@@ -1,0 +1,4 @@
+# ไม่มีอะไรต้อง ignore — โปรเจกต์นี้ push ทั้งหมดรวม vendor/ โดยตั้งใจ
+# (self-host ไลบรารีคือหัวใจของ performance ดูเหตุผลใน README)
+.DS_Store
+Thumbs.db

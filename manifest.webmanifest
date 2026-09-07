@@ -1,0 +1,18 @@
+{
+  "name": "FileKit — เครื่องมือจัดการไฟล์",
+  "short_name": "FileKit",
+  "description": "แปลง รวม แยก บีบอัด PDF Excel Word รูปภาพ ทำงานในเบราว์เซอร์ ไฟล์ไม่ถูกอัปโหลด",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1220",
+  "theme_color": "#0f1220",
+  "lang": "th",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

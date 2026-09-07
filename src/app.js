@@ -317,6 +317,31 @@ renderCats();
 renderHome();
 route();
 
+// เอียงปึกกระดาษในฉากเปิดตามเมาส์เล็กน้อย ให้รู้สึกเป็น 3 มิติจริงไม่ใช่ภาพนิ่ง
+// ‼️ เปิดเฉพาะเครื่องที่มีเมาส์จริง — บนจอสัมผัส pointermove จะยิงตอนเลื่อนหน้า ทำให้กระตุก
+{
+  const obj = document.querySelector(".hero-obj");
+  const fine = matchMedia("(hover:hover) and (pointer:fine)").matches;
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (obj && fine && !still) {
+    const hero = obj.closest(".hero");
+    let raf = 0, ev = null;
+    const set = (x, y) => { obj.style.setProperty("--tx", x + "deg"); obj.style.setProperty("--ty", y + "deg"); };
+    hero.addEventListener("pointermove", (e) => {
+      ev = e;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const r = hero.getBoundingClientRect();
+        set(((0.5 - (ev.clientY - r.top) / r.height) * 9).toFixed(2),
+            (((ev.clientX - r.left) / r.width - 0.5) * 12).toFixed(2));
+      });
+    });
+    hero.addEventListener("pointerleave", () => set(0, 0));
+  }
+}
+
+
 // สไตล์ส่วนที่เหลือ (หน้าเครื่องมือ) โหลดแบบไม่บล็อกการวาดหน้าแรก
 document.head.appendChild(el("link", { rel: "stylesheet", href: "assets/css/tool.css" }));
 

@@ -159,30 +159,85 @@ body.tool .home-only{display:none}
 
 /* ---------- โครงหน้า ---------- */
 main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,4vw,32px) 28px}
-.hero{margin:var(--sp5) 0 var(--sp6); position:relative}
-.hero h1{
-  font-size:clamp(27px,5vw,46px); margin:0 0 12px; font-weight:700;
-  /* บีบระยะตัวอักษร -2% ตามที่วัดจากเว็บชั้นนำ — ใช้กับไทยได้ ทดสอบแล้วสระไม่ชนกัน
-     แต่ line-height ห้ามต่ำกว่า 1.3 เด็ดขาด (ที่ 1.0 สระบน-ล่างล้นกล่อง 6px ชนบรรทัดบน) */
-  letter-spacing:calc(1em * -0.032);
-  line-height:1.24; padding-block:2px; max-width:20ch; text-wrap:balance;
+/* ---------- ฉากเปิด ----------
+   แผงมืดใช้สีชุดเดียวทั้งธีมสว่างและธีมมืด ให้เป็น "จุดยึด" ของหน้าเหมือน .stage
+   ‼️ ตัวแปรสีประกาศซ้ำในบล็อกนี้ → ลูกทุกตัว (ช่องค้นหา ปุ่ม) กลายเป็นเวอร์ชันพื้นมืดเอง
+      ไม่ต้องเขียนกฎซ้ำทีละตัว และไม่หลุดคอนทราสต์ตอนสลับธีม */
+.hero{
+  --card:#181c24; --card-hi:#1f242d; --bg-soft:#12161d;
+  --line:#2e3542; --line-soft:#272d38;
+  --text:#f0f1f3; --text-dim:#a8adb8; --text-mute:#8f97a6; --brand:#8aa3ff;
+  position:relative; isolation:isolate; overflow:hidden; color:var(--text);
+  margin:var(--sp4) 0 var(--sp6); border-radius:28px;
+  padding:clamp(30px,4.4vw,52px) clamp(20px,4vw,48px) clamp(28px,3.6vw,42px);
+  background:#0b0d11;
+  box-shadow:0 34px 70px -30px rgba(6,8,14,.6), inset 0 1px 0 0 rgba(255,255,255,.055);
 }
-.hero h1 em{font-style:normal; color:var(--text-mute)}
-.hero p{margin:0; max-width:600px; color:var(--text-dim); font-size:15.5px; line-height:1.8}
-.badges{display:flex;gap:var(--sp2);justify-content:center;flex-wrap:wrap;margin-top:var(--sp4)}
+/* แสงฉาก: ไล่สี 2 ก้อน + ตารางบางที่จางหายที่ขอบ — วาดด้วย CSS ล้วน ไม่มีไฟล์ภาพให้โหลดเลย */
+.hero::before{content:""; position:absolute; inset:0; z-index:-2;
+  background:radial-gradient(720px 440px at 78% 22%, rgba(116,142,255,.20), transparent 62%),
+             radial-gradient(560px 400px at 4% 100%, rgba(255,255,255,.05), transparent 60%)}
+.hero::after{content:""; position:absolute; inset:0; z-index:-1;
+  background-image:linear-gradient(rgba(255,255,255,.042) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.042) 1px,transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:radial-gradient(118% 92% at 50% 0%,#000 28%,transparent 76%);
+          mask-image:radial-gradient(118% 92% at 50% 0%,#000 28%,transparent 76%)}
+.hero-in{display:grid; grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);
+  gap:clamp(18px,3vw,38px); align-items:center}
+.kicker{display:inline-flex; align-items:center; gap:10px; margin-bottom:var(--sp4);
+  font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--text-mute)}
+.kicker s{display:block; width:26px; height:1px; background:var(--line); text-decoration:none}
+.hero h1{
+  font-size:clamp(27px,4.6vw,52px); margin:0 0 14px; font-weight:700;
+  /* บีบระยะตัวอักษร -3.4% ตามที่วัดจากเว็บชั้นนำ — ใช้กับไทยได้ ทดสอบแล้วสระไม่ชนกัน
+     แต่ line-height ห้ามต่ำกว่า 1.3 เด็ดขาด (ที่ 1.0 สระบน-ล่างล้นกล่อง 6px ชนบรรทัดบน) */
+  letter-spacing:calc(1em * -0.034);
+  line-height:1.24; padding-block:2px; max-width:19ch; text-wrap:balance;
+}
+.hero h1 em{font-style:normal; color:#79808e}
+.hero p{margin:0; max-width:52ch; color:var(--text-dim); font-size:15.5px; line-height:1.8}
+.hero .searchwrap{margin:var(--sp5) 0 0; max-width:520px}
+.facts{display:flex; flex-wrap:wrap; gap:clamp(18px,3vw,36px); margin-top:var(--sp5)}
+.fact span{display:block; font-size:10.5px; font-weight:700; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--text-mute)}
+.fact b{display:block; font-size:22px; font-weight:700; line-height:1.5; color:var(--text);
+  letter-spacing:calc(1em * -0.02)}
+.badges{display:flex;gap:var(--sp2);flex-wrap:wrap;margin-top:var(--sp4)}
 .badge{
   display:inline-flex;align-items:center;gap:6px; font-size:12px;color:var(--text-dim);
   border:1px solid var(--line); border-radius:999px; padding:5px 12px; background:var(--card);
 }
-.facts{display:flex;justify-content:flex-start;flex-wrap:wrap;gap:0;margin-top:var(--sp5);
-  border:1px solid var(--line-soft);border-radius:var(--r-lg);
-  background:color-mix(in srgb,var(--card) 62%,transparent);backdrop-filter:blur(10px);
-  overflow:hidden;box-shadow:var(--sh1), var(--ring-top)}
-.fact{flex:1 1 130px;min-width:110px;padding:11px 10px;text-align:center;border-inline-start:1px solid var(--line-soft)}
-.fact:first-child{border-inline-start:0}
-.fact b{display:block;font-size:21px;font-weight:700;line-height:1.4;color:var(--text);letter-spacing:calc(1em * -0.02)}
-.fact span{font-size:11.5px;color:var(--text-mute)}
-@media (max-width:600px){ .fact{flex:1 1 50%;min-width:0} .fact:nth-child(3){border-inline-start:0} .fact b{font-size:17px} }
+
+/* วัตถุในฉาก: ปึกกระดาษไอโซเมตริก ทำจาก CSS transform ล้วน — 0 ไบต์ ไม่มีรูปให้โหลด
+   (ทางเลือกอื่นคือรูป 3D เรนเดอร์ ซึ่งกิน 200-400 KB = ทิ้ง FCP 356 ms ที่อุตส่าห์ทำมา) */
+.hero-obj{position:relative; height:clamp(178px,21vw,268px); display:grid; place-items:center;
+  perspective:1000px; transform:rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));
+  transition:transform 260ms var(--ease)}
+.hero-obj::before{content:""; position:absolute; width:84%; aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(circle, rgba(150,170,255,.28), rgba(150,170,255,0) 66%)}
+.sheet{position:absolute; width:clamp(112px,13vw,166px); aspect-ratio:170/220; border-radius:13px;
+  background:linear-gradient(147deg,#fff 0%,#dfe5f1 26%,#a8b4cd 52%,#cfd7e7 70%,#f4f7fc 100%);
+  box-shadow:0 30px 58px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.95);
+  transform:rotateX(54deg) rotateZ(-38deg) translateZ(var(--z,0))}
+.sheet:nth-child(1){--z:8px; filter:brightness(.64)}
+.sheet:nth-child(2){--z:30px; filter:brightness(.83)}
+.sheet:nth-child(3){--z:54px; animation:sheetfloat 7s var(--ease) infinite}
+/* เส้นบรรทัดบนแผ่นบนสุด ทำให้อ่านออกว่าเป็น "เอกสาร" ไม่ใช่แค่แผ่นสี่เหลี่ยมโลหะ */
+.sheet:nth-child(3)::before{content:""; position:absolute; inset-inline:15%; top:29%; height:25%;
+  border-radius:3px;
+  background:repeating-linear-gradient(180deg, rgba(30,40,70,.26) 0 3px, transparent 3px 12px)}
+@keyframes sheetfloat{
+  0%,100%{transform:rotateX(54deg) rotateZ(-38deg) translateZ(54px)}
+  50%    {transform:rotateX(54deg) rotateZ(-38deg) translateZ(68px)}
+}
+@media (prefers-reduced-motion: reduce){ .sheet:nth-child(3){animation:none} }
+/* จอแคบ: ตัดวัตถุทิ้ง — ไม่งั้นดันเครื่องมือหลุดจอไปอีก 250px โดยไม่ได้ประโยชน์ */
+@media (max-width:860px){
+  .hero-in{grid-template-columns:1fr}
+  .hero-obj{display:none}
+  .hero h1{max-width:none}
+}
 
 /* ---------- ค้นหา ---------- */
 .searchwrap{max-width:620px; margin:var(--sp5) 0 var(--sp2)}
@@ -319,6 +374,10 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .btn-soft:hover{background:var(--card-hi)}
 
 @media (max-width:620px){
+  .hero{border-radius:20px; margin-inline:-4px; padding:26px 16px 28px}
+  .hero .searchwrap{max-width:none}
+  .facts{gap:22px}
+  .fact b{font-size:19px}
   /* ป้ายบนมือถือ: ให้เรียง 2 ต่อแถวและยอมให้ข้อความขึ้นบรรทัดใหม่
      ถ้าปล่อยเป็น nowrap ป้ายชื่อยาวจะกินเต็มแถว → หน้ายาวกว่ากริดการ์ดเดิมเสียอีก */
   .stage{padding:22px 14px 26px;border-radius:20px;margin-inline:-4px}
@@ -393,25 +452,30 @@ body.tool #home{display:none}
 <main id="main">
   <section id="home">
     <div class="hero">
-      <h1>เครื่องมือจัดการไฟล์<br><em>ที่ไม่ส่งไฟล์คุณไปไหน</em></h1>
-      <p>แปลง รวม แยก บีบอัด PDF · Excel · Word · รูปภาพ ทุกอย่างประมวลผลในเบราว์เซอร์ของคุณเอง ไฟล์ไม่เคยถูกอัปโหลดขึ้นเซิร์ฟเวอร์</p>
-      <div class="facts">
-        <div class="fact"><b id="fact-n">27</b><span>เครื่องมือ</span></div>
-        <div class="fact"><b>0</b><span>ไฟล์ที่ถูกอัปโหลด</span></div>
-        <div class="fact"><b>ไม่จำกัด</b><span>ใช้กี่ครั้งก็ได้ ไม่ต้องสมัคร</span></div>
-        <div class="fact"><b>฿0</b><span>ฟรี ไม่มีโฆษณา</span></div>
+      <div class="hero-in">
+        <div class="hero-copy">
+          <span class="kicker"><s></s>ทำงานในเครื่องคุณ 100%</span>
+          <h1>เครื่องมือจัดการไฟล์<br><em>ที่ไม่ส่งไฟล์คุณไปไหน</em></h1>
+          <p>แปลง รวม แยก บีบอัด PDF · Excel · Word · รูปภาพ ทุกอย่างประมวลผลในเบราว์เซอร์ของคุณเอง ไฟล์ไม่เคยถูกอัปโหลดขึ้นเซิร์ฟเวอร์</p>
+          <div class="searchwrap">
+            <div class="search" id="searchbox">
+              <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8L21 21"/></svg>
+              <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, บาทถ้วน, ไทยเพี้ยน" autocomplete="off"
+                     aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
+              <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button>
+              <span class="kbd" aria-hidden="true"><span id="kbdkey">Ctrl</span><span>+K</span></span>
+            </div>
+            <div class="hits" id="hits" role="status" aria-live="polite"></div>
+          </div>
+          <div class="facts">
+            <div class="fact"><b id="fact-n">27</b><span>เครื่องมือ</span></div>
+            <div class="fact"><b>0</b><span>ไฟล์ที่ถูกอัปโหลด</span></div>
+            <div class="fact"><b>฿0</b><span>ฟรี ไม่มีโฆษณา</span></div>
+          </div>
+        </div>
+        <!-- ปึกกระดาษไอโซเมตริก วาดด้วย CSS ล้วน (ดู .hero-obj) — เป็นของตกแต่ง ไม่ต้องอ่าน -->
+        <div class="hero-obj" aria-hidden="true"><div class="sheet"></div><div class="sheet"></div><div class="sheet"></div></div>
       </div>
-    </div>
-
-    <div class="searchwrap">
-      <div class="search" id="searchbox">
-        <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8L21 21"/></svg>
-        <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, บาทถ้วน, ไทยเพี้ยน" autocomplete="off"
-               aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
-        <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button>
-        <span class="kbd" aria-hidden="true"><span id="kbdkey">Ctrl</span><span>+K</span></span>
-      </div>
-      <div class="hits" id="hits" role="status" aria-live="polite"></div>
     </div>
 
     <nav class="cats" id="cats" aria-label="กรองตามหมวด"></nav>

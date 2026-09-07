@@ -110,6 +110,22 @@ with sync_playwright() as p:
     ck("เครื่องมือทุกตัวแสดงเป็นป้ายกลม", pg.locator(".pill").count(), 27)
     ck("ไม่มีการ์ดแบบเก่าเหลืออยู่", pg.locator("button.card").count(), 0)
 
+    # ‼️ ไอคอนทุกตัวต้องถูก "ลากเส้น" ไม่ใช่ "ระบายทึบ"
+    #    08/09 ลบกฎ .ico-svg ทิ้งพร้อมบล็อกมุมมองการ์ด (มันเป็นกฎกลาง ไม่ใช่ของการ์ด)
+    #    → path ถูก fill ดำแทน stroke ไอคอนกลายเป็นก้อนทึบเหมือนกันหมดทั้ง 27 ตัว
+    #    เทสเดิมทั้งชุดไม่มีใครจับได้เลย เพราะทุกตัวเช็คแค่ว่า "มี svg อยู่ไหม"
+    ICON_STROKE = """() => {
+      const bad = [];
+      for (const s of document.querySelectorAll(".ico-svg")) {
+        const c = getComputedStyle(s);
+        if (c.fill !== "none" || c.stroke === "none")
+          bad.push((s.closest(".pill")?.textContent || "?").trim() + " fill=" + c.fill + " stroke=" + c.stroke);
+      }
+      return bad;
+    }"""
+    ck("ไอคอนทุกตัววาดเป็นเส้น ไม่ใช่ก้อนทึบ", pg.evaluate(ICON_STROKE), [])
+    ck("มีไอคอนครบทุกป้าย", pg.locator(".pill .ico-svg").count(), 27)
+
     print("\n━━ ⑥ ความคมชัดสี (WCAG AA ต้อง ≥ 4.5) ━━")
     for scheme, label in [("dark","โหมดมืด"), ("light","โหมดสว่าง")]:
         pg.evaluate(f"document.documentElement.dataset.theme='{scheme}'"); pg.wait_for_timeout(120)

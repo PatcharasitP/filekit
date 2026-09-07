@@ -310,3 +310,21 @@
 .fail-box strong{display:block; color:var(--warn); margin-bottom:5px; font-size:13px}
 .fail-box ul{margin:0; padding-inline-start:20px}
 .fail-box li{overflow-wrap:anywhere; line-height:1.7}
+
+/* ── แถว "ทำอะไรต่อดี" ท้ายหน้าเครื่องมือ ── */
+.next-steps{margin-top:34px;padding-top:22px;border-top:1px solid var(--line-soft)}
+.next-steps h2{font-size:13.5px;font-weight:700;color:var(--text-mute);margin:0 0 12px}
+.next-row{display:flex;flex-wrap:wrap;gap:10px}
+.next-card{
+  display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);
+  background:var(--card);border:1px solid var(--line-soft);border-radius:999px;
+  padding:9px 18px 9px 10px;font-size:13.5px;font-weight:600;min-height:44px;
+  transition:border-color var(--t-micro,.12s) ease,background var(--t-micro,.12s) ease,transform var(--t-micro,.12s) ease;
+}
+.next-card:hover{border-color:color-mix(in srgb,var(--ac) 60%,transparent);background:var(--card-hi);transform:translateY(-1px)}
+.next-ico{
+  width:28px;height:28px;flex:none;border-radius:9px;display:grid;place-items:center;font-size:15px;
+  background:color-mix(in srgb,var(--ac) 16%,transparent);
+  border:1px solid color-mix(in srgb,var(--ac) 30%,transparent);
+}
+@media (max-width:520px){ .next-card{flex:1 1 100%;justify-content:flex-start} }

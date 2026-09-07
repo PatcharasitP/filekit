@@ -15,6 +15,10 @@ with sync_playwright() as p:
         try: pg.wait_for_selector(".dz, .tool-head", timeout=12000)
         except Exception as e: bad.append((t,"ไม่ขึ้นหน้าเครื่องมือ")); print(f"  ❌ {t}"); continue
         head = pg.locator(".tool-head").inner_text() if pg.locator(".tool-head").count() else ""
+        nxt = pg.locator(".next-card").count()
+        if nxt < 2: bad.append((t, f"แถว 'ทำอะไรต่อดี' มีแค่ {nxt} ตัว")); print(f"  ❌ {t} — next {nxt}"); continue
+        hrefs = pg.eval_on_selector_all(".next-card", "els => els.map(e => e.getAttribute('href'))")
+        if any(h == "#/" + t for h in hrefs): bad.append((t, "แนะนำวนกลับหาตัวเอง")); print(f"  ❌ {t} — วนกลับหาตัวเอง"); continue
         real=[e for e in errs if "favicon" not in e.lower()]
         if real: bad.append((t, real[0][:110])); print(f"  ❌ {t}  — {real[0][:70]}")
         elif not head.strip(): bad.append((t,"หัวเครื่องมือว่าง")); print(f"  ❌ {t}")

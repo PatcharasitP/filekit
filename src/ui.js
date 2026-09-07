@@ -1,5 +1,6 @@
 import { detectType, wrongTypeMessage } from "./filetype.js";
 import { $, $$, el } from "./dom.js";
+import { byId } from "./registry.js";
 export { $, $$, el } from "./dom.js";
 
 export function fmtBytes(b) {
@@ -42,8 +43,26 @@ export function toolShell(tool) {
       el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc)]),
     ]),
     body,
+    nextSteps(tool),
   ]);
   return { wrap, body };
+}
+
+/** แถว "ทำอะไรต่อดี" ท้ายหน้าเครื่องมือ — งานเอกสารจริงแทบไม่มีขั้นตอนเดียวจบ
+ *  เช่นรวม PDF เสร็จมักตามด้วยบีบอัดหรือเซ็นชื่อ · เดิมผู้ใช้ต้องกดกลับหน้าแรกไปหาเอง */
+export function nextSteps(tool) {
+  const list = (tool.next || []).map(byId).filter(Boolean);
+  if (!list.length) return null;
+  const accent = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
+  return el("nav", { class: "next-steps", "aria-label": "เครื่องมือที่มักใช้ต่อ" }, [
+    el("h2", {}, "ทำอะไรต่อดี"),
+    el("div", { class: "next-row" }, list.map((t) =>
+      el("a", { class: "next-card", href: "#/" + t.id, style: `--ac:${accent(t)}` }, [
+        el("span", { class: "next-ico", "aria-hidden": "true" }, t.icon),
+        el("span", {}, t.title),
+      ])
+    )),
+  ]);
 }
 
 /** แถบสถานะ + แถบความคืบหน้า (ใช้คู่กันเสมอ) */

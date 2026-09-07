@@ -103,17 +103,12 @@ with sync_playwright() as p:
     ck("จำธีมไว้หลังรีเฟรช", pg.evaluate("document.documentElement.dataset.theme"), "dark")
     pg.locator("#theme").click(); pg.wait_for_timeout(150)   # กลับเป็น auto
 
-    h_pill = pg.evaluate("document.documentElement.scrollHeight")
-    ck("ค่าตั้งต้นคือมุมมองป้ายกลม", pg.evaluate("document.documentElement.dataset.view"), "pill")
-    pg.locator("#density").click(); pg.wait_for_timeout(350)
-    h_detail = pg.evaluate("document.documentElement.scrollHeight")
-    ck("สลับเป็นมุมมองละเอียดได้", pg.evaluate("document.documentElement.dataset.view"), "detail")
-    ck("มุมมองละเอียดมีคำอธิบายให้อ่าน", pg.locator(".card p").count() >= 20, True)
-    ck("มุมมองป้ายกลมสั้นกว่ามุมมองละเอียด", h_pill < h_detail, True)
-    print(f"      (ป้ายกลม {h_pill}px → ละเอียด {h_detail}px)")
-    pg.reload(wait_until="networkidle"); pg.wait_for_timeout(400)
-    ck("จำมุมมองไว้หลังรีเฟรช", pg.evaluate("document.documentElement.dataset.view"), "detail")
-    pg.locator("#density").click(); pg.wait_for_timeout(350)
+    # ปุ่มสลับมุมมองถูกถอดออก (พี่ปอนด์ถามว่าจำเป็นไหม 08/09) — เหลือมุมมองป้ายกลมอย่างเดียว
+    # แถว "เพิ่งใช้ล่าสุด" ที่เคยอยู่เฉพาะมุมมองละเอียด ย้ายมาเป็นแถวป้ายกลมบนสุดแล้ว
+    ck("ไม่มีปุ่มสลับมุมมองแล้ว", pg.locator("#density").count(), 0)
+    ck("มีปุ่มเปลี่ยนภาษาแทน", pg.locator("#lang").count(), 1)
+    ck("เครื่องมือทุกตัวแสดงเป็นป้ายกลม", pg.locator(".pill").count(), 27)
+    ck("ไม่มีการ์ดแบบเก่าเหลืออยู่", pg.locator("button.card").count(), 0)
 
     print("\n━━ ⑥ ความคมชัดสี (WCAG AA ต้อง ≥ 4.5) ━━")
     for scheme, label in [("dark","โหมดมืด"), ("light","โหมดสว่าง")]:

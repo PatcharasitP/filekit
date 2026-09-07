@@ -2,6 +2,7 @@ import { el, dropzone, statusBar, button, field, select, download,
          stripExt, fmtBytes, eachFile, failedBox } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
+import { tr } from "../i18n.js";
 
 // สไตล์เฉพาะของแผงลอยเครื่องมือนี้ — ฝังในโมดูลเพราะห้ามแก้ assets/css/tool.css
 // (โมดูลนี้ import ครั้งเดียวต่อเซสชัน จึง <style> ไม่มีทางถูกแทรกซ้ำ)
@@ -84,8 +85,8 @@ export function mount(tool) {
   // ── แผงซ้าย: เลือกไฟล์ + รายการรูปคลิกเลือกดูได้ ──────────────────────────
   const dz = dropzone({
     accept: "image/*",
-    hint: "เลือกได้หลายไฟล์ · ย่อและบีบอัดพร้อมกันทั้งชุด",
-    expect: ["image"], expectLabel: "ไฟล์รูปภาพ",
+    hint: tr("เลือกได้หลายไฟล์ · ย่อและบีบอัดพร้อมกันทั้งชุด", "Choose multiple files · resize and compress the whole batch at once"),
+    expect: ["image"], expectLabel: tr("ไฟล์รูปภาพ", "Image files"),
     onChange: onFilesChanged,
   });
   const galCount = el("span", { class: "rz-count" }, "");
@@ -93,44 +94,44 @@ export function mount(tool) {
   const leftBody = el("div", { class: "rz-left" }, [dz.container, gallery]);
 
   // ── แผงกลาง: พรีวิวเทียบก่อน–หลังแบบเลื่อนดูได้ ──────────────────────────
-  const beforeImg = el("img", { class: "rz-img", alt: "ภาพต้นฉบับ", draggable: "false" });
-  const afterImg = el("img", { class: "rz-img", alt: "ภาพหลังประมวลผล", draggable: "false" });
+  const beforeImg = el("img", { class: "rz-img", alt: tr("ภาพต้นฉบับ", "Original image"), draggable: "false" });
+  const afterImg = el("img", { class: "rz-img", alt: tr("ภาพหลังประมวลผล", "Processed image"), draggable: "false" });
   const beforeLayer = el("div", { class: "rz-layer rz-before" }, [beforeImg]);
   const afterLayer = el("div", { class: "rz-layer rz-after" }, [afterImg]);
   const handle = el("div", {
     class: "rz-handle", tabindex: "0", role: "slider",
-    "aria-label": "ลากเพื่อเทียบก่อน–หลัง", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": "50",
+    "aria-label": tr("ลากเพื่อเทียบก่อน–หลัง", "Drag to compare before and after"), "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": "50",
   }, [el("span", { class: "rz-grip", "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")])]);
-  const tagBefore = el("span", { class: "rz-tag rz-tag-l" }, "ก่อน");
-  const tagAfter = el("span", { class: "rz-tag rz-tag-r" }, "หลัง");
+  const tagBefore = el("span", { class: "rz-tag rz-tag-l" }, tr("ก่อน", "Before"));
+  const tagAfter = el("span", { class: "rz-tag rz-tag-r" }, tr("หลัง", "After"));
   const compareBox = el("div", { class: "rz-compare" }, [afterLayer, beforeLayer, handle, tagBefore, tagAfter]);
   const previewErr = el("div", { class: "ws-empty" });
   hideEl(previewErr, true);
   const compareWrap = el("div", {}, [compareBox, previewErr]);
 
-  const toolbarLabel = el("div", { class: "rz-toolbar-label" }, "เลือกรูปเพื่อดูตัวอย่าง");
-  const resetPosBtn = button("รีเซ็ตตำแหน่งเลื่อน", { ghost: true, onclick: () => setPos(50) });
+  const toolbarLabel = el("div", { class: "rz-toolbar-label" }, tr("เลือกรูปเพื่อดูตัวอย่าง", "Select an image to preview"));
+  const resetPosBtn = button(tr("รีเซ็ตตำแหน่งเลื่อน", "Reset slider position"), { ghost: true, onclick: () => setPos(50) });
 
   // ── แผงขวา: ตัวเลือกทั้งหมด + ตัวเลขขนาดสด ──────────────────────────────
-  const modeSel = select([["long", "จำกัดด้านที่ยาวที่สุด"], ["width", "กำหนดความกว้าง"], ["pct", "ย่อเป็นเปอร์เซ็นต์"], ["none", "ไม่ย่อ (บีบอัดอย่างเดียว)"]], "long");
+  const modeSel = select([["long", tr("จำกัดด้านที่ยาวที่สุด", "Limit the longest side")], ["width", tr("กำหนดความกว้าง", "Set width")], ["pct", tr("ย่อเป็นเปอร์เซ็นต์", "Scale by percentage")], ["none", tr("ไม่ย่อ (บีบอัดอย่างเดียว)", "Don't resize (compress only)")]], "long");
   const sizeInput = el("input", { type: "number", min: "1", value: "1600" });
   const quality = el("input", { type: "range", min: "40", max: "100", value: "82" });
-  const qLabel = el("small", {}, "คุณภาพ 82%");
-  const fmtSel = select([["keep", "คงชนิดเดิม (PNG→PNG)"], ["jpeg", "บังคับเป็น JPG"], ["webp", "บังคับเป็น WEBP"]], "jpeg");
+  const qLabel = el("small", {}, tr("คุณภาพ 82%", "Quality 82%"));
+  const fmtSel = select([["keep", tr("คงชนิดเดิม (PNG→PNG)", "Keep original type (PNG→PNG)")], ["jpeg", tr("บังคับเป็น JPG", "Force JPG")], ["webp", tr("บังคับเป็น WEBP", "Force WEBP")]], "jpeg");
 
-  const sizeField = field("ขนาด (พิกเซล หรือ %)", sizeInput);
-  const modeField = field("วิธีย่อ", modeSel);
-  const qualityField = el("label", { class: "field" }, [el("span", {}, "คุณภาพไฟล์"), quality, qLabel]);
-  const fmtField = field("ชนิดไฟล์ผลลัพธ์", fmtSel);
+  const sizeField = field(tr("ขนาด (พิกเซล หรือ %)", "Size (pixels or %)"), sizeInput);
+  const modeField = field(tr("วิธีย่อ", "Resize method"), modeSel);
+  const qualityField = el("label", { class: "field" }, [el("span", {}, tr("คุณภาพไฟล์", "File quality")), quality, qLabel]);
+  const fmtField = field(tr("ชนิดไฟล์ผลลัพธ์", "Output file type"), fmtSel);
 
   const statOrig = el("span", { class: "val" });
   const statOut = el("span", { class: "val" });
   const statVerdict = el("div", { class: "rz-verdict" });
-  const statKept = el("div", { class: "rz-kept-note" }, "จะคงไฟล์ต้นฉบับไว้ — บีบแล้วไฟล์ใหญ่กว่าเดิม");
+  const statKept = el("div", { class: "rz-kept-note" }, tr("จะคงไฟล์ต้นฉบับไว้ — บีบแล้วไฟล์ใหญ่กว่าเดิม", "Original file kept — compressing made it larger"));
   hideEl(statKept, true);
   const statsBox = el("div", { class: "rz-stats" }, [
-    el("div", { class: "rz-stat-row" }, [el("span", { class: "lbl" }, "ต้นฉบับ"), statOrig]),
-    el("div", { class: "rz-stat-row" }, [el("span", { class: "lbl" }, "ผลลัพธ์"), statOut]),
+    el("div", { class: "rz-stat-row" }, [el("span", { class: "lbl" }, tr("ต้นฉบับ", "Original")), statOrig]),
+    el("div", { class: "rz-stat-row" }, [el("span", { class: "lbl" }, tr("ผลลัพธ์", "Result")), statOut]),
     statVerdict, statKept,
   ]);
   hideEl(statsBox, true);
@@ -143,27 +144,27 @@ export function mount(tool) {
   };
   modeSel.addEventListener("change", () => { syncSize(); schedulePreview(0); });
   sizeInput.addEventListener("input", () => schedulePreview());
-  quality.addEventListener("input", () => { qLabel.textContent = `คุณภาพ ${quality.value}%`; schedulePreview(); });
+  quality.addEventListener("input", () => { qLabel.textContent = tr(`คุณภาพ ${quality.value}%`, `Quality ${quality.value}%`); schedulePreview(); });
   fmtSel.addEventListener("change", () => schedulePreview(0));
 
   // ── แถบล่าง: สถานะ + ปุ่มลงมือ + ดาวน์โหลด ──────────────────────────────
-  const go = button("ย่อและบีบอัด", { onclick: run });
+  const go = button(tr("ย่อและบีบอัด", "Resize and compress"), { onclick: run });
   let lastMade = [];
-  const zipBtn = button("ดาวน์โหลดทั้งหมดเป็น ZIP", { icon: "zip", ghost: true, onclick: async () => {
+  const zipBtn = button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip", ghost: true, onclick: async () => {
     const zip = new JSZip();
     lastMade.forEach((m) => zip.file(m.name, m.blob));
-    download(await zip.generateAsync({ type: "blob" }), "รูปย่อแล้ว.zip");
+    download(await zip.generateAsync({ type: "blob" }), tr("รูปย่อแล้ว.zip", "resized-images.zip"));
   } });
   hideEl(zipBtn, true);
   // ไฟล์เดียวไม่ควรต้องไปหาไอคอนเล็ก ๆ บนรูปย่อ — ให้ปุ่มดาวน์โหลดเด่นอยู่แถบล่างเลย
-  const oneBtn = button("ดาวน์โหลดรูปที่ย่อแล้ว", { icon: "download",
+  const oneBtn = button(tr("ดาวน์โหลดรูปที่ย่อแล้ว", "Download the resized image"), { icon: "download",
     onclick: () => { const m = lastMade[0]; if (m) download(m.blob, m.name); } });
   hideEl(oneBtn, true);
 
   const ws = workspace(tool, {
-    left: { title: "ไฟล์รูปภาพ", node: leftBody, hint: "คลิกที่รูปในรายการเพื่อดูตัวอย่างก่อน–หลังของไฟล์นั้น", aside: galCount },
-    center: { node: compareWrap, empty: "ยังไม่มีไฟล์ — เลือกรูปก่อนเพื่อดูตัวอย่างก่อน–หลัง" },
-    right: { title: "ตัวเลือก", node: rightBody },
+    left: { title: tr("ไฟล์รูปภาพ", "Image files"), node: leftBody, hint: tr("คลิกที่รูปในรายการเพื่อดูตัวอย่างก่อน–หลังของไฟล์นั้น", "Click an image in the list to preview its before/after"), aside: galCount },
+    center: { node: compareWrap, empty: tr("ยังไม่มีไฟล์ — เลือกรูปก่อนเพื่อดูตัวอย่างก่อน–หลัง", "No files yet — choose an image to see a before/after preview") },
+    right: { title: tr("ตัวเลือก", "Options"), node: rightBody },
     toolbar: [toolbarLabel, resetPosBtn],
     footer: [st.node, go, oneBtn, zipBtn],
   });
@@ -171,7 +172,8 @@ export function mount(tool) {
   const failedNote = el("div", {});
   ws.body.appendChild(failedNote);
   ws.body.appendChild(el("div", { class: "note" },
-    "เหมาะกับการเตรียมรูปส่งอีเมล แนบเอกสาร หรืออัปโหลดเว็บที่จำกัดขนาดไฟล์ · รูปต้นฉบับในเครื่องไม่ถูกแก้ไข"));
+    tr("เหมาะกับการเตรียมรูปส่งอีเมล แนบเอกสาร หรืออัปโหลดเว็บที่จำกัดขนาดไฟล์ · รูปต้นฉบับในเครื่องไม่ถูกแก้ไข",
+       "Good for preparing images to email, attach to documents, or upload to sites with file size limits · your original image on this device is not modified")));
 
   // ── ตรรกะย่อขนาด (เหมือนเดิมทุกจุด) ────────────────────────────────────
   function targetSize(w, h) {
@@ -207,7 +209,7 @@ export function mount(tool) {
     if (blob.size >= f.size && w === bmpW && h === bmpH) {
       blob = f; ext = (f.name.split(".").pop() || ext).toLowerCase(); kept = true;
     }
-    return { blob, name: kept ? f.name : `${stripExt(f.name)}-ย่อ.${ext}`, dim: `${w}×${h}`, kept, w, h, bmpW, bmpH };
+    return { blob, name: kept ? f.name : tr(`${stripExt(f.name)}-ย่อ.${ext}`, `${stripExt(f.name)}-resized.${ext}`), dim: `${w}×${h}`, kept, w, h, bmpW, bmpH };
   }
 
   // ── แกลเลอรีซ้าย: thumbnail + คลิกเพื่อเลือก + ดาวน์โหลดรายไฟล์เมื่อพร้อม ──
@@ -227,16 +229,16 @@ export function mount(tool) {
 
   function renderGallery() {
     const files = dz.files;
-    galCount.textContent = files.length ? `${files.length} ไฟล์` : "";
+    galCount.textContent = files.length ? tr(`${files.length} ไฟล์`, `${files.length} files`) : "";
     gallery.innerHTML = "";
     files.forEach((f, i) => {
       const r = resultsByFile.get(f);
       const sizeLine = r
-        ? (r.kept ? "คงไฟล์เดิม (บีบแล้วใหญ่กว่า)" : `${r.dim} · ${fmtBytes(f.size)} → ${fmtBytes(r.blob.size)}`)
+        ? (r.kept ? tr("คงไฟล์เดิม (บีบแล้วใหญ่กว่า)", "Kept original (compressing made it larger)") : `${r.dim} · ${fmtBytes(f.size)} → ${fmtBytes(r.blob.size)}`)
         : fmtBytes(f.size);
       gallery.appendChild(el("div", {
         class: "rz-item" + (i === activeIndex ? " active" : ""),
-        role: "button", tabindex: "0", "aria-label": `ดูตัวอย่าง ${f.name}`,
+        role: "button", tabindex: "0", "aria-label": tr(`ดูตัวอย่าง ${f.name}`, `Preview ${f.name}`),
         onclick: () => selectIndex(i),
         onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectIndex(i); } },
       }, [
@@ -246,7 +248,7 @@ export function mount(tool) {
           el("span", { class: "rz-size" }, sizeLine),
         ]),
         r ? el("button", {
-          type: "button", class: "icon-btn", title: "ดาวน์โหลด", "aria-label": `ดาวน์โหลด ${r.name}`,
+          type: "button", class: "icon-btn", title: tr("ดาวน์โหลด", "Download"), "aria-label": tr(`ดาวน์โหลด ${r.name}`, `Download ${r.name}`),
           onclick: (e) => { e.stopPropagation(); download(r.blob, r.name); },
         }, [uiIcon("download", "pg-ico")]) : null,
       ]));
@@ -339,7 +341,7 @@ export function mount(tool) {
       statOrig.textContent = `${r.bmpW}×${r.bmpH} · ${fmtBytes(f.size)}`;
       statOut.textContent = `${r.w}×${r.h} · ${fmtBytes(r.blob.size)}`;
       const diff = f.size ? Math.round((1 - r.blob.size / f.size) * 100) : 0;
-      statVerdict.textContent = diff > 0 ? `เล็กลง ${diff}%` : diff < 0 ? `ใหญ่ขึ้น ${-diff}%` : "ขนาดเท่าเดิม";
+      statVerdict.textContent = diff > 0 ? tr(`เล็กลง ${diff}%`, `${diff}% smaller`) : diff < 0 ? tr(`ใหญ่ขึ้น ${-diff}%`, `${-diff}% larger`) : tr("ขนาดเท่าเดิม", "Same size");
       statVerdict.className = "rz-verdict " + (diff > 0 ? "ok" : diff < 0 ? "err" : "warn");
       hideEl(statKept, !r.kept);
     } catch (e) {
@@ -347,7 +349,7 @@ export function mount(tool) {
       ws.showCanvas(true);
       hideEl(compareBox, true); hideEl(statsBox, true);
       hideEl(previewErr, false);
-      previewErr.textContent = "สร้างตัวอย่างไม่ได้ — ไฟล์นี้อาจเสียหาย: " + e.message;
+      previewErr.textContent = tr("สร้างตัวอย่างไม่ได้ — ไฟล์นี้อาจเสียหาย: ", "Could not create preview — this file may be corrupted: ") + e.message;
       toolbarLabel.textContent = f.name;
     } finally {
       if (seq === previewSeq) compareBox.classList.remove("busy");
@@ -357,9 +359,9 @@ export function mount(tool) {
   // ── ประมวลผลจริงทั้งชุด + ดาวน์โหลด ─────────────────────────────────────
   async function run() {
     const files = dz.files;
-    if (!files.length) return st.err("กรุณาเลือกรูปอย่างน้อย 1 ไฟล์");
+    if (!files.length) return st.err(tr("กรุณาเลือกรูปอย่างน้อย 1 ไฟล์", "Please choose at least 1 image"));
     go.disabled = true; ws.setBusy(true);
-    st.info("กำลังประมวลผล…");
+    st.info(tr("กำลังประมวลผล…", "Processing…"));
     resultsByFile.clear();
     hideEl(zipBtn, true);
     hideEl(oneBtn, true);
@@ -375,12 +377,13 @@ export function mount(tool) {
       st.progress(null);
       failedNote.innerHTML = "";
       const fb = failedBox(failed); if (fb) failedNote.appendChild(fb);
-      if (!made.length) throw new Error("ไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็นรูปภาพจริงหรือไม่");
+      if (!made.length) throw new Error(tr("ไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็นรูปภาพจริงหรือไม่", "Could not process any file — check that they are valid image files"));
       const saved = before ? Math.round((1 - after / before) * 100) : 0;
       const keptCount = made.filter((m) => m.kept).length;
-      const verdict = saved > 0 ? `เล็กลง ${saved}%` : saved < 0 ? `ใหญ่ขึ้น ${-saved}%` : "ขนาดเท่าเดิม";
-      const tail = keptCount ? ` · ${keptCount} ไฟล์คงต้นฉบับไว้เพราะเล็กกว่าอยู่แล้ว` : "";
-      st.ok(`เสร็จ ${made.length} ไฟล์ · ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`);
+      const verdict = saved > 0 ? tr(`เล็กลง ${saved}%`, `${saved}% smaller`) : saved < 0 ? tr(`ใหญ่ขึ้น ${-saved}%`, `${-saved}% larger`) : tr("ขนาดเท่าเดิม", "Same size");
+      const tail = keptCount ? tr(` · ${keptCount} ไฟล์คงต้นฉบับไว้เพราะเล็กกว่าอยู่แล้ว`, ` · ${keptCount} files kept original because they were already smaller`) : "";
+      st.ok(tr(`เสร็จ ${made.length} ไฟล์ · ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`,
+        `Done — ${made.length} files, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`));
       lastMade = made;
       hideEl(zipBtn, made.length <= 1);
       hideEl(oneBtn, made.length !== 1);
@@ -388,7 +391,7 @@ export function mount(tool) {
       if (resultsByFile.has(files[activeIndex])) schedulePreview(0);
     } catch (e) {
       st.progress(null);
-      st.err("ประมวลผลไม่สำเร็จ: " + e.message);
+      st.err(tr("ประมวลผลไม่สำเร็จ: ", "Could not process: ") + e.message);
     } finally { go.disabled = false; ws.setBusy(false); }
   }
 

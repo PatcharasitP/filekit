@@ -1,6 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser } from "../ui.js";
 import { readPptx } from "../pptx.js";
+import { tr } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -10,33 +11,36 @@ export function mount(tool) {
   let file = null;
 
   const dz = dropzone({
-    expect: ["pptx"], expectLabel: "ไฟล์ PowerPoint (.pptx)",
+    expect: ["pptx"], expectLabel: tr("ไฟล์ PowerPoint (.pptx)", "PowerPoint files (.pptx)"),
     accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    multiple: false, hint: "รองรับไฟล์ .pptx (PowerPoint 2007 ขึ้นไป)",
+    multiple: false, hint: tr("รองรับไฟล์ .pptx (PowerPoint 2007 ขึ้นไป)", "Supports .pptx files (PowerPoint 2007 and later)"),
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; preview.hidden = true; },
   });
 
-  const withNotes = select([["yes", "รวมโน้ตผู้บรรยายด้วย"], ["no", "เอาเฉพาะเนื้อสไลด์"]], "yes");
-  const layout = select([["heading", "หัวสไลด์เป็นหัวข้อ (แนะนำ)"], ["plain", "ข้อความล้วนต่อกัน"]], "heading");
-  const breakMode = select([["page", "ขึ้นหน้าใหม่ทุกสไลด์"], ["flow", "ไหลต่อเนื่อง"]], "flow");
-  const go = button("แปลงเป็น Word", { onclick: run });
+  const withNotes = select([["yes", tr("รวมโน้ตผู้บรรยายด้วย", "Include speaker notes")], ["no", tr("เอาเฉพาะเนื้อสไลด์", "Slide content only")]], "yes");
+  const layout = select([["heading", tr("หัวสไลด์เป็นหัวข้อ (แนะนำ)", "Slide titles as headings (recommended)")], ["plain", tr("ข้อความล้วนต่อกัน", "Plain running text")]], "heading");
+  const breakMode = select([["page", tr("ขึ้นหน้าใหม่ทุกสไลด์", "New page per slide")], ["flow", tr("ไหลต่อเนื่อง", "Continuous flow")]], "flow");
+  const go = button(tr("แปลงเป็น Word", "Convert to Word"), { onclick: run });
 
   body.append(dz.container,
-    el("div", { class: "row" }, [field("โน้ตผู้บรรยาย", withNotes), field("รูปแบบเอกสาร", layout), field("การขึ้นหน้า", breakMode)]),
+    el("div", { class: "row" }, [field(tr("โน้ตผู้บรรยาย", "Speaker notes"), withNotes), field(tr("รูปแบบเอกสาร", "Document format"), layout), field(tr("การขึ้นหน้า", "Page breaks"), breakMode)]),
     el("div", { class: "actions" }, [go]), st.node, results, preview);
   body.appendChild(el("div", { class: "note" },
-    "ดึงข้อความทุกกล่องในสไลด์ หัวเรื่อง ระดับหัวข้อย่อย และโน้ตผู้บรรยาย ออกมาเป็นเอกสาร Word ที่แก้ไขต่อได้ · " +
+    tr("ดึงข้อความทุกกล่องในสไลด์ หัวเรื่อง ระดับหัวข้อย่อย และโน้ตผู้บรรยาย ออกมาเป็นเอกสาร Word ที่แก้ไขต่อได้ · " +
     "เหมาะกับการทำสรุปการประชุม เอกสารประกอบการอบรม หรือส่งเนื้อหาให้คนที่ไม่ได้เปิด PowerPoint · " +
-    "ไม่คงรูปภาพ สี และการจัดวางของสไลด์ (ถ้าต้องการหน้าตาเดิม ให้ใช้ PowerPoint → PDF แทน)"));
+    "ไม่คงรูปภาพ สี และการจัดวางของสไลด์ (ถ้าต้องการหน้าตาเดิม ให้ใช้ PowerPoint → PDF แทน)",
+    "Pulls text from every box on each slide — titles, bullet levels, and speaker notes — into an editable Word document · " +
+    "Good for meeting summaries, training handouts, or sharing content with people who don't have PowerPoint · " +
+    "Images, colors, and slide layout are not preserved (use PowerPoint → PDF instead if you need the original look)")));
 
   async function run() {
-    if (!file) return st.err("กรุณาเลือกไฟล์ .pptx ก่อน");
+    if (!file) return st.err(tr("กรุณาเลือกไฟล์ .pptx ก่อน", "Please choose a .pptx file first"));
     results.innerHTML = ""; preview.hidden = true;
     go.disabled = true;
-    st.info("กำลังอ่านสไลด์…");
+    st.info(tr("กำลังอ่านสไลด์…", "Reading slides…"));
     try {
       const { slides } = await readPptx(file, {
-        onProgress: (p) => st.progress((p.current / p.total) * 100, `(${p.current}/${p.total} สไลด์)`),
+        onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${p.total} slides)`)),
       });
 
       const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
@@ -45,7 +49,7 @@ export function mount(tool) {
       let words = 0;
 
       slides.forEach((s, idx) => {
-        const heading = s.title || `สไลด์ ${s.no}`;
+        const heading = s.title || tr(`สไลด์ ${s.no}`, `Slide ${s.no}`);
         words += heading.length;
         if (layout.value === "heading") {
           children.push(new Paragraph({
@@ -74,7 +78,7 @@ export function mount(tool) {
         if (withNotes.value === "yes" && s.notes) {
           words += s.notes.length;
           children.push(new Paragraph({
-            children: [new TextRun({ text: (/^โน้ต/.test(s.notes) ? s.notes : "โน้ตผู้บรรยาย: " + s.notes), italics: true, size: 22, font: "Sarabun", color: "666666" })],
+            children: [new TextRun({ text: (/^โน้ต/.test(s.notes) ? s.notes : tr("โน้ตผู้บรรยาย: ", "Speaker notes: ") + s.notes), italics: true, size: 22, font: "Sarabun", color: "666666" })],
             spacing: { after: 120 },
           }));
           previewLines.push(`    ✎ ${s.notes}`);
@@ -84,23 +88,24 @@ export function mount(tool) {
           children.push(new Paragraph({ children: [], pageBreakBefore: true }));
       });
 
-      if (!words) throw new Error("ไม่พบข้อความในสไลด์ — ไฟล์นี้อาจมีแต่รูปภาพ ลองใช้ PowerPoint → PDF แทน");
+      if (!words) throw new Error(tr("ไม่พบข้อความในสไลด์ — ไฟล์นี้อาจมีแต่รูปภาพ ลองใช้ PowerPoint → PDF แทน", "No text found in the slides — this file may contain only images. Try PowerPoint → PDF instead"));
 
       const blob = await Packer.toBlob(new Document({ sections: [{ properties: {}, children }] }));
       st.progress(null);
-      st.ok(`แปลงสำเร็จ ${slides.length} สไลด์ · ${words.toLocaleString("th-TH")} ตัวอักษร`);
+      st.ok(tr(`แปลงสำเร็จ ${slides.length} สไลด์ · ${words.toLocaleString("th-TH")} ตัวอักษร`,
+        `Done — ${slides.length} slides, ${words.toLocaleString("en-US")} characters`));
       preview.hidden = false;
       preview.textContent = previewLines.join("\n").slice(0, 4000);
 
       const name = stripExt(file.name) + ".docx";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${slides.length} สไลด์`)]),
-        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์`, `${slides.length} slides`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
       await yieldToBrowser();
     } catch (e) {
       st.progress(null);
-      st.err("แปลงไม่สำเร็จ: " + e.message);
+      st.err(tr("แปลงไม่สำเร็จ: ", "Could not convert: ") + e.message);
     } finally { go.disabled = false; }
   }
   return wrap;

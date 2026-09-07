@@ -3,27 +3,28 @@ import { el } from "../dom.js";
 import { field, select } from "../ui.js";
 import { columnTool } from "../sheetpick.js";
 import { checkThaiId13, formatThaiId } from "../thai.js";
+import { tr } from "../i18n.js";
 
 export function mount(tool) {
   return columnTool(tool, {
-    accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: "ไฟล์ Excel หรือ CSV",
-    hint: "รับ .xlsx .xls .csv ครั้งละ 1 ไฟล์ — มีขีดคั่นหรือเป็นเลขไทยก็อ่านได้",
-    suffix: "-ตรวจแล้ว", writeFail: true,
+    accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
+    hint: tr("รับ .xlsx .xls .csv ครั้งละ 1 ไฟล์ — มีขีดคั่นหรือเป็นเลขไทยก็อ่านได้", "Accepts one .xlsx .xls .csv file at a time — reads numbers with dashes or Thai digits too"),
+    suffix: tr("-ตรวจแล้ว", "-checked"), writeFail: true,
     guessColumn: (h) => /บัตร|ประชาชน|ผู้เสียภาษี|ภาษี|เลขประจำตัว|citizen|tax|id/i.test(h),
-    labels: { ok: "ถูกต้อง", bad: "ผิด/ไม่ครบ" },
+    labels: { ok: tr("ถูกต้อง", "Valid"), bad: tr("ผิด/ไม่ครบ", "Invalid/Incomplete") },
 
     options(refresh) {
-      const mode = select([["check", "บอกผลตรวจ (ถูกต้อง / ผิดเพราะอะไร)"],
-                           ["format", "จัดรูปแบบให้มีขีดคั่น 1-2345-67890-12-3"],
-                           ["digits", "เอาแต่ตัวเลข 13 หลัก (ตัดขีด/ช่องว่างทิ้ง)"]], "check");
+      const mode = select([["check", tr("บอกผลตรวจ (ถูกต้อง / ผิดเพราะอะไร)", "Show the check result (valid / why it's invalid)")],
+                           ["format", tr("จัดรูปแบบให้มีขีดคั่น 1-2345-67890-12-3", "Format with dashes: 1-2345-67890-12-3")],
+                           ["digits", tr("เอาแต่ตัวเลข 13 หลัก (ตัดขีด/ช่องว่างทิ้ง)", "Digits only, 13 digits (strip dashes/spaces)")]], "check");
       mode.onchange = refresh;
       return {
-        node: el("div", { class: "row" }, [field("ผลลัพธ์ที่ต้องการ", mode)]),
+        node: el("div", { class: "row" }, [field(tr("ผลลัพธ์ที่ต้องการ", "Output"), mode)]),
         read: () => ({ mode: mode.value }),
       };
     },
 
-    outName: (o) => o.mode === "check" ? "ผลตรวจ" : o.mode === "format" ? "เลข 13 หลัก (มีขีด)" : "เลข 13 หลัก",
+    outName: (o) => o.mode === "check" ? tr("ผลตรวจ", "Check result") : o.mode === "format" ? tr("เลข 13 หลัก (มีขีด)", "13-digit number (with dashes)") : tr("เลข 13 หลัก", "13-digit number"),
 
     convert(v, o) {
       if (v == null || String(v).trim() === "") return null;
@@ -31,9 +32,10 @@ export function mount(tool) {
       if (!r.ok) return { ok: false, reason: r.reason, value: " " + r.reason };
       if (o.mode === "format") return { ok: true, value: formatThaiId(r.digits) };
       if (o.mode === "digits") return { ok: true, value: r.digits };
-      return { ok: true, value: "ถูกต้อง" };
+      return { ok: true, value: tr("ถูกต้อง", "Valid") };
     },
 
-    note: "ตรวจด้วยสูตรหลักตรวจสอบมาตรฐานของเลข 13 หลัก (ผลรวมถ่วงน้ำหนัก 13…2 หารเอาเศษ 11) — บอกได้ว่าเลขพิมพ์ผิด แต่ยืนยันไม่ได้ว่าเลขนั้นมีเจ้าของอยู่จริง",
+    note: tr("ตรวจด้วยสูตรหลักตรวจสอบมาตรฐานของเลข 13 หลัก (ผลรวมถ่วงน้ำหนัก 13…2 หารเอาเศษ 11) — บอกได้ว่าเลขพิมพ์ผิด แต่ยืนยันไม่ได้ว่าเลขนั้นมีเจ้าของอยู่จริง",
+             "Checked with the standard 13-digit check-digit formula (weighted sum 13…2 mod 11) — this can tell you the number was typed wrong, but not whether it actually belongs to someone"),
   });
 }

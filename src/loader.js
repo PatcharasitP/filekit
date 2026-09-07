@@ -7,6 +7,8 @@
 // จึงไม่ได้ถูกใช้ซ้ำข้ามเว็บอีกแล้ว การ self-host ตัดมือ DNS+TLS+connect ของ
 // โดเมนที่สามทิ้งได้ทั้งก้อน ถ้า vendor/ พังค่อยตกลง CDN เป็นตาข่ายรองรับ
 
+import { tr } from "./i18n.js";
+
 const REG = {
   pdfjs: {
     global: "pdfjsLib",
@@ -79,14 +81,14 @@ function injectScript(src) {
     s.src = src;
     s.async = true;
     s.onload = () => resolve(src);
-    s.onerror = () => reject(new Error("โหลดไม่สำเร็จ: " + src));
+    s.onerror = () => reject(new Error(tr("โหลดไม่สำเร็จ: ", "Failed to load: ") + src));
     document.head.appendChild(s);
   });
 }
 
 async function loadOne(name) {
   const spec = REG[name];
-  if (!spec) throw new Error("ไม่รู้จักไลบรารี: " + name);
+  if (!spec) throw new Error(tr("ไม่รู้จักไลบรารี: ", "Unknown library: ") + name);
   if (spec.needs) await Promise.all(spec.needs.map(loadOne));
   if (spec.global && window[spec.global]) return window[spec.global];
 
@@ -98,7 +100,7 @@ async function loadOne(name) {
     await injectScript(spec.cdn); // ตาข่ายรองรับเมื่อ vendor/ ไม่มีไฟล์
   }
   const lib = spec.global ? window[spec.global] : true;
-  if (spec.global && !lib) throw new Error("โหลดแล้วแต่ไม่พบ " + spec.global);
+  if (spec.global && !lib) throw new Error(tr("โหลดแล้วแต่ไม่พบ ", "Loaded but could not find ") + spec.global);
   if (spec.ready) spec.ready(lib, base);
   return lib;
 }

@@ -2,6 +2,7 @@ import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, download,
          stripExt, yieldToBrowser, segmented } from "../ui.js";
 import { workspace } from "../workspace.js";
+import { tr } from "../i18n.js";
 
 // วาดข้อความลายน้ำลง canvas โปร่งใสแล้วฝังเป็นภาพ PNG
 // ทำแบบนี้เพื่อให้ "ข้อความไทยใช้ได้ทันที"โดยไม่ต้องฝังฟอนต์เข้า PDF
@@ -70,19 +71,19 @@ export function mount(tool) {
   const results = el("div", { class: "results" });
 
   // ── ตัวเลือกทั้งหมด (แผงขวา) — ความสามารถเดิมทุกตัว ──────────────────
-  const textInput = el("input", { type: "text", value: "เอกสารลับ ห้ามเผยแพร่", placeholder: "ข้อความลายน้ำ" });
-  const posSel = select([["diagonal", "ทแยงกลางหน้า"], ["center", "กลางหน้า แนวนอน"], ["footer", "ท้ายหน้า"], ["tile", "ปูเต็มหน้า"]], "diagonal");
+  const textInput = el("input", { type: "text", value: tr("เอกสารลับ ห้ามเผยแพร่", "Confidential — do not distribute"), placeholder: tr("ข้อความลายน้ำ", "Watermark text") });
+  const posSel = select([["diagonal", tr("ทแยงกลางหน้า", "Diagonal, centered")], ["center", tr("กลางหน้า แนวนอน", "Centered, horizontal")], ["footer", tr("ท้ายหน้า", "Footer")], ["tile", tr("ปูเต็มหน้า", "Tiled across page")]], "diagonal");
   const colorInput = el("input", { type: "color", value: "#ff3b5c" });
   const opacity = el("input", { type: "range", min: "5", max: "60", value: "18" });
-  const oLabel = el("small", {}, "ความเข้ม 18%");
-  const sizeSel = segmented([["small", "เล็ก"], ["medium", "กลาง"], ["large", "ใหญ่"]], "medium");
+  const oLabel = el("small", {}, tr("ความเข้ม 18%", "Opacity 18%"));
+  const sizeSel = segmented([["small", tr("เล็ก", "Small")], ["medium", tr("กลาง", "Medium")], ["large", tr("ใหญ่", "Large")]], "medium");
 
   const rightBox = el("div", {}, [
-    field("ข้อความลายน้ำ", textInput),
-    field("ตำแหน่ง", posSel),
-    field("สี", colorInput),
-    el("label", { class: "field" }, [el("span", {}, "ความเข้ม"), opacity, oLabel]),
-    field("ขนาด", sizeSel),
+    field(tr("ข้อความลายน้ำ", "Watermark text"), textInput),
+    field(tr("ตำแหน่ง", "Position"), posSel),
+    field(tr("สี", "Color"), colorInput),
+    el("label", { class: "field" }, [el("span", {}, tr("ความเข้ม", "Opacity")), opacity, oLabel]),
+    field(tr("ขนาด", "Size"), sizeSel),
   ]);
 
   // ── พรีวิวกระดาษจำลอง (แผงกลาง) ──────────────────────────────────────
@@ -102,7 +103,7 @@ export function mount(tool) {
     wmLayer.innerHTML = "";
     const text = textInput.value.trim();
     if (!text) {
-      wmLayer.appendChild(el("div", { class: "wmp-wm-empty" }, "พิมพ์ข้อความลายน้ำเพื่อดูตัวอย่าง"));
+      wmLayer.appendChild(el("div", { class: "wmp-wm-empty" }, tr("พิมพ์ข้อความลายน้ำเพื่อดูตัวอย่าง", "Type watermark text to preview it")));
       return;
     }
     const pw = paper.clientWidth || 300;
@@ -140,14 +141,14 @@ export function mount(tool) {
 
   if (typeof ResizeObserver !== "undefined") new ResizeObserver(drawPreview).observe(paper);
   [textInput, colorInput, opacity].forEach((n) => n.addEventListener("input", drawPreview));
-  opacity.addEventListener("input", () => { oLabel.textContent = `ความเข้ม ${opacity.value}%`; });
+  opacity.addEventListener("input", () => { oLabel.textContent = tr(`ความเข้ม ${opacity.value}%`, `Opacity ${opacity.value}%`); });
   posSel.addEventListener("change", drawPreview);
   sizeSel.addEventListener("change", drawPreview);
 
   // ── แผงซ้าย: เลือกไฟล์ + รายการไฟล์ ───────────────────────────────────
   const dz = dropzone({
-    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
-    accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
+    expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
+    accept: "application/pdf,.pdf", multiple: false, hint: tr("ครั้งละ 1 ไฟล์", "One file at a time"),
     onChange: (f) => onFileChange(f[0] || null),
   });
 
@@ -162,28 +163,32 @@ export function mount(tool) {
       const { width, height } = first.getSize();
       meta = { pages: doc.getPageCount(), w: width, h: height };
       paper.style.aspectRatio = `${width} / ${height}`;
-      metaLine.textContent = `ตัวอย่างหน้าแรก (ทั้งไฟล์มี ${meta.pages} หน้า · ${Math.round(width)}×${Math.round(height)} pt)`;
+      metaLine.textContent = tr(`ตัวอย่างหน้าแรก (ทั้งไฟล์มี ${meta.pages} หน้า · ${Math.round(width)}×${Math.round(height)} pt)`,
+                                 `Preview of page 1 (the file has ${meta.pages} pages · ${Math.round(width)}×${Math.round(height)} pt)`);
       ws.showCanvas(true);
       drawPreview();
     } catch (e) {
       meta = null;
       ws.showCanvas(false);
-      st.err("เปิดไฟล์เพื่อดูตัวอย่างไม่สำเร็จ: " + e.message);
+      st.err(tr("เปิดไฟล์เพื่อดูตัวอย่างไม่สำเร็จ: ", "Could not open the file to preview: ") + e.message);
     } finally { ws.setBusy(false); }
   }
 
   // ── แถบล่าง: ปุ่มสร้าง + สถานะ ─────────────────────────────────────────
-  const go = button("ใส่ลายน้ำ", { onclick: run });
+  const go = button(tr("ใส่ลายน้ำ", "Add watermark"), { onclick: run });
   const st = statusBar();
 
   const ws = workspace(tool, {
-    left: { title: "ไฟล์ PDF", node: dz.container },
-    center: { node: stage, empty: "ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างลายน้ำ" },
-    right: { title: "ตัวเลือกลายน้ำ", node: rightBox },
-    toolbar: [el("div", { class: "wmp-toolbar-note" }, "พรีวิวจำลอง — ตำแหน่ง สี ความเข้ม ขนาด ตรงกับค่าที่ตั้งจริง (ไม่ใช่เนื้อหาไฟล์จริง)")],
+    left: { title: tr("ไฟล์ PDF", "PDF file"), node: dz.container },
+    center: { node: stage, empty: tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างลายน้ำ", "No file yet — choose a PDF file to preview the watermark") },
+    right: { title: tr("ตัวเลือกลายน้ำ", "Watermark options"), node: rightBox },
+    toolbar: [el("div", { class: "wmp-toolbar-note" }, tr("พรีวิวจำลอง — ตำแหน่ง สี ความเข้ม ขนาด ตรงกับค่าที่ตั้งจริง (ไม่ใช่เนื้อหาไฟล์จริง)",
+                                                            "Simulated preview — position, color, opacity, and size match your real settings (not the actual file content)"))],
     footer: [go, st.node],
-    note: "ลายน้ำเป็นภาพวางทับบนเนื้อหาเดิม ไม่แก้ไขข้อความในไฟล์ต้นฉบับ · รองรับข้อความไทยเต็มรูปแบบ · " +
+    note: tr("ลายน้ำเป็นภาพวางทับบนเนื้อหาเดิม ไม่แก้ไขข้อความในไฟล์ต้นฉบับ · รองรับข้อความไทยเต็มรูปแบบ · " +
       "หมายเหตุ: ลายน้ำแบบนี้ป้องกันการคัดลอกภาพหน้าจอไม่ได้ ใช้เพื่อระบุสถานะเอกสารเป็นหลัก",
+      "The watermark is an image placed over the existing content — it does not edit the text in the original file · full Thai text support · " +
+      "note: this kind of watermark does not prevent screenshots — it is mainly for marking a document's status"),
   });
   ws.showCanvas(false);
   ws.wrap.prepend(el("style", {}, STYLE));
@@ -191,13 +196,13 @@ export function mount(tool) {
   drawPreview();
 
   async function run() {
-    if (!file) return st.err("กรุณาเลือกไฟล์ PDF ก่อน");
+    if (!file) return st.err(tr("กรุณาเลือกไฟล์ PDF ก่อน", "Please choose a PDF file first"));
     const text = textInput.value.trim();
-    if (!text) return st.err("กรุณาพิมพ์ข้อความลายน้ำ");
+    if (!text) return st.err(tr("กรุณาพิมพ์ข้อความลายน้ำ", "Please type watermark text"));
     results.innerHTML = "";
     go.disabled = true;
     ws.setBusy(true);
-    st.info("กำลังใส่ลายน้ำ…");
+    st.info(tr("กำลังใส่ลายน้ำ…", "Adding watermark…"));
     try {
       const { PDFDocument, degrees } = PDFLib;
       const { doc, encrypted } = await loadPdfLib(file);
@@ -243,16 +248,16 @@ export function mount(tool) {
 
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(`ใส่ลายน้ำครบ ${pages.length} หน้า`);
+      st.ok(tr(`ใส่ลายน้ำครบ ${pages.length} หน้า`, `Watermark added — ${pages.length} pages`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
-      const name = stripExt(file.name) + "-ลายน้ำ.pdf";
+      const name = stripExt(file.name) + tr("-ลายน้ำ.pdf", "-watermarked.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${pages.length} หน้า`)]),
-        button("ดาวน์โหลด", { icon: "download", onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages.length} หน้า`, `${pages.length} pages`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download", onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.progress(null);
-      st.err("ใส่ลายน้ำไม่สำเร็จ: " + e.message);
+      st.err(tr("ใส่ลายน้ำไม่สำเร็จ: ", "Could not add the watermark: ") + e.message);
     } finally { go.disabled = false; ws.setBusy(false); }
   }
   return ws.wrap;

@@ -2,12 +2,13 @@
 // ตรรกะงานเอกสารภาษาไทย — ไม่แตะ DOM ไม่ใช้ไลบรารีนอกแม้แต่ตัวเดียว
 // แยกไฟล์ไว้เพื่อทดสอบด้วย node ได้ตรง ๆ (tests/thai.test.mjs)
 // ─────────────────────────────────────────────────────────────────────────────
+import { tr } from "./i18n.js";
 
 /* ══ ส่วนที่ 1 · การเข้ารหัสอักขระ (encoding) ═══════════════════════════════ */
 
 export const ENC_LABEL = {
   "utf-8": "UTF-8",
-  "windows-874": "TIS-620 / Windows-874 (ไทยเก่า)",
+  "windows-874": tr("TIS-620 / Windows-874 (ไทยเก่า)", "TIS-620 / Windows-874 (legacy Thai)"),
   "utf-16le": "UTF-16 LE",
   "utf-16be": "UTF-16 BE",
   "latin1": "ISO-8859-1 (Latin-1)",
@@ -135,17 +136,17 @@ export function analyzeBytes(u8, sampleBytes = 65536) {
 
   let pickEnc, why;
   if (bom) {
-    pickEnc = bom; why = `ไฟล์มีเครื่องหมาย BOM ระบุว่าเป็น ${ENC_LABEL[bom]}`;
+    pickEnc = bom; why = tr(`ไฟล์มีเครื่องหมาย BOM ระบุว่าเป็น ${ENC_LABEL[bom]}`, `The file has a BOM marker identifying it as ${ENC_LABEL[bom]}`);
   } else {
     let nul = 0, nulOdd = 0;
     for (let i = 0; i < body.length; i++) if (body[i] === 0) { nul++; if (i % 2) nulOdd++; }
     if (body.length && nul / body.length > 0.1) {
       pickEnc = nulOdd * 2 > nul ? "utf-16le" : "utf-16be";
-      why = "พบไบต์ศูนย์แทรกทุกตัวอักษร = เป็นไฟล์ UTF-16";
+      why = tr("พบไบต์ศูนย์แทรกทุกตัวอักษร = เป็นไฟล์ UTF-16", "Zero bytes between every character = this is a UTF-16 file");
     } else if (isStrictUtf8(body)) {
-      pickEnc = "utf-8"; why = "ถอดแบบ UTF-8 เข้มงวดผ่านครบทุกไบต์";
+      pickEnc = "utf-8"; why = tr("ถอดแบบ UTF-8 เข้มงวดผ่านครบทุกไบต์", "Strict UTF-8 decoding passed for every byte");
     } else {
-      pickEnc = "windows-874"; why = "ถอดแบบ UTF-8 ไม่ผ่าน แต่ไบต์ตรงช่วงอักษรไทยของตาราง TIS-620";
+      pickEnc = "windows-874"; why = tr("ถอดแบบ UTF-8 ไม่ผ่าน แต่ไบต์ตรงช่วงอักษรไทยของตาราง TIS-620", "UTF-8 decoding failed, but the bytes match the Thai range of the TIS-620 table");
     }
   }
 
@@ -155,9 +156,10 @@ export function analyzeBytes(u8, sampleBytes = 65536) {
     const fixed = undoDoubleEncode(best.text);
     if (fixed) {
       best = { enc: "utf-8", undo: true, via: fixed.via, text: fixed.text,
-        label: `UTF-8 ที่เคยถูกอ่านผิดเป็น ${ENC_LABEL[fixed.via] || fixed.via}`,
+        label: tr(`UTF-8 ที่เคยถูกอ่านผิดเป็น ${ENC_LABEL[fixed.via] || fixed.via}`, `UTF-8, previously misread as ${ENC_LABEL[fixed.via] || fixed.via}`),
         ...scoreText(fixed.text) };
-      why = "ไฟล์เป็น UTF-8 ที่ถูกต้อง แต่ข้างในเป็นภาษาไทยที่เคยถูกอ่านผิดแล้วบันทึกซ้ำ";
+      why = tr("ไฟล์เป็น UTF-8 ที่ถูกต้อง แต่ข้างในเป็นภาษาไทยที่เคยถูกอ่านผิดแล้วบันทึกซ้ำ",
+              "The file is valid UTF-8, but the Thai text inside was misread once before and saved again");
       cands.unshift(best);
     }
   }
@@ -168,7 +170,7 @@ export function analyzeBytes(u8, sampleBytes = 65536) {
 // อ่านไฟล์ข้อความให้ออกโดยเดาการเข้ารหัสเอง (ใช้ร่วมกับ CSV ทุกเครื่องมือ)
 export function smartDecode(u8) {
   const a = analyzeBytes(u8);
-  if (!a.best) return { text: "", enc: "utf-8", undo: false, why: "ไฟล์ว่าง" };
+  if (!a.best) return { text: "", enc: "utf-8", undo: false, why: tr("ไฟล์ว่าง", "Empty file") };
   const full = decodeBytes(u8, a.best.enc);
   if (a.best.undo) {
     const fixed = undoDoubleEncode(full);
@@ -289,14 +291,14 @@ export function formatDate(p, fmt) {
 
 export function checkThaiId13(raw) {
   const s = thaiToArabicDigits(String(raw ?? "")).replace(/[\s\-.]/g, "");
-  if (!s) return { ok: false, empty: true, reason: "ไม่มีข้อมูล", digits: "" };
-  if (!/^\d+$/.test(s)) return { ok: false, reason: "มีตัวอักษรอื่นปนอยู่", digits: s };
-  if (s.length !== 13) return { ok: false, reason: `มี ${s.length} หลัก (ต้องมี 13 หลัก)`, digits: s };
+  if (!s) return { ok: false, empty: true, reason: tr("ไม่มีข้อมูล", "No data"), digits: "" };
+  if (!/^\d+$/.test(s)) return { ok: false, reason: tr("มีตัวอักษรอื่นปนอยู่", "Contains non-digit characters"), digits: s };
+  if (s.length !== 13) return { ok: false, reason: tr(`มี ${s.length} หลัก (ต้องมี 13 หลัก)`, `Has ${s.length} digits (needs 13)`), digits: s };
   let sum = 0;
   for (let i = 0; i < 12; i++) sum += +s[i] * (13 - i);
   const chk = (11 - (sum % 11)) % 10;
   if (chk !== +s[12])
-    return { ok: false, reason: `หลักสุดท้ายควรเป็น ${chk} แต่เป็น ${s[12]}`, digits: s, expect: chk };
+    return { ok: false, reason: tr(`หลักสุดท้ายควรเป็น ${chk} แต่เป็น ${s[12]}`, `Last digit should be ${chk} but is ${s[12]}`), digits: s, expect: chk };
   return { ok: true, digits: s };
 }
 

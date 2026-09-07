@@ -3,6 +3,7 @@
 import { el } from "../dom.js";
 import { toolShell, statusBar, button, field, select, dropzone, download, stripExt, fmtBytes } from "../ui.js";
 import { analyzeBytes, decodeBytes, undoDoubleEncode, ENC_LABEL } from "../thai.js";
+import { tr } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -11,27 +12,29 @@ export function mount(tool) {
 
   const bomChk = el("input", { type: "checkbox", checked: true });
   const bomBox = el("label", { class: "clean-check" }, [bomChk,
-    el("span", {}, "ใส่เครื่องหมาย BOM ให้ไฟล์ CSV (แนะนำ — เปิดใน Excel แล้วภาษาไทยไม่เพี้ยนซ้ำ)")]);
+    el("span", {}, tr("ใส่เครื่องหมาย BOM ให้ไฟล์ CSV (แนะนำ — เปิดใน Excel แล้วภาษาไทยไม่เพี้ยนซ้ำ)",
+                     "Add a BOM to the CSV (recommended — keeps Thai text intact when opened in Excel)"))]);
 
   const list = el("div", { class: "enc-list" });
   const actions = el("div", { class: "actions" });
 
   const dz = dropzone({
     accept: ".csv,.txt,.tsv,.json,.sql,.log,.md",
-    expect: ["csv", "txt", "tsv", "json", "sql", "log", "md"], expectLabel: "ไฟล์ข้อความหรือ CSV",
-    hint: "รับ .csv .txt .tsv .json — เลือกหลายไฟล์พร้อมกันได้",
+    expect: ["csv", "txt", "tsv", "json", "sql", "log", "md"], expectLabel: tr("ไฟล์ข้อความหรือ CSV", "a text or CSV file"),
+    hint: tr("รับ .csv .txt .tsv .json — เลือกหลายไฟล์พร้อมกันได้", "Accepts .csv .txt .tsv .json — pick multiple files at once"),
     onChange: scan,
   });
 
   body.append(dz.container, bomBox, st.node, list, actions);
   body.appendChild(el("div", { class: "note" },
-    "ไฟล์ Excel (.xlsx) ไม่ต้องใช้เครื่องมือนี้ — .xlsx เก็บข้อความเป็น UTF-8 เสมอ ปัญหาไทยเพี้ยนเกิดกับไฟล์ข้อความล้วนอย่าง CSV เท่านั้น"));
+    tr("ไฟล์ Excel (.xlsx) ไม่ต้องใช้เครื่องมือนี้ — .xlsx เก็บข้อความเป็น UTF-8 เสมอ ปัญหาไทยเพี้ยนเกิดกับไฟล์ข้อความล้วนอย่าง CSV เท่านั้น",
+       "Excel files (.xlsx) don't need this tool — .xlsx always stores text as UTF-8. Garbled Thai text only happens with plain text files like CSV.")));
 
   async function scan() {
     list.innerHTML = ""; actions.innerHTML = ""; st.clear();
     items = [];
     if (!dz.files.length) return;
-    st.info("กำลังตรวจการเข้ารหัส…");
+    st.info(tr("กำลังตรวจการเข้ารหัส…", "Checking encoding…"));
     for (const f of dz.files) {
       const u8 = new Uint8Array(await f.arrayBuffer());
       const analysis = analyzeBytes(u8);
@@ -39,8 +42,10 @@ export function mount(tool) {
     }
     render();
     const fixable = items.filter((it) => needsFix(it)).length;
-    if (!fixable) st.ok(`ตรวจ ${items.length} ไฟล์ — เป็น UTF-8 ที่ถูกต้องอยู่แล้วทุกไฟล์ ไม่ต้องซ่อม`);
-    else st.info(`ตรวจ ${items.length} ไฟล์ — ต้องซ่อม ${fixable} ไฟล์`);
+    if (!fixable) st.ok(tr(`ตรวจ ${items.length} ไฟล์ — เป็น UTF-8 ที่ถูกต้องอยู่แล้วทุกไฟล์ ไม่ต้องซ่อม`,
+                           `Checked ${items.length} files — all already valid UTF-8, nothing to fix`));
+    else st.info(tr(`ตรวจ ${items.length} ไฟล์ — ต้องซ่อม ${fixable} ไฟล์`,
+                    `Checked ${items.length} files — ${fixable} need fixing`));
   }
 
   const needsFix = (it) => {
@@ -52,7 +57,7 @@ export function mount(tool) {
     list.innerHTML = "";
     items.forEach((it, idx) => {
       const cands = it.analysis.candidates;
-      const sel = select(cands.map((c, i) => [String(i), c.label + (i === 0 ? "  ← ระบบเลือกให้" : "")]), "0");
+      const sel = select(cands.map((c, i) => [String(i), c.label + (i === 0 ? tr("  ← ระบบเลือกให้", "  ← auto-selected") : "")]), "0");
       sel.onchange = () => { it.choice = +sel.value; render(); };
       const cur = cands[it.choice];
       const sample = (cur?.text || "").split(/\r?\n/).filter((l) => l.trim()).slice(0, 3).join("\n");
@@ -63,21 +68,21 @@ export function mount(tool) {
           el("strong", {}, it.file.name),
           el("span", { class: "r-size" }, fmtBytes(it.file.size)),
           el("span", { class: "stat " + (needsFix(it) ? "warn" : "ok") },
-            needsFix(it) ? "ต้องซ่อม" : "ปกติดีอยู่แล้ว"),
+            needsFix(it) ? tr("ต้องซ่อม", "Needs fixing") : tr("ปกติดีอยู่แล้ว", "Already fine")),
         ]),
         el("div", { class: "note" }, it.analysis.why || ""),
-        field("อ่านไฟล์นี้เป็น", sel),
+        field(tr("อ่านไฟล์นี้เป็น", "Read this file as"), sel),
         el("div", { class: "enc-cmp" }, [
-          el("div", {}, [el("small", {}, "ถ้าเปิดตรง ๆ (แบบ UTF-8)"), el("pre", { class: "preview-text bad" }, before)]),
-          el("div", {}, [el("small", {}, "หลังซ่อมด้วยตัวเลือกด้านบน"), el("pre", { class: "preview-text good" }, sample)]),
+          el("div", {}, [el("small", {}, tr("ถ้าเปิดตรง ๆ (แบบ UTF-8)", "If opened as-is (UTF-8)")), el("pre", { class: "preview-text bad" }, before)]),
+          el("div", {}, [el("small", {}, tr("หลังซ่อมด้วยตัวเลือกด้านบน", "After fixing with the choice above")), el("pre", { class: "preview-text good" }, sample)]),
         ]),
       ]));
     });
     actions.innerHTML = "";
     if (!items.length) return;
     actions.append(
-      button("บันทึกเป็น UTF-8 ทุกไฟล์", { onclick: () => saveAll(false) }),
-      items.length > 1 ? button("ดาวน์โหลดรวมเป็น ZIP", { icon: "zip",  onclick: () => saveAll(true), ghost: true }) : null,
+      button(tr("บันทึกเป็น UTF-8 ทุกไฟล์", "Save all as UTF-8"), { onclick: () => saveAll(false) }),
+      items.length > 1 ? button(tr("ดาวน์โหลดรวมเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: () => saveAll(true), ghost: true }) : null,
     );
   }
 
@@ -99,10 +104,10 @@ export function mount(tool) {
       if (asZip) {
         const zip = new JSZip();
         made.forEach((m) => zip.file(m.name, m.blob));
-        download(await zip.generateAsync({ type: "blob" }), "ไฟล์ซ่อมแล้ว.zip");
+        download(await zip.generateAsync({ type: "blob" }), tr("ไฟล์ซ่อมแล้ว.zip", "fixed-files.zip"));
       } else made.forEach((m) => download(m.blob, m.name));
-      st.ok(`บันทึกแล้ว ${made.length} ไฟล์ (UTF-8)`);
-    } catch (e) { st.err("บันทึกไม่สำเร็จ — " + (e.message || e)); }
+      st.ok(tr(`บันทึกแล้ว ${made.length} ไฟล์ (UTF-8)`, `Saved ${made.length} files (UTF-8)`));
+    } catch (e) { st.err(tr("บันทึกไม่สำเร็จ — ", "Save failed — ") + (e.message || e)); }
   }
 
   return wrap;

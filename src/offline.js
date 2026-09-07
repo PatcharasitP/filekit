@@ -10,6 +10,7 @@ import { localLibFiles } from "./loader.js";
 import { TOOLS } from "./registry.js";
 import { el } from "./dom.js";
 import { uiIcon } from "./icons.js";
+import { tr } from "./i18n.js";
 
 const KEY = "filekit-offline-ready";
 const FONTS = ["vendor/fonts/Sarabun-Regular-th.ttf", "vendor/fonts/Sarabun-Bold-th.ttf",
@@ -19,7 +20,7 @@ const assetList = () => [
   ...localLibFiles(),
   ...FONTS,
   ...TOOLS.map((t) => `src/tools/${t.id}.js`),
-  "src/ui.js", "src/filetype.js", "src/pdfopen.js", "src/ocr.js",
+  "src/i18n.js", "src/ui.js", "src/filetype.js", "src/pdfopen.js", "src/ocr.js",
   "src/pdftext.js", "src/pptx.js", "src/thaifont.js", "assets/css/tool.css",
   "src/thai.js", "src/sheetpick.js", "src/search.js", "src/icons.js", "src/workspace.js", "src/docxmerge.js", "src/docxjoin.js",
   "src/docxreplace.js", "src/docxclean.js", "src/signpad.js",
@@ -61,32 +62,34 @@ export function offlineBar() {
   const render = () => {
     bar.innerHTML = "";
     if (isReady()) {
-      bar.appendChild(el("span", { class: "ob-ready" }, "เตรียมไฟล์ไว้ในเครื่องแล้ว — ใช้ได้ครบทุกเครื่องมือแม้ไม่มีเน็ต"));
-      bar.appendChild(el("button", { class: "ob-link", type: "button", onclick: run }, "โหลดใหม่อีกครั้ง"));
+      bar.appendChild(el("span", { class: "ob-ready" }, tr("เตรียมไฟล์ไว้ในเครื่องแล้ว — ใช้ได้ครบทุกเครื่องมือแม้ไม่มีเน็ต", "Files are ready on this device — every tool works even without internet")));
+      bar.appendChild(el("button", { class: "ob-link", type: "button", onclick: run }, tr("โหลดใหม่อีกครั้ง", "Refresh files")));
       return;
     }
     bar.appendChild(el("span", {}, [
-      el("strong", {}, [uiIcon("offline", "ob-ico"), "ใช้งานตอนไม่มีเน็ต"]),
+      el("strong", {}, [uiIcon("offline", "ob-ico"), tr("ใช้งานตอนไม่มีเน็ต", "Works without internet")]),
       el("span", { class: "ob-detail" },
-        " — ตอนนี้เครื่องมือที่เคยเปิดแล้วใช้ออฟไลน์ได้ กดปุ่มนี้เพื่อดึงทุกเครื่องมือมาเก็บไว้ล่วงหน้า (ประมาณ 5 MB)"),
+        tr(" — ตอนนี้เครื่องมือที่เคยเปิดแล้วใช้ออฟไลน์ได้ กดปุ่มนี้เพื่อดึงทุกเครื่องมือมาเก็บไว้ล่วงหน้า (ประมาณ 5 MB)",
+           " — right now only tools you've already opened work offline. Tap this to get every tool ready in advance (about 5 MB)")),
     ]));
-    bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, "เตรียมใช้งานออฟไลน์"));
+    bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, tr("เตรียมใช้งานออฟไลน์", "Get ready for offline use")));
   };
 
   async function run() {
     bar.innerHTML = "";
-    const label = el("span", {}, "กำลังเตรียมไฟล์…");
+    const label = el("span", {}, tr("กำลังเตรียมไฟล์…", "Preparing files…"));
     const fill = el("div", { class: "fill" });
     bar.append(label, el("div", { class: "progress show ob-progress" }, [fill]));
     const r = await prepareOffline(({ done, total }) => {
       fill.style.width = (done / total) * 100 + "%";
-      label.textContent = `กำลังเตรียมไฟล์… ${done}/${total}`;
+      label.textContent = tr(`กำลังเตรียมไฟล์… ${done}/${total}`, `Preparing files… ${done}/${total}`);
     });
     bar.innerHTML = "";
     if (r.failed) {
       bar.appendChild(el("span", { class: "ob-fail" },
-        `เตรียมไม่ครบ (${r.failed} จาก ${r.total} ไฟล์โหลดไม่ได้) — ลองใหม่เมื่อสัญญาณดีขึ้น`));
-      bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, "ลองใหม่"));
+        tr(`เตรียมไม่ครบ (${r.failed} จาก ${r.total} ไฟล์โหลดไม่ได้) — ลองใหม่เมื่อสัญญาณดีขึ้น`,
+           `Not all files were ready (${r.failed} of ${r.total} failed to load) — try again once your connection is better`)));
+      bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, tr("ลองใหม่", "Try again")));
     } else {
       render();
     }

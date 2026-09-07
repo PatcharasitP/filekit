@@ -1,5 +1,6 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser, segmented } from "../ui.js";
+import { tr } from "../i18n.js";
 
 const PAGE_SIZES = { auto: null, a4: [595.28, 841.89], letter: [612, 792] };
 
@@ -10,21 +11,21 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: "image/*", reorder: true,
-    hint: "รองรับ JPG · PNG · WEBP · ลากแถวเพื่อจัดลำดับหน้า",
-    expect: ["image"], expectLabel: "ไฟล์รูปภาพ",
+    hint: tr("รองรับ JPG · PNG · WEBP · ลากแถวเพื่อจัดลำดับหน้า", "Supports JPG · PNG · WEBP · Drag rows to arrange page order"),
+    expect: ["image"], expectLabel: tr("ไฟล์รูปภาพ", "Image file"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 
-  const sizeSel = select([["auto", "ตามขนาดรูป (ไม่มีขอบ)"], ["a4", "A4 แนวตั้ง"], ["letter", "Letter"]], "auto");
-  const orient = segmented([["portrait", "แนวตั้ง"], ["landscape", "แนวนอน"]], "portrait");
+  const sizeSel = select([["auto", tr("ตามขนาดรูป (ไม่มีขอบ)", "Fit image size (no border)")], ["a4", tr("A4 แนวตั้ง", "A4 portrait")], ["letter", "Letter"]], "auto");
+  const orient = segmented([["portrait", tr("แนวตั้ง", "Portrait")], ["landscape", tr("แนวนอน", "Landscape")]], "portrait");
   const margin = el("input", { type: "number", min: "0", max: "80", value: "24" });
-  const go = button("สร้างไฟล์ PDF", { onclick: run });
+  const go = button(tr("สร้างไฟล์ PDF", "Create PDF"), { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [
-      field("ขนาดหน้ากระดาษ", sizeSel),
-      field("แนวกระดาษ", orient, "ใช้เมื่อไม่ได้เลือก “ตามขนาดรูป”"),
-      field("ขอบกระดาษ (pt)", margin),
+      field(tr("ขนาดหน้ากระดาษ", "Page size"), sizeSel),
+      field(tr("แนวกระดาษ", "Page orientation"), orient, tr("ใช้เมื่อไม่ได้เลือก “ตามขนาดรูป”", "Used when “Fit image size” isn't selected")),
+      field(tr("ขอบกระดาษ (pt)", "Page margin (pt)"), margin),
     ]),
     el("div", { class: "actions" }, [go]), st.node, results);
 
@@ -44,10 +45,10 @@ export function mount(tool) {
 
   async function run() {
     const files = dz.files;
-    if (!files.length) return st.err("กรุณาเลือกรูปอย่างน้อย 1 ไฟล์");
+    if (!files.length) return st.err(tr("กรุณาเลือกรูปอย่างน้อย 1 ไฟล์", "Please choose at least 1 image"));
     results.innerHTML = "";
     go.disabled = true;
-    st.info("กำลังสร้าง PDF…");
+    st.info(tr("กำลังสร้าง PDF…", "Creating the PDF…"));
     try {
       const { PDFDocument } = PDFLib;
       const doc = await PDFDocument.create();
@@ -76,15 +77,15 @@ export function mount(tool) {
 
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(`สร้าง PDF ${files.length} หน้าเรียบร้อย`);
-      const name = stripExt(files[0].name) + "-รูปภาพ.pdf";
+      st.ok(tr(`สร้าง PDF ${files.length} หน้าเรียบร้อย`, `Done — created a ${files.length}-page PDF`));
+      const name = stripExt(files[0].name) + tr("-รูปภาพ.pdf", "-images.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${files.length} หน้า`)]),
-        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${files.length} หน้า`, `${files.length} pages`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.progress(null);
-      st.err("สร้าง PDF ไม่สำเร็จ: " + e.message);
+      st.err(tr("สร้าง PDF ไม่สำเร็จ: ", "Could not create PDF: ") + e.message);
     } finally {
       go.disabled = false;
     }

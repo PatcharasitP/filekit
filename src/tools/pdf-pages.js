@@ -2,6 +2,7 @@ import { loadPdfLib, ENCRYPTED_WARNING, openPdf, passwordBox } from "../pdfopen.
 import { el, dropzone, statusBar, button, field, download, stripExt, parsePages, yieldToBrowser } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
+import { tr } from "../i18n.js";
 
 // สไตล์เสริมเฉพาะหน้านี้ — ห้ามแก้ assets/css/tool.css จึงฝังไว้ในโมดูลแทน
 const STYLE = `
@@ -17,14 +18,14 @@ export function mount(tool) {
   const pagesGrid = el("div", { class: "pages" });
   const extra = el("div", {}); // ที่อยู่กล่องขอรหัสผ่านไฟล์ล็อก
   const results = el("div", { class: "results" });
-  const summary = el("div", { class: "pp-stats" }, "ยังไม่ได้เลือกไฟล์");
+  const summary = el("div", { class: "pp-stats" }, tr("ยังไม่ได้เลือกไฟล์", "No file chosen yet"));
   let file = null;
   let items = []; // {index, rotate, dropped, thumb}
   let selected = null; // อ้างถึงสมาชิกใน items ที่กำลังเลือกอยู่ (ไม่ใช่ index กันหลุดตอนลากสลับ)
 
   const dz = dropzone({
-    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
-    accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
+    expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
+    accept: "application/pdf,.pdf", multiple: false, hint: tr("ครั้งละ 1 ไฟล์", "One file at a time"),
     onChange: (f) => {
       file = f[0] || null;
       results.innerHTML = "";
@@ -37,28 +38,29 @@ export function mount(tool) {
   const leftNode = el("div", { class: "pp-left" }, [dz.container, extra, summary]);
 
   // ── แถบเครื่องมือลอย: ทำงานกับหน้าที่เลือกอยู่ ──────────────────────
-  const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: "หมุนซ้ายหน้าที่เลือก", onclick: () => rotateSelected(270) });
-  const rotateRBtn = button("", { icon: "rotateR", ghost: true, label: "หมุนขวาหน้าที่เลือก", onclick: () => rotateSelected(90) });
-  const toggleBtn = button("", { icon: "trash", ghost: true, label: "ลบ/เอากลับหน้าที่เลือก", onclick: toggleSelected });
-  const resetBtn = button("รีเซ็ตทั้งหมด", { icon: "undo", ghost: true, onclick: () => { if (file) loadPreview(); } });
+  const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: tr("หมุนซ้ายหน้าที่เลือก", "Rotate the selected page left"), onclick: () => rotateSelected(270) });
+  const rotateRBtn = button("", { icon: "rotateR", ghost: true, label: tr("หมุนขวาหน้าที่เลือก", "Rotate the selected page right"), onclick: () => rotateSelected(90) });
+  const toggleBtn = button("", { icon: "trash", ghost: true, label: tr("ลบ/เอากลับหน้าที่เลือก", "Remove/restore the selected page"), onclick: toggleSelected });
+  const resetBtn = button(tr("รีเซ็ตทั้งหมด", "Reset all"), { icon: "undo", ghost: true, onclick: () => { if (file) loadPreview(); } });
   [rotateLBtn, rotateRBtn, toggleBtn, resetBtn].forEach((b) => { b.disabled = true; });
 
   // ── แผงขวา: เก็บเฉพาะบางหน้าแบบพิมพ์ช่วง ────────────────────────────
-  const rangeInput = el("input", { type: "text", placeholder: "เช่น 1-3,5,8-", disabled: true });
-  const rangeBtn = button("ใช้ช่วงนี้", { ghost: true, onclick: applyRange });
+  const rangeInput = el("input", { type: "text", placeholder: tr("เช่น 1-3,5,8-", "e.g. 1-3,5,8-"), disabled: true });
+  const rangeBtn = button(tr("ใช้ช่วงนี้", "Apply this range"), { ghost: true, onclick: applyRange });
   rangeBtn.disabled = true;
   const rightNode = el("div", { class: "pp-right" }, [
-    field("เก็บเฉพาะหน้า", rangeInput, "อ้างอิงตามลำดับที่แสดงอยู่ตอนนี้ — หน้านอกช่วงจะถูกทำเครื่องหมายลบให้อัตโนมัติ"),
+    field(tr("เก็บเฉพาะหน้า", "Keep only these pages"), rangeInput, tr("อ้างอิงตามลำดับที่แสดงอยู่ตอนนี้ — หน้านอกช่วงจะถูกทำเครื่องหมายลบให้อัตโนมัติ",
+      "Based on the order shown now — pages outside the range are marked for removal automatically")),
     rangeBtn,
   ]);
 
-  const saveBtn = button("บันทึกเป็นไฟล์ใหม่", { onclick: save });
+  const saveBtn = button(tr("บันทึกเป็นไฟล์ใหม่", "Save as a new file"), { onclick: save });
   saveBtn.disabled = true;
 
   const ws = workspace(tool, {
-    left: { title: "ไฟล์ PDF", node: leftNode },
-    center: { node: pagesGrid, empty: "ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างหน้า" },
-    right: { title: "ตัวเลือก", node: rightNode },
+    left: { title: tr("ไฟล์ PDF", "PDF file"), node: leftNode },
+    center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างหน้า", "No file yet — choose a PDF file to preview its pages") },
+    right: { title: tr("ตัวเลือก", "Options"), node: rightNode },
     toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }), resetBtn],
     footer: [st.node, saveBtn],
   });
@@ -66,7 +68,8 @@ export function mount(tool) {
   ws.body.append(
     results,
     el("div", { class: "note" },
-      "คลิกที่หน้าเพื่อเลือก แล้วใช้แถบเครื่องมือด้านบนหมุน/ลบ/เอากลับ — หรือกดปุ่มเล็กบนการ์ดแต่ละใบได้เหมือนเดิม · ลากการ์ดเพื่อสลับลำดับ · พิมพ์ช่วงหน้าในแผงขวาเพื่อเลือกเก็บเฉพาะบางหน้าอย่างรวดเร็ว"),
+      tr("คลิกที่หน้าเพื่อเลือก แล้วใช้แถบเครื่องมือด้านบนหมุน/ลบ/เอากลับ — หรือกดปุ่มเล็กบนการ์ดแต่ละใบได้เหมือนเดิม · ลากการ์ดเพื่อสลับลำดับ · พิมพ์ช่วงหน้าในแผงขวาเพื่อเลือกเก็บเฉพาะบางหน้าอย่างรวดเร็ว",
+         "Click a page to select it, then use the toolbar above to rotate/remove/restore — or use the small buttons on each card as before · drag cards to reorder · type a page range on the right to quickly keep only certain pages")),
   );
   ws.showCanvas(false);
 
@@ -78,12 +81,12 @@ export function mount(tool) {
   }
 
   function updateSummary() {
-    if (!items.length) { summary.textContent = "ยังไม่ได้เลือกไฟล์"; return; }
+    if (!items.length) { summary.textContent = tr("ยังไม่ได้เลือกไฟล์", "No file chosen yet"); return; }
     const keep = items.filter((i) => !i.dropped).length;
     summary.innerHTML = "";
     summary.append(el("div", {}, [
-      "ทั้งหมด ", el("b", {}, String(items.length)), " หน้า · เก็บ ",
-      el("b", {}, String(keep)), " · ลบ ", el("b", {}, String(items.length - keep)),
+      tr("ทั้งหมด ", "Total "), el("b", {}, String(items.length)), tr(" หน้า · เก็บ ", " pages · keep "),
+      el("b", {}, String(keep)), tr(" · ลบ ", " · remove "), el("b", {}, String(items.length - keep)),
     ]));
   }
 
@@ -95,7 +98,7 @@ export function mount(tool) {
     setLoaded(false);
     ws.showCanvas(false);
     updateSummary();
-    st.info("กำลังสร้างภาพตัวอย่าง…");
+    st.info(tr("กำลังสร้างภาพตัวอย่าง…", "Generating page previews…"));
     try {
       const pdf = await openPdf(file, passwordBox(extra));
       ws.setBusy(true);
@@ -115,14 +118,14 @@ export function mount(tool) {
       pdf.destroy();
       ws.setBusy(false);
       st.progress(null);
-      st.ok(`โหลด ${items.length} หน้าเรียบร้อย — จัดเรียงได้เลย`);
+      st.ok(tr(`โหลด ${items.length} หน้าเรียบร้อย — จัดเรียงได้เลย`, `Loaded ${items.length} pages — ready to arrange`));
       setLoaded(true);
       ws.showCanvas(true);
       render();
     } catch (e) {
       ws.setBusy(false);
       st.progress(null);
-      st.err("เปิดไฟล์ไม่สำเร็จ: " + e.message);
+      st.err(tr("เปิดไฟล์ไม่สำเร็จ: ", "Could not open the file: ") + e.message);
       updateSummary();
     }
   }
@@ -134,23 +137,24 @@ export function mount(tool) {
         class: "pg" + (it.dropped ? " dropped" : "") + (it === selected ? " selected" : ""),
         draggable: "true", "data-i": i, tabindex: "0", role: "button",
         "aria-pressed": it === selected ? "true" : "false",
-        "aria-label": `หน้า ${i + 1}${it.dropped ? " (ทำเครื่องหมายลบไว้)" : ""}`,
+        "aria-label": tr(`หน้า ${i + 1}${it.dropped ? " (ทำเครื่องหมายลบไว้)" : ""}`, `Page ${i + 1}${it.dropped ? " (marked for removal)" : ""}`),
         onclick: () => { selectItem(it === selected ? null : it); },
         onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectItem(it === selected ? null : it); } },
       }, [
-        el("img", { src: it.thumb, alt: `หน้า ${it.index + 1}`, loading: "lazy",
+        el("img", { src: it.thumb, alt: tr(`หน้า ${it.index + 1}`, `Page ${it.index + 1}`), loading: "lazy",
           style: { transform: `rotate(${it.rotate}deg)` } }),
         el("span", { class: "num" }, String(i + 1)),
         el("div", { class: "tools" }, [
-          el("button", { type: "button", title: "หมุนซ้าย", onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 270) % 360; render(); } }, [uiIcon("rotateL", "pg-ico")]),
-          el("button", { type: "button", title: "หมุนขวา", onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, [uiIcon("rotateR", "pg-ico")]),
-          el("button", { type: "button", title: it.dropped ? "เอากลับ" : "ลบหน้านี้", onclick: (e) => { e.stopPropagation(); it.dropped = !it.dropped; render(); } }, [uiIcon(it.dropped ? "undo" : "trash", "pg-ico")]),
+          el("button", { type: "button", title: tr("หมุนซ้าย", "Rotate left"), onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 270) % 360; render(); } }, [uiIcon("rotateL", "pg-ico")]),
+          el("button", { type: "button", title: tr("หมุนขวา", "Rotate right"), onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, [uiIcon("rotateR", "pg-ico")]),
+          el("button", { type: "button", title: it.dropped ? tr("เอากลับ", "Restore") : tr("ลบหน้านี้", "Remove this page"), onclick: (e) => { e.stopPropagation(); it.dropped = !it.dropped; render(); } }, [uiIcon(it.dropped ? "undo" : "trash", "pg-ico")]),
         ]),
       ]);
       pagesGrid.appendChild(card);
     });
     updateSummary();
-    st.info(`เหลือ ${items.filter((i) => !i.dropped).length} หน้าจากทั้งหมด ${items.length} หน้า`);
+    st.info(tr(`เหลือ ${items.filter((i) => !i.dropped).length} หน้าจากทั้งหมด ${items.length} หน้า`,
+                `${items.filter((i) => !i.dropped).length} of ${items.length} pages left`));
     syncToolbar();
   }
 
@@ -177,7 +181,7 @@ export function mount(tool) {
     rotateRBtn.disabled = !has;
     toggleBtn.disabled = !has;
     toggleBtn.replaceChildren(uiIcon(has && selected.dropped ? "undo" : "trash", "btn-ico"));
-    toggleBtn.title = has && selected.dropped ? "เอากลับ" : "ลบหน้านี้";
+    toggleBtn.title = has && selected.dropped ? tr("เอากลับ", "Restore") : tr("ลบหน้านี้", "Remove this page");
   }
 
   function applyRange() {
@@ -185,12 +189,13 @@ export function mount(tool) {
     let pages;
     try { pages = parsePages(rangeInput.value, items.length); }
     catch (e) { st.err(e.message); return; }
-    if (!pages.length) { st.err("ไม่พบเลขหน้าที่ถูกต้องในช่วงที่พิมพ์"); return; }
+    if (!pages.length) { st.err(tr("ไม่พบเลขหน้าที่ถูกต้องในช่วงที่พิมพ์", "No valid page numbers found in what you typed")); return; }
     const keepSet = new Set(pages.map((p) => p - 1));
     items.forEach((it, i) => { it.dropped = !keepSet.has(i); });
     selected = null;
     render();
-    st.ok(`ตั้งค่าเก็บเฉพาะหน้า ${rangeInput.value} แล้ว (${pages.length} หน้า) — ตรวจสอบก่อนบันทึก`);
+    st.ok(tr(`ตั้งค่าเก็บเฉพาะหน้า ${rangeInput.value} แล้ว (${pages.length} หน้า) — ตรวจสอบก่อนบันทึก`,
+             `Set to keep pages ${rangeInput.value} (${pages.length} pages) — please review before saving`));
   }
 
   let dragging = null;
@@ -220,12 +225,12 @@ export function mount(tool) {
 
   async function save() {
     const keep = items.filter((i) => !i.dropped);
-    if (!file) return st.err("กรุณาเลือกไฟล์ก่อน");
-    if (!keep.length) return st.err("ต้องเหลืออย่างน้อย 1 หน้า");
+    if (!file) return st.err(tr("กรุณาเลือกไฟล์ก่อน", "Please choose a file first"));
+    if (!keep.length) return st.err(tr("ต้องเหลืออย่างน้อย 1 หน้า", "At least 1 page must remain"));
     results.innerHTML = "";
     saveBtn.disabled = true;
     ws.setBusy(true);
-    st.info("กำลังบันทึก…");
+    st.info(tr("กำลังบันทึก…", "Saving…"));
     try {
       const { PDFDocument, degrees } = PDFLib;
       const { doc: src, encrypted } = await loadPdfLib(file);
@@ -239,15 +244,15 @@ export function mount(tool) {
         out.addPage(page);
       });
       const blob = new Blob([await out.save()], { type: "application/pdf" });
-      st.ok(`บันทึกแล้ว ${keep.length} หน้า`);
+      st.ok(tr(`บันทึกแล้ว ${keep.length} หน้า`, `Saved — ${keep.length} pages`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
-      const name = stripExt(file.name) + "-จัดหน้าใหม่.pdf";
+      const name = stripExt(file.name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${keep.length} หน้า`)]),
-        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${keep.length} หน้า`, `${keep.length} pages`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
-      st.err("บันทึกไม่สำเร็จ: " + e.message);
+      st.err(tr("บันทึกไม่สำเร็จ: ", "Could not save: ") + e.message);
     } finally {
       ws.setBusy(false);
       saveBtn.disabled = false;

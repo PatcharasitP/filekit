@@ -10,6 +10,7 @@
 //     ต้องตัดทิ้งเพื่อไม่ให้ขึ้น section ใหม่ที่ทำให้หน้าเพี้ยน (คงของไฟล์แรกไว้)
 
 import { loadLibs } from "./loader.js";
+import { tr } from "./i18n.js";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -24,14 +25,14 @@ const PAGE_BREAK =
  * คืน { blob, parts } — parts บอกว่าดึงเนื้อหาจากไฟล์ไหนมากี่ย่อหน้า
  */
 export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
-  if (files.length < 2) throw new Error("ต้องเลือกอย่างน้อย 2 ไฟล์จึงจะรวมได้");
+  if (files.length < 2) throw new Error(tr("ต้องเลือกอย่างน้อย 2 ไฟล์จึงจะรวมได้", "Choose at least 2 files to combine them"));
   const [JSZipLib] = await loadLibs("jszip");
 
   const base = await JSZipLib.loadAsync(await files[0].arrayBuffer());
   const baseDocXml = await base.file("word/document.xml").async("string");
   const baseDoc = new DOMParser().parseFromString(baseDocXml, "application/xml");
   const body = baseDoc.getElementsByTagNameNS(W, "body")[0];
-  if (!body) throw new Error(`เปิดไฟล์ “${files[0].name}” ไม่ได้ — อาจไม่ใช่ .docx ที่ถูกต้อง`);
+  if (!body) throw new Error(tr(`เปิดไฟล์ “${files[0].name}” ไม่ได้ — อาจไม่ใช่ .docx ที่ถูกต้อง`, `Could not open "${files[0].name}" — it may not be a valid .docx`));
 
   const baseRelsXml = base.file("word/_rels/document.xml.rels")
     ? await base.file("word/_rels/document.xml.rels").async("string")
@@ -47,11 +48,11 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
     onProgress?.({ done: i, total: files.length - 1 });
     const zip = await JSZipLib.loadAsync(await files[i].arrayBuffer());
     const docFile = zip.file("word/document.xml");
-    if (!docFile) throw new Error(`เปิดไฟล์ “${files[i].name}” ไม่ได้ — อาจไม่ใช่ .docx ที่ถูกต้อง`);
+    if (!docFile) throw new Error(tr(`เปิดไฟล์ “${files[i].name}” ไม่ได้ — อาจไม่ใช่ .docx ที่ถูกต้อง`, `Could not open "${files[i].name}" — it may not be a valid .docx`));
 
     const doc = new DOMParser().parseFromString(await docFile.async("string"), "application/xml");
     const srcBody = doc.getElementsByTagNameNS(W, "body")[0];
-    if (!srcBody) throw new Error(`ไฟล์ “${files[i].name}” ไม่มีเนื้อหา`);
+    if (!srcBody) throw new Error(tr(`ไฟล์ “${files[i].name}” ไม่มีเนื้อหา`, `"${files[i].name}" has no content`));
 
     // สร้างตารางแปลงรหัสความสัมพันธ์เก่า → ใหม่ พร้อมคัดลอกไฟล์สื่อที่เกี่ยวข้อง
     const map = new Map();

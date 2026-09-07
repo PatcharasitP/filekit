@@ -14,6 +14,7 @@
 //     FileKit โหลดไว้แล้ว ทำให้ไฟล์เหลือ 33 KB (gzip) จาก 85 KB
 
 import { loadLibs } from "./loader.js";
+import { tr } from "./i18n.js";
 
 let libPromise = null;
 async function lib() {
@@ -44,7 +45,8 @@ export async function readPlaceholders(file) {
   try {
     tags = await h.parseTags(file);
   } catch (e) {
-    throw new Error("อ่านเทมเพลตไม่สำเร็จ — ตรวจว่าเป็นไฟล์ .docx จริง และตัวยึดปิดครบทุกอัน (" + e.message + ")");
+    throw new Error(tr("อ่านเทมเพลตไม่สำเร็จ — ตรวจว่าเป็นไฟล์ .docx จริง และตัวยึดปิดครบทุกอัน (" + e.message + ")",
+      "Could not read the template — check that it's really a .docx and every placeholder is closed (" + e.message + ")"));
   }
   const loops = new Set(), fields = new Set();
   for (const t of tags) {
@@ -69,7 +71,7 @@ export async function mergeAll(file, records, { nameOf, onProgress } = {}) {
   const out = [];
   for (let i = 0; i < records.length; i++) {
     const blob = await h.process(file, records[i]);
-    out.push({ name: nameOf ? nameOf(records[i], i) : `เอกสาร-${i + 1}.docx`, blob });
+    out.push({ name: nameOf ? nameOf(records[i], i) : tr(`เอกสาร-${i + 1}.docx`, `Document-${i + 1}.docx`), blob });
     onProgress?.({ done: i + 1, total: records.length });
   }
   return out;
@@ -104,13 +106,32 @@ export function asBoolean(v) {
  * · สร้างตัวกลับด้าน "ไม่<ชื่อ>"ให้อัตโนมัติ เพราะไลบรารีไม่รองรับ {{^เงื่อนไข}}
  *   ผู้ใช้จึงเขียน {{#ไม่ผ่านทดลองงาน}}…{{/ไม่ผ่านทดลองงาน}} ได้เลยโดยไม่ต้องเพิ่มคอลัมน์
  */
+/**
+ * ชื่อของ "เงื่อนไขตรงข้าม" — ไทยใช้คำนำหน้า "ไม่" อังกฤษใช้ "not"
+ *
+ * ‼️ ต้องรองรับทั้งสองภาษาเสมอ ห้ามผูกกับภาษาที่ผู้ใช้เลือกบนหน้าจอ
+ *    เพราะชื่อคอลัมน์มาจากไฟล์ Excel ของผู้ใช้ จะเป็นภาษาอะไรก็ได้ ไม่เกี่ยวกับ UI
+ * ‼️ ฝั่งอังกฤษ "not" ต้องตามด้วยตัวพิมพ์ใหญ่หรือตัวคั่นเท่านั้น
+ *    ไม่งั้นคอลัมน์ชื่อ "notes" จะถูกตีความว่าเป็นเงื่อนไขตรงข้ามของ "es"
+ * ‼️ ตรรกะนี้ต้องตรงกับที่ src/tools/word-mailmerge.js ใช้ตอนจับคู่คอลัมน์ — จึง export ให้ใช้ร่วมกัน
+ */
+const NEG_EN = /^not(?=[A-Z])|^not[ _-]/;
+const NEG_TH = "ไม่";              // ‼️ ยาว 3 หน่วยใน JS ไม่ใช่ 2 (ไ + ม + ไม้เอก) ห้ามใส่เลขตรง ๆ
+export const isNegName = (k) => k.startsWith(NEG_TH) || NEG_EN.test(k);
+export function negName(k) {
+  if (k.startsWith(NEG_TH)) return k.slice(NEG_TH.length);
+  const m = k.match(NEG_EN);
+  if (m) return k.slice(m[0].length);
+  return /^[\u0E00-\u0E7F]/.test(k) ? NEG_TH + k : "not" + k.charAt(0).toUpperCase() + k.slice(1);
+}
+
 export function normalizeRecord(o) {
   const out = { ...o };
   for (const [k, v] of Object.entries(o)) {
     const b = asBoolean(v);
     if (b === null) continue;
     out[k] = b;
-    const negKey = k.startsWith("ไม่") ? k.slice(2) : "ไม่" + k;
+    const negKey = negName(k);
     if (!(negKey in out)) out[negKey] = !b;
   }
   return out;

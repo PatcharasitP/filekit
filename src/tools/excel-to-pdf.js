@@ -2,6 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser } from "../ui.js";
 import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
 import { smartDecode } from "../thai.js";
+import { tr } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -12,27 +13,28 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv", multiple: false,
-    hint: "รองรับ .xlsx · .xls · .csv",
-    expect: ["xlsx", "csv"], expectLabel: "ไฟล์ Excel หรือ CSV",
+    hint: tr("รองรับ .xlsx · .xls · .csv", "Supports .xlsx · .xls · .csv"),
+    expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV file"),
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
 
-  const orient = select([["landscape", "แนวนอน (เหมาะกับตารางกว้าง)"], ["portrait", "แนวตั้ง"]], "landscape");
-  const headerRow = select([["yes", "แถวแรกเป็นหัวตาราง"], ["no", "ไม่มีหัวตาราง"]], "yes");
-  const fontSize = select([["8", "8 pt (ตารางกว้างมาก)"], ["9", "9 pt"], ["10", "10 pt"], ["12", "12 pt"]], "9");
-  const go = button("แปลงเป็น PDF", { onclick: run });
+  const orient = select([["landscape", tr("แนวนอน (เหมาะกับตารางกว้าง)", "Landscape (good for wide tables)")], ["portrait", tr("แนวตั้ง", "Portrait")]], "landscape");
+  const headerRow = select([["yes", tr("แถวแรกเป็นหัวตาราง", "First row is the header")], ["no", tr("ไม่มีหัวตาราง", "No header row")]], "yes");
+  const fontSize = select([["8", tr("8 pt (ตารางกว้างมาก)", "8 pt (very wide tables)")], ["9", "9 pt"], ["10", "10 pt"], ["12", "12 pt"]], "9");
+  const go = button(tr("แปลงเป็น PDF", "Convert to PDF"), { onclick: run });
 
   body.append(dz.container,
-    el("div", { class: "row" }, [field("แนวกระดาษ", orient), field("หัวตาราง", headerRow), field("ขนาดตัวอักษร", fontSize)]),
+    el("div", { class: "row" }, [field(tr("แนวกระดาษ", "Page orientation"), orient), field(tr("หัวตาราง", "Table header"), headerRow), field(tr("ขนาดตัวอักษร", "Font size"), fontSize)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    "แต่ละชีทจะขึ้นหน้าใหม่พร้อมชื่อชีทกำกับ · รองรับข้อความไทย · สูตรจะถูกแปลงเป็นค่าผลลัพธ์ล่าสุดที่บันทึกไว้ในไฟล์"));
+    tr("แต่ละชีทจะขึ้นหน้าใหม่พร้อมชื่อชีทกำกับ · รองรับข้อความไทย · สูตรจะถูกแปลงเป็นค่าผลลัพธ์ล่าสุดที่บันทึกไว้ในไฟล์",
+       "Each sheet starts on a new page labeled with its sheet name · Thai text is supported · Formulas are converted to the last saved result values")));
 
   async function run() {
-    if (!file) return st.err("กรุณาเลือกไฟล์ Excel ก่อน");
+    if (!file) return st.err(tr("กรุณาเลือกไฟล์ Excel ก่อน", "Please choose an Excel file first"));
     results.innerHTML = "";
     go.disabled = true;
-    st.info("กำลังอ่านไฟล์…");
+    st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
     try {
       // CSV ที่ไม่ใช่ UTF-8 (ส่งออกจากระบบเก่า) ต้องเดาการเข้ารหัสก่อน ไม่งั้นไทยเพี้ยนทั้งไฟล์
       const buf = new Uint8Array(await file.arrayBuffer());
@@ -67,22 +69,23 @@ export function mount(tool) {
           headStyles: { font: THAI_FONT, fontStyle: "bold", fillColor: [108, 140, 255], textColor: 255 },
           alternateRowStyles: { fillColor: [246, 248, 255] },
         });
-        st.progress(((s + 1) / wb.SheetNames.length) * 100, `(${s + 1}/${wb.SheetNames.length} ชีท)`);
+        st.progress(((s + 1) / wb.SheetNames.length) * 100, tr(`(${s + 1}/${wb.SheetNames.length} ชีท)`, `(${s + 1}/${wb.SheetNames.length} sheets)`));
         await yieldToBrowser();
       }
-      if (first) throw new Error("ไม่พบข้อมูลในไฟล์นี้");
+      if (first) throw new Error(tr("ไม่พบข้อมูลในไฟล์นี้", "No data was found in this file"));
 
       const blob = doc.output("blob");
       st.progress(null);
-      st.ok(`แปลงสำเร็จ ${doc.getNumberOfPages()} หน้า · ${totalRows.toLocaleString("th-TH")} แถว`);
+      st.ok(tr(`แปลงสำเร็จ ${doc.getNumberOfPages()} หน้า · ${totalRows.toLocaleString("th-TH")} แถว`,
+               `Done — ${doc.getNumberOfPages()} pages · ${totalRows.toLocaleString("en-US")} rows`));
       const outName = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, `${doc.getNumberOfPages()} หน้า`)]),
-        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, outName) }),
+        el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, tr(`${doc.getNumberOfPages()} หน้า`, `${doc.getNumberOfPages()} pages`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, outName) }),
       ]));
     } catch (e) {
       st.progress(null);
-      st.err("แปลงไม่สำเร็จ: " + e.message);
+      st.err(tr("แปลงไม่สำเร็จ: ", "Could not convert: ") + e.message);
     } finally { go.disabled = false; }
   }
   return wrap;

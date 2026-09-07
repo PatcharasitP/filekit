@@ -3,6 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
 import { pageLines, guessColumns, rowToCells } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
+import { tr } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -13,30 +14,32 @@ export function mount(tool) {
   let file = null;
 
   const dz = dropzone({
-    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
-    accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
+    expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF file"),
+    accept: "application/pdf,.pdf", multiple: false, hint: tr("ครั้งละ 1 ไฟล์", "One file at a time"),
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; extra.innerHTML = ""; preview.hidden = true; },
   });
 
-  const sheetMode = select([["per-page", "แยกชีทตามหน้า"], ["single", "รวมทุกหน้าในชีทเดียว"]], "per-page");
-  const strict = select([["3", "ปกติ (คอลัมน์ต้องซ้ำ ≥3 บรรทัด)"], ["2", "ยืดหยุ่น (≥2 บรรทัด)"], ["5", "เข้มงวด (≥5 บรรทัด)"]], "3");
-  const go = button("แปลงเป็น Excel", { onclick: run });
+  const sheetMode = select([["per-page", tr("แยกชีทตามหน้า", "Separate sheet per page")], ["single", tr("รวมทุกหน้าในชีทเดียว", "Combine all pages into one sheet")]], "per-page");
+  const strict = select([["3", tr("ปกติ (คอลัมน์ต้องซ้ำ ≥3 บรรทัด)", "Normal (columns must repeat ≥3 lines)")], ["2", tr("ยืดหยุ่น (≥2 บรรทัด)", "Flexible (≥2 lines)")], ["5", tr("เข้มงวด (≥5 บรรทัด)", "Strict (≥5 lines)")]], "3");
+  const go = button(tr("แปลงเป็น Excel", "Convert to Excel"), { onclick: run });
 
   body.append(dz.container,
-    el("div", { class: "row" }, [field("การจัดชีท", sheetMode), field("ความเข้มในการจับคอลัมน์", strict, "ถ้าคอลัมน์เพี้ยน ลองสลับค่านี้")]),
+    el("div", { class: "row" }, [field(tr("การจัดชีท", "Sheet layout"), sheetMode), field(tr("ความเข้มในการจับคอลัมน์", "Column-detection strictness"), strict, tr("ถ้าคอลัมน์เพี้ยน ลองสลับค่านี้", "If columns look wrong, try changing this"))]),
     el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
-    "ระบบเดาขอบคอลัมน์จากตำแหน่งข้อความจริงในไฟล์ · ตารางที่มีเซลล์ผสาน (merge) หรือข้อความหลายบรรทัดในเซลล์เดียว " +
-    "อาจต้องจัดเพิ่มใน Excel เล็กน้อย · ใช้กับ PDF ที่มีชั้นข้อความเท่านั้น (ไฟล์สแกนให้ผ่าน OCR ก่อน)"));
+    tr("ระบบเดาขอบคอลัมน์จากตำแหน่งข้อความจริงในไฟล์ · ตารางที่มีเซลล์ผสาน (merge) หรือข้อความหลายบรรทัดในเซลล์เดียว " +
+       "อาจต้องจัดเพิ่มใน Excel เล็กน้อย · ใช้กับ PDF ที่มีชั้นข้อความเท่านั้น (ไฟล์สแกนให้ผ่าน OCR ก่อน)",
+       "We guess column edges from the real text positions in the file · Tables with merged cells or multi-line text in one cell " +
+       "may need a little extra tidying in Excel · Works with PDFs that have a text layer only (run scanned files through OCR first)")));
 
   async function runOcr(pdf) {
     extra.innerHTML = "";
     go.disabled = true;
-    st.info("กำลังเตรียมตัวอ่าน OCR…");
+    st.info(tr("กำลังเตรียมตัวอ่าน OCR…", "Getting OCR ready…"));
     try {
       const pages = await ocrPdf(pdf, {
         onProgress: (p) => {
-          if (p.phase === "page") st.info(`กำลังอ่านหน้า ${p.current}/${p.total} ด้วย OCR…`);
+          if (p.phase === "page") st.info(tr(`กำลังอ่านหน้า ${p.current}/${p.total} ด้วย OCR…`, `Reading page ${p.current}/${p.total} with OCR…`));
           else if (p.phase === "read") st.progress(p.ratio * 100);
         },
       });
@@ -46,47 +49,50 @@ export function mount(tool) {
         const aoa = pg.lines.map((l) => l.split(/\s{2,}|\t+/).map((c) => c.trim()));
         if (!aoa.length) continue;
         rows += aoa.length;
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), `หน้า ${pg.page}`);
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), tr(`หน้า ${pg.page}`, `Page ${pg.page}`));
       }
-      if (!wb.SheetNames.length) throw new Error("อ่านไม่พบข้อความในไฟล์นี้เลย");
+      if (!wb.SheetNames.length) throw new Error(tr("อ่านไม่พบข้อความในไฟล์นี้เลย", "No text was found in this file"));
       const blob = new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })],
         { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
-      st.ok(`อ่านด้วย OCR สำเร็จ ${rows.toLocaleString("th-TH")} แถว · ${wb.SheetNames.length} ชีท`);
+      st.ok(tr(`อ่านด้วย OCR สำเร็จ ${rows.toLocaleString("th-TH")} แถว · ${wb.SheetNames.length} ชีท`,
+               `OCR done — ${rows.toLocaleString("en-US")} rows · ${wb.SheetNames.length} sheets`));
       const name = stripExt(file.name) + ".xlsx";
       results.innerHTML = "";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, "จาก OCR — ควรตรวจทานคอลัมน์")]),
-        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr("จาก OCR — ควรตรวจทานคอลัมน์", "From OCR — please review the columns"))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
-      st.progress(null); st.err("อ่านด้วย OCR ไม่สำเร็จ: " + e.message);
+      st.progress(null); st.err(tr("อ่านด้วย OCR ไม่สำเร็จ: ", "OCR reading failed: ") + e.message);
     } finally { go.disabled = false; pdf.destroy(); }
   }
 
   async function run() {
-    if (!file) return st.err("กรุณาเลือกไฟล์ PDF ก่อน");
+    if (!file) return st.err(tr("กรุณาเลือกไฟล์ PDF ก่อน", "Please choose a PDF file first"));
     results.innerHTML = ""; extra.innerHTML = ""; preview.hidden = true;
     go.disabled = true;
-    st.info("กำลังเปิดไฟล์…");
+    st.info(tr("กำลังเปิดไฟล์…", "Opening the file…"));
     try {
       const pdf = await openPdf(file, passwordBox(extra));
       if (!(await hasTextLayer(pdf))) {
         st.progress(null);
-        st.info("ไฟล์นี้ไม่มีชั้นข้อความ (น่าจะเป็นไฟล์สแกน)");
+        st.info(tr("ไฟล์นี้ไม่มีชั้นข้อความ (น่าจะเป็นไฟล์สแกน)", "This file has no text layer (it's probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            "ระบบอ่านตัวเลขและข้อความจากภาพให้ได้ด้วย OCR แล้วจัดเป็นแถวใน Excel ให้ · " +
-            "ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10-30 MB ·  ตารางจาก OCR อาจต้องจัดคอลัมน์เพิ่มเองใน Excel"),
+            tr("ระบบอ่านตัวเลขและข้อความจากภาพให้ได้ด้วย OCR แล้วจัดเป็นแถวใน Excel ให้ · " +
+               "ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10-30 MB ·  ตารางจาก OCR อาจต้องจัดคอลัมน์เพิ่มเองใน Excel",
+               "We can read numbers and text from the image with OCR and lay them out as rows in Excel · " +
+               "First time needs to download a ~10-30 MB language pack · Tables from OCR may need extra column tidying in Excel")),
           el("div", { class: "actions" }, [
-            button("อ่านด้วย OCR แล้วทำเป็น Excel", { onclick: () => runOcr(pdf) }),
-            button("ยกเลิก", { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),
+            button(tr("อ่านด้วย OCR แล้วทำเป็น Excel", "Read with OCR, then make Excel"), { onclick: () => runOcr(pdf) }),
+            button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),
           ]),
         ]));
         go.disabled = false;
         return;
       }
-      st.info("กำลังอ่านตาราง…");
+      st.info(tr("กำลังอ่านตาราง…", "Reading the table…"));
       const wb = XLSX.utils.book_new();
       const all = [];
       let totalRows = 0;
@@ -102,7 +108,7 @@ export function mount(tool) {
         totalRows += aoa.length;
 
         if (sheetMode.value === "per-page") {
-          if (aoa.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), `หน้า ${p}`);
+          if (aoa.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), tr(`หน้า ${p}`, `Page ${p}`));
         } else {
           if (p > 1 && aoa.length) all.push([]);
           all.push(...aoa);
@@ -113,28 +119,29 @@ export function mount(tool) {
       pdf.destroy();
 
       if (sheetMode.value === "single") {
-        if (!all.length) throw new Error("อ่านไม่พบข้อความในไฟล์นี้เลย");
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(all), "ข้อมูล");
+        if (!all.length) throw new Error(tr("อ่านไม่พบข้อความในไฟล์นี้เลย", "No text was found in this file"));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(all), tr("ข้อมูล", "Data"));
       }
-      if (!wb.SheetNames.length) throw new Error("อ่านไม่พบข้อความในไฟล์นี้เลย");
+      if (!wb.SheetNames.length) throw new Error(tr("อ่านไม่พบข้อความในไฟล์นี้เลย", "No text was found in this file"));
 
       const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
-      st.ok(`แปลงสำเร็จ ${totalRows.toLocaleString("th-TH")} แถว · ${wb.SheetNames.length} ชีท`);
+      st.ok(tr(`แปลงสำเร็จ ${totalRows.toLocaleString("th-TH")} แถว · ${wb.SheetNames.length} ชีท`,
+               `Done — ${totalRows.toLocaleString("en-US")} rows · ${wb.SheetNames.length} sheets`));
 
       const sample = (sheetMode.value === "single" ? all : XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 })).slice(0, 12);
       preview.hidden = false;
-      preview.textContent = sample.map((r) => r.join(" | ")).join("\n") || "(ไม่มีข้อมูลตัวอย่าง)";
+      preview.textContent = sample.map((r) => r.join(" | ")).join("\n") || tr("(ไม่มีข้อมูลตัวอย่าง)", "(no sample data)");
 
       const name = stripExt(file.name) + ".xlsx";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${wb.SheetNames.length} ชีท`)]),
-        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.progress(null);
-      st.err("แปลงไม่สำเร็จ: " + e.message);
+      st.err(tr("แปลงไม่สำเร็จ: ", "Could not convert: ") + e.message);
     } finally { go.disabled = false; }
   }
   return wrap;

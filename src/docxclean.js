@@ -6,6 +6,7 @@
 // ทำในเบราว์เซอร์ล้วน — ซึ่งสำคัญเป็นพิเศษกับงานประเภทนี้ เพราะไฟล์ที่กลัว
 // ข้อมูลรั่วที่สุด ย่อมไม่ควรถูกอัปโหลดขึ้นเว็บใครเพื่อ "ล้างข้อมูล"
 import { loadLibs } from "./loader.js";
+import { tr } from "./i18n.js";
 
 const RELS = "word/_rels/document.xml.rels";
 const CT = "[Content_Types].xml";
@@ -106,7 +107,7 @@ export async function clean(file, options = {}) {
 
   if (comments) {
     const found = names.filter((n) => COMMENT_PARTS.test(n));
-    if (found.length) removed.push(`คอมเมนต์ ${found.length} ส่วน`);
+    if (found.length) removed.push(tr(`คอมเมนต์ ${found.length} ส่วน`, `${found.length} comment part(s)`));
     if (relsXml) {
       // ตัดความสัมพันธ์ที่ชี้ไปไฟล์คอมเมนต์ ไม่งั้น Word แจ้งว่าไฟล์เสีย
       relsXml = relsXml.replace(/<Relationship[^>]*Target="comments(Extended|Ids|Extensible)?\.xml"[^>]*\/>/g, "");
@@ -148,9 +149,9 @@ export async function clean(file, options = {}) {
     out.file(name, await entry.async("uint8array"));
   }
 
-  if (trackChanges) removed.push("ประวัติการแก้ไขที่ยังไม่ยอมรับ");
-  if (metadata) removed.push("ชื่อผู้เขียน ผู้แก้ไขล่าสุด บริษัท และเวลาที่ใช้ทำ");
-  if (rsid) removed.push("รหัสรอบการบันทึก (rsid)");
+  if (trackChanges) removed.push(tr("ประวัติการแก้ไขที่ยังไม่ยอมรับ", "Unaccepted track changes history"));
+  if (metadata) removed.push(tr("ชื่อผู้เขียน ผู้แก้ไขล่าสุด บริษัท และเวลาที่ใช้ทำ", "Author, last-modified-by, company, and time spent"));
+  if (rsid) removed.push(tr("รหัสรอบการบันทึก (rsid)", "Save-session IDs (rsid)"));
 
   const blob = await out.generateAsync({
     type: "blob",

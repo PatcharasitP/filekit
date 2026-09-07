@@ -6,6 +6,8 @@
 // เหลือไฟล์ละ ~45 KB จากต้นฉบับ ~90 KB และโหลดจากโดเมนเดียวกันครั้งเดียว
 // แล้วเก็บไว้ใช้ซ้ำทั้ง session
 
+import { tr } from "./i18n.js";
+
 const FILES = {
   normal: { path: "vendor/fonts/Sarabun-Regular-th.ttf", vfs: "Sarabun-Regular.ttf" },
   bold:   { path: "vendor/fonts/Sarabun-Bold-th.ttf",    vfs: "Sarabun-Bold.ttf" },
@@ -27,7 +29,7 @@ function toBase64(buf) {
 function fetchFont(path) {
   if (!cache.has(path)) {
     cache.set(path, fetch(path).then((r) => {
-      if (!r.ok) throw new Error(`โหลดฟอนต์ไม่สำเร็จ (${r.status})`);
+      if (!r.ok) throw new Error(tr(`โหลดฟอนต์ไม่สำเร็จ (${r.status})`, `Failed to load font (${r.status})`));
       return r.arrayBuffer();
     }).then(toBase64).catch((e) => { cache.delete(path); throw e; }));
   }

@@ -1,34 +1,36 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 import { smartDecode } from "../thai.js";
+import { tr } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
   const st = statusBar();
   const results = el("div", { class: "results" });
 
-  const dirSel = select([["to-csv", "Excel → CSV (แยกทีละชีท)"], ["to-xlsx", "CSV → Excel (รวมเป็นไฟล์เดียว)"]], "to-csv");
+  const dirSel = select([["to-csv", tr("Excel → CSV (แยกทีละชีท)", "Excel → CSV (one file per sheet)")], ["to-xlsx", tr("CSV → Excel (รวมเป็นไฟล์เดียว)", "CSV → Excel (combine into one file)")]], "to-csv");
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv",
-    hint: "Excel → CSV รับครั้งละ 1 ไฟล์ · CSV → Excel เลือกหลายไฟล์ได้ (1 ไฟล์ = 1 ชีท)",
-    expect: ["xlsx", "csv"], expectLabel: "ไฟล์ Excel หรือ CSV",
+    hint: tr("Excel → CSV รับครั้งละ 1 ไฟล์ · CSV → Excel เลือกหลายไฟล์ได้ (1 ไฟล์ = 1 ชีท)", "Excel → CSV takes 1 file at a time · CSV → Excel accepts multiple files (1 file = 1 sheet)"),
+    expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV file"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 
-  const go = button("แปลงไฟล์", { onclick: run });
-  body.append(el("div", { class: "row" }, [field("ทิศทางการแปลง", dirSel)]), dz.container,
+  const go = button(tr("แปลงไฟล์", "Convert file"), { onclick: run });
+  body.append(el("div", { class: "row" }, [field(tr("ทิศทางการแปลง", "Conversion direction"), dirSel)]), dz.container,
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    "ไฟล์ CSV ที่สร้างจะใส่ BOM (UTF-8) ให้อัตโนมัติ — เปิดใน Excel ภาษาไทยแล้วไม่กลายเป็นอักษรต่างดาว"));
+    tr("ไฟล์ CSV ที่สร้างจะใส่ BOM (UTF-8) ให้อัตโนมัติ — เปิดใน Excel ภาษาไทยแล้วไม่กลายเป็นอักษรต่างดาว",
+       "Generated CSV files automatically include a UTF-8 BOM — Thai text opens correctly in Excel instead of turning into garbled characters")));
 
   async function run() {
     const files = dz.files;
-    if (!files.length) return st.err("กรุณาเลือกไฟล์ก่อน");
+    if (!files.length) return st.err(tr("กรุณาเลือกไฟล์ก่อน", "Please choose a file first"));
     results.innerHTML = "";
     go.disabled = true;
     try {
       if (dirSel.value === "to-csv") {
-        st.info("กำลังแยกชีท…");
+        st.info(tr("กำลังแยกชีท…", "Splitting sheets…"));
         const f = files[0];
         const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
         const base = stripExt(f.name);
@@ -42,22 +44,22 @@ export function mount(tool) {
           });
           await yieldToBrowser();
         }
-        if (!made.length) throw new Error("ไม่พบข้อมูลในไฟล์นี้");
-        st.ok(`แยกได้ ${made.length} ไฟล์ CSV`);
+        if (!made.length) throw new Error(tr("ไม่พบข้อมูลในไฟล์นี้", "No data was found in this file"));
+        st.ok(tr(`แยกได้ ${made.length} ไฟล์ CSV`, `Done — ${made.length} CSV files`));
         made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
           el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-          button("", { icon: "download", label: "ดาวน์โหลด",  onclick: () => download(m.blob, m.name) }),
+          button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
         ])));
         if (made.length > 1) results.prepend(el("div", { class: "actions" }, [
-          button("ดาวน์โหลดทั้งหมดเป็น ZIP", { icon: "zip",  onclick: async () => {
+          button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
             const zip = new JSZip();
             made.forEach((m) => zip.file(m.name, m.blob));
             download(await zip.generateAsync({ type: "blob" }), base + "-csv.zip");
           } }),
         ]));
       } else {
-        st.info("กำลังรวมเป็น Excel…");
+        st.info(tr("กำลังรวมเป็น Excel…", "Combining into Excel…"));
         let fixedEnc = 0;
         const wb = XLSX.utils.book_new();
         for (let i = 0; i < files.length; i++) {
@@ -67,7 +69,7 @@ export function mount(tool) {
           if (dec.enc !== "utf-8" || dec.undo) fixedEnc++;
           const sheet = XLSX.read(dec.text, { type: "string" }).Sheets.Sheet1;
           // ชื่อชีทของ Excel ยาวได้ไม่เกิน 31 ตัว และห้ามอักขระพิเศษบางตัว
-          const safe = stripExt(files[i].name).replace(/[\\/?*[\]:]/g, "-").slice(0, 31) || `ชีท${i + 1}`;
+          const safe = stripExt(files[i].name).replace(/[\\/?*[\]:]/g, "-").slice(0, 31) || tr(`ชีท${i + 1}`, `Sheet${i + 1}`);
           XLSX.utils.book_append_sheet(wb, sheet, safe);
           st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
           await yieldToBrowser();
@@ -75,17 +77,19 @@ export function mount(tool) {
         const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
         const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         st.progress(null);
-        st.ok(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +
-          (fixedEnc ? ` · ซ่อมภาษาไทยที่เพี้ยนให้ ${fixedEnc} ไฟล์` : ""));
+        st.ok(tr(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +
+          (fixedEnc ? ` · ซ่อมภาษาไทยที่เพี้ยนให้ ${fixedEnc} ไฟล์` : ""),
+          `Combined into Excel — ${wb.SheetNames.length} sheets` +
+          (fixedEnc ? ` · fixed garbled Thai text in ${fixedEnc} files` : "")));
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [
-          el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${wb.SheetNames.length} ชีท`)]),
-          button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
+          el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
+          button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
         ]));
       }
     } catch (e) {
       st.progress(null);
-      st.err("แปลงไม่สำเร็จ: " + e.message);
+      st.err(tr("แปลงไม่สำเร็จ: ", "Could not convert: ") + e.message);
     } finally { go.disabled = false; }
   }
   return wrap;

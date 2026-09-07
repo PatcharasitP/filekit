@@ -45,19 +45,25 @@ GRAB = """() => {
   return [...out];
 }"""
 
+# ‼️ ต้องกวาดทั้งสองภาษา — คำแปลอังกฤษเพิ่มตัวอักษรที่ตอนทำ subset ยังไม่มีในเว็บได้
 missing = {}
+pages = [""] + [f"#/{t}" for t in TOOLS]
 with sync_playwright() as p:
-    b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1280, "height": 950})
-    pages = [""] + [f"#/{t}" for t in TOOLS]
-    for i, h in enumerate(pages, 1):
-        pg.goto("about:blank"); pg.goto(f"{BASE}/{h}", wait_until="networkidle"); pg.wait_for_timeout(320)
-        for ch in pg.evaluate(GRAB):
-            cp = ord(ch)
-            if cp < 0x20 or cp == 0x7F or ch.isspace() or is_pictograph(cp) or cp in cmap: continue
-            missing.setdefault(ch, set()).add(h or "หน้าแรก")
+    b = p.chromium.launch()
+    for lang in ("th", "en"):
+        ctx = b.new_context(viewport={"width": 1280, "height": 950})
+        ctx.add_init_script(f"try{{localStorage.setItem('fk-lang','{lang}')}}catch(e){{}}")
+        pg = ctx.new_page()
+        for h in pages:
+            pg.goto("about:blank"); pg.goto(f"{BASE}/{h}", wait_until="networkidle"); pg.wait_for_timeout(320)
+            for ch in pg.evaluate(GRAB):
+                cp = ord(ch)
+                if cp < 0x20 or cp == 0x7F or ch.isspace() or is_pictograph(cp) or cp in cmap: continue
+                missing.setdefault(ch, set()).add(f"{lang}:{h or 'หน้าแรก'}")
+        ctx.close()
     b.close()
 
-print(f"ฟอนต์มี {len(cmap)} อักขระ · ตรวจ {len(TOOLS)+1} หน้า")
+print(f"ฟอนต์มี {len(cmap)} อักขระ · ตรวจ {(len(TOOLS)+1)*2} หน้า (ไทย+อังกฤษ)")
 if not missing:
     print("✅ ทุกตัวอักษรที่ผู้ใช้เห็น มีอยู่ในฟอนต์ครบ — ไม่มีฟอนต์ปนกัน")
     sys.exit(0)

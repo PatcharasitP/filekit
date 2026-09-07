@@ -9,6 +9,7 @@
 import { el } from "./dom.js";
 import { toolShell } from "./ui.js";
 import { toolIcon } from "./icons.js";
+import { tr } from "./i18n.js";
 
 /**
  * @param tool  รายการจากทะเบียนเครื่องมือ
@@ -37,7 +38,7 @@ export function workspace(tool, cfg = {}) {
 
   const emptyBox = el("div", { class: "ws-empty" }, [
     el("div", { class: "ws-empty-ico", "aria-hidden": "true" }, [toolIcon(tool, "ws-empty-svg")]),
-    el("div", {}, (cfg.center && cfg.center.empty) || "ยังไม่มีไฟล์ — เลือกไฟล์ก่อนเพื่อดูตัวอย่าง"),
+    el("div", {}, (cfg.center && cfg.center.empty) || tr("ยังไม่มีไฟล์ — เลือกไฟล์ก่อนเพื่อดูตัวอย่าง", "No file yet — choose a file first to see a preview")),
   ]);
 
   const canvas = el("div", { class: "ws-canvas" }, [

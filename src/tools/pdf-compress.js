@@ -3,13 +3,17 @@ import { hasTextLayer } from "../ocr.js";
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, download, dropzone,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+import { tr } from "../i18n.js";
 
 // ระดับการบีบ: scale = ความละเอียดที่เรนเดอร์ · q = คุณภาพ JPEG
-const LEVELS = {
-  light:  { scale: 2.0, q: 0.86, label: "เบา" },
-  medium: { scale: 1.5, q: 0.72, label: "ปานกลาง" },
-  strong: { scale: 1.15, q: 0.55, label: "แรง" },
-};
+// ‼️ ห่อ label ด้วย tr() ตอนเรียกใช้เท่านั้น (ไม่ใช่ const ระดับบนสุด) กัน LEVELS แช่ภาษาตอนโหลดโมดูล
+function levelDefs() {
+  return {
+    light:  { scale: 2.0, q: 0.86, label: tr("เบา", "Light") },
+    medium: { scale: 1.5, q: 0.72, label: tr("ปานกลาง", "Medium") },
+    strong: { scale: 1.15, q: 0.55, label: tr("แรง", "Strong") },
+  };
+}
 
 // ความละเอียดของภาพ "ก่อน" ในตัวเปรียบเทียบ — คงที่ ไม่ขึ้นกับระดับที่เลือก
 // เข้ารหัส PNG (ไม่สูญเสีย) เพื่อให้เป็นตัวแทน "ต้นฉบับ" ที่แท้จริง ไม่ปนอาร์ติแฟกต์ของเราเอง
@@ -76,27 +80,27 @@ export function mount(tool) {
 
   /* ── ซ้าย: เลือกไฟล์ ───────────────────────────────────────────────── */
   const dz = dropzone({
-    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
-    accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
+    expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
+    accept: "application/pdf,.pdf", multiple: false, hint: tr("ครั้งละ 1 ไฟล์", "One file at a time"),
     onChange: onFileChange,
   });
 
   /* ── ขวา: ระดับการบีบ + ตัวเลขสรุป ─────────────────────────────────── */
-  const level = select([["light", "เบา — คงความคมไว้มาก"], ["medium", "ปานกลาง — แนะนำ"], ["strong", "แรง — ไฟล์เล็กสุด"]], "medium");
+  const level = select([["light", tr("เบา — คงความคมไว้มาก", "Light — keeps most of the sharpness")], ["medium", tr("ปานกลาง — แนะนำ", "Medium — recommended")], ["strong", tr("แรง — ไฟล์เล็กสุด", "Strong — smallest file")]], "medium");
   level.addEventListener("change", () => renderAfterPreview());
 
   const statOrigin = el("span", { class: "cmp-stat-v" }, "–");
   const statNew = el("span", { class: "cmp-stat-v" }, "–");
   const statDiff = el("span", { class: "cmp-stat-v" }, "–");
   const statsBox = el("div", { class: "cmp-stats" }, [
-    statRow("ขนาดเดิม", statOrigin),
-    statRow("ขนาดใหม่", statNew),
-    statRow("ลดขนาดไป", statDiff),
+    statRow(tr("ขนาดเดิม", "Original size"), statOrigin),
+    statRow(tr("ขนาดใหม่", "New size"), statNew),
+    statRow(tr("ลดขนาดไป", "Reduced by"), statDiff),
   ]);
 
   /* ── กลาง: พรีวิวเทียบก่อน–หลัง แบบลากเส้นได้ ─────────────────────── */
-  const beforeImg = el("img", { class: "cmp-img cmp-before", alt: "ตัวอย่างก่อนบีบอัด", draggable: "false" });
-  const afterImg = el("img", { class: "cmp-img cmp-after", alt: "ตัวอย่างหลังบีบอัด", draggable: "false" });
+  const beforeImg = el("img", { class: "cmp-img cmp-before", alt: tr("ตัวอย่างก่อนบีบอัด", "Preview before compression"), draggable: "false" });
+  const afterImg = el("img", { class: "cmp-img cmp-after", alt: tr("ตัวอย่างหลังบีบอัด", "Preview after compression"), draggable: "false" });
   const afterWrap = el("div", { class: "cmp-after-wrap" }, [afterImg]);
   const handle = el("div", { class: "cmp-handle" }, [
     el("div", { class: "cmp-handle-line" }),
@@ -104,40 +108,43 @@ export function mount(tool) {
   ]);
   const frame = el("div", {
     class: "cmp-frame", tabindex: "0", role: "slider",
-    "aria-label": "ลากเพื่อเทียบภาพก่อนและหลังบีบอัด", "aria-orientation": "horizontal",
+    "aria-label": tr("ลากเพื่อเทียบภาพก่อนและหลังบีบอัด", "Drag to compare the image before and after compression"), "aria-orientation": "horizontal",
     "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": "50",
   }, [
     beforeImg, afterWrap, handle,
-    el("div", { class: "cmp-tag cmp-tag-before" }, "ก่อน"),
-    el("div", { class: "cmp-tag cmp-tag-after" }, "หลัง"),
+    el("div", { class: "cmp-tag cmp-tag-before" }, tr("ก่อน", "Before")),
+    el("div", { class: "cmp-tag cmp-tag-after" }, tr("หลัง", "After")),
   ]);
   const sliderWrap = el("div", { class: "cmp-slider" }, [frame]);
   wireSlider();
 
-  const go = button("บีบอัดไฟล์", { onclick: run });
+  const go = button(tr("บีบอัดไฟล์", "Compress file"), { onclick: run });
 
   const ws = workspace(tool, {
     left: {
-      title: "ไฟล์", node: el("div", { class: "cmp-left" }, [dz.container, extra]),
-      hint: "ลากไฟล์ PDF มาวาง หรือคลิกเพื่อเลือก",
+      title: tr("ไฟล์", "File"), node: el("div", { class: "cmp-left" }, [dz.container, extra]),
+      hint: tr("ลากไฟล์ PDF มาวาง หรือคลิกเพื่อเลือก", "Drag a PDF file here, or click to choose"),
     },
     center: {
-      title: "พรีวิวเทียบก่อน–หลัง", node: sliderWrap,
-      empty: "ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างเทียบก่อน–หลัง",
+      title: tr("พรีวิวเทียบก่อน–หลัง", "Before–after preview"), node: sliderWrap,
+      empty: tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างเทียบก่อน–หลัง", "No file yet — choose a PDF file to see a before–after preview"),
     },
     right: {
-      title: "ตัวเลือก",
-      node: el("div", { class: "cmp-right" }, [field("ระดับการบีบอัด", level), statsBox]),
+      title: tr("ตัวเลือก", "Options"),
+      node: el("div", { class: "cmp-right" }, [field(tr("ระดับการบีบอัด", "Compression level"), level), statsBox]),
     },
     toolbar: [
-      el("span", { class: "cmp-toolbar-hint" }, "พรีวิวหน้าแรก · ลากเส้นหรือแตะเพื่อเทียบ"),
+      el("span", { class: "cmp-toolbar-hint" }, tr("พรีวิวหน้าแรก · ลากเส้นหรือแตะเพื่อเทียบ", "Previewing page 1 · drag the line or tap to compare")),
       el("span", { class: "sep", "aria-hidden": "true" }),
-      button("รีเซ็ตตำแหน่ง", { ghost: true, icon: "undo", onclick: () => setHandlePos(50) }),
+      button(tr("รีเซ็ตตำแหน่ง", "Reset position"), { ghost: true, icon: "undo", onclick: () => setHandlePos(50) }),
     ],
     footer: [go, st.node, results],
-    note: "วิธีนี้เรนเดอร์แต่ละหน้าเป็นภาพแล้วประกอบกลับเป็น PDF ใหม่ — ได้ผลดีมากกับไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ " +
+    note: tr("วิธีนี้เรนเดอร์แต่ละหน้าเป็นภาพแล้วประกอบกลับเป็น PDF ใหม่ — ได้ผลดีมากกับไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ " +
       "แต่ข้อความในไฟล์จะกลายเป็นภาพ (คัดลอก/ค้นหาข้อความไม่ได้อีก) · " +
       "ถ้าไฟล์เป็นข้อความล้วนอยู่แล้ว การบีบแบบนี้อาจได้ไฟล์ใหญ่ขึ้น ระบบจะเตือนให้ทราบ",
+      "This method renders each page as an image and rebuilds it into a new PDF — great for scans or image-heavy files. " +
+      "But text in the file becomes an image (no longer copyable or searchable) · " +
+      "if the file is already all text, this may make the file bigger — we will warn you if that happens"),
   });
   ws.wrap.prepend(styleEl);
 
@@ -224,7 +231,7 @@ export function mount(tool) {
       ws.showCanvas(true);
     } catch (e) {
       if (token !== previewToken) return;
-      st.err("เปิดไฟล์พรีวิวไม่สำเร็จ: " + e.message);
+      st.err(tr("เปิดไฟล์พรีวิวไม่สำเร็จ: ", "Could not open the preview: ") + e.message);
     }
   }
 
@@ -244,13 +251,13 @@ export function mount(tool) {
     frame.classList.add("cmp-loading");
     try {
       const page = await pdfDoc.getPage(1);
-      const { scale, q } = LEVELS[level.value];
+      const { scale, q } = levelDefs()[level.value];
       const blob = await renderPageToBlob(page, scale, q);
       page.cleanup();
       if (token !== previewToken) return;
       setImgSrc(afterImg, blob, "after");
     } catch (e) {
-      if (token === previewToken) st.err("สร้างพรีวิวไม่สำเร็จ: " + e.message);
+      if (token === previewToken) st.err(tr("สร้างพรีวิวไม่สำเร็จ: ", "Could not generate the preview: ") + e.message);
     } finally {
       frame.classList.remove("cmp-loading");
     }
@@ -285,14 +292,14 @@ export function mount(tool) {
 
   /* ── บีบอัดจริงทุกหน้า (เหมือนเดิมทุกประการ ต่างแค่ใช้เอกสารที่เปิดไว้แล้วร่วมกับพรีวิว) ── */
   async function run() {
-    if (!file) return st.err("กรุณาเลือกไฟล์ PDF ก่อน");
+    if (!file) return st.err(tr("กรุณาเลือกไฟล์ PDF ก่อน", "Please choose a PDF file first"));
     results.innerHTML = "";
     go.disabled = true;
     level.disabled = true;               // กันชนกับ getPage()/render() ของพรีวิวขณะกำลังบีบอัด
     ws.setBusy(true);
-    st.info("กำลังบีบอัด…");
+    st.info(tr("กำลังบีบอัด…", "Compressing…"));
     try {
-      const { scale, q } = LEVELS[level.value];
+      const { scale, q } = levelDefs()[level.value];
       const doc = await getDoc();
       const hadText = await hasTextLayer(doc);
       const { PDFDocument } = PDFLib;
@@ -328,7 +335,7 @@ export function mount(tool) {
       st.progress(null);
 
       const diff = 1 - blob.size / file.size;
-      const name = `${stripExt(file.name)}-บีบอัด.pdf`;
+      const name = `${stripExt(file.name)}${tr("-บีบอัด.pdf", "-compressed.pdf")}`;
 
       statOrigin.textContent = fmtBytes(file.size);
       statNew.textContent = fmtBytes(blob.size);
@@ -340,22 +347,27 @@ export function mount(tool) {
         // จะพาผู้ใช้ไปผิดทาง (ไฟล์ภาพที่บีบมาดีแล้วควรได้คำแนะนำคนละแบบ)
         const textual = hadText;
         st.err(
-          `บีบแล้วไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — ` +
+          tr(`บีบแล้วไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `,
+             `Compression did not shrink the file (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `) +
           (textual
-            ? "ไฟล์นี้เป็นข้อความล้วนอยู่แล้ว การบีบแบบแปลงเป็นภาพจึงไม่ช่วย แนะนำให้ใช้ไฟล์เดิมต่อไป"
-            : "ไฟล์นี้ถูกบีบมาดีอยู่แล้ว ลองเลือกระดับ “แรง” ดูอีกครั้ง หรือใช้ไฟล์เดิมต่อไป")
+            ? tr("ไฟล์นี้เป็นข้อความล้วนอยู่แล้ว การบีบแบบแปลงเป็นภาพจึงไม่ช่วย แนะนำให้ใช้ไฟล์เดิมต่อไป",
+                 "This file is already all text, so converting it to images does not help — we recommend keeping the original file")
+            : tr("ไฟล์นี้ถูกบีบมาดีอยู่แล้ว ลองเลือกระดับ “แรง” ดูอีกครั้ง หรือใช้ไฟล์เดิมต่อไป",
+                 "This file is already well compressed — try the \"Strong\" level, or keep the original file"))
         );
       } else {
-        st.ok(`เล็กลง ${Math.round(diff * 100)}% · ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`);
+        st.ok(tr(`เล็กลง ${Math.round(diff * 100)}% · ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`,
+                 `Reduced by ${Math.round(diff * 100)}% · ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`));
       }
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
-          el("small", {}, `${fmtBytes(file.size)} → ${fmtBytes(blob.size)} · ระดับ${LEVELS[level.value].label}`)]),
-        button("ดาวน์โหลด", { icon: "download", onclick: () => download(blob, name) }),
+          el("small", {}, tr(`${fmtBytes(file.size)} → ${fmtBytes(blob.size)} · ระดับ${levelDefs()[level.value].label}`,
+                              `${fmtBytes(file.size)} → ${fmtBytes(blob.size)} · ${levelDefs()[level.value].label} level`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download", onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.progress(null);
-      st.err("บีบอัดไม่สำเร็จ: " + e.message);
+      st.err(tr("บีบอัดไม่สำเร็จ: ", "Could not compress: ") + e.message);
     } finally {
       go.disabled = false;
       level.disabled = false;

@@ -8,6 +8,7 @@
 // เรนเดอร์เต็มรูปแบบอย่าง LibreOffice ซึ่งรันในเบราว์เซอร์ไม่ไหว
 
 import { loadLibs } from "./loader.js";
+import { tr } from "./i18n.js";
 
 const A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const P = "http://schemas.openxmlformats.org/presentationml/2006/main";
@@ -68,7 +69,8 @@ export async function readPptx(file, { withImages = false, onProgress } = {}) {
     .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
     .sort((a, b) => numOf(a) - numOf(b));   // slide10 ต้องมาหลัง slide9 ไม่ใช่หลัง slide1
   if (!slideNames.length)
-    throw new Error("ไม่พบสไลด์ในไฟล์นี้ — ตรวจว่าเป็นไฟล์ .pptx จริงหรือไม่ (ไฟล์ .ppt รุ่นเก่ายังไม่รองรับ)");
+    throw new Error(tr("ไม่พบสไลด์ในไฟล์นี้ — ตรวจว่าเป็นไฟล์ .pptx จริงหรือไม่ (ไฟล์ .ppt รุ่นเก่ายังไม่รองรับ)",
+      "No slides found in this file — check that it's really a .pptx (old .ppt files aren't supported yet)"));
 
   const parser = new DOMParser();
   const slides = [];

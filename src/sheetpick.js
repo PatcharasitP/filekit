@@ -7,6 +7,7 @@ import { el } from "./dom.js";
 import { toolShell, statusBar, button, field, select, dropzone,
          download, stripExt, yieldToBrowser } from "./ui.js";
 import { smartDecode, ENC_LABEL } from "./thai.js";
+import { tr } from "./i18n.js";
 
 const TEXTY = ["csv", "txt", "tsv"];
 
@@ -19,8 +20,8 @@ export async function readWorkbook(file) {
 
   const d = smartDecode(buf);
   let encNote = null;
-  if (d.undo) encNote = "ไฟล์นี้ภาษาไทยเพี้ยนซ้อน — ซ่อมให้อัตโนมัติตอนอ่านแล้ว";
-  else if (d.enc !== "utf-8") encNote = `ไฟล์นี้เข้ารหัสแบบ ${ENC_LABEL[d.enc] || d.enc} — แปลงให้อัตโนมัติแล้ว`;
+  if (d.undo) encNote = tr("ไฟล์นี้ภาษาไทยเพี้ยนซ้อน — ซ่อมให้อัตโนมัติตอนอ่านแล้ว", "This file's Thai text was double-garbled — fixed automatically while reading");
+  else if (d.enc !== "utf-8") encNote = tr(`ไฟล์นี้เข้ารหัสแบบ ${ENC_LABEL[d.enc] || d.enc} — แปลงให้อัตโนมัติแล้ว`, `This file used ${ENC_LABEL[d.enc] || d.enc} encoding — converted automatically`);
   return { wb: XLSX.read(d.text, { type: "string", cellDates: true }), encNote };
 }
 
@@ -32,7 +33,7 @@ export function sheetToTable(ws) {
   const header = [];
   for (let i = 0; i < width; i++) {
     const h = aoa[0][i];
-    header.push(h == null || String(h).trim() === "" ? `คอลัมน์ ${i + 1}` : String(h).trim());
+    header.push(h == null || String(h).trim() === "" ? tr(`คอลัมน์ ${i + 1}`, `Column ${i + 1}`) : String(h).trim());
   }
   const rows = aoa.slice(1).map((r) => {
     const c = r.slice(0, width);
@@ -82,11 +83,11 @@ export function columnTool(tool, cfg) {
 
   const sheetSel = select([["0", "—"]], "0");
   const colSel = select([["0", "—"]], "0");
-  const modeSel = select([["add", "เพิ่มเป็นคอลัมน์ใหม่ (เก็บของเดิมไว้)"],
-                          ["replace", "เขียนทับคอลัมน์เดิม"]], "add");
-  const sheetField = field("ชีท", sheetSel);
-  const colField = field("คอลัมน์ที่จะแปลง", colSel);
-  const modeField = field("ผลลัพธ์", modeSel);
+  const modeSel = select([["add", tr("เพิ่มเป็นคอลัมน์ใหม่ (เก็บของเดิมไว้)", "Add as a new column (keep the original)")],
+                          ["replace", tr("เขียนทับคอลัมน์เดิม", "Overwrite the original column")]], "add");
+  const sheetField = field(tr("ชีท", "Sheet"), sheetSel);
+  const colField = field(tr("คอลัมน์ที่จะแปลง", "Column to convert"), colSel);
+  const modeField = field(tr("ผลลัพธ์", "Result"), modeSel);
   const opts = cfg.options ? cfg.options(refresh) : { node: null, read: () => ({}) };
 
   const chips = el("div", { class: "stats" });
@@ -102,8 +103,8 @@ export function columnTool(tool, cfg) {
     accept: cfg.accept, multiple: false, expect: cfg.expect, expectLabel: cfg.expectLabel,
     hint: cfg.hint, onChange: load,
   });
-  const goX = button("ดาวน์โหลดเป็น Excel", { icon: "download",  onclick: () => save("xlsx") });
-  const goC = button("ดาวน์โหลดเป็น CSV", { icon: "download",  onclick: () => save("csv"), ghost: true });
+  const goX = button(tr("ดาวน์โหลดเป็น Excel", "Download as Excel"), { icon: "download",  onclick: () => save("xlsx") });
+  const goC = button(tr("ดาวน์โหลดเป็น CSV", "Download as CSV"), { icon: "download",  onclick: () => save("csv"), ghost: true });
   const actions = el("div", { class: "actions" }, [goX, goC]);
   actions.hidden = true;
 
@@ -119,22 +120,22 @@ export function columnTool(tool, cfg) {
     const f = dz.files[0];
     if (!f) return;
     try {
-      st.info("กำลังอ่านไฟล์…");
+      st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
       ({ wb, encNote } = await readWorkbook(f));
       sheetNames = wb.SheetNames.filter((n) => wb.Sheets[n]);
-      if (!sheetNames.length) throw new Error("ไม่พบชีทในไฟล์นี้");
+      if (!sheetNames.length) throw new Error(tr("ไม่พบชีทในไฟล์นี้", "No sheets found in this file"));
       sheetSel.innerHTML = "";
       sheetNames.forEach((n, i) => sheetSel.appendChild(el("option", { value: String(i) }, n)));
       sheetField.hidden = sheetNames.length < 2;
       pickSheet(0);
     } catch (e) {
-      st.err("อ่านไฟล์ไม่สำเร็จ — " + (e.message || e));
+      st.err(tr("อ่านไฟล์ไม่สำเร็จ — ", "Could not read the file — ") + (e.message || e));
     }
   }
 
   function pickSheet(i) {
     table = sheetToTable(wb.Sheets[sheetNames[i]]);
-    if (!table.header.length) { st.err("ชีทนี้ว่างเปล่า"); panel.hidden = true; return; }
+    if (!table.header.length) { st.err(tr("ชีทนี้ว่างเปล่า", "This sheet is empty")); panel.hidden = true; return; }
     colSel.innerHTML = "";
     table.header.forEach((h, c) => colSel.appendChild(el("option", { value: String(c) }, h)));
     // เดาคอลัมน์ที่น่าจะใช่ให้ล่วงหน้า
@@ -164,10 +165,10 @@ export function columnTool(tool, cfg) {
     chips.innerHTML = "";
     const chip = (cls, text) => chips.appendChild(el("span", { class: "stat " + cls }, text));
     const L = cfg.labels || {};
-    chip("ok", `${L.ok || "แปลงได้"} ${stat.ok.toLocaleString()} แถว`);
-    if (stat.warn) chip("warn", `${L.warn || "ต้องเดาปี"} ${stat.warn.toLocaleString()} แถว`);
-    if (stat.bad) chip("bad", `${L.bad || "อ่านรูปแบบไม่ออก"} ${stat.bad.toLocaleString()} แถว`);
-    if (stat.skip) chip("dim", `➖ ช่องว่าง ${stat.skip.toLocaleString()} แถว`);
+    chip("ok", `${L.ok || tr("แปลงได้", "Converted")} ${stat.ok.toLocaleString()} ${tr("แถว", "rows")}`);
+    if (stat.warn) chip("warn", `${L.warn || tr("ต้องเดาปี", "Year guessed")} ${stat.warn.toLocaleString()} ${tr("แถว", "rows")}`);
+    if (stat.bad) chip("bad", `${L.bad || tr("อ่านรูปแบบไม่ออก", "Unrecognized format")} ${stat.bad.toLocaleString()} ${tr("แถว", "rows")}`);
+    if (stat.skip) chip("dim", `➖ ${tr("ช่องว่าง", "Empty")} ${stat.skip.toLocaleString()} ${tr("แถว", "rows")}`);
 
     const rows = [];
     for (let i = 0; i < table.rows.length && rows.length < 12; i++) {
@@ -175,24 +176,25 @@ export function columnTool(tool, cfg) {
       rows.push([i, out[i]]);
     }
     preview.innerHTML = "";
-    if (!rows.length) { preview.appendChild(el("div", { class: "note" }, "ไม่มีข้อมูลให้แสดง")); }
+    if (!rows.length) { preview.appendChild(el("div", { class: "note" }, tr("ไม่มีข้อมูลให้แสดง", "No data to show"))); }
     else {
       const t = el("table", { class: "xt" }, [
         el("thead", {}, [el("tr", {}, [
-          el("th", {}, "แถว"), el("th", {}, table.header[c] + " (เดิม)"),
+          el("th", {}, tr("แถว", "Row")), el("th", {}, table.header[c] + tr(" (เดิม)", " (original)")),
           el("th", {}, "→"), el("th", {}, cfg.outName(o, table.header[c])),
         ])]),
         el("tbody", {}, rows.map(([i, res]) => el("tr", { class: res.ok ? "" : "bad" }, [
           el("td", { class: "num" }, String(i + 2)),
           el("td", { class: "old" }, cellText(table.rows[i][c])),
           el("td", { class: "arrow" }, res.ok ? "→" : "✕"),
-          el("td", { class: "new" }, res.ok ? String(res.value) : (res.reason || "อ่านไม่ออก")),
+          el("td", { class: "new" }, res.ok ? String(res.value) : (res.reason || tr("อ่านไม่ออก", "Could not read"))),
         ]))),
       ]);
       preview.appendChild(t);
       if (stat.ok + stat.bad > rows.length)
         preview.appendChild(el("div", { class: "note" },
-          `แสดง ${rows.length} แถวแรกจาก ${(stat.ok + stat.bad).toLocaleString()} แถว — ดาวน์โหลดแล้วจะได้ครบทุกแถว`));
+          tr(`แสดง ${rows.length} แถวแรกจาก ${(stat.ok + stat.bad).toLocaleString()} แถว — ดาวน์โหลดแล้วจะได้ครบทุกแถว`,
+             `Showing the first ${rows.length} of ${(stat.ok + stat.bad).toLocaleString()} rows — the download will have all of them`)));
     }
     if (encNote) st.info(encNote); else st.clear();
   }
@@ -219,7 +221,7 @@ export function columnTool(tool, cfg) {
     });
     await yieldToBrowser();
 
-    const base = stripExt(dz.files[0].name) + (cfg.suffix || "-แปลงแล้ว");
+    const base = stripExt(dz.files[0].name) + (cfg.suffix || tr("-แปลงแล้ว", "-converted"));
     if (kind === "csv") {
       const ws = XLSX.utils.aoa_to_sheet([header, ...rows], { cellDates: true, dateNF: "dd/mm/yyyy" });
       download(new Blob(["﻿" + XLSX.utils.sheet_to_csv(ws)], { type: "text/csv;charset=utf-8" }), base + ".csv");
@@ -227,8 +229,10 @@ export function columnTool(tool, cfg) {
       download(tableToBlob(header, rows, sheetNames[+sheetSel.value]), base + ".xlsx");
     }
     const L2 = cfg.labels || {};
-    st.ok(`บันทึกแล้ว — ${L2.ok || "แปลงสำเร็จ"} ${stat.ok.toLocaleString()} แถว` +
-          (stat.bad ? ` · ${L2.bad || "อ่านไม่ออก"} ${stat.bad.toLocaleString()} แถว` : ""));
+    st.ok(tr(`บันทึกแล้ว — ${L2.ok || "แปลงสำเร็จ"} ${stat.ok.toLocaleString()} แถว`,
+             `Saved — ${L2.ok || "converted"} ${stat.ok.toLocaleString()} rows`) +
+          (stat.bad ? tr(` · ${L2.bad || "อ่านไม่ออก"} ${stat.bad.toLocaleString()} แถว`,
+                          ` · ${L2.bad || "could not read"} ${stat.bad.toLocaleString()} rows`) : ""));
   }
 
   return wrap;

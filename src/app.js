@@ -268,7 +268,12 @@ document.addEventListener("keydown", (e) => {
 }
 
 renderCats();
-renderHome();
+// ?q=... เปิดเว็บพร้อมคำค้นมาเลย — ใช้กับ SearchAction ใน schema.org และแปะลิงก์ส่งกันได้
+{
+  const q0 = new URLSearchParams(location.search).get("q") || "";
+  if (q0) { search.value = q0; searchBox.classList.add("has"); }
+  renderHome(q0);
+}
 route();
 
 // เอียงปึกกระดาษในฉากเปิดตามเมาส์เล็กน้อย ให้รู้สึกเป็น 3 มิติจริงไม่ใช่ภาพนิ่ง

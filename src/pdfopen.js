@@ -6,17 +6,18 @@
 
 import { el, button } from "./ui.js";
 import { uiIcon } from "./icons.js";
+import { tr } from "./i18n.js";
 
 /** แปลง error ของ pdf.js เป็นข้อความไทยที่บอกว่าต้องทำอะไรต่อ */
 export function friendlyPdfError(e) {
   const name = e?.name || "";
   const msg = String(e?.message || e);
   if (name === "PasswordException" || /password/i.test(msg))
-    return new Error("ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน — ต้องใส่รหัสให้ถูกก่อนจึงจะเปิดได้");
+    return new Error(tr("ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน — ต้องใส่รหัสให้ถูกก่อนจึงจะเปิดได้", "This file is password-protected — you need the correct password to open it"));
   if (name === "InvalidPDFException" || /invalid pdf/i.test(msg))
-    return new Error("ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน");
+    return new Error(tr("ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน", "This isn't a valid PDF, or the file is damaged — try opening it in a PDF reader first"));
   if (/worker/i.test(msg))
-    return new Error("โหลดตัวอ่าน PDF ไม่สำเร็จ — ลองรีเฟรชหน้าเว็บอีกครั้ง");
+    return new Error(tr("โหลดตัวอ่าน PDF ไม่สำเร็จ — ลองรีเฟรชหน้าเว็บอีกครั้ง", "Could not load the PDF reader — try refreshing the page"));
   return new Error(msg);
 }
 
@@ -24,14 +25,14 @@ export function friendlyPdfError(e) {
 export function passwordBox(container) {
   return (wrongBefore) =>
     new Promise((resolve) => {
-      const input = el("input", { type: "password", placeholder: "รหัสผ่านของไฟล์", autocomplete: "off" });
+      const input = el("input", { type: "password", placeholder: tr("รหัสผ่านของไฟล์", "File password"), autocomplete: "off" });
       const box = el("div", { class: "panel pw-box" }, [
         el("div", { class: "status show " + (wrongBefore ? "err" : "info") },
-          wrongBefore ? "รหัสผ่านไม่ถูกต้อง ลองอีกครั้ง" : "ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน กรุณาใส่รหัสเพื่อเปิด"),
-        el("label", { class: "field" }, [el("span", {}, "รหัสผ่าน"), input]),
+          wrongBefore ? tr("รหัสผ่านไม่ถูกต้อง ลองอีกครั้ง", "Wrong password, try again") : tr("ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน กรุณาใส่รหัสเพื่อเปิด", "This file is password-protected — enter the password to open it")),
+        el("label", { class: "field" }, [el("span", {}, tr("รหัสผ่าน", "Password")), input]),
         el("div", { class: "actions" }, [
-          button("ปลดล็อกแล้วทำต่อ", { onclick: () => done(input.value) }),
-          button("ยกเลิก", { ghost: true, onclick: () => done(null) }),
+          button(tr("ปลดล็อกแล้วทำต่อ", "Unlock and continue"), { onclick: () => done(input.value) }),
+          button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => done(null) }),
         ]),
       ]);
       const done = (v) => { box.remove(); resolve(v); };
@@ -56,13 +57,13 @@ export async function openPdf(file, askPassword) {
       if (e?.name === "PasswordException" && askPassword) {
         password = await askPassword(attempt > 0);
         if (password === null || password === undefined)
-          throw new Error("ยกเลิกการเปิดไฟล์ที่ล็อกรหัสผ่าน");
+          throw new Error(tr("ยกเลิกการเปิดไฟล์ที่ล็อกรหัสผ่าน", "Cancelled opening the password-protected file"));
         continue;
       }
       throw friendlyPdfError(e);
     }
   }
-  throw new Error("ใส่รหัสผ่านไม่ถูกต้องหลายครั้ง — ลองตรวจสอบรหัสอีกครั้ง");
+  throw new Error(tr("ใส่รหัสผ่านไม่ถูกต้องหลายครั้ง — ลองตรวจสอบรหัสอีกครั้ง", "Wrong password entered too many times — double-check the password and try again"));
 }
 
 /**
@@ -81,11 +82,13 @@ export async function loadPdfLib(file) {
       return { doc, encrypted: true };
     }
     if (/invalid|parse/i.test(String(e?.message || e)))
-      throw new Error("ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย");
+      throw new Error(tr("ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย", "This isn't a valid PDF, or the file is damaged"));
     throw e;
   }
 }
 
-export const ENCRYPTED_WARNING =
+export const ENCRYPTED_WARNING = tr(
   "ไฟล์ต้นฉบับถูกล็อกด้วยรหัสผ่าน ระบบทำต่อให้แล้วแต่เนื้อหาบางส่วนอาจไม่ครบ " +
-  "แนะนำให้ปลดล็อกไฟล์ก่อนแล้วทำใหม่อีกครั้ง";
+  "แนะนำให้ปลดล็อกไฟล์ก่อนแล้วทำใหม่อีกครั้ง",
+  "The original file is password-protected. We carried on, but some content may be missing — " +
+  "unlock the file first and try again for a complete result.");

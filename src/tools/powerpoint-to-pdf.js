@@ -2,6 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser, segmented } from "../ui.js";
 import { readPptx } from "../pptx.js";
 import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
+import { tr } from "../i18n.js";
 
 // สัดส่วนหน้าสไลด์ (หน่วย pt) — 16:9 คือค่าเริ่มต้นของ PowerPoint ยุคปัจจุบัน
 const SIZES = { "16:9": [960, 540], "4:3": [720, 540] };
@@ -14,36 +15,39 @@ export function mount(tool) {
   warmThaiFont();
 
   const dz = dropzone({
-    expect: ["pptx"], expectLabel: "ไฟล์ PowerPoint (.pptx)",
+    expect: ["pptx"], expectLabel: tr("ไฟล์ PowerPoint (.pptx)", "PowerPoint files (.pptx)"),
     accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    multiple: false, hint: "รองรับไฟล์ .pptx (PowerPoint 2007 ขึ้นไป)",
+    multiple: false, hint: tr("รองรับไฟล์ .pptx (PowerPoint 2007 ขึ้นไป)", "Supports .pptx files (PowerPoint 2007 and later)"),
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
 
   const ratio = segmented([["16:9", "16:9"], ["4:3", "4:3"]], "16:9");
-  const theme = select([["light", "พื้นขาว ตัวอักษรเข้ม"], ["dark", "พื้นเข้ม ตัวอักษรสว่าง"]], "light");
-  const withNotes = select([["no", "ไม่ใส่โน้ต"], ["yes", "ใส่โน้ตผู้บรรยายท้ายสไลด์"]], "no");
-  const go = button("สร้างไฟล์ PDF", { onclick: run });
+  const theme = select([["light", tr("พื้นขาว ตัวอักษรเข้ม", "Light background, dark text")], ["dark", tr("พื้นเข้ม ตัวอักษรสว่าง", "Dark background, light text")]], "light");
+  const withNotes = select([["no", tr("ไม่ใส่โน้ต", "No notes")], ["yes", tr("ใส่โน้ตผู้บรรยายท้ายสไลด์", "Add speaker notes at the bottom of each slide")]], "no");
+  const go = button(tr("สร้างไฟล์ PDF", "Create PDF"), { onclick: run });
 
   body.append(dz.container,
-    el("div", { class: "row" }, [field("สัดส่วนสไลด์", ratio), field("ธีมสี", theme), field("โน้ตผู้บรรยาย", withNotes)]),
+    el("div", { class: "row" }, [field(tr("สัดส่วนสไลด์", "Slide ratio"), ratio), field(tr("ธีมสี", "Color theme"), theme), field(tr("โน้ตผู้บรรยาย", "Speaker notes"), withNotes)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    "สำคัญ: เครื่องมือนี้จัดหน้าสไลด์ขึ้นใหม่จากข้อความในไฟล์ ไม่ได้คัดลอกหน้าตาเดิม — " +
+    tr("สำคัญ: เครื่องมือนี้จัดหน้าสไลด์ขึ้นใหม่จากข้อความในไฟล์ ไม่ได้คัดลอกหน้าตาเดิม — " +
     "สี ฟอนต์ รูปภาพ กราฟ และตำแหน่งของต้นฉบับจะไม่ถูกคงไว้ (การคงดีไซน์เป๊ะต้องใช้ PowerPoint เปิดแล้วสั่ง Save as PDF) · " +
-    "เหมาะกับการทำเอกสารอ่านเนื้อหา แจกในที่ประชุม หรือส่งให้คนที่ไม่มี PowerPoint"));
+    "เหมาะกับการทำเอกสารอ่านเนื้อหา แจกในที่ประชุม หรือส่งให้คนที่ไม่มี PowerPoint",
+    "Important: this tool rebuilds the slide layout from the file's text — it does not copy the original look. " +
+    "Colors, fonts, images, charts, and positioning are not preserved (open PowerPoint and use Save as PDF for an exact copy) · " +
+    "Good for a plain-text handout, printing for a meeting, or sharing with someone who doesn't have PowerPoint")));
 
   async function run() {
-    if (!file) return st.err("กรุณาเลือกไฟล์ .pptx ก่อน");
+    if (!file) return st.err(tr("กรุณาเลือกไฟล์ .pptx ก่อน", "Please choose a .pptx file first"));
     results.innerHTML = "";
     go.disabled = true;
-    st.info("กำลังอ่านสไลด์…");
+    st.info(tr("กำลังอ่านสไลด์…", "Reading slides…"));
     try {
       const { slides } = await readPptx(file, {
-        onProgress: (p) => st.progress((p.current / p.total) * 100, `(${p.current}/${p.total} สไลด์)`),
+        onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${p.total} slides)`)),
       });
 
-      st.info("กำลังจัดหน้า PDF…");
+      st.info(tr("กำลังจัดหน้า PDF…", "Laying out the PDF…"));
       const [W, H] = SIZES[ratio.value];
       const { jsPDF } = jspdf;
       const doc = new jsPDF({ unit: "pt", format: [W, H], orientation: "landscape" });
@@ -68,7 +72,7 @@ export function mount(tool) {
         doc.setFont(THAI_FONT, "bold");
         doc.setFontSize(30);
         doc.setTextColor(...fg);
-        const title = s.title || `สไลด์ ${s.no}`;
+        const title = s.title || tr(`สไลด์ ${s.no}`, `Slide ${s.no}`);
         for (const line of doc.splitTextToSize(title, W - M * 2)) {
           doc.text(line, M, y); y += 38;
         }
@@ -93,7 +97,7 @@ export function mount(tool) {
         if (withNotes.value === "yes" && s.notes && y < H - M - 20) {
           doc.setFontSize(12);
           doc.setTextColor(dark ? 150 : 120, dark ? 155 : 125, dark ? 175 : 145);
-          for (const line of doc.splitTextToSize("โน้ต: " + s.notes, W - M * 2)) {
+          for (const line of doc.splitTextToSize(tr("โน้ต: ", "Notes: ") + s.notes, W - M * 2)) {
             if (y > H - M) break;
             doc.text(line, M, y); y += 16;
           }
@@ -108,16 +112,16 @@ export function mount(tool) {
 
       const blob = doc.output("blob");
       st.progress(null);
-      st.ok(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`);
+      st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done — ${slides.length} pages (1 slide = 1 page)`));
       const name = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${slides.length} สไลด์ · ${ratio.value}`)]),
-        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์ · ${ratio.value}`, `${slides.length} slides · ${ratio.value}`))]),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
       await yieldToBrowser();
     } catch (e) {
       st.progress(null);
-      st.err("สร้าง PDF ไม่สำเร็จ: " + e.message);
+      st.err(tr("สร้าง PDF ไม่สำเร็จ: ", "Could not create PDF: ") + e.message);
     } finally { go.disabled = false; }
   }
   return wrap;

@@ -1,6 +1,7 @@
 import { detectType, wrongTypeMessage } from "./filetype.js";
 import { $, $$, el } from "./dom.js";
 import { byId } from "./registry.js";
+import { toolIcon } from "./icons.js";
 export { $, $$, el } from "./dom.js";
 
 export function fmtBytes(b) {
@@ -39,7 +40,7 @@ export function toolShell(tool) {
   const body = el("div", { class: "panel" });
   const wrap = el("div", { style: `--ac:var(${GROUP_ACCENT[tool.group] || "--brand"})` }, [
     el("div", { class: "tool-head" }, [
-      el("div", { class: "tool-ico", "aria-hidden": "true" }, tool.icon),
+      el("div", { class: "tool-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
       el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc)]),
     ]),
     body,
@@ -58,7 +59,7 @@ export function nextSteps(tool) {
     el("h2", {}, "ทำอะไรต่อดี"),
     el("div", { class: "next-row" }, list.map((t) =>
       el("a", { class: "next-card", href: "#/" + t.id, style: `--ac:${accent(t)}` }, [
-        el("span", { class: "next-ico", "aria-hidden": "true" }, t.icon),
+        el("span", { class: "next-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
         el("span", {}, t.title),
       ])
     )),

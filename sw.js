@@ -8,13 +8,13 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v5";
+const VERSION = "filekit-v6";
 const SHELL = `${VERSION}-shell`;
 const LIBS = `${VERSION}-libs`;
 
 const PRECACHE = [
   "./", "./index.html",
-  "./src/app.js", "./src/registry.js", "./src/loader.js", "./src/dom.js", "./src/search.js",
+  "./src/app.js", "./src/registry.js", "./src/loader.js", "./src/dom.js", "./src/search.js", "./src/icons.js",
   "./assets/css/tool.css", "./manifest.webmanifest",
 ];
 

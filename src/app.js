@@ -6,6 +6,7 @@ import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
 import { el, $ } from "./dom.js";
+import { toolIcon } from "./icons.js";
 
 const toolBox = $("#tool"), grids = $("#tools");
 const search = $("#q"), searchBox = $("#searchbox"), hits = $("#hits"), cats = $("#cats");
@@ -34,7 +35,7 @@ function cardOf(t, q = "") {
     onclick: () => go(t.id),
     onmouseenter: () => prefetch(t), onfocus: () => prefetch(t), ontouchstart: () => prefetch(t),
   }, [
-    el("span", { class: "ico", "aria-hidden": "true" }, t.icon),
+    el("span", { class: "ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
     el("div", { class: "tx" }, [title, el("p", {}, t.desc)]),
   ]);
 }

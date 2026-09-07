@@ -94,7 +94,7 @@ export function mount(tool) {
 
       const name = stripExt(file.name) + "-ocr.txt";
       results.appendChild(el("div", { class: "actions" }, [
-        button("⬇ ดาวน์โหลด .txt", { onclick: () =>
+        button("ดาวน์โหลด .txt", { icon: "download",  onclick: () =>
           download(new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" }), name) }),
         button("📋 คัดลอกทั้งหมด", { ghost: true, onclick: async () => {
           try { await navigator.clipboard.writeText(text); st.ok("คัดลอกลงคลิปบอร์ดแล้ว"); }

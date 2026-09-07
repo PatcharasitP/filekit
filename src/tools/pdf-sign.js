@@ -227,7 +227,7 @@ export function mount(tool) {
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name)]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.err("บันทึกไม่สำเร็จ: " + e.message);

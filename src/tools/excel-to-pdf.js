@@ -78,7 +78,7 @@ export function mount(tool) {
       const outName = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, `${doc.getNumberOfPages()} หน้า`)]),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, outName) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, outName) }),
       ]));
     } catch (e) {
       st.progress(null);

@@ -13,7 +13,14 @@ def ck(n, got, want, contains=False):
 #    color-mix(...12%, transparent) ถูกคิดเป็นสีทึบ ทำให้ "ผ่านหลอก" (วัดได้ 11.83 ทั้งที่ของจริง 1.34)
 #    รุ่นนี้ไล่เก็บพื้นหลังทุกชั้นแล้วผสมย้อนขึ้นมาแบบเดียวกับที่เบราว์เซอร์วาดจริง
 CONTRAST = """(sel)=>{
-  const px = s => (s.match(/[\\d.]+/g)||[]).map(Number);
+  // ‼️ เบราว์เซอร์คืนสีได้ 2 รูปแบบ: rgb()/rgba() ค่า 0-255 กับ color(srgb …) ค่า 0-1
+  //    ถ้าอ่านแบบเดียวจะเพี้ยนหนัก — สีขาว color(srgb 1 1 1) จะถูกอ่านเป็นเกือบดำ
+  const px = s => {
+    const n = (s.match(/-?[\\d.]+(?:e-?\\d+)?/g) || []).map(Number);
+    if (!n.length) return [];
+    if (/^color\\(/.test(s.trim())) { const [r,g,b,a] = n; return a === undefined ? [r*255,g*255,b*255] : [r*255,g*255,b*255,a]; }
+    return n;
+  };
   const over = (fg, bg) => { const a = fg[3] ?? 1; return [0,1,2].map(i => fg[i]*a + bg[i]*(1-a)); };
   const lin = c => { c/=255; return c<=0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
   const L = ([r,g,b]) => 0.2126*lin(r)+0.7152*lin(g)+0.0722*lin(b);

@@ -22,7 +22,7 @@ const SUGGEST = {
   docx:  ["word-to-pdf", "Word → PDF"],
   doc:   [null, "ไฟล์ .doc รุ่นเก่ายังไม่รองรับ — บันทึกเป็น .docx ก่อนแล้วลองใหม่"],
   xlsx:  ["excel-to-pdf", "Excel → PDF"],
-  csv:   ["excel-csv", "Excel ⇄ CSV"],
+  csv:   ["excel-csv", "Excel → CSV"],
   pptx:  ["powerpoint-to-word", "PowerPoint → Word"],
   ppt:   [null, "ไฟล์ .ppt รุ่นเก่ายังไม่รองรับ — บันทึกเป็น .pptx ก่อนแล้วลองใหม่"],
   image: ["images-to-pdf", "รูปภาพ → PDF"],

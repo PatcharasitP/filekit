@@ -112,7 +112,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${slides.length} สไลด์ · ${ratio.value}`)]),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
       ]));
       await yieldToBrowser();
     } catch (e) {

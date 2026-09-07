@@ -311,7 +311,7 @@ export function mount(tool) {
 
       if (made.length > 1) {
         results.appendChild(el("div", { class: "actions" }, [
-          button("📦 ดาวน์โหลดทั้งหมดเป็น ZIP", { onclick: async () => {
+          button("ดาวน์โหลดทั้งหมดเป็น ZIP", { icon: "zip",  onclick: async () => {
             st.info("กำลังบีบเป็น ZIP…");
             const [JSZipLib] = await loadLibs("jszip");
             const zip = new JSZipLib();
@@ -324,7 +324,7 @@ export function mount(tool) {
       made.slice(0, 50).forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-        button("⬇", { onclick: () => download(m.blob, m.name) }),
+        button("", { icon: "download", label: "ดาวน์โหลด",  onclick: () => download(m.blob, m.name) }),
       ])));
       if (made.length > 50) results.appendChild(el("div", { class: "note" },
         `แสดง 50 ไฟล์แรกในรายการ · ไฟล์ที่เหลืออยู่ในไฟล์ ZIP ครบทั้ง ${made.length} ไฟล์`));

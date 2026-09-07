@@ -97,7 +97,7 @@ export function mount(tool) {
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, `${fmtBytes(file.size)} → ${fmtBytes(blob.size)} · ระดับ${LEVELS[level.value].label}`)]),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.progress(null);

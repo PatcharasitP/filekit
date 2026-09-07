@@ -102,8 +102,8 @@ export function columnTool(tool, cfg) {
     accept: cfg.accept, multiple: false, expect: cfg.expect, expectLabel: cfg.expectLabel,
     hint: cfg.hint, onChange: load,
   });
-  const goX = button("⬇ ดาวน์โหลดเป็น Excel", { onclick: () => save("xlsx") });
-  const goC = button("⬇ ดาวน์โหลดเป็น CSV", { onclick: () => save("csv"), ghost: true });
+  const goX = button("ดาวน์โหลดเป็น Excel", { icon: "download",  onclick: () => save("xlsx") });
+  const goC = button("ดาวน์โหลดเป็น CSV", { icon: "download",  onclick: () => save("csv"), ghost: true });
   const actions = el("div", { class: "actions" }, [goX, goC]);
   actions.hidden = true;
 

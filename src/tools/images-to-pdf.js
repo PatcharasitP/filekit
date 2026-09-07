@@ -80,7 +80,7 @@ export function mount(tool) {
       const name = stripExt(files[0].name) + "-รูปภาพ.pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${files.length} หน้า`)]),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.progress(null);

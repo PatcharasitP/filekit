@@ -1,4 +1,4 @@
-// แปลงปี พ.ศ. ⇄ ค.ศ. ทั้งคอลัมน์ในไฟล์ Excel/CSV
+// แปลงปี พ.ศ. กับ ค.ศ. ทั้งคอลัมน์ในไฟล์ Excel/CSV
 import { el } from "../dom.js";
 import { field, select } from "../ui.js";
 import { columnTool } from "../sheetpick.js";

@@ -49,7 +49,7 @@ export function mount(tool) {
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, parts.map((p) => `${p.name} (${p.paragraphs} ย่อหน้า)`).join(" · "))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.progress(null);

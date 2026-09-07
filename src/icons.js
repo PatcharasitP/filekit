@@ -50,6 +50,32 @@ export const ICONS = {
   "thai-number":  `<path d="${DOC}"/><path d="M11.6 9.8v10.4"/><path d="M9.8 11.6h3.4a2 2 0 0 1 0 4h-3.4zM9.8 15.6h3.8a2 2 0 0 1 0 4H9.8z"/>`,
 };
 
+/** ไอคอนใช้งานทั่วไปสำหรับปุ่ม — แทนอักขระสัญลักษณ์ที่ฟอนต์ไทยไม่มี (⬇ ⠿ ⏹ ↺)
+ *  ตัวพวกนั้นจะตกไปใช้ฟอนต์อื่นของระบบ ทำให้ปุ่มดูไม่เข้าชุดกัน */
+export const UI = {
+  download: `<path d="M12 3.5v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 17v1.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V17"/>`,
+  zip:      `<path d="M4 7.5l8-4 8 4v9l-8 4-8-4z"/><path d="M4 7.5l8 4 8-4M12 11.5V20"/><path d="M10.2 5.4h1.6M10.2 7.2h1.6M10.2 9h1.6"/>`,
+  grip:     `<circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/>`,
+  stop:     `<rect x="6" y="6" width="12" height="12" rx="2"/>`,
+  rotateR:  `<path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4.5V11h-6.5"/>`,
+  rotateL:  `<path d="M4 11a8 8 0 1 1 2.3 6.3"/><path d="M4 4.5V11h6.5"/>`,
+  undo:     `<path d="M4 9h11a5 5 0 0 1 0 10h-6"/><path d="M8 5L4 9l4 4"/>`,
+  list:     `<path d="M4 6.5h16M4 12h16M4 17.5h16"/>`,
+  rows:     `<rect x="3.5" y="4" width="17" height="6" rx="1.4"/><rect x="3.5" y="14" width="17" height="6" rx="1.4"/>`,
+};
+
+/** <svg> ของไอคอนใช้งานทั่วไป */
+export function uiIcon(name, cls = "btn-ico") {
+  const d = UI[name];
+  if (!d) return null;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", cls);
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = d;
+  return svg;
+}
+
 /** คืน <svg> ของเครื่องมือ · ถ้ายังไม่มีไอคอนวาดไว้ ใช้อีโมจิเดิมแทน (ไม่พังแน่นอน) */
 export function toolIcon(tool, cls = "ico-svg") {
   const d = ICONS[tool.id];

@@ -4,10 +4,10 @@
 .tool-ico{
   width:46px;height:46px;flex:0 0 46px;border-radius:13px;display:grid;place-items:center;font-size:22px;
   color:#fff;
-  background:linear-gradient(140deg,var(--ac,var(--brand)),color-mix(in srgb,var(--ac,var(--brand)) 58%,#000));
+  background:linear-gradient(140deg,color-mix(in srgb,var(--ac,var(--brand)) 92%,#fff),color-mix(in srgb,var(--ac,var(--brand)) 72%,#000));
   box-shadow:0 6px 16px color-mix(in srgb,var(--ac,var(--brand)) 32%,transparent), inset 0 1px 0 rgba(255,255,255,.3);
 }
-.tool-head h1{margin:0;font-size:21px;font-weight:800;line-height:1.4;letter-spacing:calc(1em * -0.015)}
+.tool-head h1{margin:0;font-size:21px;font-weight:700;line-height:1.4;letter-spacing:calc(1em * -0.015)}
 .tool-head p{margin:3px 0 0;color:var(--text-dim);font-size:13.5px;max-width:70ch}
 
 .panel{
@@ -330,7 +330,7 @@
 .next-card:hover{border-color:color-mix(in srgb,var(--ac) 60%,transparent);background:var(--card-hi);transform:translateY(-1px)}
 .next-ico{
   width:28px;height:28px;flex:none;border-radius:9px;display:grid;place-items:center;font-size:15px;color:#fff;
-  background:linear-gradient(140deg,var(--ac),color-mix(in srgb,var(--ac) 58%,#000));
+  background:linear-gradient(140deg,color-mix(in srgb,var(--ac) 92%,#fff),color-mix(in srgb,var(--ac) 72%,#000));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28);
 }
 .tool-ico .ico-svg{width:26px;height:26px}
@@ -370,3 +370,10 @@
 }
 .seg-item input:focus-visible + span{outline:2.5px solid var(--brand); outline-offset:1px}
 @media (max-width:560px){ .seg{width:100%} .seg-item span{padding:7px 8px; font-size:12.5px} }
+
+/* ── ไอคอนในปุ่ม ── */
+.btn-ico{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.btn.has-ico{display:inline-flex;align-items:center;gap:8px}
+.pg-ico{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.grip-svg{width:16px;height:16px;stroke:none;fill:currentColor;display:block}

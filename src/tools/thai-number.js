@@ -1,4 +1,4 @@
-// ตัวเลข → คำอ่านบาทถ้วน · เลขไทย ⇄ เลขอารบิก ทั้งคอลัมน์
+// ตัวเลข → คำอ่านบาทถ้วน · เลขไทย กับ เลขอารบิก ทั้งคอลัมน์
 import { el } from "../dom.js";
 import { field, select } from "../ui.js";
 import { columnTool } from "../sheetpick.js";

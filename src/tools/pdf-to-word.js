@@ -53,7 +53,7 @@ export function mount(tool) {
     results.innerHTML = "";
     results.appendChild(el("div", { class: "result" }, [
       el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${blocks.length} หน้า`)]),
-      button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+      button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
     ]));
   }
 

@@ -1,7 +1,7 @@
 import { detectType, wrongTypeMessage } from "./filetype.js";
 import { $, $$, el } from "./dom.js";
 import { byId } from "./registry.js";
-import { toolIcon } from "./icons.js";
+import { toolIcon, uiIcon } from "./icons.js";
 export { $, $$, el } from "./dom.js";
 
 export function fmtBytes(b) {
@@ -97,11 +97,13 @@ export function statusBar() {
 }
 
 export function button(text, opts = {}) {
+  const ico = opts.icon ? uiIcon(opts.icon) : null;
   return el("button", {
-    class: "btn" + (opts.ghost ? " ghost" : "") + (opts.danger ? " danger" : ""),
+    class: "btn" + (opts.ghost ? " ghost" : "") + (opts.danger ? " danger" : "") + (ico ? " has-ico" : ""),
     type: "button",
     onclick: opts.onclick,
-  }, text);
+    "aria-label": opts.label || null,
+  }, ico ? [ico, text ? el("span", {}, text) : null] : text);
 }
 
 export function field(labelText, control, hint) {
@@ -247,7 +249,7 @@ export function dropzone(opts = {}) {
       const move = (d) => { const j = i + d; if (j < 0 || j >= files.length) return;
         [files[i], files[j]] = [files[j], files[i]]; render(); onChange(files); };
       const row = el("div", { class: "file-row", draggable: reorder || null, "data-i": i }, [
-        reorder ? el("span", { class: "grip", title: "ลากเพื่อสลับลำดับ", "aria-hidden": "true" }, "⠿") : null,
+        reorder ? el("span", { class: "grip", title: "ลากเพื่อสลับลำดับ", "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
         el("span", { class: "f-name" }, f.name),
         el("span", { class: "f-size" }, fmtBytes(f.size)),
         reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": `เลื่อน ${f.name} ขึ้น`,
@@ -344,11 +346,11 @@ export function failedBox(failed) {
   if (!failed) return null;
   if (!failed.length && !failed.stopped) return null;
   if (!failed.length) return el("div", { class: "fail-box" }, [
-    el("strong", {}, `⏹️ หยุดตามที่สั่ง — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`),
+    el("strong", {}, `หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`),
   ]);
   return el("div", { class: "fail-box" }, [
     el("strong", {}, `⚠️ ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`),
     el("ul", {}, failed.map((f) => el("li", {}, `${f.name} — ${f.why}`))),
-    failed.stopped ? el("div", {}, `⏹️ หยุดตามที่สั่ง — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`) : null,
+    failed.stopped ? el("div", {}, `หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`) : null,
   ]);
 }

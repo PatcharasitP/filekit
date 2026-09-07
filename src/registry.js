@@ -105,14 +105,14 @@ export const TOOLS = [
     desc:"จัดสไลด์เป็นไฟล์ PDF อ่านง่าย 1 สไลด์ = 1 หน้า เลือกธีมได้",
     libs:["jszip","jspdf"], keys:"powerpoint ppt pptx สไลด์ pdf presentation แปลง แจก", next:["pdf-merge","pdf-compress"] },
 
-  { id:"excel-csv",   group:"data", icon:"🔁", title:"Excel ⇄ CSV",
+  { id:"excel-csv",   group:"data", icon:"🔁", title:"สลับ Excel กับ CSV",
     desc:"แปลง XLSX เป็น CSV (แยกทีละชีท) หรือรวม CSV กลับเป็น Excel",
     libs:["xlsx","jszip"], keys:"csv excel xlsx แปลง data ข้อมูล", next:["thai-encoding","excel-to-pdf"] },
   { id:"thai-encoding", group:"thai", icon:"🩹", title:"ซ่อมไฟล์ไทยเพี้ยน",
     desc:"เปิด CSV แล้วเจอ “เธชเธงเธฑ” หรือ “à¸ªà¸§” — ตรวจการเข้ารหัสให้เอง แล้วบันทึกใหม่เป็น UTF-8",
     libs:["jszip"], keys:"encoding tis-620 windows-874 utf-8 เพี้ยน ต่างดาว อ่านไม่ออก มั่ว csv ภาษาไทย ยึกยือ", next:["excel-csv","thai-date"] },
 
-  { id:"thai-date", group:"thai", icon:"📅", title:"แปลง พ.ศ. ⇄ ค.ศ. ทั้งคอลัมน์",
+  { id:"thai-date", group:"thai", icon:"📅", title:"สลับปี พ.ศ. กับ ค.ศ. ทั้งคอลัมน์",
     desc:"อ่านวันที่ไทยได้ทุกแบบ (15 ม.ค. 2569 · ๑๕/๐๑/๒๕๖๙) แปลงทั้งคอลัมน์แล้วเลือกรูปแบบผลลัพธ์ได้",
     libs:["xlsx"], keys:"พ.ศ. ค.ศ. buddhist christian ปี วันที่ 543 แปลงปี date excel", next:["thai-id","thai-number"] },
 
@@ -121,7 +121,7 @@ export const TOOLS = [
     libs:["xlsx"], keys:"บัตรประชาชน เลขบัตร ผู้เสียภาษี tax id 13 หลัก ตรวจสอบ checksum", next:["thai-date","thai-number"] },
 
   { id:"thai-number", group:"thai", icon:"🔢", title:"ตัวเลข → บาทถ้วน / เลขไทย",
-    desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · สลับเลขไทย ๑๒๓ ⇄ 123 ได้ทั้งคอลัมน์",
+    desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
     libs:["xlsx"], keys:"บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค", next:["word-mailmerge","thai-date"] },
 ];
 

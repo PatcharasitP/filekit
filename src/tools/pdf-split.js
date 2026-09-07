@@ -75,12 +75,12 @@ export function mount(tool) {
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, `${m.count} หน้า`)]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-        button("⬇", { onclick: () => download(m.blob, m.name) }),
+        button("", { icon: "download", label: "ดาวน์โหลด",  onclick: () => download(m.blob, m.name) }),
       ])));
 
       if (made.length > 1) {
         results.prepend(el("div", { class: "actions" }, [
-          button("📦 ดาวน์โหลดทั้งหมดเป็น ZIP", {
+          button("ดาวน์โหลดทั้งหมดเป็น ZIP", { icon: "zip", 
             onclick: async () => {
               st.info("กำลังบีบเป็น ZIP…");
               const zip = new JSZip();

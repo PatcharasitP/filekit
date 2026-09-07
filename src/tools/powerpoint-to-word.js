@@ -59,7 +59,7 @@ export function mount(tool) {
             spacing: { before: 200, after: 80 },
           }));
         }
-        previewLines.push(`▌ ${heading}`);
+        previewLines.push(`— ${heading}`);
 
         s.paras.forEach((p) => {
           words += p.text.length;
@@ -95,7 +95,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".docx";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${slides.length} สไลด์`)]),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
       ]));
       await yieldToBrowser();
     } catch (e) {

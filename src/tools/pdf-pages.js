@@ -1,5 +1,6 @@
 import { loadPdfLib, ENCRYPTED_WARNING, openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, download, stripExt, yieldToBrowser } from "../ui.js";
+import { uiIcon } from "../icons.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -18,13 +19,13 @@ export function mount(tool) {
 
   const actions = el("div", { class: "actions" }, [
     button("💾 บันทึกเป็นไฟล์ใหม่", { onclick: save }),
-    button("↺ รีเซ็ตทั้งหมด", { ghost: true, onclick: () => { if (file) loadPreview(); } }),
+    button("รีเซ็ตทั้งหมด", { icon: "undo", ghost: true, onclick: () => { if (file) loadPreview(); } }),
   ]);
   actions.style.display = "none";
 
   body.append(dz.container, st.node, extra, grid, actions, results);
   body.appendChild(el("div", { class: "note" },
-    "คลิก 🗑 เพื่อทำเครื่องหมายลบหน้า (กดซ้ำเพื่อเอากลับ) · ปุ่ม ⟳ หมุนทีละ 90° · ลากการ์ดเพื่อสลับลำดับ แล้วกดบันทึก"));
+    "คลิก 🗑 เพื่อทำเครื่องหมายลบหน้า (กดซ้ำเพื่อเอากลับ) · ปุ่มลูกศรโค้งหมุนทีละ 90° · ลากการ์ดเพื่อสลับลำดับ แล้วกดบันทึก"));
 
   async function loadPreview() {
     grid.innerHTML = "";
@@ -68,9 +69,9 @@ export function mount(tool) {
           style: { transform: `rotate(${it.rotate}deg)` } }),
         el("span", { class: "num" }, String(i + 1)),
         el("div", { class: "tools" }, [
-          el("button", { type: "button", title: "หมุนซ้าย", onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 270) % 360; render(); } }, "⟲"),
-          el("button", { type: "button", title: "หมุนขวา", onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, "⟳"),
-          el("button", { type: "button", title: it.dropped ? "เอากลับ" : "ลบหน้านี้", onclick: (e) => { e.stopPropagation(); it.dropped = !it.dropped; render(); } }, it.dropped ? "↩" : "🗑"),
+          el("button", { type: "button", title: "หมุนซ้าย", onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 270) % 360; render(); } }, [uiIcon("rotateL", "pg-ico")]),
+          el("button", { type: "button", title: "หมุนขวา", onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, [uiIcon("rotateR", "pg-ico")]),
+          el("button", { type: "button", title: it.dropped ? "เอากลับ" : "ลบหน้านี้", onclick: (e) => { e.stopPropagation(); it.dropped = !it.dropped; render(); } }, it.dropped ? [uiIcon("undo", "pg-ico")] : "🗑"),
         ]),
       ]);
       grid.appendChild(card);
@@ -128,7 +129,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + "-จัดหน้าใหม่.pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${keep.length} หน้า`)]),
-        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+        button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
       st.err("บันทึกไม่สำเร็จ: " + e.message);

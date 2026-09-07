@@ -11,7 +11,8 @@ import { TOOLS } from "./registry.js";
 import { el } from "./dom.js";
 
 const KEY = "filekit-offline-ready";
-const FONTS = ["vendor/fonts/Sarabun-Regular-th.ttf", "vendor/fonts/Sarabun-Bold-th.ttf"];
+const FONTS = ["vendor/fonts/Sarabun-Regular-th.ttf", "vendor/fonts/Sarabun-Bold-th.ttf",
+  "vendor/fonts/Sarabun-Regular.woff2", "vendor/fonts/Sarabun-SemiBold.woff2", "vendor/fonts/Sarabun-Bold.woff2"];
 
 const assetList = () => [
   ...localLibFiles(),

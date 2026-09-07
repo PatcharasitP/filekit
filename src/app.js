@@ -6,7 +6,7 @@ import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
 import { el, $ } from "./dom.js";
-import { toolIcon } from "./icons.js";
+import { toolIcon, uiIcon } from "./icons.js";
 
 const toolBox = $("#tool"), grids = $("#tools");
 const search = $("#q"), searchBox = $("#searchbox"), hits = $("#hits"), cats = $("#cats");
@@ -240,7 +240,7 @@ function applyDensity(v) {
   else delete document.documentElement.dataset.density;
   store.set("fk-density", v);
   densBtn.setAttribute("aria-pressed", String(v === "compact"));
-  densBtn.textContent = v === "compact" ? "▤" : "☰";
+  densBtn.replaceChildren(uiIcon(v === "compact" ? "rows" : "list", "btn-ico"));
   densBtn.title = densBtn.ariaLabel = v === "compact" ? "มุมมองแบบแน่น (กดเพื่อกลับแบบปกติ)" : "มุมมองแบบปกติ (กดเพื่อดูแบบแน่น)";
 }
 applyDensity(store.get("fk-density", "cozy"));
@@ -277,32 +277,8 @@ route();
 document.head.appendChild(el("link", { rel: "stylesheet", href: "assets/css/tool.css" }));
 
 // แถบ "เตรียมใช้งานออฟไลน์" — ดึงเข้ามาตอนเบราว์เซอร์ว่าง ไม่แย่งเวลาวาดหน้าแรก
-function hasLocalFont(name) {
-  try {
-    const c = document.createElement("canvas").getContext("2d");
-    const probe = "กขคงจฉชABCwi0O";
-    const width = (f) => { c.font = `72px ${f}`; return c.measureText(probe).width; };
-    return Math.abs(width(`"${name}", monospace`) - width("monospace")) > 0.5;
-  } catch { return false; }
-}
-
 {
   const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 600));
-
-  // ฟอนต์ไทยของเราเอง — ประกาศ "หลัง" หน้าแรกวาดเสร็จแล้วเท่านั้น
-  // ถ้าใส่ไว้ใน CSS ตั้งแต่แรก เบราว์เซอร์จะดึงไฟล์ 91 KB มาแข่งกับการวาดหน้า
-  // ส่วน font-display:swap ทำให้ข้อความขึ้นด้วยฟอนต์ระบบไปก่อน แล้วค่อยสลับ ไม่มีจอว่าง
-  // และถ้าเครื่องผู้ใช้ลง Sarabun ไว้อยู่แล้ว (พบบ่อยในเครื่องคนไทย) ก็ไม่ต้องโหลดเลย
-  idle(() => {
-    // ‼️ document.fonts.check() ใช้ไม่ได้กับเรื่องนี้ — มันคืน true แม้ไม่มีฟอนต์จริง (นับ fallback ด้วย)
-    //    ต้องวัดความกว้างข้อความเทียบกับฟอนต์อ้างอิงถึงจะรู้ว่าเครื่องมีฟอนต์นั้นจริงหรือไม่
-    if (hasLocalFont("Sarabun")) return;
-    document.head.appendChild(el("style", {}, `
-@font-face{font-family:"Sarabun";src:url("vendor/fonts/Sarabun-Regular-th.ttf") format("truetype");
-  font-weight:400;font-style:normal;font-display:swap}
-@font-face{font-family:"Sarabun";src:url("vendor/fonts/Sarabun-Bold-th.ttf") format("truetype");
-  font-weight:700 800;font-style:normal;font-display:swap}`));
-  });
 
   idle(() => {
     import("./offline.js")

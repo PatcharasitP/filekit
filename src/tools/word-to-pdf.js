@@ -135,7 +135,7 @@ export function mount(tool) {
         (warned ? ` · มี ${warned} จุดที่จัดรูปแบบไม่ครบ` : ""));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
-        button("📦 ดาวน์โหลดทั้งหมดเป็น ZIP", { onclick: async () => {
+        button("ดาวน์โหลดทั้งหมดเป็น ZIP", { icon: "zip",  onclick: async () => {
           const [JSZipLib] = await loadLibs("jszip");
           const zip = new JSZipLib();
           made.forEach((m) => zip.file(m.name, m.blob));
@@ -145,7 +145,7 @@ export function mount(tool) {
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, `${m.pages} หน้า`)]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-        button("⬇", { onclick: () => download(m.blob, m.name) }),
+        button("", { icon: "download", label: "ดาวน์โหลด",  onclick: () => download(m.blob, m.name) }),
       ])));
     } catch (e) {
       st.progress(null);

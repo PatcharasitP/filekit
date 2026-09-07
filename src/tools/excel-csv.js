@@ -47,10 +47,10 @@ export function mount(tool) {
         made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
           el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-          button("⬇", { onclick: () => download(m.blob, m.name) }),
+          button("", { icon: "download", label: "ดาวน์โหลด",  onclick: () => download(m.blob, m.name) }),
         ])));
         if (made.length > 1) results.prepend(el("div", { class: "actions" }, [
-          button("📦 ดาวน์โหลดทั้งหมดเป็น ZIP", { onclick: async () => {
+          button("ดาวน์โหลดทั้งหมดเป็น ZIP", { icon: "zip",  onclick: async () => {
             const zip = new JSZip();
             made.forEach((m) => zip.file(m.name, m.blob));
             download(await zip.generateAsync({ type: "blob" }), base + "-csv.zip");
@@ -80,7 +80,7 @@ export function mount(tool) {
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${wb.SheetNames.length} ชีท`)]),
-          button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+          button("ดาวน์โหลด", { icon: "download",  onclick: () => download(blob, name) }),
         ]));
       }
     } catch (e) {

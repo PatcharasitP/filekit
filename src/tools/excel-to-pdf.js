@@ -1,6 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser } from "../ui.js";
 import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
+import { smartDecode } from "../thai.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -33,7 +34,11 @@ export function mount(tool) {
     go.disabled = true;
     st.info("กำลังอ่านไฟล์…");
     try {
-      const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      // CSV ที่ไม่ใช่ UTF-8 (ส่งออกจากระบบเก่า) ต้องเดาการเข้ารหัสก่อน ไม่งั้นไทยเพี้ยนทั้งไฟล์
+      const buf = new Uint8Array(await file.arrayBuffer());
+      const wb = /\.(csv|txt|tsv)$/i.test(file.name)
+        ? XLSX.read(smartDecode(buf).text, { type: "string" })
+        : XLSX.read(buf, { type: "array" });
       const { jsPDF } = jspdf;
       const doc = new jsPDF({ unit: "pt", format: "a4", orientation: orient.value });
       await useThaiFont(doc, "both");

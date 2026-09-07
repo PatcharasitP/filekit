@@ -11,6 +11,7 @@ export const GROUPS = [
   { id: "doc", label: "เอกสารและจดหมายเวียน" },
   { id: "ppt", label: "PowerPoint" },
   { id: "data", label: "ตารางและข้อมูล" },
+  { id: "thai", label: "งานเอกสารไทย" },
 ];
 
 export const TOOLS = [
@@ -105,6 +106,22 @@ export const TOOLS = [
   { id:"excel-csv",   group:"data", icon:"🔁", title:"Excel ⇄ CSV",
     desc:"แปลง XLSX เป็น CSV (แยกทีละชีท) หรือรวม CSV กลับเป็น Excel",
     libs:["xlsx","jszip"], keys:"csv excel xlsx แปลง data ข้อมูล" },
+  { id:"thai-encoding", group:"thai", icon:"🩹", title:"ซ่อมไฟล์ไทยเพี้ยน",
+    desc:"เปิด CSV แล้วเจอ “เธชเธงเธฑ” หรือ “à¸ªà¸§” — ตรวจการเข้ารหัสให้เอง แล้วบันทึกใหม่เป็น UTF-8",
+    libs:["jszip"], keys:"encoding tis-620 windows-874 utf-8 เพี้ยน ต่างดาว อ่านไม่ออก มั่ว csv ภาษาไทย ยึกยือ" },
+
+  { id:"thai-date", group:"thai", icon:"📅", title:"แปลง พ.ศ. ⇄ ค.ศ. ทั้งคอลัมน์",
+    desc:"อ่านวันที่ไทยได้ทุกแบบ (15 ม.ค. 2569 · ๑๕/๐๑/๒๕๖๙) แปลงทั้งคอลัมน์แล้วเลือกรูปแบบผลลัพธ์ได้",
+    libs:["xlsx"], keys:"พ.ศ. ค.ศ. buddhist christian ปี วันที่ 543 แปลงปี date excel" },
+
+  { id:"thai-id", group:"thai", icon:"🪪", title:"ตรวจเลขบัตร ปชช. / ผู้เสียภาษี",
+    desc:"ตรวจหลักตรวจสอบเลข 13 หลักทั้งไฟล์ บอกได้ว่าแถวไหนพิมพ์ผิดและควรเป็นเลขอะไร",
+    libs:["xlsx"], keys:"บัตรประชาชน เลขบัตร ผู้เสียภาษี tax id 13 หลัก ตรวจสอบ checksum" },
+
+  { id:"thai-number", group:"thai", icon:"🔢", title:"ตัวเลข → บาทถ้วน / เลขไทย",
+    desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · สลับเลขไทย ๑๒๓ ⇄ 123 ได้ทั้งคอลัมน์",
+    libs:["xlsx"], keys:"บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค" },
 ];
+
 
 export const byId = (id) => TOOLS.find((t) => t.id === id);

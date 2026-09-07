@@ -249,3 +249,39 @@
 .sample-box > div:first-child{flex:1;min-width:230px}
 .sample-links{display:flex;gap:7px;flex-wrap:wrap}
 .sample-links .chip{background:var(--surface);font-size:12px;padding:6px 12px}
+
+/* ── ชุดเครื่องมือไทย: ชิปสรุป + ตารางพรีวิว ── */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 10px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+  font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--bg-soft);color:var(--text-dim)}
+.chip.ok{border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok);
+  background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.chip.warn{border-color:color-mix(in srgb,var(--warn) 45%,transparent);color:var(--warn);
+  background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.chip.bad{border-color:color-mix(in srgb,var(--err) 45%,transparent);color:var(--err);
+  background:color-mix(in srgb,var(--err) 12%,transparent)}
+
+.xt-wrap{overflow-x:auto;border:1px solid var(--line-soft);border-radius:10px;background:var(--bg-soft)}
+.xt{width:100%;border-collapse:collapse;font-size:13.5px;line-height:1.75}
+.xt th{position:sticky;top:0;background:var(--card-hi);color:var(--text-dim);font-weight:600;
+  text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.xt td{padding:8px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.xt tr:last-child td{border-bottom:0}
+.xt .num{color:var(--text-mute);font-variant-numeric:tabular-nums;width:1%;white-space:nowrap}
+.xt .arrow{color:var(--text-mute);width:1%;text-align:center}
+.xt .old{color:var(--text-dim)}
+.xt .new{color:var(--text);font-weight:600}
+.xt tr.bad .new,.xt tr.bad .arrow{color:var(--err);font-weight:500}
+.xt-wrap+.note{margin-top:8px}
+
+/* ── ซ่อมไฟล์ไทยเพี้ยน ── */
+.enc-list{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.enc-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card)}
+.enc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.enc-head strong{flex:1;min-width:0;overflow-wrap:anywhere}
+.enc-cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.enc-cmp small{display:block;color:var(--text-mute);font-size:12px;margin-bottom:5px}
+.enc-cmp .preview-text{margin:0;max-height:120px;overflow:auto}
+.preview-text.bad{color:var(--err)}
+.preview-text.good{color:var(--ok)}
+@media(max-width:640px){.enc-cmp{grid-template-columns:1fr}}

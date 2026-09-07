@@ -2,6 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 import { readPlaceholders, mergeAll, buildRecords } from "../docxmerge.js";
 import { loadLibs } from "../loader.js";
+import { smartDecode } from "../thai.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -127,7 +128,10 @@ export function mount(tool) {
     st.info("กำลังอ่านข้อมูล…");
     try {
       const [XLSXLib] = await loadLibs("xlsx");
-      const wb = XLSXLib.read(await dataFile.arrayBuffer(), { type: "array" });
+      const dbuf = new Uint8Array(await dataFile.arrayBuffer());
+      const wb = /\.(csv|txt|tsv)$/i.test(dataFile.name)
+        ? XLSXLib.read(smartDecode(dbuf).text, { type: "string" })   // CSV ไทยเพี้ยนก็อ่านออก
+        : XLSXLib.read(dbuf, { type: "array" });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       rows = XLSXLib.utils.sheet_to_json(sheet, { defval: "", raw: false });
       if (!rows.length) throw new Error("ไม่พบข้อมูลในไฟล์ (ต้องมีแถวหัวตารางและอย่างน้อย 1 แถวข้อมูล)");

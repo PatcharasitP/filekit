@@ -1,5 +1,6 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+import { smartDecode } from "../thai.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -57,10 +58,14 @@ export function mount(tool) {
         ]));
       } else {
         st.info("กำลังรวมเป็น Excel…");
+        let fixedEnc = 0;
         const wb = XLSX.utils.book_new();
         for (let i = 0; i < files.length; i++) {
-          const text = await files[i].text();
-          const sheet = XLSX.read(text, { type: "string" }).Sheets.Sheet1;
+          // ห้ามใช้ .text() ตรง ๆ — มันบังคับอ่านเป็น UTF-8 ทำให้ CSV ที่ส่งออกจาก
+          // ระบบเก่า (TIS-620/Windows-874) กลายเป็นตัวประหลาดทั้งไฟล์
+          const dec = smartDecode(new Uint8Array(await files[i].arrayBuffer()));
+          if (dec.enc !== "utf-8" || dec.undo) fixedEnc++;
+          const sheet = XLSX.read(dec.text, { type: "string" }).Sheets.Sheet1;
           // ชื่อชีทของ Excel ยาวได้ไม่เกิน 31 ตัว และห้ามอักขระพิเศษบางตัว
           const safe = stripExt(files[i].name).replace(/[\\/?*[\]:]/g, "-").slice(0, 31) || `ชีท${i + 1}`;
           XLSX.utils.book_append_sheet(wb, sheet, safe);
@@ -70,7 +75,8 @@ export function mount(tool) {
         const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
         const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         st.progress(null);
-        st.ok(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว`);
+        st.ok(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +
+          (fixedEnc ? ` · ซ่อมภาษาไทยที่เพี้ยนให้ ${fixedEnc} ไฟล์` : ""));
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${wb.SheetNames.length} ชีท`)]),

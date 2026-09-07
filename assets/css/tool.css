@@ -383,3 +383,58 @@
 .dz:hover .dz-svg,.dz.over .dz-svg{stroke:var(--ac,var(--brand))}
 .safe-svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
   display:inline-block;vertical-align:-2px;margin-inline-end:6px;opacity:.8}
+
+/* ══ โครงแผงลอย (workspace) — ใช้กับเครื่องมือที่มีพรีวิว ══ */
+.ws-body{padding:0;background:none;border:0;box-shadow:none}
+.ws-grid{
+  display:grid; gap:14px; align-items:start;
+  grid-template-columns:minmax(210px,250px) minmax(0,1fr) minmax(230px,290px);
+}
+.ws-grid.no-left{grid-template-columns:minmax(0,1fr) minmax(230px,290px)}
+.ws-grid.no-right{grid-template-columns:minmax(210px,250px) minmax(0,1fr)}
+.ws-grid.busy{opacity:.6; pointer-events:none}
+
+.ws-panel{
+  background:var(--card); border:1px solid var(--line-soft); border-radius:var(--r-lg);
+  box-shadow:var(--sh1), var(--ring-top); display:flex; flex-direction:column;
+  max-height:min(74vh,720px); overflow:hidden;
+}
+.ws-head{display:flex;align-items:center;gap:10px;padding:13px 15px 10px}
+.ws-head h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--text-mute)}
+.ws-head > :last-child:not(h2){margin-inline-start:auto}
+.ws-hint{margin:0 15px 8px;font-size:12px;color:var(--text-mute);line-height:1.6}
+.ws-scroll{overflow:auto;padding:0 15px 15px;display:flex;flex-direction:column;gap:9px}
+
+.ws-center{min-width:0}
+.ws-canvas{
+  position:relative; background:var(--bg-soft); border:1px solid var(--line-soft);
+  border-radius:var(--r-lg); min-height:340px; display:flex; flex-direction:column;
+  max-height:min(74vh,720px); overflow:hidden;
+}
+.ws-toolbar{
+  position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  padding:9px 12px; background:color-mix(in srgb,var(--card) 88%,transparent);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--line-soft);
+}
+.ws-toolbar .btn{padding:7px 14px;font-size:13px;min-height:34px}
+.ws-toolbar .sep{width:1px;height:20px;background:var(--line);margin-inline:4px}
+.ws-stage-in{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ws-empty{margin:auto;text-align:center;color:var(--text-mute);font-size:13.5px;line-height:1.8;padding:28px 20px}
+.ws-empty-ico{width:52px;height:52px;margin:0 auto 12px;border-radius:15px;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--ac,var(--brand)) 12%,transparent);color:var(--ac,var(--brand))}
+.ws-empty-svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.ws-footer{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding:13px 16px;
+  background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  box-shadow:var(--sh1), var(--ring-top);
+}
+.ws-footer .status-wrap{flex:1;min-width:200px;margin:0}
+.ws-footer .status{margin:0}
+
+@media (max-width:1000px){
+  .ws-grid,.ws-grid.no-left,.ws-grid.no-right{grid-template-columns:1fr}
+  .ws-panel,.ws-canvas{max-height:none}
+  .ws-canvas{min-height:280px}
+  .ws-scroll{max-height:300px}
+}

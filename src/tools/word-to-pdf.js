@@ -21,7 +21,7 @@ export function mount(tool) {
 
   const size = segmented([["a4", "A4"], ["letter", "Letter"]], "a4");
   const fontSize = segmented([["12", "12 pt"], ["14", "14 pt"], ["16", "16 pt"]], "14");
-  const go = button("📘 แปลงเป็น PDF", { onclick: run });
+  const go = button("แปลงเป็น PDF", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("ขนาดกระดาษ", size), field("ขนาดตัวอักษร", fontSize)]),

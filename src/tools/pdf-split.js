@@ -27,7 +27,7 @@ export function mount(tool) {
     fEvery.style.display = mode.value === "every" ? "" : "none";
   });
 
-  const go = button("✂️ แยกไฟล์", { onclick: run });
+  const go = button("แยกไฟล์", { onclick: run });
   body.append(dz.container,
     el("div", { class: "row" }, [field("รูปแบบการแยก", mode), fRange, fEvery]),
     el("div", { class: "actions" }, [go]), st.node, results);
@@ -42,7 +42,7 @@ export function mount(tool) {
       const { doc: src, encrypted } = await loadPdfLib(file);
       const total = src.getPageCount();
 
-      // สร้าง "กลุ่มหน้า" ตามโหมดที่เลือก แล้วปั้นไฟล์ทีละกลุ่มด้วยตรรกะเดียวกัน
+      // สร้าง "กลุ่มหน้า"ตามโหมดที่เลือก แล้วปั้นไฟล์ทีละกลุ่มด้วยตรรกะเดียวกัน
       let groups = [];
       if (mode.value === "range") {
         const pages = parsePages(rangeInput.value, total);

@@ -3,7 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser, segmented } from "../ui.js";
 
 // วาดข้อความลายน้ำลง canvas โปร่งใสแล้วฝังเป็นภาพ PNG
-// ทำแบบนี้เพื่อให้ "ข้อความไทยใช้ได้ทันที" โดยไม่ต้องฝังฟอนต์เข้า PDF
+// ทำแบบนี้เพื่อให้ "ข้อความไทยใช้ได้ทันที"โดยไม่ต้องฝังฟอนต์เข้า PDF
 function textToPng(text, { fontSize = 96, color = "#ff0000", weight = 700 }) {
   const pad = 24;
   const probe = document.createElement("canvas").getContext("2d");
@@ -42,7 +42,7 @@ export function mount(tool) {
   opacity.addEventListener("input", () => { oLabel.textContent = `ความเข้ม ${opacity.value}%`; });
   const sizeSel = segmented([["small", "เล็ก"], ["medium", "กลาง"], ["large", "ใหญ่"]], "medium");
 
-  const go = button("💧 ใส่ลายน้ำ", { onclick: run });
+  const go = button("ใส่ลายน้ำ", { onclick: run });
   body.append(dz.container,
     el("div", { class: "row" }, [
       field("ข้อความลายน้ำ", textInput),

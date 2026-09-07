@@ -20,7 +20,7 @@ export function mount(tool) {
   const lang = segmented([["tha+eng", "ไทย + อังกฤษ"], ["tha", "ไทย"], ["eng", "อังกฤษ"]], "tha+eng");
   const rangeInput = el("input", { type: "text", value: "1-", placeholder: "เช่น 1-3" });
   const quality = select([["2", "ปกติ (เร็ว)"], ["2.6", "ละเอียด (แนะนำ)"], ["3.4", "ละเอียดสูง (ช้า)"]], "2.6");
-  const go = button("🔍 เริ่มอ่านข้อความ", { onclick: run });
+  const go = button("เริ่มอ่านข้อความ", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("ภาษาในเอกสาร", lang),
@@ -96,7 +96,7 @@ export function mount(tool) {
       results.appendChild(el("div", { class: "actions" }, [
         button("ดาวน์โหลด .txt", { icon: "download",  onclick: () =>
           download(new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" }), name) }),
-        button("📋 คัดลอกทั้งหมด", { ghost: true, onclick: async () => {
+        button("คัดลอกทั้งหมด", { ghost: true, onclick: async () => {
           try { await navigator.clipboard.writeText(text); st.ok("คัดลอกลงคลิปบอร์ดแล้ว"); }
           catch { st.err("เบราว์เซอร์ไม่อนุญาตให้คัดลอก — ใช้ปุ่มดาวน์โหลดแทนได้"); }
         } }),

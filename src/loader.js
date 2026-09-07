@@ -128,7 +128,7 @@ export function warmLibs(names = []) {
   idle(() => loadLibs(...names).catch(() => {}));
 }
 
-/** บอกว่าไลบรารีชุดนี้พร้อมใช้แล้วหรือยัง (ใช้ตัดสินว่าจะโชว์ "กำลังเตรียม..." ไหม) */
+/** บอกว่าไลบรารีชุดนี้พร้อมใช้แล้วหรือยัง (ใช้ตัดสินว่าจะโชว์ "กำลังเตรียม..."ไหม) */
 export function libsReady(names = []) {
   return names.every((n) => {
     const s = REG[n];

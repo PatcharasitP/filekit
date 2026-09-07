@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// โครงร่วมของเครื่องมือที่ทำงาน "ทีละคอลัมน์" บนไฟล์ Excel/CSV
+// โครงร่วมของเครื่องมือที่ทำงาน "ทีละคอลัมน์"บนไฟล์ Excel/CSV
 // เครื่องมือลูกบอกแค่ 2 อย่าง: มีตัวเลือกอะไร และแปลงค่าหนึ่งช่องยังไง
 // ที่เหลือ (เลือกชีท เลือกคอลัมน์ พรีวิว สรุปผล ดาวน์โหลด) ไฟล์นี้จัดการให้หมด
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,9 +164,9 @@ export function columnTool(tool, cfg) {
     chips.innerHTML = "";
     const chip = (cls, text) => chips.appendChild(el("span", { class: "stat " + cls }, text));
     const L = cfg.labels || {};
-    chip("ok", `✅ ${L.ok || "แปลงได้"} ${stat.ok.toLocaleString()} แถว`);
-    if (stat.warn) chip("warn", `⚠️ ${L.warn || "ต้องเดาปี"} ${stat.warn.toLocaleString()} แถว`);
-    if (stat.bad) chip("bad", `❌ ${L.bad || "อ่านรูปแบบไม่ออก"} ${stat.bad.toLocaleString()} แถว`);
+    chip("ok", `${L.ok || "แปลงได้"} ${stat.ok.toLocaleString()} แถว`);
+    if (stat.warn) chip("warn", `${L.warn || "ต้องเดาปี"} ${stat.warn.toLocaleString()} แถว`);
+    if (stat.bad) chip("bad", `${L.bad || "อ่านรูปแบบไม่ออก"} ${stat.bad.toLocaleString()} แถว`);
     if (stat.skip) chip("dim", `➖ ช่องว่าง ${stat.skip.toLocaleString()} แถว`);
 
     const rows = [];

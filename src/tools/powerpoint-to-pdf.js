@@ -23,13 +23,13 @@ export function mount(tool) {
   const ratio = segmented([["16:9", "16:9"], ["4:3", "4:3"]], "16:9");
   const theme = select([["light", "พื้นขาว ตัวอักษรเข้ม"], ["dark", "พื้นเข้ม ตัวอักษรสว่าง"]], "light");
   const withNotes = select([["no", "ไม่ใส่โน้ต"], ["yes", "ใส่โน้ตผู้บรรยายท้ายสไลด์"]], "no");
-  const go = button("📕 สร้างไฟล์ PDF", { onclick: run });
+  const go = button("สร้างไฟล์ PDF", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("สัดส่วนสไลด์", ratio), field("ธีมสี", theme), field("โน้ตผู้บรรยาย", withNotes)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    "‼️ สำคัญ: เครื่องมือนี้จัดหน้าสไลด์ขึ้นใหม่จากข้อความในไฟล์ ไม่ได้คัดลอกหน้าตาเดิม — " +
+    "สำคัญ: เครื่องมือนี้จัดหน้าสไลด์ขึ้นใหม่จากข้อความในไฟล์ ไม่ได้คัดลอกหน้าตาเดิม — " +
     "สี ฟอนต์ รูปภาพ กราฟ และตำแหน่งของต้นฉบับจะไม่ถูกคงไว้ (การคงดีไซน์เป๊ะต้องใช้ PowerPoint เปิดแล้วสั่ง Save as PDF) · " +
     "เหมาะกับการทำเอกสารอ่านเนื้อหา แจกในที่ประชุม หรือส่งให้คนที่ไม่มี PowerPoint"));
 

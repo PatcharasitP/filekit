@@ -28,10 +28,10 @@ export function mount(tool) {
     convert(v, o) {
       if (v == null || String(v).trim() === "") return null;
       const r = checkThaiId13(v);
-      if (!r.ok) return { ok: false, reason: r.reason, value: "❌ " + r.reason };
+      if (!r.ok) return { ok: false, reason: r.reason, value: " " + r.reason };
       if (o.mode === "format") return { ok: true, value: formatThaiId(r.digits) };
       if (o.mode === "digits") return { ok: true, value: r.digits };
-      return { ok: true, value: "✅ ถูกต้อง" };
+      return { ok: true, value: "ถูกต้อง" };
     },
 
     note: "ตรวจด้วยสูตรหลักตรวจสอบมาตรฐานของเลข 13 หลัก (ผลรวมถ่วงน้ำหนัก 13…2 หารเอาเศษ 11) — บอกได้ว่าเลขพิมพ์ผิด แต่ยืนยันไม่ได้ว่าเลขนั้นมีเจ้าของอยู่จริง",

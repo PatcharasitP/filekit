@@ -19,7 +19,7 @@ export function mount(tool) {
 
   const breakMode = select([["page", "ขึ้นหน้าใหม่ตามหน้าเดิม"], ["flow", "ไหลต่อเนื่องเป็นเอกสารเดียว"]], "page");
   const fontSize = select([["11", "11 pt"], ["12", "12 pt"], ["14", "14 pt"], ["16", "16 pt"]], "12");
-  const go = button("📝 แปลงเป็น Word", { onclick: run });
+  const go = button("แปลงเป็น Word", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("การขึ้นหน้า", breakMode), field("ขนาดตัวอักษร", fontSize)]),
@@ -97,7 +97,7 @@ export function mount(tool) {
             "ระบบอ่านตัวอักษรจากภาพให้ได้ด้วย OCR รองรับไทย–อังกฤษ · ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10–30 MB " +
             "และใช้เวลาประมาณ 3–15 วินาทีต่อหน้า · ทุกอย่างทำในเครื่องคุณเอง"),
           el("div", { class: "actions" }, [
-            button("🔍 อ่านด้วย OCR แล้วแปลงเป็น Word", { onclick: () => runOcr(pdf) }),
+            button("อ่านด้วย OCR แล้วแปลงเป็น Word", { onclick: () => runOcr(pdf) }),
             button("ยกเลิก", { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),
           ]),
         ]));

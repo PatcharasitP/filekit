@@ -20,7 +20,7 @@ export function mount(tool) {
   const orient = select([["landscape", "แนวนอน (เหมาะกับตารางกว้าง)"], ["portrait", "แนวตั้ง"]], "landscape");
   const headerRow = select([["yes", "แถวแรกเป็นหัวตาราง"], ["no", "ไม่มีหัวตาราง"]], "yes");
   const fontSize = select([["8", "8 pt (ตารางกว้างมาก)"], ["9", "9 pt"], ["10", "10 pt"], ["12", "12 pt"]], "9");
-  const go = button("📕 แปลงเป็น PDF", { onclick: run });
+  const go = button("แปลงเป็น PDF", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("แนวกระดาษ", orient), field("หัวตาราง", headerRow), field("ขนาดตัวอักษร", fontSize)]),

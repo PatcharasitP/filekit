@@ -1,4 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+import { uiIcon } from "../icons.js";
 import { openPdf, passwordBox, loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { signaturePad, savedSignatures, saveSignature, removeSignature, imageToSignature } from "../signpad.js";
 
@@ -31,7 +32,7 @@ export function mount(tool) {
     el("p", { class: "mm-label" }, "วาดในกรอบด้านล่าง (ใช้นิ้วบนมือถือได้) หรืออัปโหลดรูปลายเซ็นที่ถ่าย/สแกนไว้"),
     el("div", { class: "sign-pad-wrap" }, [pad.node]),
     el("div", { class: "actions" }, [padUse, padClear,
-      button("📷 อัปโหลดรูปลายเซ็น", { ghost: true, onclick: () => upInput.click() }), upInput]),
+      button("อัปโหลดรูปลายเซ็น", { ghost: true, onclick: () => upInput.click() }), upInput]),
     savedBox,
   ]);
 
@@ -41,7 +42,7 @@ export function mount(tool) {
   const layer = el("div", { class: "sign-layer" });
   stage.append(pageCanvas, layer);
 
-  const prevBtn = button("← หน้าก่อน", { ghost: true, onclick: () => gotoPage(current - 1) });
+  const prevBtn = button("หน้าก่อน", { ghost: true, onclick: () => gotoPage(current - 1) });
   const nextBtn = button("หน้าถัดไป →", { ghost: true, onclick: () => gotoPage(current + 1) });
   const pageLabel = el("span", { class: "sign-pageno" });
   const viewer = el("div", { class: "panel sign-viewer", hidden: true }, [
@@ -52,14 +53,14 @@ export function mount(tool) {
     el("p", { class: "mm-label sign-hint" }, "คลิก (หรือแตะ) ตรงจุดที่ต้องการวางลายเซ็น · ลากเพื่อย้าย · ใช้แถบเลื่อนปรับขนาด"),
   ]);
 
-  const go = button("💾 บันทึกเป็น PDF ที่เซ็นแล้ว", { onclick: save });
+  const go = button("บันทึกเป็น PDF ที่เซ็นแล้ว", { onclick: save });
   go.disabled = true;
 
   body.append(dz.container, extra, signSection, viewer,
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
     "ลายเซ็นถูกวางเป็นภาพทับบนหน้าเอกสาร เหมือนการเซ็นแล้วสแกน — เหมาะกับเอกสารทั่วไปในองค์กร · " +
-    "‼️ นี่ไม่ใช่ลายเซ็นดิจิทัลแบบมีใบรับรอง (Digital Signature) ที่ใช้ยืนยันตัวตนทางกฎหมาย · " +
+    "นี่ไม่ใช่ลายเซ็นดิจิทัลแบบมีใบรับรอง (Digital Signature) ที่ใช้ยืนยันตัวตนทางกฎหมาย · " +
     "ลายเซ็นที่บันทึกไว้เก็บอยู่ในเบราว์เซอร์ของคุณเครื่องเดียว ไม่ถูกส่งไปไหน"));
 
   renderSaved();
@@ -99,7 +100,7 @@ export function mount(tool) {
       const item = el("div", { class: "sign-thumb" + (url === signature ? " on" : "") }, [
         el("img", { src: url, alt: "ลายเซ็น", onclick: () => { signature = url; renderSaved(); st.ok("เลือกลายเซ็นแล้ว — คลิกบนหน้าเอกสารเพื่อวาง"); } }),
         el("button", { class: "icon-btn danger", type: "button", title: "ลบออก",
-          onclick: (e) => { e.stopPropagation(); removeSignature(url); if (signature === url) signature = null; renderSaved(); } }, "✕"),
+          onclick: (e) => { e.stopPropagation(); removeSignature(url); if (signature === url) signature = null; renderSaved(); } }, [uiIcon("close", "pg-ico")]),
       ]);
       row.appendChild(item);
     });
@@ -163,7 +164,7 @@ export function mount(tool) {
       const item = el("div", { class: "sign-item", style: { left: p.rx * 100 + "%", top: p.ry * 100 + "%", width: p.rw * 100 + "%" } }, [
         el("img", { src: p.dataUrl, alt: "ลายเซ็น", draggable: "false" }),
         el("button", { class: "sign-del", type: "button", title: "เอาออก",
-          onclick: (e) => { e.stopPropagation(); placed.splice(idx, 1); drawPlaced(); go.disabled = !placed.length; } }, "✕"),
+          onclick: (e) => { e.stopPropagation(); placed.splice(idx, 1); drawPlaced(); go.disabled = !placed.length; } }, [uiIcon("close", "pg-ico")]),
         el("input", { class: "sign-size", type: "range", min: "6", max: "60", value: String(Math.round(p.rw * 100)),
           oninput: (e) => { p.rw = +e.target.value / 100; item.style.width = p.rw * 100 + "%"; },
           onclick: (e) => e.stopPropagation() }),

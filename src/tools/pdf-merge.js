@@ -14,7 +14,7 @@ export function mount(tool) {
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 
-  const go = button("🔗 รวมเป็นไฟล์เดียว", { onclick: run });
+  const go = button("รวมเป็นไฟล์เดียว", { onclick: run });
 
   body.append(dz.container, el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },

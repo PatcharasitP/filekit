@@ -1,6 +1,6 @@
 // ── ประตูเดียวสำหรับเปิดไฟล์ PDF ทุกเครื่องมือ ─────────────────────────────
 // เดิมแต่ละเครื่องมือเรียก pdfjsLib.getDocument() เองตรง ๆ ทำให้เมื่อเจอไฟล์
-// ที่ล็อกรหัส ผู้ใช้เห็นข้อความดิบจากไลบรารีว่า "No password given" ซึ่งอ่าน
+// ที่ล็อกรหัส ผู้ใช้เห็นข้อความดิบจากไลบรารีว่า "No password given"ซึ่งอ่าน
 // ไม่รู้เรื่องและไม่มีทางไปต่อ ไฟล์นี้รวมการจัดการไว้ที่เดียว: ขอรหัสผ่าน
 // เป็นภาษาไทย ลองใหม่ได้ และแปลง error ทุกชนิดเป็นข้อความที่ทำตามได้
 
@@ -49,7 +49,7 @@ export async function openPdf(file, askPassword) {
   let password;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      // ส่งสำเนา buffer ทุกครั้ง เพราะ pdf.js จะ "ยึด" buffer เดิมไปหลังเรียก
+      // ส่งสำเนา buffer ทุกครั้ง เพราะ pdf.js จะ "ยึด"buffer เดิมไปหลังเรียก
       return await pdfjsLib.getDocument({ data: buf.slice(0), password }).promise;
     } catch (e) {
       if (e?.name === "PasswordException" && askPassword) {
@@ -86,5 +86,5 @@ export async function loadPdfLib(file) {
 }
 
 export const ENCRYPTED_WARNING =
-  "⚠️ ไฟล์ต้นฉบับถูกล็อกด้วยรหัสผ่าน ระบบทำต่อให้แล้วแต่เนื้อหาบางส่วนอาจไม่ครบ " +
+  "ไฟล์ต้นฉบับถูกล็อกด้วยรหัสผ่าน ระบบทำต่อให้แล้วแต่เนื้อหาบางส่วนอาจไม่ครบ " +
   "แนะนำให้ปลดล็อกไฟล์ก่อนแล้วทำใหม่อีกครั้ง";

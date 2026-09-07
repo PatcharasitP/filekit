@@ -29,7 +29,7 @@ export function mount(tool) {
   const origin = el("div", { class: "dz-count" });
 
   const level = select([["light", "เบา — คงความคมไว้มาก"], ["medium", "ปานกลาง — แนะนำ"], ["strong", "แรง — ไฟล์เล็กสุด"]], "medium");
-  const go = button("🗜️ บีบอัดไฟล์", { onclick: run });
+  const go = button("บีบอัดไฟล์", { onclick: run });
 
   body.append(dz.container, origin,
     el("div", { class: "row" }, [field("ระดับการบีบอัด", level)]),
@@ -82,7 +82,7 @@ export function mount(tool) {
       const diff = 1 - blob.size / file.size;
       const name = `${stripExt(file.name)}-บีบอัด.pdf`;
       if (diff <= 0.02) {
-        // ตรวจของจริงก่อนบอกสาเหตุ — เดาว่า "ข้อความล้วน" ทั้งที่เป็นไฟล์ภาพ
+        // ตรวจของจริงก่อนบอกสาเหตุ — เดาว่า "ข้อความล้วน"ทั้งที่เป็นไฟล์ภาพ
         // จะพาผู้ใช้ไปผิดทาง (ไฟล์ภาพที่บีบมาดีแล้วควรได้คำแนะนำคนละแบบ)
         const textual = hadText;
         st.err(

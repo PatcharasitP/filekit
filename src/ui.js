@@ -49,7 +49,7 @@ export function toolShell(tool) {
   return { wrap, body };
 }
 
-/** แถว "ทำอะไรต่อดี" ท้ายหน้าเครื่องมือ — งานเอกสารจริงแทบไม่มีขั้นตอนเดียวจบ
+/** แถว "ทำอะไรต่อดี"ท้ายหน้าเครื่องมือ — งานเอกสารจริงแทบไม่มีขั้นตอนเดียวจบ
  *  เช่นรวม PDF เสร็จมักตามด้วยบีบอัดหรือเซ็นชื่อ · เดิมผู้ใช้ต้องกดกลับหน้าแรกไปหาเอง */
 export function nextSteps(tool) {
   const list = (tool.next || []).map(byId).filter(Boolean);
@@ -148,7 +148,7 @@ export function resultRow(name, blob, extra) {
   return el("div", { class: "result" }, [
     el("div", { class: "r-name" }, [el("strong", {}, name), extra ? el("small", {}, extra) : null]),
     el("span", { class: "r-size" }, fmtBytes(blob.size)),
-    button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+    button("ดาวน์โหลด", { onclick: () => download(blob, name) }),
   ]);
 }
 
@@ -172,11 +172,11 @@ export function dropzone(opts = {}) {
     class: "dz", tabindex: "0", role: "button",
     "aria-label": `เลือกไฟล์: ${expectLabel} — คลิกหรือกด Enter เพื่อเลือก หรือลากไฟล์มาวาง`,
   }, [
-    el("div", { class: "dz-ico", "aria-hidden": "true" }, "📂"),
+    el("div", { class: "dz-ico", "aria-hidden": "true" }, [uiIcon("upload", "dz-svg")]),
     el("div", { class: "dz-main" }, "คลิกเพื่อเลือกไฟล์ หรือลากมาวาง"),
     el("div", { class: "dz-hint" }, hint),
     // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
-    el("div", { class: "dz-safe" }, "🔒 ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น"),
+    el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), "ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น"]),
     input,
   ]);
 
@@ -199,7 +199,7 @@ export function dropzone(opts = {}) {
     warn.innerHTML = "";
 
     // กันเคสที่ผู้ใช้ลากไฟล์ผิดชนิดเข้ามา (เช่นเอา PowerPoint ใส่เครื่องมือ PDF)
-    // เดิมไฟล์จะถูกรับเข้าไปแล้วไปพังตอนอ่าน ทำให้ขึ้นว่า "ไฟล์เสียหาย" ซึ่งไม่จริง
+    // เดิมไฟล์จะถูกรับเข้าไปแล้วไปพังตอนอ่าน ทำให้ขึ้นว่า "ไฟล์เสียหาย"ซึ่งไม่จริง
     let usable = incoming;
     if (expect) {
       const bad = [];
@@ -257,7 +257,7 @@ export function dropzone(opts = {}) {
         reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": `เลื่อน ${f.name} ลง`,
           title: "เลื่อนลง", disabled: i === files.length - 1 || null, onclick: () => move(1) }, "↓") : null,
         el("button", { class: "icon-btn danger", type: "button", title: "เอาออก",
-          "aria-label": `เอา ${f.name} ออก`, onclick: () => remove(i) }, "✕"),
+          "aria-label": `เอา ${f.name} ออก`, onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),
       ]);
       list.appendChild(row);
     });
@@ -296,7 +296,7 @@ export function dropzone(opts = {}) {
            clear() { files = []; warn.innerHTML = ""; render(); onChange(files); } };
 }
 
-/** แปลง "1-3,5,8-" เป็นอาร์เรย์เลขหน้า (ฐาน 1) — ใช้ร่วมหลายเครื่องมือ */
+/** แปลง "1-3,5,8-"เป็นอาร์เรย์เลขหน้า (ฐาน 1) — ใช้ร่วมหลายเครื่องมือ */
 export function parsePages(spec, total) {
   const out = new Set();
   for (const part of String(spec).split(",")) {
@@ -349,7 +349,7 @@ export function failedBox(failed) {
     el("strong", {}, `หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`),
   ]);
   return el("div", { class: "fail-box" }, [
-    el("strong", {}, `⚠️ ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`),
+    el("strong", {}, `ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`),
     el("ul", {}, failed.map((f) => el("li", {}, `${f.name} — ${f.why}`))),
     failed.stopped ? el("div", {}, `หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`) : null,
   ]);

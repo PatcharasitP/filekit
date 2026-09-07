@@ -35,7 +35,7 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
 
   const baseRelsXml = base.file("word/_rels/document.xml.rels")
     ? await base.file("word/_rels/document.xml.rels").async("string")
-    : `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${RELS_NS}"></Relationships>`;
+    : `<?xml version="1.0"encoding="UTF-8"standalone="yes"?><Relationships xmlns="${RELS_NS}"></Relationships>`;
   const baseRels = new DOMParser().parseFromString(baseRelsXml, "application/xml");
   const relsRoot = baseRels.documentElement;
 

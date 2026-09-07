@@ -1,4 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
+import { uiIcon } from "../icons.js";
 import { countMatches, replaceInDocx, makeRules } from "../docxreplace.js";
 import { loadLibs } from "../loader.js";
 
@@ -26,7 +27,7 @@ export function mount(tool) {
     const row = el("div", { class: "rep-row" }, [
       fi, el("span", { class: "mm-arrow" }, "→"), ri,
       el("button", { class: "icon-btn danger", type: "button", title: "เอาออก",
-        onclick: () => { row.remove(); refresh(); previewBox.innerHTML = ""; } }, "✕"),
+        onclick: () => { row.remove(); refresh(); previewBox.innerHTML = ""; } }, [uiIcon("close", "pg-ico")]),
     ]);
     row._get = () => ({ find: fi.value.trim(), replace: ri.value });
     rulesBox.appendChild(row);
@@ -34,8 +35,8 @@ export function mount(tool) {
   };
   addRule();
 
-  const preview = button("🔍 ดูก่อนว่าจะเปลี่ยนกี่จุด", { ghost: true, onclick: runPreview });
-  const go = button("✏️ แทนที่แล้วดาวน์โหลด", { onclick: run });
+  const preview = button("ดูก่อนว่าจะเปลี่ยนกี่จุด", { ghost: true, onclick: runPreview });
+  const go = button("แทนที่แล้วดาวน์โหลด", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "rep-head" }, [

@@ -27,7 +27,7 @@ export function mount(tool) {
   };
   modeSel.addEventListener("change", syncSize);
 
-  const go = button("📐 ย่อและบีบอัด", { onclick: run });
+  const go = button("ย่อและบีบอัด", { onclick: run });
   body.append(dz.container,
     el("div", { class: "row" }, [
       field("วิธีย่อ", modeSel), sizeField,

@@ -18,14 +18,14 @@ export function mount(tool) {
   });
 
   const actions = el("div", { class: "actions" }, [
-    button("💾 บันทึกเป็นไฟล์ใหม่", { onclick: save }),
+    button("บันทึกเป็นไฟล์ใหม่", { onclick: save }),
     button("รีเซ็ตทั้งหมด", { icon: "undo", ghost: true, onclick: () => { if (file) loadPreview(); } }),
   ]);
   actions.style.display = "none";
 
   body.append(dz.container, st.node, extra, grid, actions, results);
   body.appendChild(el("div", { class: "note" },
-    "คลิก 🗑 เพื่อทำเครื่องหมายลบหน้า (กดซ้ำเพื่อเอากลับ) · ปุ่มลูกศรโค้งหมุนทีละ 90° · ลากการ์ดเพื่อสลับลำดับ แล้วกดบันทึก"));
+    "คลิกปุ่มถังขยะเพื่อทำเครื่องหมายลบหน้า (กดซ้ำเพื่อเอากลับ) · ปุ่มลูกศรโค้งหมุนทีละ 90° · ลากการ์ดเพื่อสลับลำดับ แล้วกดบันทึก"));
 
   async function loadPreview() {
     grid.innerHTML = "";

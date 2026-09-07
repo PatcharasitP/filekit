@@ -26,7 +26,7 @@ export function mount(tool) {
   const syncQ = () => { qField.style.display = typeSel.value === "png" ? "none" : ""; };
   typeSel.addEventListener("change", syncQ); syncQ();
 
-  const go = button("🔄 แปลงไฟล์", { onclick: run });
+  const go = button("แปลงไฟล์", { onclick: run });
   body.append(dz.container,
     el("div", { class: "row" }, [field("แปลงเป็นชนิด", typeSel), qField]),
     el("div", { class: "actions" }, [go]), st.node, results);

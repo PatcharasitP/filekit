@@ -1,4 +1,4 @@
-// ทะเบียนเครื่องมือ — ไฟล์นี้มีแต่ "ข้อมูล" ไม่ import โค้ดเครื่องมือสักบรรทัด
+// ทะเบียนเครื่องมือ — ไฟล์นี้มีแต่ "ข้อมูล"ไม่ import โค้ดเครื่องมือสักบรรทัด
 // หน้าแรกจึงวาดรายการได้โดยไม่ดึงโค้ดของเครื่องมือใดเข้ามาเลย
 // libs = ไลบรารีที่เครื่องมือนั้นต้องใช้ (ชื่อตาม src/loader.js) ใช้ทั้งตอนโหลดจริง
 // และตอน prefetch ล่วงหน้าเมื่อผู้ใช้เอาเมาส์ไปชี้การ์ด
@@ -25,15 +25,15 @@ export const TOOLS = [
     desc:"รวมหลายไฟล์เป็นเล่มเดียว ลากสลับลำดับได้",
     libs:["pdflib"], keys:"merge combine รวม ต่อ เล่ม", next:["pdf-compress","pdf-watermark","pdf-sign"] },
 
-  { id:"pdf-split",   group:"pdf", icon:"✂️", title:"แยกไฟล์ PDF",
+  { id:"pdf-split",   group:"pdf", icon:"✂", title:"แยกไฟล์ PDF",
     desc:"แยกตามช่วงหน้า ทุก N หน้า หรือแยกทีละหน้า",
     libs:["pdflib","jszip"], keys:"split แยก ตัด ช่วงหน้า", next:["pdf-merge","pdf-pages"] },
 
-  { id:"pdf-compress",group:"pdf", icon:"🗜️", title:"บีบอัดไฟล์ PDF",
+  { id:"pdf-compress",group:"pdf", icon:"🗜", title:"บีบอัดไฟล์ PDF",
     desc:"ลดขนาดไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ เทียบขนาดก่อน–หลังให้เห็น",
     libs:["pdfjs","pdflib"], keys:"compress บีบอัด ลดขนาด เล็กลง", next:["pdf-merge","pdf-to-images"] },
 
-  { id:"pdf-sign",group:"pdf", icon:"🖊️", title:"เซ็นชื่อบน PDF",
+  { id:"pdf-sign",group:"pdf", icon:"🖊", title:"เซ็นชื่อบน PDF",
     desc:"วาดลายเซ็นหรืออัปโหลดรูป แล้วลากไปวางบนเอกสาร เก็บลายเซ็นไว้ใช้ซ้ำได้",
     libs:["pdfjs","pdflib"], keys:"sign signature เซ็น ลายเซ็น เซ็นชื่อ สัญญา ใบลา อนุมัติ", next:["pdf-compress","pdf-watermark"] },
 
@@ -45,7 +45,7 @@ export const TOOLS = [
     desc:"อ่านตัวอักษรไทย–อังกฤษจาก PDF สแกน ได้เป็นข้อความหรือ PDF ที่ค้นหาได้",
     libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร recognize", next:["pdf-to-text","pdf-to-word"] },
 
-  { id:"pdf-to-images",group:"from-pdf", icon:"🖼️", title:"PDF → รูปภาพ",
+  { id:"pdf-to-images",group:"from-pdf", icon:"🖼", title:"PDF → รูปภาพ",
     desc:"แปลงทุกหน้าเป็น PNG หรือ JPG เลือกความละเอียดได้",
     libs:["pdfjs","jszip"], keys:"image png jpg รูป ภาพ export", next:["image-resize","images-to-pdf"] },
 
@@ -85,7 +85,7 @@ export const TOOLS = [
     desc:"ต่อเอกสารหลายไฟล์เป็นเล่มเดียว พร้อมรูปภาพครบ ลากจัดลำดับได้",
     libs:["jszip"], keys:"merge join รวม ต่อ เอกสาร word docx เล่ม รายงาน", next:["word-clean","word-to-pdf"] },
 
-  { id:"word-replace",group:"doc", icon:"✏️", title:"ค้นหา–แทนที่ทั้งชุด",
+  { id:"word-replace",group:"doc", icon:"✏", title:"ค้นหา–แทนที่ทั้งชุด",
     desc:"แก้คำเดิมพร้อมกันหลายไฟล์ เช่นเปลี่ยนชื่อบริษัทหรือปีในเอกสารทั้งกอง",
     libs:["jszip"], keys:"find replace ค้นหา แทนที่ หลายไฟล์ batch แก้ทั้งชุด word", next:["word-clean","word-to-pdf"] },
 
@@ -97,11 +97,11 @@ export const TOOLS = [
     desc:"เอาข้อมูลจาก Excel เติมลงเทมเพลต Word ทีละแถว ได้เอกสารครบทั้งชุดในครั้งเดียว",
     libs:["jszip","xlsx"], keys:"mailmerge mail merge จดหมายเวียน เทมเพลต template word excel ใบรับรอง ใบเสร็จ เวียน", next:["thai-number","word-to-pdf","word-clean"] },
 
-  { id:"powerpoint-to-word",group:"ppt", icon:"📽️", title:"PowerPoint → Word",
+  { id:"powerpoint-to-word",group:"ppt", icon:"📽", title:"PowerPoint → Word",
     desc:"ดึงข้อความทุกสไลด์ หัวข้อย่อย และโน้ตผู้บรรยาย เป็นเอกสาร Word",
     libs:["jszip","docx"], keys:"powerpoint ppt pptx สไลด์ word docx โน้ต presentation แปลง", next:["word-clean","word-to-pdf"] },
 
-  { id:"powerpoint-to-pdf",group:"ppt", icon:"🖥️", title:"PowerPoint → PDF",
+  { id:"powerpoint-to-pdf",group:"ppt", icon:"🖥", title:"PowerPoint → PDF",
     desc:"จัดสไลด์เป็นไฟล์ PDF อ่านง่าย 1 สไลด์ = 1 หน้า เลือกธีมได้",
     libs:["jszip","jspdf"], keys:"powerpoint ppt pptx สไลด์ pdf presentation แปลง แจก", next:["pdf-merge","pdf-compress"] },
 

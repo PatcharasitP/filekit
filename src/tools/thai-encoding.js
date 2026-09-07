@@ -76,7 +76,7 @@ export function mount(tool) {
     actions.innerHTML = "";
     if (!items.length) return;
     actions.append(
-      button("💾 บันทึกเป็น UTF-8 ทุกไฟล์", { onclick: () => saveAll(false) }),
+      button("บันทึกเป็น UTF-8 ทุกไฟล์", { onclick: () => saveAll(false) }),
       items.length > 1 ? button("ดาวน์โหลดรวมเป็น ZIP", { icon: "zip",  onclick: () => saveAll(true), ghost: true }) : null,
     );
   }

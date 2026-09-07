@@ -5,7 +5,6 @@
 //
 // ทำในเบราว์เซอร์ล้วน — ซึ่งสำคัญเป็นพิเศษกับงานประเภทนี้ เพราะไฟล์ที่กลัว
 // ข้อมูลรั่วที่สุด ย่อมไม่ควรถูกอัปโหลดขึ้นเว็บใครเพื่อ "ล้างข้อมูล"
-
 import { loadLibs } from "./loader.js";
 
 const RELS = "word/_rels/document.xml.rels";
@@ -135,8 +134,8 @@ export async function clean(file, options = {}) {
     }
 
     if (metadata && name === "docProps/core.xml") {
-      out.file(name, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:creator></dc:creator><cp:lastModifiedBy></cp:lastModifiedBy><cp:revision>1</cp:revision></cp:coreProperties>`);
+      out.file(name, `<?xml version="1.0"encoding="UTF-8"standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"xmlns:dc="http://purl.org/dc/elements/1.1/"xmlns:dcterms="http://purl.org/dc/terms/"xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:creator></dc:creator><cp:lastModifiedBy></cp:lastModifiedBy><cp:revision>1</cp:revision></cp:coreProperties>`);
       continue;
     }
     if (metadata && name === "docProps/app.xml") {

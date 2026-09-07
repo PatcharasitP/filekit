@@ -20,7 +20,7 @@ export function mount(tool) {
 
   const sheetMode = select([["per-page", "แยกชีทตามหน้า"], ["single", "รวมทุกหน้าในชีทเดียว"]], "per-page");
   const strict = select([["3", "ปกติ (คอลัมน์ต้องซ้ำ ≥3 บรรทัด)"], ["2", "ยืดหยุ่น (≥2 บรรทัด)"], ["5", "เข้มงวด (≥5 บรรทัด)"]], "3");
-  const go = button("📊 แปลงเป็น Excel", { onclick: run });
+  const go = button("แปลงเป็น Excel", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("การจัดชีท", sheetMode), field("ความเข้มในการจับคอลัมน์", strict, "ถ้าคอลัมน์เพี้ยน ลองสลับค่านี้")]),
@@ -77,9 +77,9 @@ export function mount(tool) {
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
             "ระบบอ่านตัวเลขและข้อความจากภาพให้ได้ด้วย OCR แล้วจัดเป็นแถวใน Excel ให้ · " +
-            "ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10-30 MB · ‼️ ตารางจาก OCR อาจต้องจัดคอลัมน์เพิ่มเองใน Excel"),
+            "ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10-30 MB ·  ตารางจาก OCR อาจต้องจัดคอลัมน์เพิ่มเองใน Excel"),
           el("div", { class: "actions" }, [
-            button("🔍 อ่านด้วย OCR แล้วทำเป็น Excel", { onclick: () => runOcr(pdf) }),
+            button("อ่านด้วย OCR แล้วทำเป็น Excel", { onclick: () => runOcr(pdf) }),
             button("ยกเลิก", { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),
           ]),
         ]));

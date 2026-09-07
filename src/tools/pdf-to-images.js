@@ -18,7 +18,7 @@ export function mount(tool) {
   const fmt = select([["png", "PNG (คมชัด ไฟล์ใหญ่)"], ["jpeg", "JPG (ไฟล์เล็กกว่า)"]], "png");
   const dpi = select([["1.5", "ปกติ (~110 DPI)"], ["2", "สูง (~150 DPI) แนะนำ"], ["3", "สูงมาก (~220 DPI)"], ["4", "สูงสุด (~300 DPI)"]], "2");
   const rangeInput = el("input", { type: "text", value: "1-", placeholder: "เช่น 1-5,8" });
-  const go = button("🖼️ แปลงเป็นรูป", { onclick: run });
+  const go = button("แปลงเป็นรูป", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("ชนิดรูป", fmt), field("ความละเอียด", dpi),

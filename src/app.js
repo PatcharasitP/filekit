@@ -24,7 +24,21 @@ function pushRecent(id) {
   store.set(RECENT_KEY, list.join(","));
 }
 
-/* ── การ์ดเครื่องมือ ── */
+/* ── ป้ายเครื่องมือ (มุมมองหลัก) ── */
+function pillOf(t, q = "") {
+  const r = q ? highlightRange(t.title, q) : null;
+  const label = r
+    ? [t.title.slice(0, r[0]), el("mark", {}, t.title.slice(r[0], r[1])), t.title.slice(r[1])]
+    : [t.title];
+  return el("button", {
+    class: "pill", type: "button", "data-id": t.id, style: `--ac:${accentOf(t.group)}`,
+    title: t.desc,                       // คำอธิบายยังอยู่ แค่ย้ายไปอยู่ในทูลทิป
+    onclick: () => go(t.id),
+    onmouseenter: () => prefetch(t), onfocus: () => prefetch(t), ontouchstart: () => prefetch(t),
+  }, [el("i", { "aria-hidden": "true" }, [toolIcon(t) || t.icon]), el("span", {}, label)]);
+}
+
+/* ── การ์ดเครื่องมือ (มุมมองรายละเอียด) ── */
 function cardOf(t, q = "") {
   const r = q ? highlightRange(t.title, q) : null;
   const title = r
@@ -43,25 +57,45 @@ function cardOf(t, q = "") {
 /* ── วาดหน้าแรก ── */
 let activeCat = "";                     // "" = ทุกหมวด
 function renderHome(q = "") {
+  const detail = store.get("fk-view", "pill") === "detail";
   const found = searchTools(TOOLS, q);
   const ids = new Set(found.map((r) => r.t.id));
+  const stageH = $("#stageh");
   grids.innerHTML = "";
 
-  // เรียงตามคะแนนเมื่อค้นหา (ไม่แบ่งหมวด) — คนกำลังค้นอยากเห็นตัวที่ตรงที่สุดก่อน
+  // กำลังค้นหา: เรียงตามคะแนน ไม่แบ่งหมวด — คนกำลังค้นอยากเห็นตัวที่ตรงที่สุดก่อน
   if (q.trim()) {
     hits.textContent = found.length ? `พบ ${found.length} เครื่องมือ` : "";
+    if (stageH) stageH.textContent = found.length ? `ผลการค้นหา “${q.trim()}”` : "";
     if (!found.length) return showEmpty(q);
-    grids.appendChild(el("section", { class: "group" }, [
-      el("div", { class: "grid" }, found.map((r) => cardOf(r.t, q))),
-    ]));
+    grids.appendChild(detail
+      ? el("div", { class: "grid" }, found.map((r) => cardOf(r.t, q)))
+      : el("div", { class: "pills" }, found.map((r) => pillOf(r.t, q))));
     return;
   }
 
   hits.textContent = "";
+  const shown = TOOLS.filter((t) => !activeCat || t.group === activeCat);
+  if (stageH) stageH.textContent = activeCat
+    ? `${(GROUPS.find((g) => g.id === activeCat) || {}).label} · ${shown.length} เครื่องมือ`
+    : `${TOOLS.length} เครื่องมือ ทำงานในเครื่องคุณทั้งหมด`;
+
+  if (!detail) {
+    const box = el("div", { class: "pills" });
+    for (const g of GROUPS) {
+      const items = shown.filter((t) => t.group === g.id);
+      if (!items.length) continue;
+      // ใส่หัวหมวดคั่นเฉพาะตอนดูทั้งหมด — ถ้ากรองหมวดเดียวอยู่แล้วไม่ต้องซ้ำ
+      if (!activeCat) box.appendChild(el("div", { class: "pill-group" }, [g.label, el("s", {})]));
+      items.forEach((t) => box.appendChild(pillOf(t)));
+    }
+    grids.appendChild(box);
+    return;
+  }
+
   if (!activeCat) renderRecent();
   for (const g of GROUPS) {
-    if (activeCat && activeCat !== g.id) continue;
-    const items = TOOLS.filter((t) => t.group === g.id && ids.has(t.id));
+    const items = shown.filter((t) => t.group === g.id);
     if (!items.length) continue;
     grids.appendChild(el("section", { class: "group", id: "g-" + g.id, style: `--ac:${accentOf(g.id)}` }, [
       el("div", { class: "group-h" }, [
@@ -107,14 +141,14 @@ function renderCats() {
       style: `--ac:${accent}`,
       onclick: () => { activeCat = activeCat === id ? "" : id; renderCats(); renderHome(search.value); },
     }, [label, el("b", {}, String(count))]);
-  cats.appendChild(mk("", "ทั้งหมด", TOOLS.length, "var(--brand-text)"));  // --brand สว่างเกินไปสำหรับใช้เป็นตัวอักษรบนพื้นสว่าง
+  cats.appendChild(mk("", "ทั้งหมด", TOOLS.length, "var(--text)"));   // หมวดรวมใช้สีกลาง ไม่แย่งสีประจำหมวด
   for (const g of GROUPS) {
     const n = TOOLS.filter((t) => t.group === g.id).length;
     if (n) cats.appendChild(mk(g.id, g.short || g.label, n, accentOf(g.id)));
   }
 }
 
-/* ── prefetch: เริ่มดึงโค้ดเครื่องมือ + ไลบรารี ตอนผู้ใช้ "เล็ง" การ์ด ────────
+/* ── prefetch: เริ่มดึงโค้ดเครื่องมือ + ไลบรารี ตอนผู้ใช้ "เล็ง"การ์ด ────────
    ผู้ใช้ใช้เวลาจากชี้เมาส์ถึงคลิกราว 100-300 ms ซึ่งพอให้เริ่มโหลดไปก่อนได้ */
 const prefetched = new Set();
 function prefetch(t) {
@@ -171,7 +205,7 @@ function goHome(push = true) {
     document.body.classList.remove("tool");
     document.title = "FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์";
     toolBox.innerHTML = "";
-    renderHome(search.value);            // อัปเดตแถว "เพิ่งใช้" ให้ทันที
+    renderHome(search.value);            // อัปเดตแถว "เพิ่งใช้"ให้ทันที
   });
   if (push && location.hash) location.hash = "";
 }
@@ -198,7 +232,7 @@ $("#qclear").addEventListener("click", clearSearch);
 search.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && search.value) { e.preventDefault(); clearSearch(); }
   if (e.key === "ArrowDown" || e.key === "Enter") {
-    const first = grids.querySelector("button.card");
+    const first = grids.querySelector("button.card, button.pill");
     if (first) { e.preventDefault(); e.key === "Enter" ? first.click() : first.focus(); }
   }
 });
@@ -206,7 +240,7 @@ search.addEventListener("keydown", (e) => {
 /* ── เดินในกริดด้วยลูกศร (นับจำนวนคอลัมน์จากตำแหน่งจริงบนจอ) ── */
 grids.addEventListener("keydown", (e) => {
   if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) return;
-  const list = [...grids.querySelectorAll("button.card")];
+  const list = [...grids.querySelectorAll("button.card, button.pill")];
   const i = list.indexOf(document.activeElement);
   if (i < 0) return;
   // จำนวนคอลัมน์ = จำนวนการ์ดที่อยู่แถวเดียวกับตัวที่โฟกัสอยู่ (กริดเป็น auto-fill จึงต้องวัดจากของจริง)
@@ -220,14 +254,21 @@ grids.addEventListener("keydown", (e) => {
 
 /* ── ธีม / มุมมอง ── */
 const THEMES = ["auto", "light", "dark"];
-const THEME_ICON = { auto: "🌗", light: "☀️", dark: "🌙" };
+const THEME_SVG = {
+  auto:  `<circle cx="12"cy="12"r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 0 0 16.4z"fill="currentColor"stroke="none"/>`,
+  light: `<circle cx="12"cy="12"r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/>`,
+  dark:  `<path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/>`,
+};
 const THEME_NAME = { auto: "ตามระบบ", light: "โหมดสว่าง", dark: "โหมดมืด" };
 const themeBtn = $("#theme");
 function applyTheme(v) {
   if (v === "auto") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = v;
   store.set("fk-theme", v);
-  themeBtn.textContent = THEME_ICON[v];
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "btn-ico"); svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true"); svg.innerHTML = THEME_SVG[v];
+  themeBtn.replaceChildren(svg);
   themeBtn.title = themeBtn.ariaLabel = `ธีม: ${THEME_NAME[v]} (กดเพื่อเปลี่ยน)`;
 }
 applyTheme(store.get("fk-theme", "auto"));
@@ -235,17 +276,20 @@ themeBtn.addEventListener("click", () =>
   applyTheme(THEMES[(THEMES.indexOf(store.get("fk-theme", "auto")) + 1) % THEMES.length]));
 
 const densBtn = $("#density");
-function applyDensity(v) {
-  if (v === "compact") document.documentElement.dataset.density = "compact";
-  else delete document.documentElement.dataset.density;
-  store.set("fk-density", v);
-  densBtn.setAttribute("aria-pressed", String(v === "compact"));
-  densBtn.replaceChildren(uiIcon(v === "compact" ? "rows" : "list", "btn-ico"));
-  densBtn.title = densBtn.ariaLabel = v === "compact" ? "มุมมองแบบแน่น (กดเพื่อกลับแบบปกติ)" : "มุมมองแบบปกติ (กดเพื่อดูแบบแน่น)";
+function applyView(v) {
+  document.documentElement.dataset.view = v;
+  store.set("fk-view", v);
+  densBtn.setAttribute("aria-pressed", String(v === "detail"));
+  densBtn.replaceChildren(uiIcon(v === "detail" ? "list" : "rows", "btn-ico"));
+  densBtn.title = densBtn.ariaLabel = v === "detail"
+    ? "มุมมองแบบละเอียด (กดเพื่อดูแบบป้ายกลม)"
+    : "มุมมองแบบป้ายกลม (กดเพื่อดูคำอธิบายทุกตัว)";
 }
-applyDensity(store.get("fk-density", "cozy"));
-densBtn.addEventListener("click", () =>
-  applyDensity(store.get("fk-density", "cozy") === "compact" ? "cozy" : "compact"));
+applyView(store.get("fk-view", "pill"));
+densBtn.addEventListener("click", () => {
+  applyView(store.get("fk-view", "pill") === "detail" ? "pill" : "detail");
+  renderHome(search.value);
+});
 
 /* ── ผูกเหตุการณ์ที่เหลือ ── */
 $("#back").addEventListener("click", () => goHome());
@@ -288,6 +332,6 @@ document.head.appendChild(el("link", { rel: "stylesheet", href: "assets/css/tool
 }
 
 // Service worker: ทำให้เปิดซ้ำเร็วและใช้งานออฟไลน์ได้
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+if ("serviceWorker"in navigator && location.protocol.startsWith("http")) {
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }

@@ -22,10 +22,10 @@ with sync_playwright() as p:
     # ── ① หน้าแรก ──────────────────────────────────────────────
     print("\n━━ ① หน้าแรกเห็นเครื่องมือใหม่ ━━")
     pg.goto(BASE, wait_until="networkidle")
-    ck("จำนวนเครื่องมือทั้งหมด", pg.locator("button.card").count(), 27)
+    ck("จำนวนเครื่องมือทั้งหมด", pg.locator("button.pill, button.card").count(), 27)
     ck("มีหมวด 'งานเอกสารไทย'", pg.get_by_text("งานเอกสารไทย", exact=True).count() >= 1, True)
     for tid in ["thai-encoding","thai-date","thai-id","thai-number"]:
-        ck(f"มีการ์ด {tid}", pg.locator(f'button.card[data-id="{tid}"]').count(), 1)
+        ck(f"มีเครื่องมือ {tid}", pg.locator(f'button.pill[data-id="{tid}"], button.card[data-id="{tid}"]').count(), 1)
     # หน้าแรกต้องไม่ดึงไลบรารีหนักมาก่อน (หลักการ lazy-first ของโปรเจกต์)
     reqs = []
     pg.on("request", lambda r: reqs.append(r.url))
@@ -103,7 +103,7 @@ with sync_playwright() as p:
     ck("ผิด 2 แถว", pg.locator(".stat.bad").inner_text(), "2", contains=True)
     tb = pg.locator(".xt tbody")
     ck("บอกเลขที่ควรเป็นให้ด้วย", tb.locator("tr.bad").first.locator("td").nth(3).inner_text(), "หลักสุดท้ายควรเป็น", contains=True)
-    ck("เลขมีขีดคั่นยังตรวจผ่าน", tb.locator("tr").nth(3).locator("td").nth(3).inner_text(), "✅ ถูกต้อง")
+    ck("เลขมีขีดคั่นยังตรวจผ่าน", tb.locator("tr").nth(3).locator("td").nth(3).inner_text().strip(), "ถูกต้อง")
 
     # ── ⑤ บาทถ้วน ─────────────────────────────────────────────
     print("\n━━ ⑤ ตัวเลข → บาทถ้วน ━━")

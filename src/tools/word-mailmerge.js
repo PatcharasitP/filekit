@@ -42,7 +42,7 @@ export function mount(tool) {
   const groupField = field("จัดกลุ่มด้วยคอลัมน์", groupCol, "แถวที่ค่าตรงกันจะรวมเป็นเอกสารเดียว");
   const loopField = field("ใส่รายการลงบล็อก", loopSel);
   const nameCol = el("select", {});
-  const go = button("📄 สร้างเอกสารทั้งชุด", { onclick: run });
+  const go = button("สร้างเอกสารทั้งชุด", { onclick: run });
   go.disabled = true;
   let step3, step4, wait3, wait4;
 
@@ -86,11 +86,11 @@ export function mount(tool) {
         "มีทั้งแบบหนึ่งแถวหนึ่งใบ (หนังสือแจ้งผลประเมิน) และแบบมีตารางรายการ (ใบเสนอราคา) พร้อมตัวอย่างเงื่อนไข"),
     ]),
     el("div", { class: "sample-links" }, [
-      el("a", { class: "chip", href: "samples/ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx", download: true }, "📄 เทมเพลตประเมิน"),
-      el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลพนักงาน.xlsx", download: true }, "📊 ข้อมูลพนักงาน"),
-      el("a", { class: "chip", href: "samples/ตัวอย่าง-ใบเสนอราคา.docx", download: true }, "📄 เทมเพลตใบเสนอราคา"),
-      el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx", download: true }, "📊 ข้อมูลใบเสนอราคา"),
-      el("a", { class: "chip", href: "samples/อ่านก่อนใช้.txt", download: true }, "📘 วิธีเขียนตัวยึด"),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx", download: true }, "เทมเพลตประเมิน"),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลพนักงาน.xlsx", download: true }, "ข้อมูลพนักงาน"),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ใบเสนอราคา.docx", download: true }, "เทมเพลตใบเสนอราคา"),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx", download: true }, "ข้อมูลใบเสนอราคา"),
+      el("a", { class: "chip", href: "samples/อ่านก่อนใช้.txt", download: true }, "วิธีเขียนตัวยึด"),
     ]),
   ]));
 
@@ -121,7 +121,7 @@ export function mount(tool) {
       } else {
         fieldsBox.append(
           el("p", { class: "mm-label" }, `พบตัวยึด ${fields.length} รายการ` +
-            (loops.length ? ` และบล็อกวนซ้ำ ${loops.length} บล็อก` : "")),
+            (loops.length ? `และบล็อกวนซ้ำ ${loops.length} บล็อก` : "")),
           el("div", { class: "stack" }, fields.map((f) => el("span", { text: `{{${f}}}` })))
         );
         if (loops.length) {

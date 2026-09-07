@@ -18,7 +18,7 @@ export function mount(tool) {
   const sizeSel = select([["auto", "ตามขนาดรูป (ไม่มีขอบ)"], ["a4", "A4 แนวตั้ง"], ["letter", "Letter"]], "auto");
   const orient = segmented([["portrait", "แนวตั้ง"], ["landscape", "แนวนอน"]], "portrait");
   const margin = el("input", { type: "number", min: "0", max: "80", value: "24" });
-  const go = button("🧩 สร้างไฟล์ PDF", { onclick: run });
+  const go = button("สร้างไฟล์ PDF", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [

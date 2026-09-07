@@ -22,7 +22,7 @@ export function mount(tool) {
     metadata: checkbox("ล้างชื่อผู้เขียน ผู้แก้ไขล่าสุด บริษัท และเวลาที่ใช้ทำ", true),
     rsid: checkbox("ลบรหัสรอบการบันทึกที่บอกได้ว่าใครแก้ช่วงไหน", true),
   };
-  const go = button("🧹 ล้างแล้วดาวน์โหลด", { onclick: run });
+  const go = button("ล้างแล้วดาวน์โหลด", { onclick: run });
   go.disabled = true;
 
   body.append(dz.container, reportBox,
@@ -35,7 +35,7 @@ export function mount(tool) {
   body.appendChild(el("div", { class: "note" },
     "เอกสารที่ผ่านการรีวิวหลายรอบมักพกของที่ไม่ควรออกไปด้วย — คอมเมนต์ภายใน ประวัติการแก้ไขที่ยังไม่ยอมรับ " +
     "ชื่อคนที่แก้ ชื่อบริษัท และเวลาที่ใช้ทำงาน ของพวกนี้มองไม่เห็นบนหน้าจอถ้าไม่เปิดโหมดรีวิว แต่ผู้รับเปิดดูได้ทั้งหมด · " +
-    "‼️ ไฟล์ต้นฉบับในเครื่องคุณไม่ถูกแก้ไข ระบบสร้างไฟล์ใหม่ให้ดาวน์โหลดเท่านั้น"));
+    "ไฟล์ต้นฉบับในเครื่องคุณไม่ถูกแก้ไข ระบบสร้างไฟล์ใหม่ให้ดาวน์โหลดเท่านั้น"));
 
   function checkbox(label, checked) {
     const input = el("input", { type: "checkbox", checked: checked || null });

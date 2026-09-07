@@ -47,7 +47,7 @@ with sync_playwright() as p:
     pg.goto(BASE, wait_until="networkidle")
 
     print("\n━━ ① โครงหน้าแรก ━━")
-    ck("การ์ดครบ 27 ใบ", pg.locator("button.card").count(), 27)
+    ck("ป้ายเครื่องมือครบ 27 ใบ", pg.locator("button.pill").count(), 27)
     ck("มีแถบหมวด 9 ปุ่ม (ทั้งหมด + 8 หมวด)", pg.locator(".cat").count(), 9)
     ck("ปุ่ม 'ทั้งหมด' บอกจำนวนถูก", pg.locator(".cat").first.inner_text().replace("\n","").replace(" ",""), "ทั้งหมด27")
     ck("มีลิงก์ข้ามไปเนื้อหา (skip link)", pg.locator("a.skip").count(), 1)
@@ -55,26 +55,26 @@ with sync_playwright() as p:
 
     print("\n━━ ② กรองตามหมวด ━━")
     pg.locator(".cat", has_text="งานไทย").click(); pg.wait_for_timeout(250)
-    ck("กดหมวดงานไทย → เหลือ 4 ใบ", pg.locator("button.card").count(), 4)
+    ck("กดหมวดงานไทย → เหลือ 4 ใบ", pg.locator("button.pill, button.card").count(), 4)
     ck("ปุ่มหมวดขึ้นสถานะถูกเลือก", pg.locator('.cat[aria-pressed="true"]').inner_text().replace("\n","").replace(" ",""), "งานไทย4")
     pg.locator(".cat", has_text="งานไทย").click(); pg.wait_for_timeout(250)
-    ck("กดซ้ำ → กลับมาครบ 27", pg.locator("button.card").count(), 27)
+    ck("กดซ้ำ → กลับมาครบ 27", pg.locator("button.pill, button.card").count(), 27)
 
     print("\n━━ ③ ค้นหา ━━")
     q = pg.locator("#q")
     q.fill("บาทถ้วน"); pg.wait_for_timeout(300)
     ck("พิมพ์ 'บาทถ้วน' → ตัวแรกคือเครื่องมือบาทถ้วน",
-       pg.locator("button.card").first.get_attribute("data-id"), "thai-number")
+       pg.locator("button.pill, button.card").first.get_attribute("data-id"), "thai-number")
     ck("บอกจำนวนที่พบ", pg.locator("#hits").inner_text(), "พบ", contains=True)
     q.fill("ไฟล์"); pg.wait_for_timeout(300)
-    ck("ไฮไลต์คำที่ตรงในชื่อ", pg.locator("button.card mark").first.inner_text(), "ไฟล์")
+    ck("ไฮไลต์คำที่ตรงในชื่อ", pg.locator("button.pill mark, button.card mark").first.inner_text(), "ไฟล์")
     q.fill("i;,"); pg.wait_for_timeout(300)   # ลืมสลับแป้น = พิมพ์ "รวม"
     ck("ลืมสลับแป้น 'i;,' → เจอรวมไฟล์ PDF",
-       pg.locator("button.card").first.get_attribute("data-id"), "pdf-merge")
+       pg.locator("button.pill, button.card").first.get_attribute("data-id"), "pdf-merge")
     q.fill("zzzxyq"); pg.wait_for_timeout(300)
     ck("ไม่เจอ → ขึ้นข้อความช่วยเหลือ", pg.locator(".empty b").inner_text(), "ไม่พบเครื่องมือ", contains=True)
     pg.locator(".empty button").click(); pg.wait_for_timeout(250)
-    ck("กดปุ่มล้างในหน้าไม่เจอ → กลับมาครบ", pg.locator("button.card").count(), 27)
+    ck("กดปุ่มล้างในหน้าไม่เจอ → กลับมาครบ", pg.locator("button.pill, button.card").count(), 27)
 
     print("\n━━ ④ คีย์บอร์ด ━━")
     pg.locator("body").click(position={"x":5,"y":400})
@@ -85,7 +85,7 @@ with sync_playwright() as p:
     pg.keyboard.press("Control+k")
     ck("กด Ctrl+K → โฟกัสไปช่องค้นหา", pg.evaluate("document.activeElement.id"), "q")
     pg.locator("#q").press("ArrowDown")
-    ck("ลูกศรลงจากช่องค้นหา → ไปการ์ดใบแรก", pg.evaluate("document.activeElement.className"), "card")
+    ck("ลูกศรลงจากช่องค้นหา → ไปเครื่องมือตัวแรก", pg.evaluate("document.activeElement.className"), "pill")
     first = pg.evaluate("document.activeElement.dataset.id")
     pg.keyboard.press("ArrowRight")
     ck("ลูกศรขวา → ย้ายไปการ์ดถัดไป", pg.evaluate("document.activeElement.dataset.id") != first, True)
@@ -94,27 +94,31 @@ with sync_playwright() as p:
     pg.locator("#theme").click(); pg.wait_for_timeout(150)
     t1 = pg.evaluate("document.documentElement.dataset.theme")
     ck("กดสลับธีมครั้งแรก → โหมดสว่าง", t1, "light")
-    ck("พื้นหลังเปลี่ยนเป็นสีสว่างจริง",
-       pg.evaluate("getComputedStyle(document.body).backgroundColor"), "rgb(247, 248, 252)")
+    ck("พื้นหลังเปลี่ยนเป็นสีสว่างจริง (สว่างกว่า 90%)",
+       pg.evaluate("""() => { const m = getComputedStyle(document.body).backgroundColor.match(/[\\d.]+/g).map(Number);
+         return (m[0]+m[1]+m[2])/3 > 230; }"""), True)
     pg.locator("#theme").click(); pg.wait_for_timeout(150)
     ck("กดอีกครั้ง → โหมดมืด", pg.evaluate("document.documentElement.dataset.theme"), "dark")
     pg.reload(wait_until="networkidle")
     ck("จำธีมไว้หลังรีเฟรช", pg.evaluate("document.documentElement.dataset.theme"), "dark")
     pg.locator("#theme").click(); pg.wait_for_timeout(150)   # กลับเป็น auto
 
-    h_cozy = pg.evaluate("document.documentElement.scrollHeight")
-    pg.locator("#density").click(); pg.wait_for_timeout(250)
-    h_compact = pg.evaluate("document.documentElement.scrollHeight")
-    ck("โหมดแน่นทำให้หน้าสั้นลงจริง", h_compact < h_cozy * 0.75, True)
-    print(f"      (ปกติ {h_cozy}px → แน่น {h_compact}px)")
-    ck("โหมดแน่นซ่อนคำอธิบาย",
-       pg.evaluate("getComputedStyle(document.querySelector('.card p')).display"), "none")
-    pg.locator("#density").click(); pg.wait_for_timeout(200)
+    h_pill = pg.evaluate("document.documentElement.scrollHeight")
+    ck("ค่าตั้งต้นคือมุมมองป้ายกลม", pg.evaluate("document.documentElement.dataset.view"), "pill")
+    pg.locator("#density").click(); pg.wait_for_timeout(350)
+    h_detail = pg.evaluate("document.documentElement.scrollHeight")
+    ck("สลับเป็นมุมมองละเอียดได้", pg.evaluate("document.documentElement.dataset.view"), "detail")
+    ck("มุมมองละเอียดมีคำอธิบายให้อ่าน", pg.locator(".card p").count() >= 20, True)
+    ck("มุมมองป้ายกลมสั้นกว่ามุมมองละเอียด", h_pill < h_detail, True)
+    print(f"      (ป้ายกลม {h_pill}px → ละเอียด {h_detail}px)")
+    pg.reload(wait_until="networkidle"); pg.wait_for_timeout(400)
+    ck("จำมุมมองไว้หลังรีเฟรช", pg.evaluate("document.documentElement.dataset.view"), "detail")
+    pg.locator("#density").click(); pg.wait_for_timeout(350)
 
     print("\n━━ ⑥ ความคมชัดสี (WCAG AA ต้อง ≥ 4.5) ━━")
     for scheme, label in [("dark","โหมดมืด"), ("light","โหมดสว่าง")]:
         pg.evaluate(f"document.documentElement.dataset.theme='{scheme}'"); pg.wait_for_timeout(120)
-        for sel, name in [(".card p","คำอธิบายในการ์ด"), (".group-h > span:last-child","จำนวนเครื่องมือ"),
+        for sel, name in [(".pill","ป้ายเครื่องมือ"), (".stage-h","หัวข้อในแผง"),
                           ("footer","ท้ายหน้า"), (".fact span","ป้ายในแถบสถิติ"), ('.cat:not([aria-pressed="true"])',"ปุ่มหมวดที่ยังไม่เลือก"),
                           (".fact b","ตัวเลขในแถบสถิติ"), (".hero p","คำโปรย")]:
             r = pg.evaluate(CONTRAST, sel)

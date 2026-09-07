@@ -19,7 +19,7 @@ export function mount(tool) {
   const withNotes = select([["yes", "รวมโน้ตผู้บรรยายด้วย"], ["no", "เอาเฉพาะเนื้อสไลด์"]], "yes");
   const layout = select([["heading", "หัวสไลด์เป็นหัวข้อ (แนะนำ)"], ["plain", "ข้อความล้วนต่อกัน"]], "heading");
   const breakMode = select([["page", "ขึ้นหน้าใหม่ทุกสไลด์"], ["flow", "ไหลต่อเนื่อง"]], "flow");
-  const go = button("📝 แปลงเป็น Word", { onclick: run });
+  const go = button("แปลงเป็น Word", { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("โน้ตผู้บรรยาย", withNotes), field("รูปแบบเอกสาร", layout), field("การขึ้นหน้า", breakMode)]),
@@ -27,7 +27,7 @@ export function mount(tool) {
   body.appendChild(el("div", { class: "note" },
     "ดึงข้อความทุกกล่องในสไลด์ หัวเรื่อง ระดับหัวข้อย่อย และโน้ตผู้บรรยาย ออกมาเป็นเอกสาร Word ที่แก้ไขต่อได้ · " +
     "เหมาะกับการทำสรุปการประชุม เอกสารประกอบการอบรม หรือส่งเนื้อหาให้คนที่ไม่ได้เปิด PowerPoint · " +
-    "‼️ ไม่คงรูปภาพ สี และการจัดวางของสไลด์ (ถ้าต้องการหน้าตาเดิม ให้ใช้ PowerPoint → PDF แทน)"));
+    "ไม่คงรูปภาพ สี และการจัดวางของสไลด์ (ถ้าต้องการหน้าตาเดิม ให้ใช้ PowerPoint → PDF แทน)"));
 
   async function run() {
     if (!file) return st.err("กรุณาเลือกไฟล์ .pptx ก่อน");

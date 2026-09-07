@@ -3,12 +3,13 @@
 // เบามาก แต่แลกมาด้วยข้อจำกัด: เครื่องมือที่ยังไม่เคยเปิดจะใช้ตอนไม่มีเน็ตไม่ได้
 // (พิสูจน์แล้วด้วยการตัดเน็ตจริงระดับเครือข่าย)
 //
-// ไฟล์นี้ให้ผู้ใช้ "เลือกเอง" ว่าจะดึงทุกอย่างมาเก็บไว้ล่วงหน้าไหม — ไม่บังคับ
+// ไฟล์นี้ให้ผู้ใช้ "เลือกเอง"ว่าจะดึงทุกอย่างมาเก็บไว้ล่วงหน้าไหม — ไม่บังคับ
 // โหลด 4-5 MB ตั้งแต่หน้าแรก เพราะจะทำลายข้อดีเรื่องความเร็วที่ตั้งใจออกแบบไว้
 
 import { localLibFiles } from "./loader.js";
 import { TOOLS } from "./registry.js";
 import { el } from "./dom.js";
+import { uiIcon } from "./icons.js";
 
 const KEY = "filekit-offline-ready";
 const FONTS = ["vendor/fonts/Sarabun-Regular-th.ttf", "vendor/fonts/Sarabun-Bold-th.ttf",
@@ -60,12 +61,12 @@ export function offlineBar() {
   const render = () => {
     bar.innerHTML = "";
     if (isReady()) {
-      bar.appendChild(el("span", { class: "ob-ready" }, "✅ เตรียมไฟล์ไว้ในเครื่องแล้ว — ใช้ได้ครบทุกเครื่องมือแม้ไม่มีเน็ต"));
+      bar.appendChild(el("span", { class: "ob-ready" }, "เตรียมไฟล์ไว้ในเครื่องแล้ว — ใช้ได้ครบทุกเครื่องมือแม้ไม่มีเน็ต"));
       bar.appendChild(el("button", { class: "ob-link", type: "button", onclick: run }, "โหลดใหม่อีกครั้ง"));
       return;
     }
     bar.appendChild(el("span", {}, [
-      el("strong", {}, "📥 ใช้งานตอนไม่มีเน็ต"),
+      el("strong", {}, [uiIcon("offline", "ob-ico"), "ใช้งานตอนไม่มีเน็ต"]),
       el("span", { class: "ob-detail" },
         " — ตอนนี้เครื่องมือที่เคยเปิดแล้วใช้ออฟไลน์ได้ กดปุ่มนี้เพื่อดึงทุกเครื่องมือมาเก็บไว้ล่วงหน้า (ประมาณ 5 MB)"),
     ]));

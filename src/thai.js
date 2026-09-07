@@ -35,7 +35,7 @@ export function decodeBytes(u8, enc) {
   return new TextDecoder(enc).decode(stripBOM(u8).body);
 }
 
-// สร้างตาราง "ตัวอักษร → ไบต์" ย้อนกลับจาก TextDecoder เอง
+// สร้างตาราง "ตัวอักษร → ไบต์"ย้อนกลับจาก TextDecoder เอง
 // (JS มี TextEncoder แค่ UTF-8 จึงต้องกลับตารางเอง — ทำครั้งเดียวแล้วจำไว้)
 const _encoders = new Map();
 export function encoderFor(enc) {
@@ -221,7 +221,7 @@ export function parseAnyDate(v) {
   if (v instanceof Date && !isNaN(v))
     return { y: v.getFullYear(), m: v.getMonth() + 1, d: v.getDate() };
   if (typeof v === "number" && isFinite(v)) {
-    // 1000–2600 = ตีความว่าเป็น "ปี" ไม่ใช่เลขลำดับวันของ Excel
+    // 1000–2600 = ตีความว่าเป็น "ปี"ไม่ใช่เลขลำดับวันของ Excel
     // (เลขลำดับช่วงนี้คือปี ค.ศ. 1902–1907 ซึ่งแทบไม่มีในงานจริง แต่คอลัมน์ปีมีเยอะมาก)
     if (v >= 1000 && v <= 2600 && Number.isInteger(v)) return { y: v, m: null, d: null };
     if (v > 0 && v < 2958466) return excelSerialToParts(v);

@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, segmented } from "../ui.js";
 import { readPptx } from "../pptx.js";
 import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
 
@@ -20,7 +20,7 @@ export function mount(tool) {
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
 
-  const ratio = select([["16:9", "16:9 (จอกว้าง)"], ["4:3", "4:3 (จอมาตรฐาน)"]], "16:9");
+  const ratio = segmented([["16:9", "16:9"], ["4:3", "4:3"]], "16:9");
   const theme = select([["light", "พื้นขาว ตัวอักษรเข้ม"], ["dark", "พื้นเข้ม ตัวอักษรสว่าง"]], "light");
   const withNotes = select([["no", "ไม่ใส่โน้ต"], ["yes", "ใส่โน้ตผู้บรรยายท้ายสไลด์"]], "no");
   const go = button("📕 สร้างไฟล์ PDF", { onclick: run });

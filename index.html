@@ -8,7 +8,20 @@
 <meta name="theme-color" content="#0f1220" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="canonical" href="https://patcharasitp.github.io/filekit/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FileKit">
+<meta property="og:locale" content="th_TH">
+<meta property="og:title" content="FileKit — เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน">
+<meta property="og:description" content="27 เครื่องมือ แปลง รวม แยก บีบอัด PDF · Word · Excel · รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
+<meta property="og:url" content="https://patcharasitp.github.io/filekit/">
+<meta property="og:image" content="https://patcharasitp.github.io/filekit/assets/social/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FileKit — 27 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Cpath%20fill%3D%22%234a5bd1%22%20fill-rule%3D%22evenodd%22%20d%3D%22M14%206L30%206L38%2014L38%2042L14%2042Z%20M20%2022A4%204%200%201%200%2028%2022A4%204%200%201%200%2020%2022Z%20M22%2025L26%2025L24.5%2034L23.5%2034Z%22/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 
 <!-- เลือกธีมก่อนวาดหน้าจอ กันจอกะพริบขาว-ดำตอนโหลด -->
 <script>try{var t=localStorage.getItem("fk-theme");if(t&&t!=="auto")document.documentElement.dataset.theme=t;
@@ -37,13 +50,19 @@ var d=localStorage.getItem("fk-density");if(d)document.documentElement.dataset.d
   --sh3:0 0 0 1px var(--line), 0 12px 28px rgba(0,0,0,.5);
   --shadow:var(--sh2);
   /* ── การเคลื่อนไหว ── */
-  --t-micro:120ms; --t-panel:220ms; --ease:cubic-bezier(.4,0,.2,1);
+  --t-micro:100ms; --t-panel:220ms; --ease:cubic-bezier(.4,0,.2,1);
+  --t-btn:100ms; --ease-snap:cubic-bezier(.25,.46,.45,.94);   /* วัดจาก stripe/linear/saasui ตรงกัน */
+  --t-card:150ms;
+  /* เส้นบางที่ปรับตามธีมเอง + ขอบเรืองด้านบนสำหรับพื้นมืด (ทำให้ของดูมีมิติโดยไม่ต้องใช้เงา) */
+  --hairline:rgba(255,255,255,.09);
+  --ring-top:inset 0 1px 0 0 rgba(255,255,255,.06);
   /* ── ตัวอักษร: ภาษาไทยต้องการ line-height สูงกว่าอังกฤษเพราะมีสระบน-ล่าง ── */
   --lh:1.75; --lh-tight:1.4;
   --font:"Sarabun","IBM Plex Sans Thai","Noto Sans Thai",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
 }
 /* โหมดสว่าง — ประกาศซ้ำ 2 ที่ ให้ทั้ง "ตามระบบ" และ "ผู้ใช้เลือกเอง" ทำงานถูกทั้งคู่ */
 @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --hairline:rgba(16,22,50,.10); --ring-top:inset 0 1px 0 0 rgba(255,255,255,.7);
   /* สีความหมายชุดเดิมสว่างเกินไปสำหรับพื้นขาว (เขียวได้แค่ 1.34:1) ต้องมีชุดเข้มแยก */
   --ok:#0b6b42; --warn:#8f5200; --err:#ad2740;
   --bg:#f7f8fc; --bg-soft:#eef0f8; --card:#fff; --card-hi:#f4f6ff;
@@ -56,6 +75,7 @@ var d=localStorage.getItem("fk-density");if(d)document.documentElement.dataset.d
   --sh3:0 8px 16px rgba(20,26,60,.08), 0 16px 32px rgba(20,26,60,.09);
 }}
 :root[data-theme="light"]{
+  --hairline:rgba(16,22,50,.10); --ring-top:inset 0 1px 0 0 rgba(255,255,255,.7);
   /* สีความหมายชุดเดิมสว่างเกินไปสำหรับพื้นขาว (เขียวได้แค่ 1.34:1) ต้องมีชุดเข้มแยก */
   --ok:#0b6b42; --warn:#8f5200; --err:#ad2740;
   --bg:#f7f8fc; --bg-soft:#eef0f8; --card:#fff; --card-hi:#f4f6ff;
@@ -97,9 +117,10 @@ button{font-family:inherit}
 .brand{display:flex; align-items:center; gap:10px; cursor:pointer; border:0; background:none; color:inherit; padding:2px 4px; margin-inline-start:-4px; min-height:40px; font-size:16px; font-weight:700; line-height:1.25}
 .brand .mark{
   width:32px;height:32px;border-radius:9px; display:grid;place-items:center; flex:none;
-  background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff; font-size:17px;
-  box-shadow:0 4px 12px color-mix(in srgb,var(--brand) 45%,transparent);
+  background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff;
+  box-shadow:0 4px 12px color-mix(in srgb,var(--brand) 45%,transparent), inset 0 1px 0 0 rgba(255,255,255,.25);
 }
+.mark-svg{width:19px;height:19px;display:block}
 .brand small{display:block;font-size:11px;font-weight:500;color:var(--text-mute);line-height:1.3}
 .top .spacer{flex:1}
 .iconbtn{
@@ -108,6 +129,7 @@ button{font-family:inherit}
   border-radius:11px; font-size:16px; transition:color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
 }
 .iconbtn:hover{background:var(--card-hi); color:var(--text)}
+.iconbtn{box-shadow:var(--ring-top)}
 .back{
   display:none; align-items:center; gap:6px; cursor:pointer; white-space:nowrap;
   border:1px solid var(--line); background:var(--card); color:var(--text);
@@ -121,8 +143,11 @@ body.tool .home-only{display:none}
 main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,4vw,32px) 72px}
 .hero{text-align:center; margin-bottom:var(--sp5)}
 .hero h1{
-  font-size:clamp(25px,4.4vw,38px); margin:0 0 8px; letter-spacing:-.3px; font-weight:800;
-  line-height:1.42; padding-block:2px;
+  font-size:clamp(25px,4.4vw,38px); margin:0 0 8px; font-weight:800;
+  /* บีบระยะตัวอักษร -2% ตามที่วัดจากเว็บชั้นนำ — ใช้กับไทยได้ ทดสอบแล้วสระไม่ชนกัน
+     แต่ line-height ห้ามต่ำกว่า 1.3 เด็ดขาด (ที่ 1.0 สระบน-ล่างล้นกล่อง 6px ชนบรรทัดบน) */
+  letter-spacing:calc(1em * -0.02);
+  line-height:1.34; padding-block:2px;
   background:linear-gradient(120deg,var(--text),var(--brand)); -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 .hero p{margin:0 auto; max-width:600px; color:var(--text-dim); font-size:14.5px}
@@ -151,7 +176,7 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .search input::placeholder{color:var(--text-mute)}
 .search input::-webkit-search-cancel-button{display:none}
 .kbd{
-  display:none; align-items:center; gap:3px; flex:none;
+  display:none; align-items:center; gap:0; flex:none;
   font-size:11px; color:var(--text-mute); border:1px solid var(--line); border-radius:6px; padding:2px 7px;
   background:var(--bg-soft); font-family:inherit;
 }
@@ -172,7 +197,9 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   flex:none; scroll-snap-align:start; cursor:pointer; white-space:nowrap;
   border:1px solid var(--line); background:var(--card); color:var(--text-dim);
   border-radius:999px; padding:7px 14px; font-size:13px; font-weight:600; min-height:36px;
-  transition:color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease);
+  box-shadow:0 1px 2px rgba(0,0,0,.05);
+  transition:color var(--t-btn) var(--ease-snap), border-color var(--t-btn) var(--ease-snap),
+             background var(--t-btn) var(--ease-snap);
 }
 .cat:hover{color:var(--text); border-color:var(--text-mute)}
 /* พื้นย้อมสีเข้มเกินไปจะกินคอนทราสต์ของตัวอักษรสีเดียวกัน — 13% ตกที่ 4.32:1 ต้องลดเหลือ 8% */
@@ -192,11 +219,11 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .card{
   display:flex; gap:var(--sp3); align-items:flex-start; text-align:start;
   background:var(--card); border:1px solid var(--line-soft); border-radius:var(--r);
-  padding:14px; cursor:pointer; color:inherit; box-shadow:var(--sh1);
-  transition:transform var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease),
-             box-shadow var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
+  padding:14px; cursor:pointer; color:inherit; box-shadow:var(--sh1), var(--ring-top);
+  transition:transform var(--t-card) var(--ease), border-color var(--t-card) var(--ease),
+             box-shadow var(--t-card) var(--ease), background var(--t-card) var(--ease);
 }
-.card:hover{transform:translateY(-2px); border-color:color-mix(in srgb,var(--ac) 60%,transparent); box-shadow:var(--sh2); background:var(--card-hi)}
+.card:hover{transform:translateY(-2px); border-color:color-mix(in srgb,var(--ac) 60%,transparent); box-shadow:var(--sh2), var(--ring-top); background:var(--card-hi)}
 .card .ico{
   flex:none; width:40px; height:40px; border-radius:11px; display:grid; place-items:center; font-size:20px;
   background:color-mix(in srgb,var(--ac) 16%,transparent);
@@ -263,7 +290,10 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .ob-progress{flex:1;min-width:220px;height:7px;border-radius:99px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--line-soft)}
 .ob-progress .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .2s}
 
-footer{border-top:1px solid var(--line-soft); padding:18px; text-align:center; color:var(--text-mute); font-size:12.5px}
+footer{position:relative; padding:18px; text-align:center; color:var(--text-mute); font-size:12.5px}
+footer::before{content:""; position:absolute; inset-inline:0; top:0; height:1px; background:var(--line);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
 #tool{display:none}
 body.tool #tool{display:block}
 body.tool #home{display:none}
@@ -275,7 +305,7 @@ body.tool #home{display:none}
 
 <header class="top">
   <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก">
-    <span class="mark" aria-hidden="true">🗂️</span>
+    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M14 6L30 6L38 14L38 42L14 42Z M20 22A4 4 0 1 0 28 22A4 4 0 1 0 20 22Z M22 25L26 25L24.5 34L23.5 34Z"/></svg></span>
     <span>FileKit<small>ทำงานในเครื่องคุณ 100%</small></span>
   </button>
   <span class="spacer"></span>
@@ -303,7 +333,7 @@ body.tool #home{display:none}
         <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, บาทถ้วน, ไทยเพี้ยน" autocomplete="off"
                aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
         <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา">✕</button>
-        <span class="kbd" aria-hidden="true"><span id="kbdkey">Ctrl</span>+K</span>
+        <span class="kbd" aria-hidden="true"><span id="kbdkey">Ctrl</span><span>+K</span></span>
       </div>
       <div class="hits" id="hits" role="status" aria-live="polite"></div>
     </div>

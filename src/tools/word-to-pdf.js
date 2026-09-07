@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
 import { loadLibs } from "../loader.js";
 import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
 
@@ -19,8 +19,8 @@ export function mount(tool) {
     onChange: (f) => { files = f; st.clear(); results.innerHTML = ""; },
   });
 
-  const size = select([["a4", "A4"], ["letter", "Letter"]], "a4");
-  const fontSize = select([["12", "12 pt"], ["14", "14 pt"], ["16", "16 pt"]], "14");
+  const size = segmented([["a4", "A4"], ["letter", "Letter"]], "a4");
+  const fontSize = segmented([["12", "12 pt"], ["14", "14 pt"], ["16", "16 pt"]], "14");
   const go = button("📘 แปลงเป็น PDF", { onclick: run });
 
   body.append(dz.container,

@@ -6,7 +6,7 @@
   background:color-mix(in srgb,var(--ac,var(--brand)) 16%,transparent);
   border:1px solid color-mix(in srgb,var(--ac,var(--brand)) 32%,transparent);
 }
-.tool-head h1{margin:0;font-size:21px;font-weight:800;line-height:1.45}
+.tool-head h1{margin:0;font-size:21px;font-weight:800;line-height:1.4;letter-spacing:calc(1em * -0.015)}
 .tool-head p{margin:3px 0 0;color:var(--text-dim);font-size:13.5px;max-width:70ch}
 
 .panel{
@@ -60,6 +60,8 @@
 .btn{
   border:0;border-radius:999px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;
   background:linear-gradient(135deg,var(--btn-a),var(--btn-b));color:#fff;
+  box-shadow:inset 0 1px 0 0 rgba(255,255,255,.18);
+  transition:filter var(--t-btn,.1s) var(--ease-snap,ease), transform var(--t-btn,.1s) var(--ease-snap,ease);
   box-shadow:0 6px 18px color-mix(in srgb,var(--brand) 35%,transparent);
   transition:transform .12s,filter .12s;
 }
@@ -312,7 +314,10 @@
 .fail-box li{overflow-wrap:anywhere; line-height:1.7}
 
 /* ── แถว "ทำอะไรต่อดี" ท้ายหน้าเครื่องมือ ── */
-.next-steps{margin-top:34px;padding-top:22px;border-top:1px solid var(--line-soft)}
+.next-steps{position:relative;margin-top:34px;padding-top:22px}
+.next-steps::before{content:"";position:absolute;inset-inline:0;top:0;height:1px;background:var(--line);
+  -webkit-mask-image:linear-gradient(90deg,#000,#000 70%,transparent);
+          mask-image:linear-gradient(90deg,#000,#000 70%,transparent)}
 .next-steps h2{font-size:13.5px;font-weight:700;color:var(--text-mute);margin:0 0 12px}
 .next-row{display:flex;flex-wrap:wrap;gap:10px}
 .next-card{
@@ -340,3 +345,25 @@
 }
 .btn-cancel:hover{background:color-mix(in srgb,var(--err) 18%,transparent)}
 .btn-cancel:disabled{opacity:.55;cursor:default}
+
+/* ── ปุ่มแบบแบ่งช่อง (segmented control) ── */
+.seg{
+  display:inline-flex; padding:3px; gap:2px;
+  background:var(--bg-soft); border:1px solid var(--line); border-radius:11px;
+  max-width:100%; flex-wrap:wrap;
+}
+.seg-item{position:relative; flex:1 1 auto; min-width:0}
+.seg-item input{position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; width:100%; height:100%}
+.seg-item span{
+  display:block; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  padding:7px 14px; border-radius:8px; font-size:13px; font-weight:600; color:var(--text-dim);
+  min-height:36px; line-height:22px;
+  transition:color var(--t-btn,.1s) var(--ease-snap,ease), background var(--t-btn,.1s) var(--ease-snap,ease);
+}
+.seg-item:hover span{color:var(--text)}
+.seg-item input:checked + span{
+  background:var(--card); color:var(--text);
+  box-shadow:0 1px 2px rgba(0,0,0,.08), var(--ring-top);
+}
+.seg-item input:focus-visible + span{outline:2.5px solid var(--brand); outline-offset:1px}
+@media (max-width:560px){ .seg{width:100%} .seg-item span{padding:7px 8px; font-size:12.5px} }

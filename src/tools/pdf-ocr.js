@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, parsePages, yieldToBrowser } from "../ui.js";
+         stripExt, parsePages, yieldToBrowser, segmented } from "../ui.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 
 export function mount(tool) {
@@ -17,7 +17,7 @@ export function mount(tool) {
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; preview.hidden = true; },
   });
 
-  const lang = select([["tha+eng", "ไทย + อังกฤษ"], ["tha", "ไทยอย่างเดียว"], ["eng", "อังกฤษอย่างเดียว"]], "tha+eng");
+  const lang = segmented([["tha+eng", "ไทย + อังกฤษ"], ["tha", "ไทย"], ["eng", "อังกฤษ"]], "tha+eng");
   const rangeInput = el("input", { type: "text", value: "1-", placeholder: "เช่น 1-3" });
   const quality = select([["2", "ปกติ (เร็ว)"], ["2.6", "ละเอียด (แนะนำ)"], ["3.4", "ละเอียดสูง (ช้า)"]], "2.6");
   const go = button("🔍 เริ่มอ่านข้อความ", { onclick: run });

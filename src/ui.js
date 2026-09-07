@@ -111,6 +111,29 @@ export function field(labelText, control, hint) {
   ]);
 }
 
+let segSeq = 0;
+/**
+ * ปุ่มแบบแบ่งช่อง — ใช้แทน dropdown เมื่อมีตัวเลือก 2-4 ตัวและข้อความสั้น
+ * เห็นทุกตัวเลือกพร้อมกันโดยไม่ต้องกดเปิด และกดโดนง่ายกว่าบนมือถือ
+ * ‼️ ใช้ <input type=radio> จริง จึงได้การนำทางด้วยลูกศร/Tab และการอ่านออกเสียงมาฟรี
+ *    (เหตุการณ์ change ของ radio ลอยขึ้นมาถึงกล่องอยู่แล้ว จึงผูก .onchange กับกล่องได้เลย
+ *     เหมือน select ทุกประการ — ห้าม dispatch ซ้ำ ไม่งั้นจะยิงสองรอบ)
+ */
+export function segmented(options, value) {
+  const name = "seg" + ++segSeq;
+  const wrap = el("div", { class: "seg", role: "radiogroup" });
+  const inputs = options.map(([v, t]) => {
+    const input = el("input", { type: "radio", name, value: v, checked: v === value || null });
+    wrap.appendChild(el("label", { class: "seg-item" }, [input, el("span", {}, t)]));
+    return input;
+  });
+  Object.defineProperty(wrap, "value", {
+    get: () => (inputs.find((i) => i.checked) || {}).value ?? "",
+    set: (v) => inputs.forEach((i) => { i.checked = i.value === v; }),
+  });
+  return wrap;
+}
+
 export function select(options, value) {
   const s = el("select", {});
   options.forEach(([v, t]) => s.appendChild(el("option", { value: v, selected: v === value }, t)));

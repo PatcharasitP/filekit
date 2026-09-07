@@ -1,6 +1,6 @@
 import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, segmented } from "../ui.js";
 
 // วาดข้อความลายน้ำลง canvas โปร่งใสแล้วฝังเป็นภาพ PNG
 // ทำแบบนี้เพื่อให้ "ข้อความไทยใช้ได้ทันที" โดยไม่ต้องฝังฟอนต์เข้า PDF
@@ -40,7 +40,7 @@ export function mount(tool) {
   const opacity = el("input", { type: "range", min: "5", max: "60", value: "18" });
   const oLabel = el("small", {}, "ความเข้ม 18%");
   opacity.addEventListener("input", () => { oLabel.textContent = `ความเข้ม ${opacity.value}%`; });
-  const sizeSel = select([["small", "เล็ก"], ["medium", "กลาง"], ["large", "ใหญ่"]], "medium");
+  const sizeSel = segmented([["small", "เล็ก"], ["medium", "กลาง"], ["large", "ใหญ่"]], "medium");
 
   const go = button("💧 ใส่ลายน้ำ", { onclick: run });
   body.append(dz.container,

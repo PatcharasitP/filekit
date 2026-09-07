@@ -328,3 +328,15 @@
   border:1px solid color-mix(in srgb,var(--ac) 30%,transparent);
 }
 @media (max-width:520px){ .next-card{flex:1 1 100%;justify-content:flex-start} }
+
+/* ── ปุ่มหยุดระหว่างประมวลผล ── */
+.prog-row{display:flex;align-items:center;gap:10px}
+.prog-row .progress{flex:1}
+.btn-cancel{
+  flex:none;border:1px solid color-mix(in srgb,var(--err) 45%,transparent);
+  background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err);
+  border-radius:999px;padding:6px 15px;font-size:12.5px;font-weight:700;cursor:pointer;
+  font-family:inherit;min-height:34px;
+}
+.btn-cancel:hover{background:color-mix(in srgb,var(--err) 18%,transparent)}
+.btn-cancel:disabled{opacity:.55;cursor:default}

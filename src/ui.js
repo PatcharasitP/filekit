@@ -67,17 +67,25 @@ export function nextSteps(tool) {
 
 /** แถบสถานะ + แถบความคืบหน้า (ใช้คู่กันเสมอ) */
 export function statusBar() {
-  const msg = el("div", { class: "status" });
+  const msg = el("div", { class: "status", role: "status", "aria-live": "polite" });
   const fill = el("div", { class: "fill" });
+  // ‼️ งานที่ใช้เวลานานต้องยกเลิกได้ ไม่งั้นลากมา 50 ไฟล์แล้วกดผิดต้องรอจนจบหรือปิดแท็บทิ้ง
+  let cancelled = false;
+  const stop = el("button", { class: "btn-cancel", type: "button", hidden: true,
+    onclick: () => { cancelled = true; stop.disabled = true; stop.textContent = "กำลังหยุด…"; } }, "หยุด");
   const bar = el("div", { class: "progress" }, [fill]);
-  const node = el("div", { class: "status-wrap" }, [msg, bar]);
+  const node = el("div", { class: "status-wrap" }, [msg, el("div", { class: "prog-row" }, [bar, stop])]);
   let label = "";
   return {
     node,
+    get cancelled() { return cancelled; },
+    /** เรียกก่อนเริ่มงานใหม่ทุกครั้ง — เปิดปุ่มหยุดและล้างธงเดิม */
+    begin: () => { cancelled = false; stop.hidden = false; stop.disabled = false; stop.textContent = "หยุด"; },
+    end: () => { stop.hidden = true; },
     info: (t) => { msg.className = "status show info"; msg.textContent = t; label = t; },
     ok: (t) => { msg.className = "status show ok"; msg.textContent = t; },
     err: (t) => { msg.className = "status show err"; msg.textContent = t; },
-    clear: () => { msg.className = "status"; msg.textContent = ""; bar.classList.remove("show"); },
+    clear: () => { msg.className = "status"; msg.textContent = ""; bar.classList.remove("show"); stop.hidden = true; },
     progress: (pct, note) => {
       if (pct === null) { bar.classList.remove("show"); return; }
       bar.classList.add("show");
@@ -293,20 +301,30 @@ export const stripExt = (n) => (n.lastIndexOf(".") > 0 ? n.slice(0, n.lastIndexO
  */
 export async function eachFile(files, st, fn) {
   const failed = [];
+  st?.begin?.();
+  let stopped = 0;
   for (let i = 0; i < files.length; i++) {
+    if (st?.cancelled) { stopped = files.length - i; break; }
     try { await fn(files[i], i); }
     catch (e) { failed.push({ name: files[i].name, why: (e && e.message) || String(e) }); }
     st?.progress?.(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
     await yieldToBrowser();
   }
+  st?.end?.();
+  failed.stopped = stopped;          // ไฟล์ที่ยังไม่ได้ทำเพราะผู้ใช้กดหยุด
   return failed;
 }
 
 /** กล่องสรุปไฟล์ที่ข้ามไป — ใช้คู่กับ eachFile */
 export function failedBox(failed) {
-  if (!failed || !failed.length) return null;
+  if (!failed) return null;
+  if (!failed.length && !failed.stopped) return null;
+  if (!failed.length) return el("div", { class: "fail-box" }, [
+    el("strong", {}, `⏹️ หยุดตามที่สั่ง — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`),
+  ]);
   return el("div", { class: "fail-box" }, [
     el("strong", {}, `⚠️ ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`),
     el("ul", {}, failed.map((f) => el("li", {}, `${f.name} — ${f.why}`))),
+    failed.stopped ? el("div", {}, `⏹️ หยุดตามที่สั่ง — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`) : null,
   ]);
 }

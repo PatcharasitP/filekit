@@ -1,6 +1,6 @@
 import sys, re, pathlib
 from playwright.sync_api import sync_playwright
-BASE="http://localhost:8899"
+BASE=__import__("os").environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
 REG = pathlib.Path(__file__).resolve().parent.parent / "src/registry.js"
 ids = re.findall(r'id:"([\w-]+)"', REG.read_text(encoding="utf-8"))
 bad=[]

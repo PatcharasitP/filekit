@@ -1,7 +1,7 @@
 import re, sys, pathlib
 from playwright.sync_api import sync_playwright
 
-BASE = "http://localhost:8899"
+BASE = __import__("os").environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
 FX = pathlib.Path("/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/fx")
 OUT = FX / "downloads"; OUT.mkdir(exist_ok=True)
 P, Fa = 0, []

@@ -1,6 +1,6 @@
 import sys, pathlib
 from playwright.sync_api import sync_playwright
-BASE = "http://localhost:8899"
+BASE = __import__("os").environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
 P, F = 0, []
 def ck(n, got, want, contains=False):
     global P

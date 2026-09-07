@@ -88,7 +88,9 @@
   --shadow:var(--sh2);
   /* ── การเคลื่อนไหว ── */
   --t-micro:100ms; --t-panel:220ms; --ease:cubic-bezier(.4,0,.2,1);
-  --t-btn:100ms; --ease-snap:cubic-bezier(.25,.46,.45,.94);   /* วัดจาก stripe/linear/saasui ตรงกัน */
+  --t-btn:100ms; --ease-snap:cubic-bezier(.25,.46,.45,.94);
+  /* เด้งเลยเป้าหมายแล้วสปริงกลับ — ค่าตัวที่สามเกิน 1 คือสิ่งที่ทำให้ hover รู้สึก "มีชีวิต" */
+  --ease-spring:cubic-bezier(.2,2.2,.4,1);   /* วัดจาก stripe/linear/saasui ตรงกัน */
   --t-card:150ms;
   /* เส้นบางที่ปรับตามธีมเอง + ขอบเรืองด้านบนสำหรับพื้นมืด (ทำให้ของดูมีมิติโดยไม่ต้องใช้เงา) */
   --hairline:rgba(255,255,255,.09);
@@ -126,7 +128,8 @@
   --sh2:0 2px 6px rgba(20,26,60,.06), 0 6px 14px rgba(20,26,60,.07);
   --sh3:0 8px 16px rgba(20,26,60,.08), 0 16px 32px rgba(20,26,60,.09);
 }
-@media (prefers-reduced-motion: reduce){ :root{ --t-micro:0ms; --t-panel:0ms } }
+@media (prefers-reduced-motion: reduce){ :root{ --t-micro:0ms; --t-panel:0ms;
+  --ease-spring:linear } .pill{transition:none} }
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
@@ -149,9 +152,18 @@ button{font-family:inherit}
   position:sticky; top:0; z-index:20;
   display:flex; align-items:center; gap:var(--sp3);
   padding:10px clamp(14px,4vw,32px);
-  background:color-mix(in srgb, var(--bg) 84%, transparent);
-  backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--line-soft);
+  /* ‼️ backdrop-filter ต้องอยู่กับที่ตลอด ห้ามเปิด-ปิด และห้ามย้ายไปชั้นหลอก
+     วัดจริงแล้ว: ย้ายไป ::before + isolation:isolate ทำให้เกิด compositing layer เพิ่มอีกชั้น
+     ตั้งแต่เฟรมแรก → FCP มือถือ 364 → 456 ms (ช้าลง 25%) ทั้งที่ตายังไม่เห็นอะไรเปลี่ยน
+     ท่าที่เร็วเท่าเดิม: เบลอตลอด (ตอนอยู่บนสุดมันเบลอพื้นหน้าเว็บซึ่งไม่มีอะไรให้เห็นอยู่แล้ว)
+     แล้วค่อยไล่สีพื้น+เส้นขอบเข้ามาตอนสกอลล์ — ทั้งคู่เป็นคุณสมบัติที่ compositor ทำได้ถูก ๆ */
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  background:transparent; border-bottom:1px solid transparent;
+  transition:background var(--t-panel) var(--ease), border-color var(--t-panel) var(--ease);
+}
+:root[data-scrolled] .top{
+  background:color-mix(in srgb, var(--bg) 82%, transparent);
+  border-bottom-color:var(--line-soft);
 }
 .brand{display:flex; align-items:center; gap:10px; cursor:pointer; border:0; background:none; color:inherit; padding:2px 4px; margin-inline-start:-4px; min-height:40px; font-size:16px; font-weight:700; line-height:1.25}
 .brand .mark{
@@ -330,7 +342,7 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   background:#fff;color:#14161c;border:0;border-radius:13px;padding:10px 17px 10px 10px;
   font:600 14.5px/1.5 var(--font);white-space:nowrap;
   box-shadow:0 1px 2px rgba(0,0,0,.07), 0 8px 18px -10px rgba(0,0,0,.35);
-  transition:transform var(--t-btn) var(--ease-snap), box-shadow var(--t-btn) var(--ease-snap);
+  transition:transform 320ms var(--ease-spring), box-shadow var(--t-btn) var(--ease-snap);
 }
 .pill:hover{transform:translateY(-2px); box-shadow:0 2px 4px rgba(0,0,0,.09), 0 14px 26px -10px rgba(0,0,0,.42)}
 .pill:active{transform:translateY(0)}

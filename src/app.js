@@ -245,6 +245,23 @@ const langBtn = $("#lang");
 langBtn.textContent = IS_EN ? "ไทย" : "EN";
 langBtn.addEventListener("click", () => setLang(IS_EN ? "th" : "en"));
 
+// แถบบนใสตอนอยู่บนสุด กลายเป็นกระจกฝ้าเมื่อเลื่อนลง
+// ‼️ อ่าน scrollY ใน rAF ไม่ใช่ในตัว handler — อ่านค่า layout ระหว่างสกอลล์บังคับให้เบราว์เซอร์
+//    คำนวณผังใหม่ทุกเฟรม (forced reflow) · passive:true บอกเบราว์เซอร์ว่าเราไม่ขวางการสกอลล์
+{
+  const root = document.documentElement;
+  let ticking = false;
+  const sync = () => {
+    ticking = false;
+    if (window.scrollY > 8) root.dataset.scrolled = "";
+    else root.removeAttribute("data-scrolled");
+  };
+  addEventListener("scroll", () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(sync); }
+  }, { passive: true });
+  sync();
+}
+
 /* ── ผูกเหตุการณ์ที่เหลือ ── */
 $("#back").addEventListener("click", () => goHome());
 $("#brand").addEventListener("click", () => goHome());

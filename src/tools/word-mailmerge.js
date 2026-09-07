@@ -1,6 +1,6 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
-import { readPlaceholders, mergeAll } from "../docxmerge.js";
+import { readPlaceholders, mergeAll, buildRecords } from "../docxmerge.js";
 import { loadLibs } from "../loader.js";
 
 export function mount(tool) {
@@ -9,7 +9,8 @@ export function mount(tool) {
   const results = el("div", { class: "results" });
 
   let tplFile = null, dataFile = null;
-  let fields = [];        // ตัวยึดในเทมเพลต
+  let fields = [];        // ตัวยึดธรรมดาในเทมเพลต
+  let loops = [];         // บล็อกวนซ้ำ เช่น {{#รายการ}} … {{/รายการ}}
   let rows = [];          // ข้อมูลจาก Excel
   let columns = [];       // ชื่อคอลัมน์ใน Excel
   const mapping = {};     // ตัวยึด -> คอลัมน์
@@ -34,7 +35,11 @@ export function mount(tool) {
   const mapBox = el("div", { class: "mm-box", hidden: true });
   const previewBox = el("div", { class: "mm-box", hidden: true });
 
-  const missing = select([["blank", "เว้นว่างไว้"], ["keep", "คงตัวยึดเดิมไว้ (เพื่อให้เห็นว่าขาด)"]], "blank");
+  const modeSel = select([["row", "หนึ่งแถว = หนึ่งเอกสาร"], ["group", "รวมหลายแถวเป็นเอกสารเดียว (ใช้กับตารางรายการ)"]], "row");
+  const groupCol = el("select", {});
+  const loopSel = el("select", {});
+  const groupField = field("จัดกลุ่มด้วยคอลัมน์", groupCol, "แถวที่ค่าตรงกันจะรวมเป็นเอกสารเดียว");
+  const loopField = field("ใส่รายการลงบล็อก", loopSel);
   const nameCol = el("select", {});
   const go = button("📄 สร้างเอกสารทั้งชุด", { onclick: run });
   go.disabled = true;
@@ -49,7 +54,8 @@ export function mount(tool) {
     el("div", { class: "mm-step" }, [el("span", { class: "mm-num" }, "4"),
       el("div", {}, [el("h3", {}, "ตรวจดูก่อนสร้าง"), previewBox,
         el("div", { class: "row" }, [
-          field("ถ้าข้อมูลช่องไหนว่าง", missing),
+          field("รูปแบบเอกสาร", modeSel),
+          groupField, loopField,
           field("ตั้งชื่อไฟล์จากคอลัมน์", nameCol, "เว้นไว้ = ตั้งชื่อตามลำดับ"),
         ]),
         el("div", { class: "actions" }, [go])])]),
@@ -67,18 +73,25 @@ export function mount(tool) {
     if (!tplFile) return refresh();
     st.info("กำลังอ่านตัวยึดในเทมเพลต…");
     try {
-      fields = await readPlaceholders(tplFile);
+      const parsed = await readPlaceholders(tplFile);
+      fields = parsed.fields; loops = parsed.loops;
       st.clear();
-      if (!fields.length) {
-        fieldsBox.hidden = false;
+      fieldsBox.hidden = false;
+      if (!fields.length && !loops.length) {
         fieldsBox.appendChild(el("div", { class: "status show err" },
           "ไม่พบตัวยึดในไฟล์นี้ — ตัวยึดต้องอยู่ในรูป {{ชื่อคอลัมน์}} เช่น {{ชื่อ}} หรือ {{ตำแหน่ง}}"));
       } else {
-        fieldsBox.hidden = false;
         fieldsBox.append(
-          el("p", { class: "mm-label" }, `พบตัวยึด ${fields.length} รายการในเทมเพลต`),
+          el("p", { class: "mm-label" }, `พบตัวยึด ${fields.length} รายการ` +
+            (loops.length ? ` และบล็อกวนซ้ำ ${loops.length} บล็อก` : "")),
           el("div", { class: "stack" }, fields.map((f) => el("span", { text: `{{${f}}}` })))
         );
+        if (loops.length) {
+          fieldsBox.append(
+            el("p", { class: "mm-label", style: { marginTop: "10px" } }, "บล็อกวนซ้ำ (ใช้กับตารางรายการหลายบรรทัด)"),
+            el("div", { class: "stack" }, loops.map((f) => el("span", { class: "mm-loop", text: `{{#${f}}} … {{/${f}}}` })))
+          );
+        }
       }
     } catch (e) {
       st.err("อ่านเทมเพลตไม่สำเร็จ: " + e.message);
@@ -142,6 +155,16 @@ export function mount(tool) {
     nameCol.innerHTML = "";
     nameCol.appendChild(el("option", { value: "" }, "— ตั้งชื่อตามลำดับ —"));
     columns.forEach((c) => nameCol.appendChild(el("option", { value: c }, c)));
+
+    groupCol.innerHTML = "";
+    columns.forEach((c) => groupCol.appendChild(el("option", { value: c }, c)));
+    loopSel.innerHTML = "";
+    loops.forEach((l) => loopSel.appendChild(el("option", { value: l }, `{{#${l}}}`)));
+    if (loops.length && modeSel.value === "row" && rows.length > new Set(rows.map(r => r[columns[0]])).size) {
+      // ข้อมูลมีค่าซ้ำในคอลัมน์แรกและเทมเพลตมีบล็อกวนซ้ำ → น่าจะตั้งใจทำแบบจัดกลุ่ม
+      modeSel.value = "group"; groupCol.value = columns[0];
+    }
+    syncMode();
     renderPreview();
   }
 
@@ -161,12 +184,29 @@ export function mount(tool) {
         el("span", { class: v ? "mm-val" : "mm-val empty", text: v || (col ? "(ว่างในแถวแรก)" : "(ยังไม่จับคู่)") })
       );
     });
-    previewBox.append(
-      el("p", { class: "mm-label" }, `ตัวอย่างจากแถวแรกของข้อมูล — จะสร้างทั้งหมด ${rows.length.toLocaleString("th-TH")} ไฟล์`),
-      list);
+    let head = `ตัวอย่างจากแถวแรกของข้อมูล — จะสร้างทั้งหมด ${rows.length.toLocaleString("th-TH")} ไฟล์`;
+    if (modeSel.value === "group" && groupCol.value) {
+      const n = new Set(rows.map((r) => String(r[groupCol.value] ?? ""))).size;
+      head = `จัดกลุ่มตามคอลัมน์ “${groupCol.value}” — จะได้ ${n.toLocaleString("th-TH")} ไฟล์ จาก ${rows.length.toLocaleString("th-TH")} แถว`;
+    }
+    previewBox.append(el("p", { class: "mm-label" }, head), list);
   }
 
-  const refresh = () => { go.disabled = !(tplFile && rows.length && fields.length); };
+  function syncMode() {
+    const grouped = modeSel.value === "group";
+    groupField.style.display = grouped ? "" : "none";
+    loopField.style.display = grouped ? "" : "none";
+    renderPreview();
+  }
+  modeSel.addEventListener("change", () => { syncMode(); refresh(); });
+  groupCol.addEventListener("change", renderPreview);
+  loopSel.addEventListener("change", renderPreview);
+
+  const refresh = () => {
+    const grouped = modeSel.value === "group";
+    go.disabled = !(tplFile && rows.length && (fields.length || loops.length)
+                    && (!grouped || (groupCol.value && loopSel.value)));
+  };
 
   // ── สร้างเอกสารทั้งชุด ───────────────────────────────────────────────────
   async function run() {
@@ -176,8 +216,13 @@ export function mount(tool) {
     try {
       const base = stripExt(tplFile.name);
       const used = new Map();
-      const nameOf = (row, i) => {
-        let label = nameCol.value ? String(row[nameCol.value] ?? "").trim() : "";
+      const nameOf = (record, i) => {
+        const src = record.__rows ? record.__rows[0] : null;
+        let label = "";
+        if (nameCol.value) {
+          label = src ? String(src[nameCol.value] ?? "").trim()
+                      : String(record[Object.keys(mapping).find((f) => mapping[f] === nameCol.value)] ?? "").trim();
+        }
         label = label.replace(/[\\/:*?"<>|]/g, "-").slice(0, 60);   // กันอักขระที่ตั้งชื่อไฟล์ไม่ได้
         let name = label ? `${base}-${label}` : `${base}-${i + 1}`;
         const n = (used.get(name) || 0) + 1;                        // ชื่อซ้ำให้เติมเลขต่อท้าย
@@ -185,15 +230,15 @@ export function mount(tool) {
         return (n > 1 ? `${name} (${n})` : name) + ".docx";
       };
 
-      // แปลงข้อมูลให้คีย์เป็นชื่อ "ตัวยึด" ตามที่จับคู่ไว้
-      const mapped = rows.map((r) => {
-        const o = {};
-        fields.forEach((f) => { o[f] = mapping[f] ? r[mapping[f]] : ""; });
-        return o;
+      const records = buildRecords(rows, {
+        mode: modeSel.value,
+        groupBy: groupCol.value,
+        loopName: loopSel.value,
+        mapping,
       });
 
-      const made = await mergeAll(tplFile, mapped, {
-        missing: missing.value, nameOf,
+      const made = await mergeAll(tplFile, records, {
+        nameOf,
         onProgress: ({ done, total }) => st.progress((done / total) * 100, `(${done}/${total})`),
       });
 

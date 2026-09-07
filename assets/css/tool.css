@@ -162,3 +162,4 @@
   .mm-arrow{display:none}
   .mm-grid select{margin-bottom:8px}
 }
+.mm-loop{color:var(--warn)!important;border-color:color-mix(in srgb,var(--warn) 40%,transparent)!important}

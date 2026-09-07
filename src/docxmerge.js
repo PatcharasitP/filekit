@@ -1,133 +1,113 @@
 // ── รวมข้อมูลจาก Excel เข้ากับเทมเพลต Word (Mail Merge) ────────────────────
-// ‼️ หัวใจของเรื่องนี้คือ Word ไม่ได้เก็บข้อความเป็นก้อนเดียว
-// ย่อหน้าหนึ่งถูกหั่นเป็นหลาย <w:r> (run) ตามการจัดรูปแบบ การตรวจคำสะกด และ
-// ประวัติการแก้ไข ทำให้ตัวยึด {{ชื่อ}} ที่คนพิมพ์ติดกันในหน้าจอ กลายเป็น
-// "{{ชื่", "อ}}" คนละ run ในไฟล์จริง — โค้ดที่ค้นหาทีละ run จึงหาไม่เจอ
+// ใช้ easy-template-x (MIT) ที่ bundle เองไว้ใน vendor/ แทนการเขียน engine เอง
 //
-// วิธีที่ใช้: ต่อข้อความของทุก run ในย่อหน้าเดียวกันเป็นสตริงเดียวก่อน
-// หาตัวยึดบนสตริงนั้น แล้วค่อยเขียนค่ากลับลง run ตามช่วงตำแหน่งที่จับคู่ไว้
-// วิธีนี้รักษารูปแบบตัวอักษรของ run แรกไว้ (ตัวหนา สี ขนาด) ซึ่งเป็นที่ที่
-// ตัวยึดเริ่มต้น จึงได้ผลลัพธ์ที่หน้าตาเหมือนที่คนออกแบบเทมเพลตตั้งใจ
+// เหตุผลที่เปลี่ยนมาใช้ไลบรารี ทั้งที่เคยเขียนเองได้แล้ว:
+// ตัวที่เขียนเองแทนที่ข้อความล้วนได้ดี แต่ทำ "ตารางวนซ้ำ" ไม่ได้ ซึ่งเป็นสิ่งที่
+// เอกสารจริงต้องใช้เกือบทุกใบ (ใบเสนอราคา ใบเสร็จ ใบส่งของ ล้วนมีรายการหลายบรรทัด)
+// การรองรับ loop เองต้องจัดการโครงสร้างแถวตารางใน OOXML ซึ่งเสี่ยงพังกับเทมเพลต
+// ที่ซับซ้อน ส่วน easy-template-x เป็น MIT ล้วน ไม่มีฟีเจอร์ที่ต้องจ่ายเงิน
+//
+// ที่ bundle เองเพราะ:
+//   · ไลบรารีเผยแพร่เป็น ESM ที่มี bare import (jszip, xmldom, json5, lodash.get)
+//     ซึ่งเบราว์เซอร์แก้เองไม่ได้ถ้าไม่มี bundler
+//   · แทน @xmldom/xmldom ด้วย DOMParser ของเบราว์เซอร์ และแทน jszip ด้วยตัวที่
+//     FileKit โหลดไว้แล้ว ทำให้ไฟล์เหลือ 33 KB (gzip) จาก 85 KB
 
 import { loadLibs } from "./loader.js";
 
-const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-
-/** ไฟล์ใน .docx ที่อาจมีตัวยึด — หัวกระดาษและท้ายกระดาษก็ต้องแทนที่ด้วย */
-const TARGET = /^word\/(document|header\d*|footer\d*)\.xml$/;
-
-export const PLACEHOLDER = /\{\{\s*([^{}]+?)\s*\}\}/g;
-
-/** ดึงรายชื่อตัวยึดทั้งหมดจากไฟล์เทมเพลต (ใช้โชว์ให้ผู้ใช้จับคู่กับคอลัมน์ Excel) */
-export async function readPlaceholders(file) {
-  const [JSZipLib] = await loadLibs("jszip");
-  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
-  const names = new Set();
-  let paragraphs = 0;
-
-  for (const path of Object.keys(zip.files)) {
-    if (!TARGET.test(path)) continue;
-    const xml = await zip.file(path).async("string");
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
-    for (const p of doc.getElementsByTagNameNS(W, "p")) {
-      paragraphs++;
-      const text = joinRuns(p).text;
-      for (const m of text.matchAll(PLACEHOLDER)) names.add(m[1]);
-    }
+let libPromise = null;
+async function lib() {
+  if (!libPromise) {
+    libPromise = (async () => {
+      await loadLibs("jszip");                    // ต้องมาก่อน bundle จะหา globalThis.JSZip
+      return import("../vendor/easy-template-x.esm.js");
+    })().catch((e) => { libPromise = null; throw e; });
   }
-  if (!paragraphs) throw new Error("อ่านเนื้อหาในไฟล์ไม่ได้ — ตรวจว่าเป็นไฟล์ .docx จริง (ไฟล์ .doc รุ่นเก่ายังไม่รองรับ)");
-  return [...names];
+  return libPromise;
 }
 
-/** ต่อข้อความทุก run ในย่อหน้าเป็นสตริงเดียว พร้อมจำว่าอักษรช่วงไหนอยู่ node ใด */
-function joinRuns(p) {
-  const nodes = [...p.getElementsByTagNameNS(W, "t")];
-  const spans = [];
-  let text = "";
-  for (const n of nodes) {
-    const s = n.textContent || "";
-    spans.push({ node: n, start: text.length, end: text.length + s.length });
-    text += s;
-  }
-  return { text, spans };
-}
-
-/** แทนที่ตัวยึดในย่อหน้าเดียว คืน true ถ้ามีการเปลี่ยนแปลง */
-function mergeParagraph(p, valueOf) {
-  const { text, spans } = joinRuns(p);
-  if (!text.includes("{{")) return false;
-
-  const hits = [...text.matchAll(PLACEHOLDER)];
-  if (!hits.length) return false;
-
-  // แทนที่จากท้ายไปหน้า เพื่อไม่ให้ตำแหน่งที่จับไว้ขยับตามความยาวที่เปลี่ยน
-  const out = new Map(spans.map((s) => [s.node, s.node.textContent || ""]));
-  for (let i = hits.length - 1; i >= 0; i--) {
-    const m = hits[i];
-    const from = m.index, to = m.index + m[0].length;
-    const value = valueOf(m[1]);
-
-    let placed = false;
-    for (const sp of spans) {
-      if (sp.end <= from || sp.start >= to) continue;   // run นี้ไม่เกี่ยวกับตัวยึดนี้
-      const cur = out.get(sp.node);
-      const localFrom = Math.max(0, from - sp.start);
-      const localTo = Math.min(cur.length, to - sp.start);
-      // run แรกที่ทับกับตัวยึดจะได้ค่าจริงไป ส่วน run ถัดไปตัดเศษที่เหลือทิ้ง
-      out.set(sp.node, cur.slice(0, localFrom) + (placed ? "" : value) + cur.slice(localTo));
-      placed = true;
-    }
-  }
-
-  for (const [node, value] of out) {
-    if ((node.textContent || "") === value) continue;
-    node.textContent = value;
-    // ต้องบอก Word ให้เก็บช่องว่างหัว-ท้ายไว้ ไม่งั้นชื่อจะไปติดกับคำข้างหน้า
-    node.setAttribute("xml:space", "preserve");
-  }
-  return true;
-}
-
-/**
- * สร้างเอกสารหนึ่งชุดจากเทมเพลต + ข้อมูลหนึ่งแถว
- * missing: "keep" = คงตัวยึดไว้ · "blank" = แทนด้วยค่าว่าง
- */
-export async function mergeOne(zip, JSZipLib, row, { missing = "blank" } = {}) {
-  const out = zip.clone ? zip.clone() : null;   // JSZip ไม่มี clone จริง จึงสร้างใหม่ด้านล่างแทน
-  const valueOf = (key) => {
-    const v = row[key];
-    if (v === undefined || v === null || v === "") return missing === "keep" ? `{{${key}}}` : "";
-    return String(v);
-  };
-  const files = {};
-  for (const path of Object.keys(zip.files)) {
-    const entry = zip.files[path];
-    if (entry.dir) continue;
-    if (!TARGET.test(path)) { files[path] = await entry.async("uint8array"); continue; }
-    const xml = await entry.async("string");
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
-    for (const p of doc.getElementsByTagNameNS(W, "p")) mergeParagraph(p, valueOf);
-    files[path] = new XMLSerializer().serializeToString(doc);
-  }
-  const zipOut = new JSZipLib();
-  for (const [path, data] of Object.entries(files)) zipOut.file(path, data);
-  return zipOut.generateAsync({
-    type: "blob",
-    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    compression: "DEFLATE",
+/** ตัวคั่นแบบ {{...}} ให้ตรงกับที่คนไทยคุ้นและที่เอกสารช่วยเหลือของเราเขียนไว้ */
+async function handler() {
+  const etx = await lib();
+  return new etx.TemplateHandler({
+    delimiters: new etx.Delimiters({ tagStart: "{{", tagEnd: "}}" }),
   });
 }
 
-/** ทำทั้งชุด: เทมเพลต + ข้อมูลหลายแถว → เอกสารหลายไฟล์ */
-export async function mergeAll(templateFile, rows, { missing = "blank", nameOf, onProgress } = {}) {
-  const [JSZipLib] = await loadLibs("jszip");
-  const buf = await templateFile.arrayBuffer();
-  const results = [];
-  for (let i = 0; i < rows.length; i++) {
-    const zip = await JSZipLib.loadAsync(buf);          // โหลดใหม่ทุกแถว กัน state ปนกัน
-    const blob = await mergeOne(zip, JSZipLib, rows[i], { missing });
-    results.push({ name: nameOf ? nameOf(rows[i], i) : `เอกสาร-${i + 1}.docx`, blob });
-    onProgress?.({ done: i + 1, total: rows.length });
+/**
+ * อ่านตัวยึดทั้งหมดในเทมเพลต
+ * คืน { fields, loops } — loops คือตัวยึดที่เป็นบล็อกวนซ้ำ ({{#ชื่อ}} ... {{/ชื่อ}})
+ */
+export async function readPlaceholders(file) {
+  const h = await handler();
+  let tags;
+  try {
+    tags = await h.parseTags(file);
+  } catch (e) {
+    throw new Error("อ่านเทมเพลตไม่สำเร็จ — ตรวจว่าเป็นไฟล์ .docx จริง และตัวยึดปิดครบทุกอัน (" + e.message + ")");
   }
-  return results;
+  const loops = new Set(), fields = new Set();
+  for (const t of tags) {
+    const name = t.name;
+    if (!name) continue;
+    // easy-template-x ทำเครื่องหมายบล็อกวนซ้ำไว้ที่ tag ตัวเปิด/ปิด
+    if (t.disposition === "Open" || t.disposition === "Close") loops.add(name);
+    else fields.add(name);
+  }
+  return { fields: [...fields], loops: [...loops] };
+}
+
+/** สร้างเอกสารหนึ่งชุดจากข้อมูลหนึ่งก้อน */
+export async function mergeOne(file, data) {
+  const h = await handler();
+  return h.process(file, data);
+}
+
+/** ทำทั้งชุด: เทมเพลตหนึ่งไฟล์ + ข้อมูลหลายก้อน → เอกสารหลายไฟล์ */
+export async function mergeAll(file, records, { nameOf, onProgress } = {}) {
+  const h = await handler();
+  const out = [];
+  for (let i = 0; i < records.length; i++) {
+    const blob = await h.process(file, records[i]);
+    out.push({ name: nameOf ? nameOf(records[i], i) : `เอกสาร-${i + 1}.docx`, blob });
+    onProgress?.({ done: i + 1, total: records.length });
+  }
+  return out;
+}
+
+/**
+ * จัดข้อมูลตารางแบนจาก Excel ให้เป็นก้อนตามเอกสาร
+ * โหมด "row"   : หนึ่งแถว = หนึ่งเอกสาร
+ * โหมด "group" : แถวที่มีค่าในคอลัมน์ groupBy เหมือนกัน = เอกสารเดียว
+ *                คอลัมน์ที่ค่าเหมือนกันทั้งกลุ่มกลายเป็นตัวยึดธรรมดา
+ *                ส่วนรายการที่ต่างกันไปอยู่ในบล็อกวนซ้ำตามชื่อ loop ที่เทมเพลตใช้
+ */
+export function buildRecords(rows, { mode = "row", groupBy, loopName, mapping }) {
+  const pick = (row) => {
+    const o = {};
+    for (const [field, col] of Object.entries(mapping)) o[field] = col ? (row[col] ?? "") : "";
+    return o;
+  };
+
+  if (mode === "row" || !groupBy || !loopName) return rows.map(pick);
+
+  const groups = new Map();
+  for (const row of rows) {
+    const key = String(row[groupBy] ?? "");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  }
+
+  return [...groups.values()].map((items) => {
+    const first = pick(items[0]);
+    const record = { ...first };
+    // ค่าที่ไม่เหมือนกันทุกแถวในกลุ่ม ไม่ควรใช้เป็นค่าระดับเอกสาร (กันหยิบค่าแถวแรกมาแทนทั้งกลุ่มแบบผิด ๆ)
+    for (const key of Object.keys(first)) {
+      const values = new Set(items.map((r) => String(pick(r)[key] ?? "")));
+      if (values.size > 1) record[key] = "";
+    }
+    record[loopName] = items.map(pick);
+    record.__rows = items;
+    return record;
+  });
 }

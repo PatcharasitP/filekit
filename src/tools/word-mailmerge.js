@@ -61,10 +61,31 @@ export function mount(tool) {
         el("div", { class: "actions" }, [go])])]),
     st.node, results);
 
+  // ให้ลองใช้ได้ทันทีโดยไม่ต้องเตรียมไฟล์เอง — คนส่วนใหญ่ติดตรงไม่รู้ว่าเทมเพลตหน้าตายังไง
+  body.appendChild(el("div", { class: "sample-box" }, [
+    el("div", {}, [
+      el("strong", {}, "ยังไม่มีไฟล์? ลองด้วยตัวอย่างสำเร็จรูปได้เลย"),
+      el("p", { class: "mm-label", style: { margin: "5px 0 0" } },
+        "มีทั้งแบบหนึ่งแถวหนึ่งใบ (หนังสือแจ้งผลประเมิน) และแบบมีตารางรายการ (ใบเสนอราคา) พร้อมตัวอย่างเงื่อนไข"),
+    ]),
+    el("div", { class: "sample-links" }, [
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx", download: true }, "📄 เทมเพลตประเมิน"),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลพนักงาน.xlsx", download: true }, "📊 ข้อมูลพนักงาน"),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ใบเสนอราคา.docx", download: true }, "📄 เทมเพลตใบเสนอราคา"),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx", download: true }, "📊 ข้อมูลใบเสนอราคา"),
+      el("a", { class: "chip", href: "samples/อ่านก่อนใช้.txt", download: true }, "📘 วิธีเขียนตัวยึด"),
+    ]),
+  ]));
+
   body.appendChild(el("div", { class: "note" },
     "วิธีใช้: เปิดไฟล์ Word ของคุณแล้วพิมพ์ตัวยึดในตำแหน่งที่ต้องการเติมข้อมูล เช่น " +
     "“เรียน {{คำนำหน้า}}{{ชื่อ}}” จากนั้นเตรียม Excel ที่มีคอลัมน์ชื่อเดียวกัน ระบบจะสร้างเอกสารให้ทีละแถว · " +
     "รองรับหัวกระดาษและท้ายกระดาษด้วย · ทุกอย่างทำในเครื่องคุณเอง ไฟล์ไม่ถูกอัปโหลดไปไหน"));
+
+  body.appendChild(el("div", { class: "note" },
+    "เงื่อนไข: ใส่ {{#ได้โบนัส}}ข้อความเมื่อจริง{{/ได้โบนัส}} แล้วใน Excel ใส่ TRUE / FALSE (หรือ ใช่ / ไม่ใช่, มี / ไม่มี) · " +
+    "อยากได้ข้อความกรณีตรงข้ามให้ใช้ {{#ไม่ได้โบนัส}}…{{/ไม่ได้โบนัส}} — ไม่ต้องเพิ่มคอลัมน์ ระบบสร้างตัวขึ้นต้นด้วย “ไม่” ให้เอง · " +
+    "ตารางรายการหลายบรรทัด: ในแถวตารางใส่ {{#รายการ}} ที่ช่องแรกและ {{/รายการ}} ที่ช่องสุดท้าย"));
 
   // ── อ่านตัวยึดจากเทมเพลต ─────────────────────────────────────────────────
   async function scanTemplate() {
@@ -132,10 +153,17 @@ export function mount(tool) {
     const byNorm = new Map(columns.map((c) => [norm(c), c]));
 
     const grid = el("div", { class: "mm-grid" });
-    fields.forEach((f) => {
+    // บล็อกเงื่อนไข (เช่น {{#ได้โบนัส}}) ก็ต้องจับคู่กับคอลัมน์เหมือนตัวยึดธรรมดา
+    // ไม่งั้นค่าจะไม่ถูกส่งเข้าเทมเพลตและเงื่อนไขจะไม่ทำงานเลย
+    // ส่วนบล็อกวนซ้ำที่รับรายการ (ใช้ในโหมดจัดกลุ่ม) ไม่ต้องจับคู่ เพราะระบบสร้างให้เอง
+    const negOf = (n) => (n.startsWith("ไม่") ? n.slice(2) : "ไม่" + n);
+    const loopSet = new Set(loops);
+    const condFields = loops.filter((l) => !loopSet.has(negOf(l)) || !l.startsWith("ไม่"));
+    const mappable = [...fields, ...loops.filter((l) => !l.startsWith("ไม่"))];
+    mappable.forEach((f) => {
       const guess = byNorm.get(norm(f)) || "";
       mapping[f] = guess;
-      const sel = el("select", { onchange: (e) => { mapping[f] = e.target.value; renderPreview(); refresh(); } });
+      const sel = el("select", { onchange: (e) => { mapping[f] = e.target.value; renderPreview(); renderUnmatched(); refresh(); } });
       sel.appendChild(el("option", { value: "" }, "— ไม่ใช้ —"));
       columns.forEach((c) => sel.appendChild(el("option", { value: c, selected: c === guess }, c)));
       grid.append(
@@ -146,11 +174,7 @@ export function mount(tool) {
     });
     mapBox.append(el("p", { class: "mm-label" }, "ระบบจับคู่ให้อัตโนมัติเมื่อชื่อตรงกัน ปรับเองได้"), grid);
 
-    const unmatched = fields.filter((f) => !mapping[f]);
-    if (unmatched.length) {
-      mapBox.appendChild(el("div", { class: "status show err", style: { marginTop: "12px" } },
-        `ยังไม่ได้จับคู่ ${unmatched.length} ตัวยึด: ${unmatched.map((f) => `{{${f}}}`).join(" ")}`));
-    }
+    renderUnmatched();
 
     nameCol.innerHTML = "";
     nameCol.appendChild(el("option", { value: "" }, "— ตั้งชื่อตามลำดับ —"));
@@ -175,7 +199,8 @@ export function mount(tool) {
     previewBox.hidden = false;
     const r = rows[0];
     const list = el("div", { class: "mm-preview" });
-    fields.forEach((f) => {
+    const shown = [...fields, ...loops.filter((l) => !l.startsWith("ไม่") && mapping[l] !== undefined)];
+    shown.forEach((f) => {
       const col = mapping[f];
       const v = col ? String(r[col] ?? "") : "";
       list.append(
@@ -192,15 +217,29 @@ export function mount(tool) {
     previewBox.append(el("p", { class: "mm-label" }, head), list);
   }
 
+  // เตือนเฉพาะตัวยึดที่ผู้ใช้ต้องจับคู่จริง — ไม่นับบล็อกที่ระบบเติมรายการให้เองในโหมดจัดกลุ่ม
+  let warnNode = null;
+  function renderUnmatched() {
+    warnNode?.remove(); warnNode = null;
+    if (!mapBox || mapBox.hidden) return;
+    const skip = modeSel.value === "group" && loopSel.value ? loopSel.value : null;
+    const list = [...fields, ...loops.filter((l) => !l.startsWith("ไม่"))]
+      .filter((f) => f !== skip && !mapping[f]);
+    if (!list.length) return;
+    warnNode = el("div", { class: "status show err", style: { marginTop: "12px" } },
+      `ยังไม่ได้จับคู่ ${list.length} ตัวยึด: ${list.map((f) => `{{${f}}}`).join(" ")}`);
+    mapBox.appendChild(warnNode);
+  }
+
   function syncMode() {
     const grouped = modeSel.value === "group";
     groupField.style.display = grouped ? "" : "none";
     loopField.style.display = grouped ? "" : "none";
     renderPreview();
   }
-  modeSel.addEventListener("change", () => { syncMode(); refresh(); });
+  modeSel.addEventListener("change", () => { syncMode(); renderUnmatched(); refresh(); });
   groupCol.addEventListener("change", renderPreview);
-  loopSel.addEventListener("change", renderPreview);
+  loopSel.addEventListener("change", () => { renderPreview(); renderUnmatched(); });
 
   const refresh = () => {
     const grouped = modeSel.value === "group";
@@ -230,11 +269,13 @@ export function mount(tool) {
         return (n > 1 ? `${name} (${n})` : name) + ".docx";
       };
 
+      const cleanMapping = { ...mapping };
+      if (modeSel.value === "group" && loopSel.value) delete cleanMapping[loopSel.value];
       const records = buildRecords(rows, {
         mode: modeSel.value,
         groupBy: groupCol.value,
         loopName: loopSel.value,
-        mapping,
+        mapping: cleanMapping,
       });
 
       const made = await mergeAll(tplFile, records, {

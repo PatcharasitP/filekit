@@ -82,11 +82,45 @@ export async function mergeAll(file, records, { nameOf, onProgress } = {}) {
  *                คอลัมน์ที่ค่าเหมือนกันทั้งกลุ่มกลายเป็นตัวยึดธรรมดา
  *                ส่วนรายการที่ต่างกันไปอยู่ในบล็อกวนซ้ำตามชื่อ loop ที่เทมเพลตใช้
  */
+// ค่าที่คนไทยใช้แทน "จริง/เท็จ" ใน Excel — ต้องแปลงเป็น boolean จริงก่อนส่งเข้าเทมเพลต
+// ‼️ ถ้าไม่แปลง คำว่า "FALSE" จะเป็นสตริงที่ไม่ว่าง = ถือว่าจริง → เงื่อนไขแสดงตลอด
+// ‼️ ห้ามใส่ "1"/"0" — คอลัมน์อย่าง "ลำดับ" หรือ "จำนวน" ที่มีค่า 1 จะกลายเป็น true
+// แล้วพิมพ์ออกมาเป็นคำว่า true ในเอกสาร (เจอจริงตอนทำตัวอย่างใบเสนอราคา)
+const TRUE_WORDS = new Set(["true", "yes", "y", "ใช่", "จริง", "มี", "ผ่าน", "อนุมัติ", "✓", "✔"]);
+const FALSE_WORDS = new Set(["false", "no", "n", "ไม่ใช่", "เท็จ", "ไม่มี", "ไม่ผ่าน", "ไม่อนุมัติ", "✗", "✘"]);
+
+/** คืน true/false ถ้าค่านั้นสื่อความหมายจริง-เท็จ · คืน null ถ้าเป็นข้อความธรรมดา */
+export function asBoolean(v) {
+  if (typeof v === "boolean") return v;
+  const s = String(v ?? "").trim().toLowerCase();
+  if (TRUE_WORDS.has(s)) return true;
+  if (FALSE_WORDS.has(s)) return false;
+  return null;
+}
+
+/**
+ * เตรียมข้อมูลหนึ่งระเบียนให้เทมเพลตใช้ได้
+ * · ค่าที่สื่อจริง-เท็จ ถูกแปลงเป็น boolean เพื่อให้ {{#เงื่อนไข}} ทำงานถูก
+ * · สร้างตัวกลับด้าน "ไม่<ชื่อ>" ให้อัตโนมัติ เพราะไลบรารีไม่รองรับ {{^เงื่อนไข}}
+ *   ผู้ใช้จึงเขียน {{#ไม่ผ่านทดลองงาน}}…{{/ไม่ผ่านทดลองงาน}} ได้เลยโดยไม่ต้องเพิ่มคอลัมน์
+ */
+export function normalizeRecord(o) {
+  const out = { ...o };
+  for (const [k, v] of Object.entries(o)) {
+    const b = asBoolean(v);
+    if (b === null) continue;
+    out[k] = b;
+    const negKey = k.startsWith("ไม่") ? k.slice(2) : "ไม่" + k;
+    if (!(negKey in out)) out[negKey] = !b;
+  }
+  return out;
+}
+
 export function buildRecords(rows, { mode = "row", groupBy, loopName, mapping }) {
   const pick = (row) => {
     const o = {};
     for (const [field, col] of Object.entries(mapping)) o[field] = col ? (row[col] ?? "") : "";
-    return o;
+    return normalizeRecord(o);
   };
 
   if (mode === "row" || !groupBy || !loopName) return rows.map(pick);
@@ -104,7 +138,7 @@ export function buildRecords(rows, { mode = "row", groupBy, loopName, mapping })
     // ค่าที่ไม่เหมือนกันทุกแถวในกลุ่ม ไม่ควรใช้เป็นค่าระดับเอกสาร (กันหยิบค่าแถวแรกมาแทนทั้งกลุ่มแบบผิด ๆ)
     for (const key of Object.keys(first)) {
       const values = new Set(items.map((r) => String(pick(r)[key] ?? "")));
-      if (values.size > 1) record[key] = "";
+      if (values.size > 1) record[key] = typeof first[key] === "boolean" ? false : "";
     }
     record[loopName] = items.map(pick);
     record.__rows = items;

@@ -19,7 +19,7 @@ const assetList = () => [
   ...TOOLS.map((t) => `src/tools/${t.id}.js`),
   "src/ui.js", "src/filetype.js", "src/pdfopen.js", "src/ocr.js",
   "src/pdftext.js", "src/pptx.js", "src/thaifont.js", "assets/css/tool.css",
-  "src/thai.js", "src/sheetpick.js", "src/docxmerge.js", "src/docxjoin.js",
+  "src/thai.js", "src/sheetpick.js", "src/search.js", "src/docxmerge.js", "src/docxjoin.js",
   "src/docxreplace.js", "src/docxclean.js", "src/signpad.js",
 ];
 

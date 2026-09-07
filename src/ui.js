@@ -29,11 +29,16 @@ export function download(blob, filename) {
 }
 
 /** โครงหน้าเครื่องมือ: หัวเรื่อง + กล่องเนื้อหา */
+const GROUP_ACCENT = {
+  pdf: "--g-pdf", "from-pdf": "--g-pdf", "to-pdf": "--g-pdf",
+  image: "--g-img", doc: "--g-doc", ppt: "--g-ppt", data: "--g-data", thai: "--g-thai",
+};
+
 export function toolShell(tool) {
   const body = el("div", { class: "panel" });
-  const wrap = el("div", {}, [
+  const wrap = el("div", { style: `--ac:var(${GROUP_ACCENT[tool.group] || "--brand"})` }, [
     el("div", { class: "tool-head" }, [
-      el("div", { class: "tool-ico" }, tool.icon),
+      el("div", { class: "tool-ico", "aria-hidden": "true" }, tool.icon),
       el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc)]),
     ]),
     body,
@@ -110,10 +115,15 @@ export function dropzone(opts = {}) {
     onchange: (e) => { add([...e.target.files]); input.value = ""; },
   });
   const list = el("div", { class: "files" });
-  const zone = el("div", { class: "dz", tabindex: "0", role: "button" }, [
-    el("div", { class: "dz-ico" }, "📁"),
+  const zone = el("div", {
+    class: "dz", tabindex: "0", role: "button",
+    "aria-label": `เลือกไฟล์: ${expectLabel} — คลิกหรือกด Enter เพื่อเลือก หรือลากไฟล์มาวาง`,
+  }, [
+    el("div", { class: "dz-ico", "aria-hidden": "true" }, "📂"),
     el("div", { class: "dz-main" }, "คลิกเพื่อเลือกไฟล์ หรือลากมาวาง"),
     el("div", { class: "dz-hint" }, hint),
+    // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
+    el("div", { class: "dz-safe" }, "🔒 ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น"),
     input,
   ]);
 
@@ -181,12 +191,20 @@ export function dropzone(opts = {}) {
   function render() {
     list.innerHTML = "";
     files.forEach((f, i) => {
+      // ‼️ การลากวางแบบ HTML5 ใช้ไม่ได้เลยบนมือถือและกับคนที่ใช้คีย์บอร์ดอย่างเดียว
+      //    จึงต้องมีปุ่มขึ้น-ลงคู่กันเสมอ ไม่ใช่ทางเลือกเสริม
+      const move = (d) => { const j = i + d; if (j < 0 || j >= files.length) return;
+        [files[i], files[j]] = [files[j], files[i]]; render(); onChange(files); };
       const row = el("div", { class: "file-row", draggable: reorder || null, "data-i": i }, [
-        reorder ? el("span", { class: "grip", title: "ลากเพื่อสลับลำดับ" }, "⠿") : null,
+        reorder ? el("span", { class: "grip", title: "ลากเพื่อสลับลำดับ", "aria-hidden": "true" }, "⠿") : null,
         el("span", { class: "f-name" }, f.name),
         el("span", { class: "f-size" }, fmtBytes(f.size)),
+        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": `เลื่อน ${f.name} ขึ้น`,
+          title: "เลื่อนขึ้น", disabled: i === 0 || null, onclick: () => move(-1) }, "↑") : null,
+        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": `เลื่อน ${f.name} ลง`,
+          title: "เลื่อนลง", disabled: i === files.length - 1 || null, onclick: () => move(1) }, "↓") : null,
         el("button", { class: "icon-btn danger", type: "button", title: "เอาออก",
-          onclick: () => remove(i) }, "✕"),
+          "aria-label": `เอา ${f.name} ออก`, onclick: () => remove(i) }, "✕"),
       ]);
       list.appendChild(row);
     });
@@ -247,3 +265,29 @@ export function parsePages(spec, total) {
 }
 
 export const stripExt = (n) => (n.lastIndexOf(".") > 0 ? n.slice(0, n.lastIndexOf(".")) : n);
+
+/**
+ * วนทำงานทีละไฟล์แบบ "ทนต่อไฟล์เสีย"
+ * เดิมทุกเครื่องมือครอบ try รอบลูปทั้งก้อน → ไฟล์เดียวพัง = ผลงานที่แปลงสำเร็จไปแล้วหายหมด
+ * ซึ่งเจ็บมากเวลาลากมา 30 ไฟล์แล้วมีไฟล์เสียปนอยู่ใบเดียว
+ * คืนรายการไฟล์ที่ข้ามไปพร้อมเหตุผล เพื่อเอาไปบอกผู้ใช้ให้ตรงจุด
+ */
+export async function eachFile(files, st, fn) {
+  const failed = [];
+  for (let i = 0; i < files.length; i++) {
+    try { await fn(files[i], i); }
+    catch (e) { failed.push({ name: files[i].name, why: (e && e.message) || String(e) }); }
+    st?.progress?.(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
+    await yieldToBrowser();
+  }
+  return failed;
+}
+
+/** กล่องสรุปไฟล์ที่ข้ามไป — ใช้คู่กับ eachFile */
+export function failedBox(failed) {
+  if (!failed || !failed.length) return null;
+  return el("div", { class: "fail-box" }, [
+    el("strong", {}, `⚠️ ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`),
+    el("ul", {}, failed.map((f) => el("li", {}, `${f.name} — ${f.why}`))),
+  ]);
+}

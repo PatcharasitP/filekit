@@ -89,7 +89,7 @@ export function columnTool(tool, cfg) {
   const modeField = field("ผลลัพธ์", modeSel);
   const opts = cfg.options ? cfg.options(refresh) : { node: null, read: () => ({}) };
 
-  const chips = el("div", { class: "chips" });
+  const chips = el("div", { class: "stats" });
   const preview = el("div", { class: "xt-wrap" });
   const panel = el("div", { class: "panel", hidden: true }, [
     el("div", { class: "row" }, [sheetField, colField]),
@@ -162,7 +162,7 @@ export function columnTool(tool, cfg) {
     if (!table) return;
     const { out, stat, o, c } = computeAll();
     chips.innerHTML = "";
-    const chip = (cls, text) => chips.appendChild(el("span", { class: "chip " + cls }, text));
+    const chip = (cls, text) => chips.appendChild(el("span", { class: "stat " + cls }, text));
     const L = cfg.labels || {};
     chip("ok", `✅ ${L.ok || "แปลงได้"} ${stat.ok.toLocaleString()} แถว`);
     if (stat.warn) chip("warn", `⚠️ ${L.warn || "ต้องเดาปี"} ${stat.warn.toLocaleString()} แถว`);

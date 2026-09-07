@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -56,8 +56,7 @@ export function mount(tool) {
     const made = [];
     let before = 0, after = 0;
     try {
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
+      const failed = await eachFile(files, st, async (f) => {
         const bmp = await createImageBitmap(f);
         const bmpW = bmp.width, bmpH = bmp.height;
         const [w, h] = targetSize(bmpW, bmpH);
@@ -83,10 +82,9 @@ export function mount(tool) {
         made.push({ name: kept ? f.name : `${stripExt(f.name)}-ย่อ.${ext}`, blob,
                     from: f.size, dim: `${w}×${h}`, kept });
         before += f.size; after += blob.size;
-        st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
-        await yieldToBrowser();
-      }
+      });
       st.progress(null);
+      if (!made.length) throw new Error("ไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็นรูปภาพจริงหรือไม่");
       const saved = before ? Math.round((1 - after / before) * 100) : 0;
       const keptCount = made.filter((m) => m.kept).length;
       const verdict = saved > 0 ? `เล็กลง ${saved}%` : saved < 0 ? `ใหญ่ขึ้น ${-saved}%` : "ขนาดเท่าเดิม";

@@ -62,7 +62,7 @@ export function mount(tool) {
         el("div", { class: "enc-head" }, [
           el("strong", {}, it.file.name),
           el("span", { class: "r-size" }, fmtBytes(it.file.size)),
-          el("span", { class: "chip " + (needsFix(it) ? "warn" : "ok") },
+          el("span", { class: "stat " + (needsFix(it) ? "warn" : "ok") },
             needsFix(it) ? "ต้องซ่อม" : "ปกติดีอยู่แล้ว"),
         ]),
         el("div", { class: "note" }, it.analysis.why || ""),

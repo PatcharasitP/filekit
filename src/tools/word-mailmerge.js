@@ -44,16 +44,31 @@ export function mount(tool) {
   const nameCol = el("select", {});
   const go = button("📄 สร้างเอกสารทั้งชุด", { onclick: run });
   go.disabled = true;
+  let step3, step4, wait3, wait4;
+
+  // ขั้นที่ยังทำอะไรไม่ได้ต้องบอกให้รู้ว่ารออะไรอยู่ ไม่ใช่โชว์หัวข้อลอย ๆ แล้วปล่อยให้เดา
+  function syncLocks() {
+    const on3 = mapBox.childElementCount > 0;
+    const on4 = previewBox.childElementCount > 0;
+    step3?.setAttribute("data-locked", on3 ? "0" : "1");
+    step4?.setAttribute("data-locked", on4 ? "0" : "1");
+    if (wait3) wait3.hidden = on3;
+    if (wait4) wait4.hidden = on4;
+  }
 
   body.append(
     el("div", { class: "mm-step" }, [el("span", { class: "mm-num" }, "1"),
       el("div", {}, [el("h3", {}, "เลือกเทมเพลต Word"), tplZone.container, fieldsBox])]),
     el("div", { class: "mm-step" }, [el("span", { class: "mm-num" }, "2"),
       el("div", {}, [el("h3", {}, "เลือกไฟล์ข้อมูล"), dataZone.container])]),
-    el("div", { class: "mm-step" }, [el("span", { class: "mm-num" }, "3"),
-      el("div", {}, [el("h3", {}, "จับคู่ข้อมูลกับตัวยึด"), mapBox])]),
-    el("div", { class: "mm-step" }, [el("span", { class: "mm-num" }, "4"),
-      el("div", {}, [el("h3", {}, "ตรวจดูก่อนสร้าง"), previewBox,
+    step3 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "3"),
+      el("div", {}, [el("h3", {}, "จับคู่ข้อมูลกับตัวยึด"),
+        wait3 = el("div", { class: "step-wait" }, "รอไฟล์จากขั้นที่ 1 และ 2 ก่อน — ระบบจะจับคู่คอลัมน์ให้อัตโนมัติ"),
+        mapBox])]),
+    step4 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "4"),
+      el("div", {}, [el("h3", {}, "ตรวจดูก่อนสร้าง"),
+        wait4 = el("div", { class: "step-wait" }, "จะแสดงตัวอย่างเอกสารของแถวแรกให้ดูก่อน เมื่อจับคู่ข้อมูลเรียบร้อย"),
+        previewBox,
         el("div", { class: "row" }, [
           field("รูปแบบเอกสาร", modeSel),
           groupField, loopField,
@@ -61,6 +76,7 @@ export function mount(tool) {
         ]),
         el("div", { class: "actions" }, [go])])]),
     st.node, results);
+  syncLocks();
 
   // ให้ลองใช้ได้ทันทีโดยไม่ต้องเตรียมไฟล์เอง — คนส่วนใหญ่ติดตรงไม่รู้ว่าเทมเพลตหน้าตายังไง
   body.appendChild(el("div", { class: "sample-box" }, [
@@ -179,6 +195,7 @@ export function mount(tool) {
     mapBox.append(el("p", { class: "mm-label" }, "ระบบจับคู่ให้อัตโนมัติเมื่อชื่อตรงกัน ปรับเองได้"), grid);
 
     renderUnmatched();
+    syncLocks();
 
     nameCol.innerHTML = "";
     nameCol.appendChild(el("option", { value: "" }, "— ตั้งชื่อตามลำดับ —"));
@@ -199,6 +216,7 @@ export function mount(tool) {
   // ── พรีวิวแถวแรก ให้เห็นผลก่อนสร้างจริง ─────────────────────────────────
   function renderPreview() {
     previewBox.innerHTML = "";
+    queueMicrotask(syncLocks);
     if (!rows.length || !fields.length) { previewBox.hidden = true; return; }
     previewBox.hidden = false;
     const r = rows[0];

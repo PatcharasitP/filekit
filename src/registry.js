@@ -3,15 +3,17 @@
 // libs = ไลบรารีที่เครื่องมือนั้นต้องใช้ (ชื่อตาม src/loader.js) ใช้ทั้งตอนโหลดจริง
 // และตอน prefetch ล่วงหน้าเมื่อผู้ใช้เอาเมาส์ไปชี้การ์ด
 
+// accent = สีประจำตระกูล (ชื่อตัวแปร CSS ใน index.html) — หมวดตระกูลเดียวกันใช้สีเดียวกัน
+// จงใจไม่ให้สีละหมวด เพราะ 8 สีบนหน้าเดียวทำให้ลายตาและจำไม่ได้
 export const GROUPS = [
-  { id: "pdf", label: "จัดการไฟล์ PDF" },
-  { id: "from-pdf", label: "แปลงจาก PDF" },
-  { id: "to-pdf", label: "แปลงเป็น PDF" },
-  { id: "image", label: "รูปภาพ" },
-  { id: "doc", label: "เอกสารและจดหมายเวียน" },
-  { id: "ppt", label: "PowerPoint" },
-  { id: "data", label: "ตารางและข้อมูล" },
-  { id: "thai", label: "งานเอกสารไทย" },
+  { id: "pdf",      label: "จัดการไฟล์ PDF",        short: "จัดการ PDF",  accent: "--g-pdf" },
+  { id: "from-pdf", label: "แปลงจาก PDF",           short: "จาก PDF",     accent: "--g-pdf" },
+  { id: "to-pdf",   label: "แปลงเป็น PDF",          short: "เป็น PDF",    accent: "--g-pdf" },
+  { id: "image",    label: "รูปภาพ",                short: "รูปภาพ",      accent: "--g-img" },
+  { id: "doc",      label: "เอกสารและจดหมายเวียน",  short: "Word",        accent: "--g-doc" },
+  { id: "ppt",      label: "PowerPoint",            short: "PowerPoint",  accent: "--g-ppt" },
+  { id: "data",     label: "ตารางและข้อมูล",        short: "ตาราง",       accent: "--g-data" },
+  { id: "thai",     label: "งานเอกสารไทย",          short: "งานไทย",      accent: "--g-thai" },
 ];
 
 export const TOOLS = [

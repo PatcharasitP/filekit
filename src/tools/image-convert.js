@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
 
 const TYPES = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
 
@@ -41,8 +41,7 @@ export function mount(tool) {
     const q = +quality.value / 100;
     const made = [];
     try {
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
+      const failed = await eachFile(files, st, async (f) => {
         const bmp = await createImageBitmap(f);
         const canvas = document.createElement("canvas");
         canvas.width = bmp.width; canvas.height = bmp.height;
@@ -55,11 +54,11 @@ export function mount(tool) {
         if (!blob) throw new Error(`เบราว์เซอร์นี้ยังบันทึกเป็น ${typeSel.value.toUpperCase()} ไม่ได้`);
         canvas.width = canvas.height = 0; // ปล่อยหน่วยความจำทันที ไม่รอ GC
         made.push({ name: `${stripExt(f.name)}.${typeSel.value === "jpeg" ? "jpg" : typeSel.value}`, blob, from: f.size });
-        st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
-        await yieldToBrowser();
-      }
+      });
       st.progress(null);
-      st.ok(`แปลงเสร็จ ${made.length} ไฟล์`);
+      if (!made.length) throw new Error("แปลงไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็นรูปภาพจริงหรือไม่");
+      st.ok(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? ` · ข้าม ${failed.length} ไฟล์` : ""));
+      const fb = failedBox(failed); if (fb) results.appendChild(fb);
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),
           el("small", {}, `${fmtBytes(m.from)} → ${fmtBytes(m.blob.size)}`)]),

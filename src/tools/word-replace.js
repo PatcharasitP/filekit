@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
 import { countMatches, replaceInDocx, makeRules } from "../docxreplace.js";
 import { loadLibs } from "../loader.js";
 
@@ -71,7 +71,7 @@ export function mount(tool) {
       const rules = makeRules(pairs, opts());
       const table = el("div", { class: "rep-preview" });
       let grand = 0;
-      for (const f of files) {
+      const scanFailed = await eachFile(files, null, async (f) => {
         const counts = await countMatches(f, rules);
         const sum = counts.reduce((a, b) => a + b, 0);
         grand += sum;
@@ -81,8 +81,8 @@ export function mount(tool) {
             ? counts.map((c, i) => `“${pairs[i].find}” ${c} จุด`).filter((_, i) => counts[i]).join(" · ")
             : "ไม่พบคำที่ค้นหา"),
         ]));
-        await yieldToBrowser();
-      }
+      });
+      if (scanFailed.length) table.appendChild(failedBox(scanFailed));
       st.clear();
       previewBox.append(
         el("div", { class: "status show " + (grand ? "info" : "err") },
@@ -102,14 +102,14 @@ export function mount(tool) {
       const rules = makeRules(getPairs(), opts());
       const made = [];
       let total = 0;
-      for (let i = 0; i < files.length; i++) {
-        const { blob, total: n } = await replaceInDocx(files[i], rules);
+      const failed = await eachFile(files, st, async (f) => {
+        const { blob, total: n } = await replaceInDocx(f, rules);
         total += n;
-        made.push({ name: `${stripExt(files[i].name)}-แก้แล้ว.docx`, blob, n });
-        st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
-        await yieldToBrowser();
-      }
+        made.push({ name: `${stripExt(f.name)}-แก้แล้ว.docx`, blob, n });
+      });
       st.progress(null);
+      if (!made.length) throw new Error("แก้ไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็น .docx จริงหรือไม่");
+      if (failed.length) results.appendChild(failedBox(failed));
       st.ok(`แทนที่ ${total.toLocaleString("th-TH")} จุด ใน ${made.length} ไฟล์`);
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button("📦 ดาวน์โหลดทั้งหมดเป็น ZIP", { onclick: async () => {

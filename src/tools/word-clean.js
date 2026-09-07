@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
 import { inspect, clean } from "../docxclean.js";
 import { loadLibs } from "../loader.js";
 
@@ -47,12 +47,13 @@ export function mount(tool) {
     if (!files.length) { go.disabled = true; st.clear(); return; }
     st.info("กำลังตรวจไฟล์…");
     try {
-      for (const f of files) {
+      const scanFailed = await eachFile(files, null, async (f) => {
         reports.push({ file: f, report: await inspect(f) });
-        await yieldToBrowser();
-      }
+      });
+      if (!reports.length) throw new Error("เปิดไฟล์ไม่ได้สักไฟล์ — ตรวจว่าเป็น .docx จริงหรือไม่");
       st.clear();
       renderReport();
+      if (scanFailed.length) reportBox.appendChild(failedBox(scanFailed));
       go.disabled = false;
     } catch (e) {
       st.err("ตรวจไฟล์ไม่สำเร็จ: " + e.message);
@@ -102,14 +103,14 @@ export function mount(tool) {
     try {
       const options = Object.fromEntries(Object.entries(opts).map(([k, v]) => [k, v.input.checked]));
       const made = [];
-      for (let i = 0; i < files.length; i++) {
-        const { blob } = await clean(files[i], options);
-        made.push({ name: `${stripExt(files[i].name)}-สะอาด.docx`, blob, from: files[i].size });
-        st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
-        await yieldToBrowser();
-      }
+      const failed = await eachFile(files, st, async (f) => {
+        const { blob } = await clean(f, options);
+        made.push({ name: `${stripExt(f.name)}-สะอาด.docx`, blob, from: f.size });
+      });
       st.progress(null);
-      st.ok(`ล้างเสร็จ ${made.length} ไฟล์ — ตรวจผลได้จากการอัปโหลดไฟล์ที่ล้างแล้วกลับเข้ามาใหม่`);
+      if (!made.length) throw new Error("ล้างไม่สำเร็จสักไฟล์");
+      if (failed.length) results.appendChild(failedBox(failed));
+      st.ok(`ล้างเสร็จ ${made.length} ไฟล์${failed.length ? ` · ข้าม ${failed.length}` : ""} — ตรวจผลได้จากการอัปโหลดไฟล์ที่ล้างแล้วกลับเข้ามาใหม่`);
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button("📦 ดาวน์โหลดทั้งหมดเป็น ZIP", { onclick: async () => {

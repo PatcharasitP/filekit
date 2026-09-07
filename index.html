@@ -10,120 +10,247 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
 
+<!-- เลือกธีมก่อนวาดหน้าจอ กันจอกะพริบขาว-ดำตอนโหลด -->
+<script>try{var t=localStorage.getItem("fk-theme");if(t&&t!=="auto")document.documentElement.dataset.theme=t;
+var d=localStorage.getItem("fk-density");if(d)document.documentElement.dataset.density=d;}catch(e){}</script>
+
 <!-- Critical CSS inline: หน้าแรกวาดได้ครบโดยไม่ต้องรอไฟล์ CSS ภายนอกเลย -->
 <style>
 :root{
+  /* ── พื้นผิวและเส้น (โหมดมืดเป็นค่าตั้งต้น) ── */
   --bg:#0f1220; --bg-soft:#161a2c; --card:#1b2038; --card-hi:#222846;
   --line:#2b3157; --line-soft:#232847;
-  --text:#eef0f8; --text-dim:#a3a9c4; --text-mute:#6f7696;
-  --brand:#6c8cff; --brand-2:#9d7bff; --brand-ink:#fff;
+  --text:#eef0f8; --text-dim:#a3a9c4; --text-mute:#868db0;
+  --brand:#6c8cff; --brand-text:#8aa3ff; --brand-2:#9d7bff; --brand-ink:#fff;
+  /* พื้นปุ่มต้องเข้มกว่าสีแบรนด์ ไม่งั้นตัวอักษรขาวบนปุ่มได้แค่ 3.07:1 (ต้องการ 4.5:1) */
+  --btn-a:#4258d8; --btn-b:#6f45d0;
   --ok:#3ddc97; --warn:#ffbe4d; --err:#ff6b81;
-  --r:16px; --r-sm:10px;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
+  /* ── สีประจำตระกูลเครื่องมือ (ตรวจผ่าน WCAG AA ทั้งสองโหมดแล้ว) ── */
+  --g-pdf:#e8613c; --g-img:#3ab7d8; --g-doc:#6c8cff; --g-ppt:#c77dff; --g-data:#3ec98a; --g-thai:#ff6b81;
+  /* ── ระยะห่าง 8pt ── */
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:24px; --sp6:32px; --sp7:48px;
+  /* ── มุมโค้ง ── */
+  --r:14px; --r-sm:10px; --r-lg:20px;
+  /* ── เงา: โหมดมืดใช้เส้นขอบเรืองแทน เพราะเงาดำไม่เห็นบนพื้นมืด ── */
+  --sh1:0 0 0 1px var(--line-soft);
+  --sh2:0 0 0 1px var(--line), 0 4px 12px rgba(0,0,0,.4);
+  --sh3:0 0 0 1px var(--line), 0 12px 28px rgba(0,0,0,.5);
+  --shadow:var(--sh2);
+  /* ── การเคลื่อนไหว ── */
+  --t-micro:120ms; --t-panel:220ms; --ease:cubic-bezier(.4,0,.2,1);
+  /* ── ตัวอักษร: ภาษาไทยต้องการ line-height สูงกว่าอังกฤษเพราะมีสระบน-ล่าง ── */
+  --lh:1.75; --lh-tight:1.4;
   --font:"Sarabun","IBM Plex Sans Thai","Noto Sans Thai",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
 }
-@media (prefers-color-scheme: light){
-  :root{
-    --bg:#f7f8fc; --bg-soft:#eef0f8; --card:#fff; --card-hi:#f4f6ff;
-    --line:#dfe3f2; --line-soft:#e9ecf7;
-    --text:#161a2c; --text-dim:#5b6180; --text-mute:#8b91ad;
-    --shadow:0 8px 24px rgba(20,26,60,.08);
-  }
+/* โหมดสว่าง — ประกาศซ้ำ 2 ที่ ให้ทั้ง "ตามระบบ" และ "ผู้ใช้เลือกเอง" ทำงานถูกทั้งคู่ */
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  /* สีความหมายชุดเดิมสว่างเกินไปสำหรับพื้นขาว (เขียวได้แค่ 1.34:1) ต้องมีชุดเข้มแยก */
+  --ok:#0b6b42; --warn:#8f5200; --err:#ad2740;
+  --bg:#f7f8fc; --bg-soft:#eef0f8; --card:#fff; --card-hi:#f4f6ff;
+  --line:#dfe3f2; --line-soft:#e9ecf7;
+  --text:#161a2c; --text-dim:#5b6180; --text-mute:#676d88;
+  --brand-text:#3a57c8;
+  --g-pdf:#b03a0a; --g-img:#0e6c86; --g-doc:#3a57c8; --g-ppt:#7b3fc4; --g-data:#0c6440; --g-thai:#b02a43;
+  --sh1:0 1px 2px rgba(20,26,60,.06), 0 1px 3px rgba(20,26,60,.05);
+  --sh2:0 2px 6px rgba(20,26,60,.06), 0 6px 14px rgba(20,26,60,.07);
+  --sh3:0 8px 16px rgba(20,26,60,.08), 0 16px 32px rgba(20,26,60,.09);
+}}
+:root[data-theme="light"]{
+  /* สีความหมายชุดเดิมสว่างเกินไปสำหรับพื้นขาว (เขียวได้แค่ 1.34:1) ต้องมีชุดเข้มแยก */
+  --ok:#0b6b42; --warn:#8f5200; --err:#ad2740;
+  --bg:#f7f8fc; --bg-soft:#eef0f8; --card:#fff; --card-hi:#f4f6ff;
+  --line:#dfe3f2; --line-soft:#e9ecf7;
+  --text:#161a2c; --text-dim:#5b6180; --text-mute:#676d88;
+  --brand-text:#3a57c8;
+  --g-pdf:#b03a0a; --g-img:#0e6c86; --g-doc:#3a57c8; --g-ppt:#7b3fc4; --g-data:#0c6440; --g-thai:#b02a43;
+  --sh1:0 1px 2px rgba(20,26,60,.06), 0 1px 3px rgba(20,26,60,.05);
+  --sh2:0 2px 6px rgba(20,26,60,.06), 0 6px 14px rgba(20,26,60,.07);
+  --sh3:0 8px 16px rgba(20,26,60,.08), 0 16px 32px rgba(20,26,60,.09);
 }
+@media (prefers-reduced-motion: reduce){ :root{ --t-micro:0ms; --t-panel:0ms } }
+
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
 body{
   margin:0; background:var(--bg); color:var(--text);
-  font-family:var(--font); font-size:15px; line-height:1.6;
-  -webkit-font-smoothing:antialiased;
-  min-height:100dvh;
+  font-family:var(--font); font-size:15px; line-height:var(--lh);
+  -webkit-font-smoothing:antialiased; min-height:100dvh;
 }
-a{color:var(--brand)}
+a{color:var(--brand-text)}
 button{font-family:inherit}
+:focus-visible{outline:2.5px solid var(--brand); outline-offset:2px; border-radius:6px}
 
-/* ---------- header ---------- */
+.skip{position:absolute; left:-9999px; top:8px; z-index:99;
+  background:var(--brand); color:#fff; padding:10px 18px; border-radius:999px; font-weight:700; text-decoration:none}
+.skip:focus{left:12px}
+
+/* ---------- แถบบน ---------- */
 .top{
   position:sticky; top:0; z-index:20;
-  display:flex; align-items:center; gap:12px;
-  padding:12px clamp(14px,4vw,32px);
-  background:color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter:blur(12px);
+  display:flex; align-items:center; gap:var(--sp3);
+  padding:10px clamp(14px,4vw,32px);
+  background:color-mix(in srgb, var(--bg) 84%, transparent);
+  backdrop-filter:blur(14px);
   border-bottom:1px solid var(--line-soft);
 }
-.brand{display:flex; align-items:center; gap:10px; cursor:pointer; border:0; background:none; color:inherit; padding:0; font-size:16px; font-weight:700}
+.brand{display:flex; align-items:center; gap:10px; cursor:pointer; border:0; background:none; color:inherit; padding:2px 4px; margin-inline-start:-4px; min-height:40px; font-size:16px; font-weight:700; line-height:1.25}
 .brand .mark{
-  width:32px;height:32px;border-radius:9px; display:grid;place-items:center;
+  width:32px;height:32px;border-radius:9px; display:grid;place-items:center; flex:none;
   background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff; font-size:17px;
   box-shadow:0 4px 12px color-mix(in srgb,var(--brand) 45%,transparent);
 }
-.brand small{display:block;font-size:11px;font-weight:500;color:var(--text-mute);line-height:1.2}
+.brand small{display:block;font-size:11px;font-weight:500;color:var(--text-mute);line-height:1.3}
 .top .spacer{flex:1}
-.chip{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:12px;color:var(--text-dim);
-  border:1px solid var(--line); border-radius:999px; padding:5px 11px; background:var(--card);
+.iconbtn{
+  width:38px;height:38px;flex:none; display:grid;place-items:center; cursor:pointer;
+  border:1px solid var(--line); background:var(--card); color:var(--text-dim);
+  border-radius:11px; font-size:16px; transition:color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
 }
+.iconbtn:hover{background:var(--card-hi); color:var(--text)}
 .back{
-  display:none; align-items:center; gap:6px; cursor:pointer;
+  display:none; align-items:center; gap:6px; cursor:pointer; white-space:nowrap;
   border:1px solid var(--line); background:var(--card); color:var(--text);
-  border-radius:999px; padding:7px 14px; font-size:13px; font-weight:600;
+  border-radius:999px; padding:8px 15px; font-size:13px; font-weight:600; min-height:38px;
 }
 .back:hover{background:var(--card-hi)}
 body.tool .back{display:inline-flex}
+body.tool .home-only{display:none}
 
-/* ---------- layout ---------- */
-main{max-width:1120px; margin:0 auto; padding:clamp(20px,4vw,40px) clamp(14px,4vw,32px) 72px}
-.hero{text-align:center; margin-bottom:26px}
+/* ---------- โครงหน้า ---------- */
+main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,4vw,32px) 72px}
+.hero{text-align:center; margin-bottom:var(--sp5)}
 .hero h1{
-  font-size:clamp(28px,5vw,42px); margin:0 0 10px; letter-spacing:-.3px; font-weight:800;
+  font-size:clamp(25px,4.4vw,38px); margin:0 0 8px; letter-spacing:-.3px; font-weight:800;
   line-height:1.42; padding-block:2px;
   background:linear-gradient(120deg,var(--text),var(--brand)); -webkit-background-clip:text; background-clip:text; color:transparent;
 }
-.hero p{margin:0 auto; max-width:620px; color:var(--text-dim); font-size:15px}
-.hero .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.hero p{margin:0 auto; max-width:600px; color:var(--text-dim); font-size:14.5px}
+.badges{display:flex;gap:var(--sp2);justify-content:center;flex-wrap:wrap;margin-top:var(--sp4)}
+.badge{
+  display:inline-flex;align-items:center;gap:6px; font-size:12px;color:var(--text-dim);
+  border:1px solid var(--line); border-radius:999px; padding:5px 12px; background:var(--card);
+}
+.facts{display:flex;justify-content:center;flex-wrap:wrap;gap:0;margin-top:var(--sp4);
+  border:1px solid var(--line-soft);border-radius:var(--r);background:var(--card);overflow:hidden;box-shadow:var(--sh1)}
+.fact{flex:1 1 130px;min-width:110px;padding:11px 10px;text-align:center;border-inline-start:1px solid var(--line-soft)}
+.fact:first-child{border-inline-start:0}
+.fact b{display:block;font-size:19px;font-weight:800;line-height:1.35;color:var(--text)}
+.fact span{font-size:11.5px;color:var(--text-mute)}
+@media (max-width:600px){ .fact{flex:1 1 50%;min-width:0} .fact:nth-child(3){border-inline-start:0} .fact b{font-size:17px} }
 
+/* ---------- ค้นหา ---------- */
+.searchwrap{max-width:600px; margin:var(--sp5) auto var(--sp2)}
 .search{
-  display:flex; align-items:center; gap:10px; margin:22px auto 8px; max-width:520px;
-  background:var(--card); border:1px solid var(--line); border-radius:999px; padding:10px 18px;
-  box-shadow:var(--shadow);
+  display:flex; align-items:center; gap:10px;
+  background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:11px 16px 11px 20px;
+  box-shadow:var(--sh2); transition:border-color var(--t-micro) var(--ease);
 }
-.search input{flex:1; border:0; background:none; color:var(--text); font-size:15px; outline:none; font-family:inherit}
+.search:focus-within{border-color:var(--brand)}
+.search input{flex:1; min-width:0; border:0; background:none; color:var(--text); font-size:15px; outline:none; font-family:inherit; min-height:24px; padding-block:5px}
 .search input::placeholder{color:var(--text-mute)}
-
-.group{margin-top:30px}
-.group h2{
-  font-size:13px; line-height:1.7; text-transform:uppercase; letter-spacing:.9px; color:var(--text-mute);
-  margin:0 0 12px; font-weight:700;
+.search input::-webkit-search-cancel-button{display:none}
+.kbd{
+  display:none; align-items:center; gap:3px; flex:none;
+  font-size:11px; color:var(--text-mute); border:1px solid var(--line); border-radius:6px; padding:2px 7px;
+  background:var(--bg-soft); font-family:inherit;
 }
-.grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(232px,1fr))}
+@media (hover:hover){ .kbd{display:inline-flex} }
+.search .clear{display:none; border:0; background:none; color:var(--text-mute); cursor:pointer; font-size:17px; padding:0 2px; line-height:1}
+.search.has .clear{display:block}
+.search.has .kbd{display:none}
+.hits{text-align:center; font-size:12.5px; color:var(--text-mute); min-height:19px; margin-top:var(--sp2)}
+
+/* ---------- แถบหมวด ---------- */
+.cats{
+  display:flex; gap:var(--sp2); overflow-x:auto; scrollbar-width:none;
+  padding:var(--sp2) 2px var(--sp3); margin:0 -2px;
+  scroll-snap-type:x proximity;
+}
+.cats::-webkit-scrollbar{display:none}
+.cat{
+  flex:none; scroll-snap-align:start; cursor:pointer; white-space:nowrap;
+  border:1px solid var(--line); background:var(--card); color:var(--text-dim);
+  border-radius:999px; padding:7px 14px; font-size:13px; font-weight:600; min-height:36px;
+  transition:color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease);
+}
+.cat:hover{color:var(--text); border-color:var(--text-mute)}
+/* พื้นย้อมสีเข้มเกินไปจะกินคอนทราสต์ของตัวอักษรสีเดียวกัน — 13% ตกที่ 4.32:1 ต้องลดเหลือ 8% */
+.cat[aria-pressed="true"]{
+  color:var(--ac,var(--brand)); border-color:color-mix(in srgb,var(--ac,var(--brand)) 55%,transparent);
+  background:color-mix(in srgb,var(--ac,var(--brand)) 8%,transparent);
+}
+.cat b{font-weight:700; opacity:.65; margin-inline-start:5px; font-size:12px}
+
+/* ---------- กริดเครื่องมือ ---------- */
+.group{margin-top:var(--sp6); scroll-margin-top:76px}
+.group-h{display:flex; align-items:baseline; gap:var(--sp2); margin:0 0 var(--sp3)}
+.group-h h2{font-size:16px; margin:0; font-weight:700; line-height:1.5}
+.group-h .dot{width:8px;height:8px;border-radius:99px;background:var(--ac);flex:none;align-self:center}
+.group-h span{font-size:12.5px; color:var(--text-mute)}
+.grid{display:grid; gap:var(--sp3); grid-template-columns:repeat(auto-fill,minmax(258px,1fr))}
 .card{
-  display:flex; flex-direction:column; gap:6px; text-align:right;
+  display:flex; gap:var(--sp3); align-items:flex-start; text-align:start;
   background:var(--card); border:1px solid var(--line-soft); border-radius:var(--r);
-  padding:16px; cursor:pointer; color:inherit; text-align:start;
-  transition:transform .16s ease, border-color .16s ease, background .16s ease;
+  padding:14px; cursor:pointer; color:inherit; box-shadow:var(--sh1);
+  transition:transform var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease),
+             box-shadow var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
 }
-.card:hover{transform:translateY(-2px); border-color:var(--brand); background:var(--card-hi)}
-.card:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
-.card .ico{font-size:24px; line-height:1}
-.card h3{margin:2px 0 0; font-size:15px; font-weight:700; line-height:1.5}
-.card p{margin:0; font-size:12.5px; color:var(--text-dim); line-height:1.5}
-.empty{color:var(--text-mute); text-align:center; padding:40px 0}
+.card:hover{transform:translateY(-2px); border-color:color-mix(in srgb,var(--ac) 60%,transparent); box-shadow:var(--sh2); background:var(--card-hi)}
+.card .ico{
+  flex:none; width:40px; height:40px; border-radius:11px; display:grid; place-items:center; font-size:20px;
+  background:color-mix(in srgb,var(--ac) 16%,transparent);
+  border:1px solid color-mix(in srgb,var(--ac) 30%,transparent);
+}
+.card .tx{min-width:0}
+.card h3{margin:0; font-size:14.5px; font-weight:700; line-height:1.5}
+.card p{margin:2px 0 0; font-size:12.5px; color:var(--text-dim); line-height:1.55;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.card mark{background:color-mix(in srgb,var(--brand) 30%,transparent); color:inherit; border-radius:3px; padding:0 1px}
 
-/* จอมือถือ: 2 คอลัมน์ + คำอธิบายจำกัด 2 บรรทัด ทำให้เห็นเครื่องมือได้มากขึ้น
-   ต่อการเลื่อนหนึ่งครั้ง โดยยังคงคำอธิบายไว้ให้คนที่เพิ่งเข้ามาครั้งแรก */
-@media (max-width:560px){
-  .grid{grid-template-columns:repeat(2,1fr); gap:10px}
-  .card{padding:13px}
-  .card .ico{font-size:21px}
-  .card h3{font-size:13.5px}
-  .card p{font-size:11.5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
-  .hero p{font-size:14px}
+/* โหมดแน่น: สำหรับคนที่รู้แล้วว่าจะใช้อะไร เห็นได้มากกว่าเดิมราว 3 เท่าต่อหนึ่งจอ */
+:root[data-density="compact"] .card{padding:10px 13px; align-items:center; border-inline-start:3px solid var(--ac)}
+:root[data-density="compact"] .card .ico{width:26px;height:26px;font-size:17px;background:none;border:0;border-radius:0}
+:root[data-density="compact"] .card p{display:none}
+:root[data-density="compact"] .card h3{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+:root[data-density="compact"] .grid{grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:var(--sp2)}
+:root[data-density="compact"] .hero p,
+:root[data-density="compact"] .badges,
+:root[data-density="compact"] .facts{display:none}
+
+.empty{color:var(--text-mute); text-align:center; padding:var(--sp7) var(--sp4); line-height:1.9}
+.empty b{display:block; color:var(--text); font-size:16px; margin-bottom:6px}
+.empty .btn-soft{margin-top:var(--sp3)}
+.btn-soft{
+  border:1px solid var(--line); background:var(--card); color:var(--text); cursor:pointer;
+  border-radius:999px; padding:9px 18px; font-size:13.5px; font-weight:600; min-height:40px;
+}
+.btn-soft:hover{background:var(--card-hi)}
+
+@media (max-width:600px){
+  /* บนมือถือการ์ดต้อง "เตี้ย" ไม่ใช่ "แคบ" — วางไอคอนไว้ซ้ายและตัดคำอธิบายเหลือบรรทัดเดียว
+     ทำให้หน้าแรกสั้นลงราว 40% เทียบกับแบบไอคอนอยู่บน (วัดจริงก่อน-หลัง) */
+  .grid{grid-template-columns:1fr 1fr; gap:var(--sp2)}
+  .card{padding:9px 10px; gap:9px; align-items:center}
+  .card .ico{width:32px;height:32px;font-size:17px;border-radius:9px}
+  /* คำอธิบายที่ถูกตัดเหลือ 3-4 คำแล้วต่อด้วย "…" ไม่ได้ให้ข้อมูลอะไร มีแต่ทำให้รก
+     บนจอแคบจึงตัดทิ้งไปเลย แล้วให้ชื่อเครื่องมือใช้พื้นที่ได้ 2 บรรทัดเต็ม */
+  .card h3{font-size:12.5px; line-height:1.45;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .card p{display:none}
+  .group{margin-top:var(--sp5)}
+  .group-h h2{font-size:14.5px}
+  .hero p{font-size:13.5px}
+  .badges{gap:6px}
+  .badge{font-size:11px;padding:4px 10px}
+  :root[data-density="compact"] .card{flex-direction:row}
+  .cats{position:sticky; top:57px; z-index:15; background:var(--bg); margin-inline:calc(clamp(14px,4vw,32px) * -1); padding-inline:clamp(14px,4vw,32px)}
 }
 
-/* แถบเตรียมใช้งานออฟไลน์ (ท้ายหน้าแรก) */
+/* แถบเตรียมใช้งานออฟไลน์ */
 .offline-bar{
-  display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;
-  max-width:1120px;margin:34px auto 0;padding:14px 20px;
+  display:flex;align-items:center;gap:var(--sp4);flex-wrap:wrap;justify-content:center;
+  max-width:1160px;margin:var(--sp6) auto 0;padding:14px 20px;
   background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r);
   font-size:13px;color:var(--text-dim);
 }
@@ -132,45 +259,56 @@ main{max-width:1120px; margin:0 auto; padding:clamp(20px,4vw,40px) clamp(14px,4v
 .ob-ready{color:var(--ok);font-weight:600}
 .ob-fail{color:var(--err);font-weight:600}
 .ob-btn{padding:9px 18px;font-size:13px}
-.ob-link{background:none;border:0;color:var(--brand);cursor:pointer;font-size:12.5px;text-decoration:underline;font-family:inherit}
+.ob-link{background:none;border:0;color:var(--brand-text);cursor:pointer;font-size:12.5px;text-decoration:underline;font-family:inherit}
 .ob-progress{flex:1;min-width:220px;height:7px;border-radius:99px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--line-soft)}
 .ob-progress .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .2s}
 
-footer{
-  border-top:1px solid var(--line-soft); padding:18px; text-align:center;
-  color:var(--text-mute); font-size:12.5px;
-}
+footer{border-top:1px solid var(--line-soft); padding:18px; text-align:center; color:var(--text-mute); font-size:12.5px}
 #tool{display:none}
 body.tool #tool{display:block}
 body.tool #home{display:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">ข้ามไปที่เนื้อหาหลัก</a>
 
 <header class="top">
   <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก">
-    <span class="mark">🗂️</span>
+    <span class="mark" aria-hidden="true">🗂️</span>
     <span>FileKit<small>ทำงานในเครื่องคุณ 100%</small></span>
   </button>
   <span class="spacer"></span>
+  <button class="iconbtn home-only" id="density" type="button" aria-pressed="false" aria-label="สลับมุมมองแบบแน่น" title="มุมมองแบบแน่น">☰</button>
+  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม">🌗</button>
   <button class="back" id="back" type="button">← เครื่องมือทั้งหมด</button>
 </header>
 
-<main>
+<main id="main">
   <section id="home">
     <div class="hero">
       <h1>เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน</h1>
       <p>แปลง รวม แยก บีบอัด PDF · Excel · Word · รูปภาพ ทุกอย่างประมวลผลในเบราว์เซอร์ของคุณเอง ไฟล์ไม่เคยถูกอัปโหลดขึ้นเซิร์ฟเวอร์</p>
-      <div class="badges">
-        <span class="chip">🔒 ไฟล์ไม่ออกจากเครื่อง</span>
-        <span class="chip">⚡ หน้าแรกเบา โหลดไลบรารีเมื่อใช้จริง</span>
-        <span class="chip">📴 ใช้ได้แม้ออฟไลน์</span>
+      <div class="facts">
+        <div class="fact"><b id="fact-n">27</b><span>เครื่องมือ</span></div>
+        <div class="fact"><b>0</b><span>ไฟล์ที่ถูกอัปโหลด</span></div>
+        <div class="fact"><b>ไม่จำกัด</b><span>ใช้กี่ครั้งก็ได้ ไม่ต้องสมัคร</span></div>
+        <div class="fact"><b>฿0</b><span>ฟรี ไม่มีโฆษณา</span></div>
       </div>
     </div>
-    <div class="search">
-      <span aria-hidden="true">🔍</span>
-      <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, OCR, บีบอัด" autocomplete="off" aria-label="ค้นหาเครื่องมือ">
+
+    <div class="searchwrap">
+      <div class="search" id="searchbox">
+        <span aria-hidden="true">🔍</span>
+        <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, บาทถ้วน, ไทยเพี้ยน" autocomplete="off"
+               aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
+        <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา">✕</button>
+        <span class="kbd" aria-hidden="true"><span id="kbdkey">Ctrl</span>+K</span>
+      </div>
+      <div class="hits" id="hits" role="status" aria-live="polite"></div>
     </div>
+
+    <nav class="cats" id="cats" aria-label="กรองตามหมวด"></nav>
     <div id="tools"></div>
   </section>
 

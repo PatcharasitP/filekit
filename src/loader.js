@@ -61,6 +61,16 @@ const REG = {
   },
 };
 
+/** รายชื่อไฟล์ในเครื่อง (vendor/) ของทุกไลบรารี — ใช้ตอนเตรียมใช้งานออฟไลน์ */
+export const localLibFiles = () => {
+  const files = [];
+  for (const spec of Object.values(REG)) {
+    files.push(spec.local);
+    if (spec.global === "pdfjsLib") files.push("vendor/pdf.worker.min.js"); // worker แยกไฟล์
+  }
+  return files;
+};
+
 const inflight = new Map(); // ชื่อ -> Promise — กันโหลดซ้ำเมื่อหลายเครื่องมือขอพร้อมกัน
 
 function injectScript(src) {

@@ -120,6 +120,22 @@ main{max-width:1120px; margin:0 auto; padding:clamp(20px,4vw,40px) clamp(14px,4v
   .hero p{font-size:14px}
 }
 
+/* แถบเตรียมใช้งานออฟไลน์ (ท้ายหน้าแรก) */
+.offline-bar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;
+  max-width:1120px;margin:34px auto 0;padding:14px 20px;
+  background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r);
+  font-size:13px;color:var(--text-dim);
+}
+.offline-bar strong{color:var(--text);font-weight:700}
+.ob-detail{color:var(--text-mute)}
+.ob-ready{color:var(--ok);font-weight:600}
+.ob-fail{color:var(--err);font-weight:600}
+.ob-btn{padding:9px 18px;font-size:13px}
+.ob-link{background:none;border:0;color:var(--brand);cursor:pointer;font-size:12.5px;text-decoration:underline;font-family:inherit}
+.ob-progress{flex:1;min-width:220px;height:7px;border-radius:99px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--line-soft)}
+.ob-progress .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .2s}
+
 footer{
   border-top:1px solid var(--line-soft); padding:18px; text-align:center;
   color:var(--text-mute); font-size:12.5px;

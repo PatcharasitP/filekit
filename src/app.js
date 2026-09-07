@@ -130,6 +130,16 @@ route();
 const rest = el("link", { rel: "stylesheet", href: "assets/css/tool.css" });
 document.head.appendChild(rest);
 
+// แถบ "เตรียมใช้งานออฟไลน์" — ดึงเข้ามาตอนเบราว์เซอร์ว่าง ไม่แย่งเวลาวาดหน้าแรก
+{
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 600));
+  idle(() => {
+    import("./offline.js")
+      .then((m) => document.querySelector("footer")?.before(m.offlineBar()))
+      .catch(() => {});
+  });
+}
+
 // Service worker: ทำให้เปิดซ้ำเร็วและใช้งานออฟไลน์ได้
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));

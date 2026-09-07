@@ -2,6 +2,7 @@ import { detectType, wrongTypeMessage } from "./filetype.js";
 import { $, $$, el } from "./dom.js";
 import { byId } from "./registry.js";
 import { toolIcon, uiIcon } from "./icons.js";
+import { tr } from "./i18n.js";
 export { $, $$, el } from "./dom.js";
 
 export function fmtBytes(b) {
@@ -55,8 +56,8 @@ export function nextSteps(tool) {
   const list = (tool.next || []).map(byId).filter(Boolean);
   if (!list.length) return null;
   const accent = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
-  return el("nav", { class: "next-steps", "aria-label": "เครื่องมือที่มักใช้ต่อ" }, [
-    el("h2", {}, "ทำอะไรต่อดี"),
+  return el("nav", { class: "next-steps", "aria-label": tr("เครื่องมือที่มักใช้ต่อ", "Tools people use next") }, [
+    el("h2", {}, tr("ทำอะไรต่อดี", "What next?")),
     el("div", { class: "next-row" }, list.map((t) =>
       el("a", { class: "next-card", href: "#/" + t.id, style: `--ac:${accent(t)}` }, [
         el("span", { class: "next-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
@@ -73,7 +74,7 @@ export function statusBar() {
   // ‼️ งานที่ใช้เวลานานต้องยกเลิกได้ ไม่งั้นลากมา 50 ไฟล์แล้วกดผิดต้องรอจนจบหรือปิดแท็บทิ้ง
   let cancelled = false;
   const stop = el("button", { class: "btn-cancel", type: "button", hidden: true,
-    onclick: () => { cancelled = true; stop.disabled = true; stop.textContent = "กำลังหยุด…"; } }, "หยุด");
+    onclick: () => { cancelled = true; stop.disabled = true; stop.textContent = tr("กำลังหยุด…", "Stopping…"); } }, tr("หยุด", "Stop"));
   const bar = el("div", { class: "progress" }, [fill]);
   const node = el("div", { class: "status-wrap" }, [msg, el("div", { class: "prog-row" }, [bar, stop])]);
   let label = "";
@@ -81,7 +82,7 @@ export function statusBar() {
     node,
     get cancelled() { return cancelled; },
     /** เรียกก่อนเริ่มงานใหม่ทุกครั้ง — เปิดปุ่มหยุดและล้างธงเดิม */
-    begin: () => { cancelled = false; stop.hidden = false; stop.disabled = false; stop.textContent = "หยุด"; },
+    begin: () => { cancelled = false; stop.hidden = false; stop.disabled = false; stop.textContent = tr("หยุด", "Stop"); },
     end: () => { stop.hidden = true; },
     info: (t) => { msg.className = "status show info"; msg.textContent = t; label = t; },
     ok: (t) => { msg.className = "status show ok"; msg.textContent = t; },
@@ -148,7 +149,7 @@ export function resultRow(name, blob, extra) {
   return el("div", { class: "result" }, [
     el("div", { class: "r-name" }, [el("strong", {}, name), extra ? el("small", {}, extra) : null]),
     el("span", { class: "r-size" }, fmtBytes(blob.size)),
-    button("ดาวน์โหลด", { onclick: () => download(blob, name) }),
+    button(tr("ดาวน์โหลด", "Download"), { onclick: () => download(blob, name) }),
   ]);
 }
 
@@ -156,10 +157,10 @@ export function resultRow(name, blob, extra) {
 export function dropzone(opts = {}) {
   const {
     accept = "*/*", multiple = true, reorder = false,
-    hint = "ลากไฟล์มาวาง หรือคลิกเพื่อเลือก",
+    hint = tr("ลากไฟล์มาวาง หรือคลิกเพื่อเลือก", "Drop files here, or click to choose"),
     onChange = () => {},
     expect = null,                 // เช่น ["pdf"] — ชนิดไฟล์ที่เครื่องมือนี้รับ
-    expectLabel = "ไฟล์ชนิดที่รองรับ",
+    expectLabel = tr("ไฟล์ชนิดที่รองรับ", "a supported file type"),
   } = opts;
 
   let files = [];
@@ -170,13 +171,14 @@ export function dropzone(opts = {}) {
   const list = el("div", { class: "files" });
   const zone = el("div", {
     class: "dz", tabindex: "0", role: "button",
-    "aria-label": `เลือกไฟล์: ${expectLabel} — คลิกหรือกด Enter เพื่อเลือก หรือลากไฟล์มาวาง`,
+    "aria-label": tr(`เลือกไฟล์: ${expectLabel} — คลิกหรือกด Enter เพื่อเลือก หรือลากไฟล์มาวาง`,
+                     `Choose files: ${expectLabel} — click or press Enter to pick, or drop files here`),
   }, [
     el("div", { class: "dz-ico", "aria-hidden": "true" }, [uiIcon("upload", "dz-svg")]),
-    el("div", { class: "dz-main" }, "คลิกเพื่อเลือกไฟล์ หรือลากมาวาง"),
+    el("div", { class: "dz-main" }, tr("คลิกเพื่อเลือกไฟล์ หรือลากมาวาง", "Click to choose files, or drop them here")),
     el("div", { class: "dz-hint" }, hint),
     // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
-    el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), "ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น"]),
+    el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device — nothing is uploaded")]),
     input,
   ]);
 
@@ -224,12 +226,13 @@ export function dropzone(opts = {}) {
     const names = bad.map((b) => b.file.name).join(", ");
     const box = el("div", { class: "wrong-type" }, [
       el("div", {}, [
-        el("strong", {}, "ไฟล์นี้ใช้กับเครื่องมือนี้ไม่ได้"),
+        el("strong", {}, tr("ไฟล์นี้ใช้กับเครื่องมือนี้ไม่ได้", "This file does not work with this tool")),
         el("div", { class: "wt-detail" }, `${info.text} — ${names}`),
       ]),
       info.toolId
         ? el("button", { class: "btn", type: "button",
-            onclick: () => { location.hash = "#/" + info.toolId; } }, `ไปที่ ${info.toolName} →`)
+            onclick: () => { location.hash = "#/" + info.toolId; } },
+            tr(`ไปที่ ${info.toolName} →`, `Go to ${info.toolName} →`))
         : null,
     ]);
     warn.appendChild(box);
@@ -249,19 +252,21 @@ export function dropzone(opts = {}) {
       const move = (d) => { const j = i + d; if (j < 0 || j >= files.length) return;
         [files[i], files[j]] = [files[j], files[i]]; render(); onChange(files); };
       const row = el("div", { class: "file-row", draggable: reorder || null, "data-i": i }, [
-        reorder ? el("span", { class: "grip", title: "ลากเพื่อสลับลำดับ", "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
+        reorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
         el("span", { class: "f-name" }, f.name),
         el("span", { class: "f-size" }, fmtBytes(f.size)),
-        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": `เลื่อน ${f.name} ขึ้น`,
-          title: "เลื่อนขึ้น", disabled: i === 0 || null, onclick: () => move(-1) }, "↑") : null,
-        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": `เลื่อน ${f.name} ลง`,
-          title: "เลื่อนลง", disabled: i === files.length - 1 || null, onclick: () => move(1) }, "↓") : null,
-        el("button", { class: "icon-btn danger", type: "button", title: "เอาออก",
-          "aria-label": `เอา ${f.name} ออก`, onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),
+        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
+          title: tr("เลื่อนขึ้น", "Move up"), disabled: i === 0 || null, onclick: () => move(-1) }, "↑") : null,
+        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
+          title: tr("เลื่อนลง", "Move down"), disabled: i === files.length - 1 || null, onclick: () => move(1) }, "↓") : null,
+        el("button", { class: "icon-btn danger", type: "button", title: tr("เอาออก", "Remove"),
+          "aria-label": tr(`เอา ${f.name} ออก`, `Remove ${f.name}`), onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),
       ]);
       list.appendChild(row);
     });
-    count.textContent = files.length ? `${files.length} ไฟล์ · รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}` : "";
+    count.textContent = !files.length ? ""
+      : tr(`${files.length} ไฟล์ · รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}`,
+           `${files.length} files · ${fmtBytes(files.reduce((a, f) => a + f.size, 0))} total`);
   }
 
   if (reorder) {
@@ -311,7 +316,7 @@ export function parsePages(spec, total) {
       const n = +s;
       if (n >= 1 && n <= total) out.add(n);
     } else {
-      throw new Error(`อ่านช่วงหน้าไม่เข้าใจ: "${s}"`);
+      throw new Error(tr(`อ่านช่วงหน้าไม่เข้าใจ: "${s}"`, `Could not read the page range: "${s}"`));
     }
   }
   return [...out].sort((a, b) => a - b);
@@ -346,11 +351,14 @@ export function failedBox(failed) {
   if (!failed) return null;
   if (!failed.length && !failed.stopped) return null;
   if (!failed.length) return el("div", { class: "fail-box" }, [
-    el("strong", {}, `หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`),
+    el("strong", {}, tr(`หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`,
+                        `Stopped as asked — ${failed.stopped} files left untouched (whatever finished is still yours to download)`)),
   ]);
   return el("div", { class: "fail-box" }, [
-    el("strong", {}, `ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`),
+    el("strong", {}, tr(`ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`,
+                        `Skipped ${failed.length} files this tool could not handle (the rest finished fine)`)),
     el("ul", {}, failed.map((f) => el("li", {}, `${f.name} — ${f.why}`))),
-    failed.stopped ? el("div", {}, `หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`) : null,
+    failed.stopped ? el("div", {}, tr(`หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`,
+                                      `Stopped as asked — ${failed.stopped} files left untouched`)) : null,
   ]);
 }

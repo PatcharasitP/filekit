@@ -28,7 +28,7 @@
 
 <!-- เลือกธีมก่อนวาดหน้าจอ กันจอกะพริบขาว-ดำตอนโหลด -->
 <script>try{var t=localStorage.getItem("fk-theme");if(t&&t!=="auto")document.documentElement.dataset.theme=t;
-var v=localStorage.getItem("fk-view");document.documentElement.dataset.view=v||"pill";}catch(e){}</script>
+}catch(e){}</script>
 
 <!-- Critical CSS inline: หน้าแรกวาดได้ครบโดยไม่ต้องรอไฟล์ CSS ภายนอกเลย -->
 <style>
@@ -148,6 +148,10 @@ button{font-family:inherit}
 }
 .iconbtn:hover{background:var(--card-hi); color:var(--text)}
 .iconbtn{box-shadow:var(--ring-top)}
+/* ปุ่มภาษาเป็นตัวอักษรไม่ใช่ไอคอน จึงต้องกว้างตามข้อความ */
+.langbtn{width:auto; min-width:44px; padding:0 12px; font:700 12px/1 var(--font);
+  letter-spacing:.06em; color:var(--text-dim)}
+.langbtn:hover{color:var(--text)}
 .back{
   display:none; align-items:center; gap:6px; cursor:pointer; white-space:nowrap;
   border:1px solid var(--line); background:var(--card); color:var(--text);
@@ -322,9 +326,6 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .pill-group:first-child{margin-top:0}
 .pill-group s{flex:1;height:1px;background:var(--stage-line);text-decoration:none}
 
-:root[data-view="pill"] .stage-f{display:block}
-:root[data-view="detail"] .stage{background:none;box-shadow:none;padding:0;margin-top:var(--sp4)}
-:root[data-view="detail"] .stage-h,:root[data-view="detail"] .stage-f{display:none}
 
 /* ---------- กริดเครื่องมือ (โหมดรายละเอียด) ---------- */
 .group{margin-top:var(--sp7); scroll-margin-top:76px}
@@ -436,17 +437,17 @@ body.tool #home{display:none}
 </style>
 </head>
 <body>
-<a class="skip" href="#main">ข้ามไปที่เนื้อหาหลัก</a>
+<a class="skip" href="#main" data-en="Skip to main content">ข้ามไปที่เนื้อหาหลัก</a>
 
 <header class="top">
-  <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก">
+  <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก" data-en-al="Back to home">
     <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M14 6L30 6L38 14L38 42L14 42Z M20 22A4 4 0 1 0 28 22A4 4 0 1 0 20 22Z M22 25L26 25L24.5 34L23.5 34Z"/></svg></span>
-    <span>FileKit<small>ทำงานในเครื่องคุณ 100%</small></span>
+    <span>FileKit<small data-en="100% on your device">ทำงานในเครื่องคุณ 100%</small></span>
   </button>
   <span class="spacer"></span>
-  <button class="iconbtn home-only" id="density" type="button" aria-pressed="false" aria-label="สลับมุมมอง" title="สลับมุมมอง"></button>
-  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม"></button>
-  <button class="back" id="back" type="button">← เครื่องมือทั้งหมด</button>
+  <button class="iconbtn langbtn" id="lang" type="button" aria-label="เปลี่ยนภาษา" title="เปลี่ยนภาษา" data-en-al="Change language">EN</button>
+  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม" data-en-al="Switch theme"></button>
+  <button class="back" id="back" type="button" data-en="← All tools">← เครื่องมือทั้งหมด</button>
 </header>
 
 <main id="main">
@@ -454,23 +455,24 @@ body.tool #home{display:none}
     <div class="hero">
       <div class="hero-in">
         <div class="hero-copy">
-          <span class="kicker"><s></s>ทำงานในเครื่องคุณ 100%</span>
-          <h1>เครื่องมือจัดการไฟล์<br><em>ที่ไม่ส่งไฟล์คุณไปไหน</em></h1>
-          <p>แปลง รวม แยก บีบอัด PDF · Excel · Word · รูปภาพ ทุกอย่างประมวลผลในเบราว์เซอร์ของคุณเอง ไฟล์ไม่เคยถูกอัปโหลดขึ้นเซิร์ฟเวอร์</p>
+          <span class="kicker" data-en-html="<s></s>100% on your device"><s></s>ทำงานในเครื่องคุณ 100%</span>
+          <h1 data-en-html="File tools<br><em>that never upload your files</em>">เครื่องมือจัดการไฟล์<br><em>ที่ไม่ส่งไฟล์คุณไปไหน</em></h1>
+          <p data-en="Convert, merge, split and compress PDF · Excel · Word · images. Everything runs inside your own browser — your files are never uploaded to any server.">แปลง รวม แยก บีบอัด PDF · Excel · Word · รูปภาพ ทุกอย่างประมวลผลในเบราว์เซอร์ของคุณเอง ไฟล์ไม่เคยถูกอัปโหลดขึ้นเซิร์ฟเวอร์</p>
           <div class="searchwrap">
             <div class="search" id="searchbox">
               <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8L21 21"/></svg>
               <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, บาทถ้วน, ไทยเพี้ยน" autocomplete="off"
+                     data-en-ph="Search tools — e.g. merge PDF, split, compress" data-en-al="Search tools"
                      aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
-              <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button>
+              <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา" data-en-al="Clear search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button>
               <span class="kbd" aria-hidden="true"><span id="kbdkey">Ctrl</span><span>+K</span></span>
             </div>
             <div class="hits" id="hits" role="status" aria-live="polite"></div>
           </div>
           <div class="facts">
-            <div class="fact"><b id="fact-n">27</b><span>เครื่องมือ</span></div>
-            <div class="fact"><b>0</b><span>ไฟล์ที่ถูกอัปโหลด</span></div>
-            <div class="fact"><b>฿0</b><span>ฟรี ไม่มีโฆษณา</span></div>
+            <div class="fact"><b id="fact-n">27</b><span data-en="tools">เครื่องมือ</span></div>
+            <div class="fact"><b>0</b><span data-en="files uploaded">ไฟล์ที่ถูกอัปโหลด</span></div>
+            <div class="fact"><b>฿0</b><span data-en="free, no ads">ฟรี ไม่มีโฆษณา</span></div>
           </div>
         </div>
         <!-- ปึกกระดาษไอโซเมตริก วาดด้วย CSS ล้วน (ดู .hero-obj) — เป็นของตกแต่ง ไม่ต้องอ่าน -->
@@ -478,19 +480,27 @@ body.tool #home{display:none}
       </div>
     </div>
 
-    <nav class="cats" id="cats" aria-label="กรองตามหมวด"></nav>
+    <nav class="cats" id="cats" aria-label="กรองตามหมวด" data-en-al="Filter by category"></nav>
     <div class="stage" id="stage">
       <div class="stage-h" id="stageh"></div>
       <div id="tools"></div>
-      <div class="stage-f">ไม่ต้องสมัคร · ใช้กี่ครั้งก็ได้ · ไม่มีโฆษณา · ไฟล์ไม่เคยออกจากเครื่องคุณ</div>
+      <div class="stage-f" data-en="No sign-up · Unlimited use · No ads · Your files never leave your device">ไม่ต้องสมัคร · ใช้กี่ครั้งก็ได้ · ไม่มีโฆษณา · ไฟล์ไม่เคยออกจากเครื่องคุณ</div>
     </div>
   </section>
 
   <section id="tool" aria-live="polite"></section>
 </main>
 
-<footer>ประมวลผลฝั่งเบราว์เซอร์ทั้งหมด — ไฟล์ของคุณไม่ถูกส่งไปยังเซิร์ฟเวอร์ใด ๆ</footer>
+<footer data-en="Everything is processed in your browser — your files are never sent to any server.">ประมวลผลฝั่งเบราว์เซอร์ทั้งหมด — ไฟล์ของคุณไม่ถูกส่งไปยังเซิร์ฟเวอร์ใด ๆ</footer>
 
+<!-- แปลข้อความที่เขียนตายใน HTML ให้เสร็จก่อนวาดจอ — app.js เป็น module จึงถูกเลื่อนไปท้ายสุด
+     ถ้ารอมัน ผู้ใช้ภาษาอังกฤษจะเห็นภาษาไทยแวบหนึ่งก่อน (ตรรกะเดียวกับ applyStatic ใน src/i18n.js) -->
+<script>try{if(localStorage.getItem("fk-lang")==="en"){var d=document,r=d.documentElement;r.lang="en";
+d.querySelectorAll("[data-en]").forEach(function(n){n.textContent=n.dataset.en});
+d.querySelectorAll("[data-en-html]").forEach(function(n){n.innerHTML=n.dataset.enHtml});
+d.querySelectorAll("[data-en-ph]").forEach(function(n){n.setAttribute("placeholder",n.dataset.enPh)});
+d.querySelectorAll("[data-en-al]").forEach(function(n){n.setAttribute("aria-label",n.dataset.enAl);
+  if(n.hasAttribute("title"))n.setAttribute("title",n.dataset.enAl)});}}catch(e){}</script>
 <script type="module" src="src/app.js"></script>
 </body>
 </html>

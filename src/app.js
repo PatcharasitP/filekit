@@ -6,7 +6,8 @@ import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
 import { el, $ } from "./dom.js";
-import { toolIcon, uiIcon } from "./icons.js";
+import { toolIcon } from "./icons.js";
+import { LANG, IS_EN, tr, setLang, applyStatic } from "./i18n.js";
 
 const toolBox = $("#tool"), grids = $("#tools");
 const search = $("#q"), searchBox = $("#searchbox"), hits = $("#hits"), cats = $("#cats");
@@ -38,97 +39,56 @@ function pillOf(t, q = "") {
   }, [el("i", { "aria-hidden": "true" }, [toolIcon(t) || t.icon]), el("span", {}, label)]);
 }
 
-/* ── การ์ดเครื่องมือ (มุมมองรายละเอียด) ── */
-function cardOf(t, q = "") {
-  const r = q ? highlightRange(t.title, q) : null;
-  const title = r
-    ? el("h3", {}, [t.title.slice(0, r[0]), el("mark", {}, t.title.slice(r[0], r[1])), t.title.slice(r[1])])
-    : el("h3", {}, t.title);
-  return el("button", {
-    class: "card", type: "button", "data-id": t.id, style: `--ac:${accentOf(t.group)}`,
-    onclick: () => go(t.id),
-    onmouseenter: () => prefetch(t), onfocus: () => prefetch(t), ontouchstart: () => prefetch(t),
-  }, [
-    el("span", { class: "ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
-    el("div", { class: "tx" }, [title, el("p", {}, t.desc)]),
-  ]);
-}
-
 /* ── วาดหน้าแรก ── */
 let activeCat = "";                     // "" = ทุกหมวด
 function renderHome(q = "") {
-  const detail = store.get("fk-view", "pill") === "detail";
   const found = searchTools(TOOLS, q);
-  const ids = new Set(found.map((r) => r.t.id));
   const stageH = $("#stageh");
   grids.innerHTML = "";
 
   // กำลังค้นหา: เรียงตามคะแนน ไม่แบ่งหมวด — คนกำลังค้นอยากเห็นตัวที่ตรงที่สุดก่อน
   if (q.trim()) {
-    hits.textContent = found.length ? `พบ ${found.length} เครื่องมือ` : "";
-    if (stageH) stageH.textContent = found.length ? `ผลการค้นหา “${q.trim()}”` : "";
+    hits.textContent = found.length ? tr(`พบ ${found.length} เครื่องมือ`, `${found.length} tools found`) : "";
+    if (stageH) stageH.textContent = found.length
+      ? tr(`ผลการค้นหา “${q.trim()}”`, `Results for “${q.trim()}”`) : "";
     if (!found.length) return showEmpty(q);
-    grids.appendChild(detail
-      ? el("div", { class: "grid" }, found.map((r) => cardOf(r.t, q)))
-      : el("div", { class: "pills" }, found.map((r) => pillOf(r.t, q))));
+    grids.appendChild(el("div", { class: "pills" }, found.map((r) => pillOf(r.t, q))));
     return;
   }
 
   hits.textContent = "";
   const shown = TOOLS.filter((t) => !activeCat || t.group === activeCat);
   if (stageH) stageH.textContent = activeCat
-    ? `${(GROUPS.find((g) => g.id === activeCat) || {}).label} · ${shown.length} เครื่องมือ`
-    : `${TOOLS.length} เครื่องมือ ทำงานในเครื่องคุณทั้งหมด`;
+    ? tr(`${(GROUPS.find((g) => g.id === activeCat) || {}).label} · ${shown.length} เครื่องมือ`,
+         `${(GROUPS.find((g) => g.id === activeCat) || {}).label} · ${shown.length} tools`)
+    : tr(`${TOOLS.length} เครื่องมือ ทำงานในเครื่องคุณทั้งหมด`,
+         `${TOOLS.length} tools · all of them run on your device`);
 
-  if (!detail) {
-    const box = el("div", { class: "pills" });
-    for (const g of GROUPS) {
-      const items = shown.filter((t) => t.group === g.id);
-      if (!items.length) continue;
-      // ใส่หัวหมวดคั่นเฉพาะตอนดูทั้งหมด — ถ้ากรองหมวดเดียวอยู่แล้วไม่ต้องซ้ำ
-      if (!activeCat) box.appendChild(el("div", { class: "pill-group" }, [g.label, el("s", {})]));
-      items.forEach((t) => box.appendChild(pillOf(t)));
+  const box = el("div", { class: "pills" });
+  // แถวเพิ่งใช้ล่าสุดขึ้นก่อน เฉพาะตอนดูทั้งหมด — คนกลับมาเว็บนี้มักใช้ตัวเดิมซ้ำ
+  if (!activeCat) {
+    const recent = recentIds().map(byId).filter(Boolean);
+    if (recent.length >= 2) {
+      box.appendChild(el("div", { class: "pill-group" }, [tr("เพิ่งใช้ล่าสุด", "Recently used"), el("s", {})]));
+      recent.forEach((t) => box.appendChild(pillOf(t)));
     }
-    grids.appendChild(box);
-    return;
   }
-
-  if (!activeCat) renderRecent();
   for (const g of GROUPS) {
     const items = shown.filter((t) => t.group === g.id);
     if (!items.length) continue;
-    grids.appendChild(el("section", { class: "group", id: "g-" + g.id, style: `--ac:${accentOf(g.id)}` }, [
-      el("div", { class: "group-h" }, [
-        el("span", { class: "dot", "aria-hidden": "true" }),
-        el("h2", {}, g.label),
-        el("span", {}, `${items.length} เครื่องมือ`),
-      ]),
-      el("div", { class: "grid" }, items.map((t) => cardOf(t))),
-    ]));
+    // ใส่หัวหมวดคั่นเฉพาะตอนดูทั้งหมด — ถ้ากรองหมวดเดียวอยู่แล้วไม่ต้องซ้ำ
+    if (!activeCat) box.appendChild(el("div", { class: "pill-group" }, [g.label, el("s", {})]));
+    items.forEach((t) => box.appendChild(pillOf(t)));
   }
-}
-
-function renderRecent() {
-  const ids = recentIds();
-  if (ids.length < 2) return;           // มีตัวเดียวยังไม่เป็นประโยชน์ ไม่ต้องรก
-  grids.appendChild(el("section", { class: "group", style: "--ac:var(--brand-text)" }, [
-    el("div", { class: "group-h" }, [
-      el("span", { class: "dot", "aria-hidden": "true" }),
-      el("h2", {}, "เพิ่งใช้ล่าสุด"),
-      el("button", {
-        class: "ob-link", type: "button",
-        onclick: () => { store.set(RECENT_KEY, ""); renderHome(search.value); },
-      }, "ล้างรายการ"),
-    ]),
-    el("div", { class: "grid" }, ids.map((id) => cardOf(byId(id)))),
-  ]));
+  grids.appendChild(box);
 }
 
 function showEmpty(q) {
   grids.appendChild(el("div", { class: "empty" }, [
-    el("b", {}, `ไม่พบเครื่องมือที่ตรงกับ “${q}”`),
-    el("div", {}, "ลองพิมพ์สั้นลง หรือใช้คำอื่น เช่น “PDF” · “Word” · “รูป” · “ไทย”"),
-    el("button", { class: "btn-soft", type: "button", onclick: clearSearch }, "ล้างคำค้นหา แล้วดูทั้งหมด"),
+    el("b", {}, tr(`ไม่พบเครื่องมือที่ตรงกับ “${q}”`, `No tool matches “${q}”`)),
+    el("div", {}, tr("ลองพิมพ์สั้นลง หรือใช้คำอื่น เช่น “PDF” · “Word” · “รูป” · “ไทย”",
+                     "Try a shorter word, or another one — “PDF” · “Word” · “image” · “Excel”")),
+    el("button", { class: "btn-soft", type: "button", onclick: clearSearch }, tr("ล้างคำค้นหา แล้วดูทั้งหมด", "Clear search and show everything")),
   ]));
 }
 
@@ -141,7 +101,7 @@ function renderCats() {
       style: `--ac:${accent}`,
       onclick: () => { activeCat = activeCat === id ? "" : id; renderCats(); renderHome(search.value); },
     }, [label, el("b", {}, String(count))]);
-  cats.appendChild(mk("", "ทั้งหมด", TOOLS.length, "var(--text)"));   // หมวดรวมใช้สีกลาง ไม่แย่งสีประจำหมวด
+  cats.appendChild(mk("", tr("ทั้งหมด", "All"), TOOLS.length, "var(--text)"));   // หมวดรวมใช้สีกลาง ไม่แย่งสีประจำหมวด
   for (const g of GROUPS) {
     const n = TOOLS.filter((t) => t.group === g.id).length;
     if (n) cats.appendChild(mk(g.id, g.short || g.label, n, accentOf(g.id)));
@@ -177,7 +137,7 @@ async function go(id, push = true) {
     const cached = mounted.get(id);
     if (cached) { toolBox.appendChild(cached); return; }
     toolBox.appendChild(el("div", { class: "loading" }, [
-      el("div", { class: "spinner" }), el("div", {}, "กำลังเตรียมเครื่องมือ…"),
+      el("div", { class: "spinner" }), el("div", {}, tr("กำลังเตรียมเครื่องมือ…", "Preparing the tool…")),
     ]));
   });
   window.scrollTo({ top: 0, behavior: "instant" });
@@ -194,8 +154,9 @@ async function go(id, push = true) {
     console.error(err);
     toolBox.innerHTML = "";
     toolBox.appendChild(el("div", { class: "panel" }, [
-      el("div", { class: "status show err" }, "เปิดเครื่องมือไม่สำเร็จ: " + err.message),
-      el("button", { class: "btn", type: "button", onclick: () => { mounted.delete(id); go(id, false); } }, "ลองใหม่"),
+      el("div", { class: "status show err" },
+        tr("เปิดเครื่องมือไม่สำเร็จ: ", "Could not open this tool: ") + err.message),
+      el("button", { class: "btn", type: "button", onclick: () => { mounted.delete(id); go(id, false); } }, tr("ลองใหม่", "Try again")),
     ]));
   }
 }
@@ -203,7 +164,8 @@ async function go(id, push = true) {
 function goHome(push = true) {
   swap(() => {
     document.body.classList.remove("tool");
-    document.title = "FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์";
+    document.title = tr("FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์",
+                        "FileKit — file tools that run in your browser");
     toolBox.innerHTML = "";
     renderHome(search.value);            // อัปเดตแถว "เพิ่งใช้"ให้ทันที
   });
@@ -232,7 +194,7 @@ $("#qclear").addEventListener("click", clearSearch);
 search.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && search.value) { e.preventDefault(); clearSearch(); }
   if (e.key === "ArrowDown" || e.key === "Enter") {
-    const first = grids.querySelector("button.card, button.pill");
+    const first = grids.querySelector("button.pill");
     if (first) { e.preventDefault(); e.key === "Enter" ? first.click() : first.focus(); }
   }
 });
@@ -240,7 +202,7 @@ search.addEventListener("keydown", (e) => {
 /* ── เดินในกริดด้วยลูกศร (นับจำนวนคอลัมน์จากตำแหน่งจริงบนจอ) ── */
 grids.addEventListener("keydown", (e) => {
   if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) return;
-  const list = [...grids.querySelectorAll("button.card, button.pill")];
+  const list = [...grids.querySelectorAll("button.pill")];
   const i = list.indexOf(document.activeElement);
   if (i < 0) return;
   // จำนวนคอลัมน์ = จำนวนการ์ดที่อยู่แถวเดียวกับตัวที่โฟกัสอยู่ (กริดเป็น auto-fill จึงต้องวัดจากของจริง)
@@ -259,7 +221,9 @@ const THEME_SVG = {
   light: `<circle cx="12"cy="12"r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/>`,
   dark:  `<path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/>`,
 };
-const THEME_NAME = { auto: "ตามระบบ", light: "โหมดสว่าง", dark: "โหมดมืด" };
+const THEME_NAME = IS_EN
+  ? { auto: "system", light: "light", dark: "dark" }
+  : { auto: "ตามระบบ", light: "โหมดสว่าง", dark: "โหมดมืด" };
 const themeBtn = $("#theme");
 function applyTheme(v) {
   if (v === "auto") delete document.documentElement.dataset.theme;
@@ -269,27 +233,17 @@ function applyTheme(v) {
   svg.setAttribute("class", "btn-ico"); svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("aria-hidden", "true"); svg.innerHTML = THEME_SVG[v];
   themeBtn.replaceChildren(svg);
-  themeBtn.title = themeBtn.ariaLabel = `ธีม: ${THEME_NAME[v]} (กดเพื่อเปลี่ยน)`;
+  themeBtn.title = themeBtn.ariaLabel = tr(`ธีม: ${THEME_NAME[v]} (กดเพื่อเปลี่ยน)`,
+                                          `Theme: ${THEME_NAME[v]} (click to change)`);
 }
 applyTheme(store.get("fk-theme", "auto"));
 themeBtn.addEventListener("click", () =>
   applyTheme(THEMES[(THEMES.indexOf(store.get("fk-theme", "auto")) + 1) % THEMES.length]));
 
-const densBtn = $("#density");
-function applyView(v) {
-  document.documentElement.dataset.view = v;
-  store.set("fk-view", v);
-  densBtn.setAttribute("aria-pressed", String(v === "detail"));
-  densBtn.replaceChildren(uiIcon(v === "detail" ? "list" : "rows", "btn-ico"));
-  densBtn.title = densBtn.ariaLabel = v === "detail"
-    ? "มุมมองแบบละเอียด (กดเพื่อดูแบบป้ายกลม)"
-    : "มุมมองแบบป้ายกลม (กดเพื่อดูคำอธิบายทุกตัว)";
-}
-applyView(store.get("fk-view", "pill"));
-densBtn.addEventListener("click", () => {
-  applyView(store.get("fk-view", "pill") === "detail" ? "pill" : "detail");
-  renderHome(search.value);
-});
+const langBtn = $("#lang");
+// ป้ายบนปุ่มคือ "ภาษาที่จะเปลี่ยนไป" ไม่ใช่ภาษาปัจจุบัน — กดแล้วได้อย่างที่เห็น
+langBtn.textContent = IS_EN ? "ไทย" : "EN";
+langBtn.addEventListener("click", () => setLang(IS_EN ? "th" : "en"));
 
 /* ── ผูกเหตุการณ์ที่เหลือ ── */
 $("#back").addEventListener("click", () => goHome());

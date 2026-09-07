@@ -190,3 +190,51 @@
 .rep-line span{color:var(--brand);font-weight:600}
 .rep-line.none span{color:var(--text-mute);font-weight:400}
 @media (max-width:560px){ .rep-row{grid-template-columns:1fr auto} .rep-row .mm-arrow{display:none} }
+
+/* ── เซ็นชื่อบน PDF ── */
+.sign-panel{margin-top:16px}
+.sign-h{font-size:15px;margin:0 0 8px}
+.sign-pad-wrap{
+  border:1.5px dashed var(--line);border-radius:var(--r-sm);background:#fff;
+  overflow:hidden;margin-top:4px;
+}
+.sign-canvas{display:block;touch-action:none;cursor:crosshair}
+.sign-saved{margin-top:16px}
+.sign-thumbs{display:flex;gap:10px;flex-wrap:wrap}
+.sign-thumb{
+  position:relative;border:1.5px solid var(--line);border-radius:var(--r-sm);
+  background:#fff;padding:6px 10px;cursor:pointer;transition:border-color .15s;
+}
+.sign-thumb.on{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent)}
+.sign-thumb img{display:block;height:44px;width:auto;max-width:170px;object-fit:contain}
+.sign-thumb .icon-btn{position:absolute;top:-9px;right:-9px;width:22px;height:22px;background:var(--surface);font-size:11px}
+
+.sign-viewer{margin-top:16px}
+.sign-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.sign-bar .btn{padding:7px 14px;font-size:13px}
+.sign-pageno{font-size:13.5px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+/* หน้ากระดาษ A4 เต็มความกว้างจะสูงเกินจอ (เคยได้ 1,264px บนจอ 900px) ทำให้ต้อง
+   เลื่อนหาจุดเซ็นไปมา จึงจำกัดความสูงไม่ให้เกินจอแล้วให้ความกว้างปรับตาม */
+.sign-stage{position:relative;display:inline-block;line-height:0;max-width:100%;
+  border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:#fff}
+.sign-page{display:block;max-width:100%;max-height:68vh;width:auto;height:auto}
+.sign-wrap{display:flex;justify-content:center}
+.sign-layer{position:absolute;inset:0}
+.sign-item{position:absolute;cursor:grab;touch-action:none;line-height:0}
+.sign-item:active{cursor:grabbing}
+.sign-item img{width:100%;height:auto;display:block;pointer-events:none}
+.sign-item::after{content:"";position:absolute;inset:-4px;border:1.5px dashed var(--brand);
+  border-radius:5px;opacity:0;transition:opacity .15s;pointer-events:none}
+.sign-item:hover::after{opacity:.8}
+.sign-del{
+  position:absolute;top:-11px;right:-11px;width:22px;height:22px;border-radius:50%;
+  border:1px solid var(--line);background:var(--surface);color:var(--err);
+  font-size:11px;cursor:pointer;opacity:0;transition:opacity .15s;line-height:1;
+}
+.sign-item:hover .sign-del{opacity:1}
+.sign-size{
+  position:absolute;left:0;right:0;bottom:-26px;width:100%;height:16px;
+  opacity:0;transition:opacity .15s;accent-color:var(--brand);cursor:pointer;
+}
+.sign-item:hover .sign-size{opacity:1}
+.sign-hint{margin-top:11px!important}

@@ -30,6 +30,10 @@ export const TOOLS = [
     desc:"ลดขนาดไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ เทียบขนาดก่อน–หลังให้เห็น",
     libs:["pdfjs","pdflib"], keys:"compress บีบอัด ลดขนาด เล็กลง" },
 
+  { id:"pdf-sign",group:"pdf", icon:"🖊️", title:"เซ็นชื่อบน PDF",
+    desc:"วาดลายเซ็นหรืออัปโหลดรูป แล้วลากไปวางบนเอกสาร เก็บลายเซ็นไว้ใช้ซ้ำได้",
+    libs:["pdfjs","pdflib"], keys:"sign signature เซ็น ลายเซ็น เซ็นชื่อ สัญญา ใบลา อนุมัติ" },
+
   { id:"pdf-watermark",group:"pdf", icon:"💧", title:"ใส่ลายน้ำ PDF",
     desc:"ประทับข้อความไทย–อังกฤษลงทุกหน้า เลือกตำแหน่ง สี และความเข้มได้",
     libs:["pdflib"], keys:"watermark ลายน้ำ ประทับ ลับ confidential ตราประทับ" },

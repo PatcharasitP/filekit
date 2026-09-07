@@ -5,6 +5,7 @@
 // เป็นภาษาไทย ลองใหม่ได้ และแปลง error ทุกชนิดเป็นข้อความที่ทำตามได้
 
 import { el, button } from "./ui.js";
+import { uiIcon } from "./icons.js";
 
 /** แปลง error ของ pdf.js เป็นข้อความไทยที่บอกว่าต้องทำอะไรต่อ */
 export function friendlyPdfError(e) {
@@ -26,7 +27,7 @@ export function passwordBox(container) {
       const input = el("input", { type: "password", placeholder: "รหัสผ่านของไฟล์", autocomplete: "off" });
       const box = el("div", { class: "panel pw-box" }, [
         el("div", { class: "status show " + (wrongBefore ? "err" : "info") },
-          wrongBefore ? "รหัสผ่านไม่ถูกต้อง ลองอีกครั้ง" : "🔒 ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน กรุณาใส่รหัสเพื่อเปิด"),
+          wrongBefore ? "รหัสผ่านไม่ถูกต้อง ลองอีกครั้ง" : "ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน กรุณาใส่รหัสเพื่อเปิด"),
         el("label", { class: "field" }, [el("span", {}, "รหัสผ่าน"), input]),
         el("div", { class: "actions" }, [
           button("ปลดล็อกแล้วทำต่อ", { onclick: () => done(input.value) }),

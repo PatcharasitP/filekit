@@ -436,5 +436,8 @@
   .ws-grid,.ws-grid.no-left,.ws-grid.no-right{grid-template-columns:1fr}
   .ws-panel,.ws-canvas{max-height:none}
   .ws-canvas{min-height:280px}
-  .ws-scroll{max-height:300px}
+  /* แผงตัวเลือก (ขวา) ห้ามมีกรอบเลื่อนซ้อนบนมือถือ — ผู้ใช้จะไม่รู้ว่ามีของอยู่ข้างล่าง
+     ส่วนแผงรายการ (ซ้าย) จำกัดความสูงได้ เพราะรายการยาวได้ไม่จำกัด */
+  .ws-right .ws-scroll{max-height:none}
+  .ws-left .ws-scroll{max-height:340px}
 }

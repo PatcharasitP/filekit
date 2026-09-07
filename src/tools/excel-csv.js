@@ -10,6 +10,7 @@ export function mount(tool) {
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv",
     hint: "Excel → CSV รับครั้งละ 1 ไฟล์ · CSV → Excel เลือกหลายไฟล์ได้ (1 ไฟล์ = 1 ชีท)",
+    expect: ["xlsx", "csv"], expectLabel: "ไฟล์ Excel หรือ CSV",
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 

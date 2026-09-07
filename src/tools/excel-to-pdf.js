@@ -12,6 +12,7 @@ export function mount(tool) {
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv", multiple: false,
     hint: "รองรับ .xlsx · .xls · .csv",
+    expect: ["xlsx", "csv"], expectLabel: "ไฟล์ Excel หรือ CSV",
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
 

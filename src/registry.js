@@ -8,6 +8,7 @@ export const GROUPS = [
   { id: "from-pdf", label: "แปลงจาก PDF" },
   { id: "to-pdf", label: "แปลงเป็น PDF" },
   { id: "image", label: "รูปภาพ" },
+  { id: "ppt", label: "PowerPoint" },
   { id: "data", label: "ตารางและข้อมูล" },
 ];
 
@@ -71,6 +72,14 @@ export const TOOLS = [
   { id:"image-resize",group:"image", icon:"📐", title:"ย่อ–บีบอัดรูปภาพ",
     desc:"ย่อขนาดและลดน้ำหนักไฟล์รูปทีละหลายไฟล์ เห็นขนาดก่อน–หลัง",
     libs:["jszip"], keys:"resize compress ย่อ ลดขนาด บีบอัด รูป" },
+
+  { id:"powerpoint-to-word",group:"ppt", icon:"📽️", title:"PowerPoint → Word",
+    desc:"ดึงข้อความทุกสไลด์ หัวข้อย่อย และโน้ตผู้บรรยาย เป็นเอกสาร Word",
+    libs:["jszip","docx"], keys:"powerpoint ppt pptx สไลด์ word docx โน้ต presentation แปลง" },
+
+  { id:"powerpoint-to-pdf",group:"ppt", icon:"🖥️", title:"PowerPoint → PDF",
+    desc:"จัดสไลด์เป็นไฟล์ PDF อ่านง่าย 1 สไลด์ = 1 หน้า เลือกธีมได้",
+    libs:["jszip","jspdf"], keys:"powerpoint ppt pptx สไลด์ pdf presentation แปลง แจก" },
 
   { id:"excel-csv",   group:"data", icon:"🔁", title:"Excel ⇄ CSV",
     desc:"แปลง XLSX เป็น CSV (แยกทีละชีท) หรือรวม CSV กลับเป็น Excel",

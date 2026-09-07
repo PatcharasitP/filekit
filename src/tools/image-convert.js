@@ -11,6 +11,7 @@ export function mount(tool) {
   const dz = dropzone({
     accept: "image/*",
     hint: "รองรับ JPG · PNG · WEBP · BMP · GIF (เลือกได้หลายไฟล์)",
+    expect: ["image"], expectLabel: "ไฟล์รูปภาพ",
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 

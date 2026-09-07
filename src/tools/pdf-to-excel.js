@@ -1,17 +1,21 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser } from "../ui.js";
 import { pageLines, guessColumns, rowToCells } from "../pdftext.js";
+import { openPdf, passwordBox } from "../pdfopen.js";
+import { ocrPdf, hasTextLayer } from "../ocr.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
   const st = statusBar();
   const results = el("div", { class: "results" });
   const preview = el("div", { class: "preview-text", hidden: true });
+  const extra = el("div", {});
   let file = null;
 
   const dz = dropzone({
+    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
     accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
-    onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; preview.hidden = true; },
+    onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; extra.innerHTML = ""; preview.hidden = true; },
   });
 
   const sheetMode = select([["per-page", "แยกชีทตามหน้า"], ["single", "รวมทุกหน้าในชีทเดียว"]], "per-page");
@@ -20,18 +24,69 @@ export function mount(tool) {
 
   body.append(dz.container,
     el("div", { class: "row" }, [field("การจัดชีท", sheetMode), field("ความเข้มในการจับคอลัมน์", strict, "ถ้าคอลัมน์เพี้ยน ลองสลับค่านี้")]),
-    el("div", { class: "actions" }, [go]), st.node, results, preview);
+    el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
     "ระบบเดาขอบคอลัมน์จากตำแหน่งข้อความจริงในไฟล์ · ตารางที่มีเซลล์ผสาน (merge) หรือข้อความหลายบรรทัดในเซลล์เดียว " +
     "อาจต้องจัดเพิ่มใน Excel เล็กน้อย · ใช้กับ PDF ที่มีชั้นข้อความเท่านั้น (ไฟล์สแกนให้ผ่าน OCR ก่อน)"));
 
+  async function runOcr(pdf) {
+    extra.innerHTML = "";
+    go.disabled = true;
+    st.info("กำลังเตรียมตัวอ่าน OCR…");
+    try {
+      const pages = await ocrPdf(pdf, {
+        onProgress: (p) => {
+          if (p.phase === "page") st.info(`กำลังอ่านหน้า ${p.current}/${p.total} ด้วย OCR…`);
+          else if (p.phase === "read") st.progress(p.ratio * 100);
+        },
+      });
+      const wb = XLSX.utils.book_new();
+      let rows = 0;
+      for (const pg of pages) {
+        const aoa = pg.lines.map((l) => l.split(/\s{2,}|\t+/).map((c) => c.trim()));
+        if (!aoa.length) continue;
+        rows += aoa.length;
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), `หน้า ${pg.page}`);
+      }
+      if (!wb.SheetNames.length) throw new Error("อ่านไม่พบข้อความในไฟล์นี้เลย");
+      const blob = new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })],
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      st.progress(null);
+      st.ok(`อ่านด้วย OCR สำเร็จ ${rows.toLocaleString("th-TH")} แถว · ${wb.SheetNames.length} ชีท`);
+      const name = stripExt(file.name) + ".xlsx";
+      results.innerHTML = "";
+      results.appendChild(el("div", { class: "result" }, [
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, "จาก OCR — ควรตรวจทานคอลัมน์")]),
+        button("⬇ ดาวน์โหลด", { onclick: () => download(blob, name) }),
+      ]));
+    } catch (e) {
+      st.progress(null); st.err("อ่านด้วย OCR ไม่สำเร็จ: " + e.message);
+    } finally { go.disabled = false; pdf.destroy(); }
+  }
+
   async function run() {
     if (!file) return st.err("กรุณาเลือกไฟล์ PDF ก่อน");
-    results.innerHTML = ""; preview.hidden = true;
+    results.innerHTML = ""; extra.innerHTML = ""; preview.hidden = true;
     go.disabled = true;
-    st.info("กำลังอ่านตาราง…");
+    st.info("กำลังเปิดไฟล์…");
     try {
-      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      const pdf = await openPdf(file, passwordBox(extra));
+      if (!(await hasTextLayer(pdf))) {
+        st.progress(null);
+        st.info("ไฟล์นี้ไม่มีชั้นข้อความ (น่าจะเป็นไฟล์สแกน)");
+        extra.appendChild(el("div", { class: "panel" }, [
+          el("div", { class: "note", style: { marginTop: "0" } },
+            "ระบบอ่านตัวเลขและข้อความจากภาพให้ได้ด้วย OCR แล้วจัดเป็นแถวใน Excel ให้ · " +
+            "ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10-30 MB · ‼️ ตารางจาก OCR อาจต้องจัดคอลัมน์เพิ่มเองใน Excel"),
+          el("div", { class: "actions" }, [
+            button("🔍 อ่านด้วย OCR แล้วทำเป็น Excel", { onclick: () => runOcr(pdf) }),
+            button("ยกเลิก", { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),
+          ]),
+        ]));
+        go.disabled = false;
+        return;
+      }
+      st.info("กำลังอ่านตาราง…");
       const wb = XLSX.utils.book_new();
       const all = [];
       let totalRows = 0;
@@ -58,10 +113,10 @@ export function mount(tool) {
       pdf.destroy();
 
       if (sheetMode.value === "single") {
-        if (!all.length) throw new Error("ไม่พบข้อความในไฟล์ — ถ้าเป็นไฟล์สแกน ให้ใช้เครื่องมือ OCR ก่อน");
+        if (!all.length) throw new Error("อ่านไม่พบข้อความในไฟล์นี้เลย");
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(all), "ข้อมูล");
       }
-      if (!wb.SheetNames.length) throw new Error("ไม่พบข้อความในไฟล์ — ถ้าเป็นไฟล์สแกน ให้ใช้เครื่องมือ OCR ก่อน");
+      if (!wb.SheetNames.length) throw new Error("อ่านไม่พบข้อความในไฟล์นี้เลย");
 
       const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });

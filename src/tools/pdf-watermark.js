@@ -1,3 +1,4 @@
+import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, yieldToBrowser } from "../ui.js";
 
@@ -28,6 +29,7 @@ export function mount(tool) {
   let file = null;
 
   const dz = dropzone({
+    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
     accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
@@ -63,7 +65,7 @@ export function mount(tool) {
     st.info("กำลังใส่ลายน้ำ…");
     try {
       const { PDFDocument, degrees } = PDFLib;
-      const doc = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+      const { doc, encrypted } = await loadPdfLib(file);
       const { dataUrl, w, h } = textToPng(text, { color: colorInput.value });
       const png = await doc.embedPng(dataUrl);
       const alpha = +opacity.value / 100;
@@ -107,6 +109,7 @@ export function mount(tool) {
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.progress(null);
       st.ok(`ใส่ลายน้ำครบ ${pages.length} หน้า`);
+      if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(file.name) + "-ลายน้ำ.pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${pages.length} หน้า`)]),

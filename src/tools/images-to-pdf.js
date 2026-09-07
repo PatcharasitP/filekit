@@ -11,6 +11,7 @@ export function mount(tool) {
   const dz = dropzone({
     accept: "image/*", reorder: true,
     hint: "รองรับ JPG · PNG · WEBP · ลากแถวเพื่อจัดลำดับหน้า",
+    expect: ["image"], expectLabel: "ไฟล์รูปภาพ",
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 

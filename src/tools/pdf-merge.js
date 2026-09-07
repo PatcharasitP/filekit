@@ -1,3 +1,4 @@
+import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, download, stripExt, yieldToBrowser } from "../ui.js";
 
 export function mount(tool) {
@@ -9,6 +10,7 @@ export function mount(tool) {
     accept: "application/pdf,.pdf",
     reorder: true,
     hint: "เลือกได้หลายไฟล์ · ลากแถวเพื่อสลับลำดับก่อนรวม",
+    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 
@@ -27,8 +29,10 @@ export function mount(tool) {
     try {
       const { PDFDocument } = PDFLib;
       const out = await PDFDocument.create();
+      let sawEncrypted = false;
       for (let i = 0; i < files.length; i++) {
-        const src = await PDFDocument.load(await files[i].arrayBuffer(), { ignoreEncryption: true });
+        const { doc: src, encrypted } = await loadPdfLib(files[i]);
+        if (encrypted) sawEncrypted = true;
         const pages = await out.copyPages(src, src.getPageIndices());
         pages.forEach((p) => out.addPage(p));
         st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
@@ -37,6 +41,7 @@ export function mount(tool) {
       const blob = new Blob([await out.save()], { type: "application/pdf" });
       st.progress(null);
       st.ok(`รวมเสร็จ ${out.getPageCount()} หน้า จาก ${files.length} ไฟล์`);
+      if (sawEncrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(files[0].name) + "-รวม.pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${out.getPageCount()} หน้า`)]),

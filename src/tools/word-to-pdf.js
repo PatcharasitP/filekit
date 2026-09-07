@@ -12,6 +12,7 @@ export function mount(tool) {
   warmThaiFont(); // เริ่มดึงฟอนต์ตั้งแต่เปิดหน้า ผู้ใช้จะไม่ต้องรอตอนกดแปลง
 
   const dz = dropzone({
+    expect: ["docx"], expectLabel: "ไฟล์ Word (.docx)",
     accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     multiple: false, hint: "รองรับไฟล์ .docx (Word 2007 ขึ้นไป)",
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },

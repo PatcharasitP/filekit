@@ -1,27 +1,6 @@
-// ── ชิ้นส่วน UI ที่ทุกเครื่องมือใช้ร่วมกัน ───────────────────────────────────
-// ไฟล์นี้เล็กและไม่พึ่งไลบรารีภายนอกเลย จึงถูกรวมเข้ากับ chunk ของเครื่องมือ
-// ได้โดยไม่ทำให้หน้าแรกหนักขึ้น
-
-export const $ = (sel, root = document) => root.querySelector(sel);
-export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-
-export function el(tag, attrs = {}, children = []) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v === null || v === undefined || v === false) continue;
-    if (k === "class") n.className = v;
-    else if (k === "html") n.innerHTML = v;
-    else if (k === "text") n.textContent = v;
-    else if (k === "style" && typeof v === "object") Object.assign(n.style, v);
-    else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
-    else n.setAttribute(k, v === true ? "" : v);
-  }
-  for (const c of [].concat(children)) {
-    if (c === null || c === undefined || c === false) continue;
-    n.appendChild(typeof c === "object" ? c : document.createTextNode(String(c)));
-  }
-  return n;
-}
+import { detectType, wrongTypeMessage } from "./filetype.js";
+import { $, $$, el } from "./dom.js";
+export { $, $$, el } from "./dom.js";
 
 export function fmtBytes(b) {
   if (b === null || b === undefined) return "";
@@ -121,6 +100,8 @@ export function dropzone(opts = {}) {
     accept = "*/*", multiple = true, reorder = false,
     hint = "ลากไฟล์มาวาง หรือคลิกเพื่อเลือก",
     onChange = () => {},
+    expect = null,                 // เช่น ["pdf"] — ชนิดไฟล์ที่เครื่องมือนี้รับ
+    expectLabel = "ไฟล์ชนิดที่รองรับ",
   } = opts;
 
   let files = [];
@@ -152,9 +133,43 @@ export function dropzone(opts = {}) {
 
   function add(incoming) {
     if (!incoming.length) return;
-    files = multiple ? files.concat(incoming) : incoming.slice(0, 1);
+    warn.innerHTML = "";
+
+    // กันเคสที่ผู้ใช้ลากไฟล์ผิดชนิดเข้ามา (เช่นเอา PowerPoint ใส่เครื่องมือ PDF)
+    // เดิมไฟล์จะถูกรับเข้าไปแล้วไปพังตอนอ่าน ทำให้ขึ้นว่า "ไฟล์เสียหาย" ซึ่งไม่จริง
+    let usable = incoming;
+    if (expect) {
+      const bad = [];
+      usable = incoming.filter((f) => {
+        const kind = detectType(f);
+        if (kind && expect.includes(kind)) return true;
+        bad.push({ file: f, kind });
+        return false;
+      });
+      if (bad.length) showWrongType(bad);
+      if (!usable.length) return;
+    }
+
+    files = multiple ? files.concat(usable) : usable.slice(0, 1);
     render();
     onChange(files);
+  }
+
+  function showWrongType(bad) {
+    const first = bad[0];
+    const info = wrongTypeMessage(first.kind, expectLabel);
+    const names = bad.map((b) => b.file.name).join(", ");
+    const box = el("div", { class: "wrong-type" }, [
+      el("div", {}, [
+        el("strong", {}, "ไฟล์นี้ใช้กับเครื่องมือนี้ไม่ได้"),
+        el("div", { class: "wt-detail" }, `${info.text} — ${names}`),
+      ]),
+      info.toolId
+        ? el("button", { class: "btn", type: "button",
+            onclick: () => { location.hash = "#/" + info.toolId; } }, `ไปที่ ${info.toolName} →`)
+        : null,
+    ]);
+    warn.appendChild(box);
   }
   function remove(i) { files.splice(i, 1); render(); onChange(files); }
   function move(from, to) {
@@ -204,8 +219,10 @@ export function dropzone(opts = {}) {
   }
 
   const count = el("div", { class: "dz-count" });
-  const container = el("div", {}, [zone, count, list]);
-  return { container, get files() { return files; }, clear() { files = []; render(); onChange(files); } };
+  const warn = el("div", {});
+  const container = el("div", {}, [zone, warn, count, list]);
+  return { container, get files() { return files; },
+           clear() { files = []; warn.innerHTML = ""; render(); onChange(files); } };
 }
 
 /** แปลง "1-3,5,8-" เป็นอาร์เรย์เลขหน้า (ฐาน 1) — ใช้ร่วมหลายเครื่องมือ */

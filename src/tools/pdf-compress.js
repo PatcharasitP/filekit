@@ -1,3 +1,5 @@
+import { openPdf, passwordBox } from "../pdfopen.js";
+import { hasTextLayer } from "../ocr.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 
@@ -12,9 +14,11 @@ export function mount(tool) {
   const { wrap, body } = toolShell(tool);
   const st = statusBar();
   const results = el("div", { class: "results" });
+  const extra = el("div", {});
   let file = null;
 
   const dz = dropzone({
+    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
     accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
     onChange: (f) => {
       file = f[0] || null;
@@ -29,7 +33,7 @@ export function mount(tool) {
 
   body.append(dz.container, origin,
     el("div", { class: "row" }, [field("ระดับการบีบอัด", level)]),
-    el("div", { class: "actions" }, [go]), st.node, results);
+    el("div", { class: "actions" }, [go]), st.node, extra, results);
   body.appendChild(el("div", { class: "note" },
     "วิธีนี้เรนเดอร์แต่ละหน้าเป็นภาพแล้วประกอบกลับเป็น PDF ใหม่ — ได้ผลดีมากกับไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ " +
     "แต่ข้อความในไฟล์จะกลายเป็นภาพ (คัดลอก/ค้นหาข้อความไม่ได้อีก) · " +
@@ -42,8 +46,8 @@ export function mount(tool) {
     st.info("กำลังบีบอัด…");
     try {
       const { scale, q } = LEVELS[level.value];
-      const buf = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+      const pdf = await openPdf(file, passwordBox(extra));
+      const hadText = await hasTextLayer(pdf);
       const { PDFDocument } = PDFLib;
       const out = await PDFDocument.create();
 
@@ -78,7 +82,15 @@ export function mount(tool) {
       const diff = 1 - blob.size / file.size;
       const name = `${stripExt(file.name)}-บีบอัด.pdf`;
       if (diff <= 0.02) {
-        st.err(`บีบแล้วไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — ไฟล์นี้น่าจะเป็นข้อความล้วนอยู่แล้ว แนะนำให้ใช้ไฟล์เดิมต่อไป`);
+        // ตรวจของจริงก่อนบอกสาเหตุ — เดาว่า "ข้อความล้วน" ทั้งที่เป็นไฟล์ภาพ
+        // จะพาผู้ใช้ไปผิดทาง (ไฟล์ภาพที่บีบมาดีแล้วควรได้คำแนะนำคนละแบบ)
+        const textual = hadText;
+        st.err(
+          `บีบแล้วไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — ` +
+          (textual
+            ? "ไฟล์นี้เป็นข้อความล้วนอยู่แล้ว การบีบแบบแปลงเป็นภาพจึงไม่ช่วย แนะนำให้ใช้ไฟล์เดิมต่อไป"
+            : "ไฟล์นี้ถูกบีบมาดีอยู่แล้ว ลองเลือกระดับ “แรง” ดูอีกครั้ง หรือใช้ไฟล์เดิมต่อไป")
+        );
       } else {
         st.ok(`เล็กลง ${Math.round(diff * 100)}% · ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`);
       }

@@ -4,7 +4,7 @@
 
 import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
-import { el, $ } from "./ui.js";
+import { el, $ } from "./dom.js";
 
 const home = $("#home");
 const toolBox = $("#tool");

@@ -1,3 +1,4 @@
+import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, parsePages, fmtBytes, yieldToBrowser } from "../ui.js";
 
@@ -10,6 +11,7 @@ export function mount(tool) {
   const dz = dropzone({
     accept: "application/pdf,.pdf", multiple: false,
     hint: "ครั้งละ 1 ไฟล์",
+    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
 
@@ -37,8 +39,7 @@ export function mount(tool) {
     st.info("กำลังแยกไฟล์…");
     try {
       const { PDFDocument } = PDFLib;
-      const buf = await file.arrayBuffer();
-      const src = await PDFDocument.load(buf, { ignoreEncryption: true });
+      const { doc: src, encrypted } = await loadPdfLib(file);
       const total = src.getPageCount();
 
       // สร้าง "กลุ่มหน้า" ตามโหมดที่เลือก แล้วปั้นไฟล์ทีละกลุ่มด้วยตรรกะเดียวกัน
@@ -70,6 +71,7 @@ export function mount(tool) {
 
       st.progress(null);
       st.ok(`แยกได้ ${made.length} ไฟล์`);
+      if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, `${m.count} หน้า`)]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

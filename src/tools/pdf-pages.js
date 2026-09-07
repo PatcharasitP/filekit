@@ -1,3 +1,4 @@
+import { loadPdfLib, ENCRYPTED_WARNING, openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, download, stripExt, yieldToBrowser } from "../ui.js";
 
 export function mount(tool) {
@@ -5,10 +6,12 @@ export function mount(tool) {
   const st = statusBar();
   const grid = el("div", { class: "pages" });
   const results = el("div", { class: "results" });
+  const extra = el("div", {});
   let file = null;
   let items = []; // {index, rotate, dropped, thumb}
 
   const dz = dropzone({
+    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
     accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
     onChange: (f) => { file = f[0] || null; results.innerHTML = ""; if (file) loadPreview(); else { grid.innerHTML = ""; st.clear(); } },
   });
@@ -19,7 +22,7 @@ export function mount(tool) {
   ]);
   actions.style.display = "none";
 
-  body.append(dz.container, st.node, grid, actions, results);
+  body.append(dz.container, st.node, extra, grid, actions, results);
   body.appendChild(el("div", { class: "note" },
     "คลิก 🗑 เพื่อทำเครื่องหมายลบหน้า (กดซ้ำเพื่อเอากลับ) · ปุ่ม ⟳ หมุนทีละ 90° · ลากการ์ดเพื่อสลับลำดับ แล้วกดบันทึก"));
 
@@ -29,7 +32,7 @@ export function mount(tool) {
     actions.style.display = "none";
     st.info("กำลังสร้างภาพตัวอย่าง…");
     try {
-      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      const pdf = await openPdf(file, passwordBox(extra));
       items = [];
       for (let p = 1; p <= pdf.numPages; p++) {
         const page = await pdf.getPage(p);
@@ -109,7 +112,7 @@ export function mount(tool) {
     st.info("กำลังบันทึก…");
     try {
       const { PDFDocument, degrees } = PDFLib;
-      const src = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+      const { doc: src, encrypted } = await loadPdfLib(file);
       const out = await PDFDocument.create();
       const copied = await out.copyPages(src, keep.map((k) => k.index));
       copied.forEach((page, i) => {
@@ -121,6 +124,7 @@ export function mount(tool) {
       });
       const blob = new Blob([await out.save()], { type: "application/pdf" });
       st.ok(`บันทึกแล้ว ${keep.length} หน้า`);
+      if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(file.name) + "-จัดหน้าใหม่.pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, `${keep.length} หน้า`)]),

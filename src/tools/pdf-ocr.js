@@ -1,16 +1,19 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, parsePages, yieldToBrowser } from "../ui.js";
+import { openPdf, passwordBox } from "../pdfopen.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
   const st = statusBar();
   const results = el("div", { class: "results" });
   const preview = el("div", { class: "preview-text", hidden: true });
+  const extra = el("div", {});
   let file = null, worker = null;
 
   const dz = dropzone({
     accept: "application/pdf,.pdf,image/*", multiple: false,
     hint: "รองรับ PDF สแกน และไฟล์รูปภาพ",
+    expect: ["pdf", "image"], expectLabel: "ไฟล์ PDF หรือรูปภาพ",
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; preview.hidden = true; },
   });
 
@@ -23,7 +26,7 @@ export function mount(tool) {
     el("div", { class: "row" }, [field("ภาษาในเอกสาร", lang),
       field("หน้าที่ต้องการ", rangeInput, "ว่าง = ทุกหน้า · แนะนำทดลองหน้าเดียวก่อน"),
       field("ความละเอียดในการอ่าน", quality)]),
-    el("div", { class: "actions" }, [go]), st.node, results, preview);
+    el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
     "ครั้งแรกของแต่ละภาษาจะต้องดาวน์โหลดชุดข้อมูลการอ่าน (ภาษาไทยประมาณ 10-30 MB) เบราว์เซอร์จะเก็บไว้ใช้ซ้ำครั้งต่อไป · " +
     "การอ่านใช้เวลาราว 3-15 วินาทีต่อหน้าขึ้นกับเครื่อง · ทั้งหมดทำงานในเครื่องคุณเอง ไม่มีการส่งไฟล์ออกไปไหน"));
@@ -31,7 +34,7 @@ export function mount(tool) {
   async function pageImages() {
     // คืนรายการ dataURL ของภาพที่จะส่งให้ OCR — รองรับทั้ง PDF และไฟล์รูป
     if (file.type.startsWith("image/")) return [{ label: file.name, url: URL.createObjectURL(file) }];
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const pdf = await openPdf(file, passwordBox(extra));
     const pages = parsePages(rangeInput.value || "1-", pdf.numPages);
     if (!pages.length) throw new Error(`ไฟล์นี้มี ${pdf.numPages} หน้า — ช่วงที่ระบุไม่ตรงกับหน้าใดเลย`);
     const out = [];

@@ -9,6 +9,7 @@ export function mount(tool) {
   const dz = dropzone({
     accept: "image/*",
     hint: "เลือกได้หลายไฟล์ · ย่อและบีบอัดพร้อมกันทั้งชุด",
+    expect: ["image"], expectLabel: "ไฟล์รูปภาพ",
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 

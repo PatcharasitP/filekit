@@ -1,3 +1,4 @@
+import { openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, parsePages, fmtBytes, yieldToBrowser } from "../ui.js";
 
@@ -5,9 +6,11 @@ export function mount(tool) {
   const { wrap, body } = toolShell(tool);
   const st = statusBar();
   const results = el("div", { class: "results" });
+  const extra = el("div", {});
   let file = null;
 
   const dz = dropzone({
+    expect: ["pdf"], expectLabel: "ไฟล์ PDF",
     accept: "application/pdf,.pdf", multiple: false, hint: "ครั้งละ 1 ไฟล์",
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
@@ -20,7 +23,7 @@ export function mount(tool) {
   body.append(dz.container,
     el("div", { class: "row" }, [field("ชนิดรูป", fmt), field("ความละเอียด", dpi),
       field("หน้าที่ต้องการ", rangeInput, "ว่างไว้ = ทุกหน้า")]),
-    el("div", { class: "actions" }, [go]), st.node, results);
+    el("div", { class: "actions" }, [go]), st.node, extra, results);
 
   async function run() {
     if (!file) return st.err("กรุณาเลือกไฟล์ PDF ก่อน");
@@ -28,8 +31,7 @@ export function mount(tool) {
     go.disabled = true;
     st.info("กำลังเปิดไฟล์…");
     try {
-      const buf = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const pdf = await openPdf(file, passwordBox(extra));
       const pages = parsePages(rangeInput.value || "1-", pdf.numPages);
       if (!pages.length) throw new Error(`ไฟล์นี้มี ${pdf.numPages} หน้า — ช่วงที่ระบุไม่ตรงกับหน้าใดเลย`);
 

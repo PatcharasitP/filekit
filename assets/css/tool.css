@@ -163,3 +163,30 @@
   .mm-grid select{margin-bottom:8px}
 }
 .mm-loop{color:var(--warn)!important;border-color:color-mix(in srgb,var(--warn) 40%,transparent)!important}
+
+/* ── ตรวจเอกสารก่อนส่ง ── */
+.clean-card{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:13px 16px;margin-top:10px}
+.clean-head{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:14px}
+.clean-list{margin:9px 0 0;padding-left:19px;font-size:13.5px;color:var(--text-dim);line-height:1.75}
+.clean-list li.bad{color:var(--err);font-weight:600}
+.clean-ok{margin:7px 0 0;font-size:13.5px;color:var(--ok)}
+.clean-opts{margin-top:18px;display:flex;flex-direction:column;gap:9px}
+.clean-check{display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text-dim);cursor:pointer;line-height:1.6}
+.clean-check input{margin-top:5px;flex:none;width:16px;height:16px;accent-color:var(--brand)}
+.clean-check:hover span{color:var(--text)}
+
+/* ── ค้นหา–แทนที่ทั้งชุด ── */
+.rep-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px}
+.rep-head .btn{padding:6px 14px;font-size:12.5px}
+.rep-rules{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.rep-row{display:grid;grid-template-columns:1fr auto 1fr auto;gap:9px;align-items:center}
+.rep-row input[type=text]{
+  font-family:inherit;font-size:14px;padding:8px 12px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:var(--bg-soft);color:var(--text);width:100%;
+}
+.rep-preview{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.rep-line{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;font-size:13.5px;
+  background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:8px 13px}
+.rep-line span{color:var(--brand);font-weight:600}
+.rep-line.none span{color:var(--text-mute);font-weight:400}
+@media (max-width:560px){ .rep-row{grid-template-columns:1fr auto} .rep-row .mm-arrow{display:none} }

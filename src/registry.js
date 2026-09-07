@@ -55,7 +55,7 @@ export const TOOLS = [
     libs:["pdfjs","xlsx"], keys:"excel xlsx ตาราง table sheet" },
 
   { id:"word-to-pdf", group:"to-pdf", icon:"📘", title:"Word → PDF",
-    desc:"แปลง DOCX เป็น PDF รองรับภาษาไทยเต็มรูปแบบ",
+    desc:"แปลง DOCX เป็น PDF รองรับภาษาไทยเต็มรูปแบบ ทำได้ทีละหลายไฟล์",
     libs:["mammoth","jspdf"], keys:"word docx pdf แปลง" },
 
   { id:"excel-to-pdf",group:"to-pdf", icon:"📕", title:"Excel → PDF",
@@ -73,6 +73,18 @@ export const TOOLS = [
   { id:"image-resize",group:"image", icon:"📐", title:"ย่อ–บีบอัดรูปภาพ",
     desc:"ย่อขนาดและลดน้ำหนักไฟล์รูปทีละหลายไฟล์ เห็นขนาดก่อน–หลัง",
     libs:["jszip"], keys:"resize compress ย่อ ลดขนาด บีบอัด รูป" },
+
+  { id:"word-join",group:"doc", icon:"🔗", title:"รวมไฟล์ Word",
+    desc:"ต่อเอกสารหลายไฟล์เป็นเล่มเดียว พร้อมรูปภาพครบ ลากจัดลำดับได้",
+    libs:["jszip"], keys:"merge join รวม ต่อ เอกสาร word docx เล่ม รายงาน" },
+
+  { id:"word-replace",group:"doc", icon:"✏️", title:"ค้นหา–แทนที่ทั้งชุด",
+    desc:"แก้คำเดิมพร้อมกันหลายไฟล์ เช่นเปลี่ยนชื่อบริษัทหรือปีในเอกสารทั้งกอง",
+    libs:["jszip"], keys:"find replace ค้นหา แทนที่ หลายไฟล์ batch แก้ทั้งชุด word" },
+
+  { id:"word-clean",group:"doc", icon:"🧹", title:"ตรวจเอกสารก่อนส่ง",
+    desc:"หาคอมเมนต์ค้าง ประวัติแก้ไข และชื่อผู้เขียนที่ติดมากับไฟล์ แล้วล้างให้ในคลิกเดียว",
+    libs:["jszip"], keys:"clean metadata comment track changes ตรวจ ล้าง คอมเมนต์ ประวัติ ผู้เขียน ความลับ ส่งออก" },
 
   { id:"word-mailmerge",group:"doc", icon:"📬", title:"จดหมายเวียน Word + Excel",
     desc:"เอาข้อมูลจาก Excel เติมลงเทมเพลต Word ทีละแถว ได้เอกสารครบทั้งชุดในครั้งเดียว",

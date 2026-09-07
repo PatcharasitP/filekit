@@ -11,8 +11,8 @@
 .tool-head p{margin:3px 0 0;color:var(--text-dim);font-size:13.5px;max-width:70ch}
 
 .panel{
-  background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r);
-  padding:clamp(14px,3vw,22px);box-shadow:var(--shadow);
+  background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  padding:clamp(14px,3vw,22px);box-shadow:var(--shadow), var(--ring-top);
 }
 .panel + .panel{margin-top:14px}
 .note{font-size:12.5px;color:var(--text-mute);margin-top:10px;line-height:1.6}
@@ -21,9 +21,12 @@
 .dz{
   border:1.5px dashed var(--line);border-radius:var(--r);padding:20px 18px;text-align:center;
   cursor:pointer;background:var(--bg-soft);
-  transition:border-color .15s,background .15s,transform .15s;
+  transition:border-color .15s,background .15s,transform var(--t-panel,.22s) var(--ease-spring,ease),box-shadow var(--t-panel,.22s) var(--ease-spring,ease);
 }
 .dz:hover,.dz:focus-visible{border-color:var(--ac,var(--brand));background:var(--card-hi);outline:none}
+/* เดิม hover มีแค่เปลี่ยนสีเส้นขอบ ไม่ยกตัวเลย — ปุ่ม/ป้ายบนหน้าแรกทุกอันสปริงตอน hover
+   ให้กล่องลากไฟล์เป็นจุดที่ผู้ใช้เจอก่อนสิ่งอื่นในหน้าเครื่องมือก็ควรมีความรู้สึกเดียวกัน */
+.dz:hover{transform:translateY(-2px);box-shadow:0 14px 28px -18px color-mix(in srgb,var(--ac,var(--brand)) 55%,transparent)}
 .dz.over{
   border-color:var(--ac,var(--brand));border-style:solid;transform:scale(1.008);
   background:color-mix(in srgb,var(--ac,var(--brand)) 10%,var(--card-hi));
@@ -32,7 +35,7 @@
 .dz-main{font-weight:700;margin-top:6px}
 .dz-hint{font-size:12.5px;color:var(--text-mute);margin-top:4px}
 .dz-safe{font-size:11.5px;color:var(--text-mute);margin-top:9px;opacity:.85}
-@media (prefers-reduced-motion: reduce){ .dz.over{transform:none} }
+@media (prefers-reduced-motion: reduce){ .dz.over,.dz:hover{transform:none;box-shadow:none} }
 .dz-count{font-size:12.5px;color:var(--text-dim);margin:10px 2px 0}
 
 .files{display:flex;flex-direction:column;gap:6px;margin-top:8px}
@@ -57,19 +60,32 @@
   border:1px solid var(--line);background:var(--bg-soft);color:var(--text);width:100%;
 }
 .field input:focus,.field select:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:transparent}
+/* input[type=color] ของเบราว์เซอร์ไม่รับ padding ตามปกติ (ปุ่มสีลอยชิดซ้าย เหลือพื้นที่ว่างขวาเยอะ
+   เห็นชัดสุดในหน้าใส่ลายน้ำ PDF) เลยแยกสไตล์ให้เป็นแท่งสีเต็มบล็อกแบบเดียวกับ field อื่น ๆ */
+.field input[type=color]{padding:4px;height:40px;cursor:pointer}
+.field input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.field input[type=color]::-webkit-color-swatch{border:none;border-radius:calc(var(--r-sm) - 4px)}
+.field input[type=color]::-moz-color-swatch{border:none;border-radius:calc(var(--r-sm) - 4px)}
 
 .btn{
   border:0;border-radius:999px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;
   background:var(--btn-bg);color:var(--btn-fg);
-  box-shadow:none;
-  transition:filter var(--t-btn,.1s) var(--ease-snap,ease), transform var(--t-btn,.1s) var(--ease-snap,ease);
   box-shadow:0 6px 18px color-mix(in srgb,var(--brand) 35%,transparent);
-  transition:transform .12s,filter .12s;
+  transition:transform var(--t-panel,.22s) var(--ease-spring,ease), filter var(--t-btn,.1s) var(--ease-snap,ease), box-shadow var(--t-panel,.22s) var(--ease-spring,ease);
 }
-.btn:hover{filter:brightness(1.07)}
+/* สปริงยกตัวแบบเดียวกับ .pill/.next-card บนหน้าแรก (--ease-spring) แทนที่จะมีแค่ brightness
+   ซึ่งบนปุ่มโทนขาว/เข้มเกือบดำแทบมองไม่เห็นความต่างตอน hover */
+.btn:hover{filter:brightness(1.07);transform:translateY(-2px);box-shadow:0 10px 24px -6px color-mix(in srgb,var(--brand) 42%,transparent)}
 .btn:active{transform:translateY(1px)}
 .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;filter:grayscale(.65)}
-.btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line);box-shadow:none}
+.btn.ghost{
+  background:var(--card);color:var(--text);border:1px solid var(--line);
+  box-shadow:0 1px 2px rgba(0,0,0,.06), var(--ring-top);
+}
+/* เดิม ghost ใช้ background:var(--card) เหมือนพื้นแผงที่มันวางอยู่เสมอ (ws-head/.panel ก็ var(--card))
+   ปุ่มเลยแทบล่องหน โดยเฉพาะธีมสว่างที่เส้นขอบ var(--line) จางมาก (เคยเจอกับปุ่ม "รีเซ็ตตำแหน่งเลื่อน") */
+.btn.ghost:hover{filter:none;background:var(--card-hi);border-color:color-mix(in srgb,var(--ac,var(--brand)) 55%,var(--line))}
+@media (prefers-reduced-motion: reduce){ .btn{transition:filter var(--t-btn,.1s) ease} .btn:hover{transform:none} }
 .btn.danger{background:linear-gradient(135deg,#ff6b81,#ff9068)}
 .icon-btn{
   border:1px solid var(--line);background:var(--card);color:var(--text-dim);cursor:pointer;
@@ -81,11 +97,13 @@
 
 /* ---- status / progress ---- */
 .status-wrap{margin-top:14px}
-.status{display:none;font-size:13.5px;padding:10px 14px;border-radius:var(--r-sm);font-weight:600}
+.status{display:none;font-size:13.5px;padding:10px 14px;border-radius:var(--r-sm);font-weight:600;border:1px solid transparent}
 .status.show{display:block}
-.status.info{background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand)}
-.status.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
-.status.err{background:color-mix(in srgb,var(--err) 15%,transparent);color:var(--err)}
+/* เดิมไม่มีเส้นขอบเลย มีแค่พื้นย้อมสี — ในขณะที่กล่องแจ้งเตือนแบบอื่นในหน้าเดียวกัน
+   (.fail-box, .wrong-type, .stat) ทุกกล่องมีเส้นขอบย้อมสีคู่กับพื้นเสมอ ทำให้ .status ดูจางกว่าเพื่อนแบบไม่มีเหตุผล */
+.status.info{background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand);border-color:color-mix(in srgb,var(--brand) 30%,transparent)}
+.status.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 32%,transparent)}
+.status.err{background:color-mix(in srgb,var(--err) 15%,transparent);color:var(--err);border-color:color-mix(in srgb,var(--err) 32%,transparent)}
 .progress{display:none;height:7px;border-radius:99px;background:var(--bg-soft);overflow:hidden;margin-top:10px;border:1px solid var(--line-soft)}
 .progress.show{display:block}
 .progress .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .18s ease}
@@ -181,7 +199,7 @@
 .mm-loop{color:var(--warn)!important;border-color:color-mix(in srgb,var(--warn) 40%,transparent)!important}
 
 /* ── ตรวจเอกสารก่อนส่ง ── */
-.clean-card{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:13px 16px;margin-top:10px}
+.clean-card{background:var(--surface-2,var(--bg-soft));border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:13px 16px;margin-top:10px}
 .clean-head{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:14px}
 .clean-list{margin:9px 0 0;padding-left:19px;font-size:13.5px;color:var(--text-dim);line-height:1.75}
 .clean-list li.bad{color:var(--err);font-weight:600}
@@ -202,7 +220,7 @@
 }
 .rep-preview{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .rep-line{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;font-size:13.5px;
-  background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:8px 13px}
+  background:var(--surface-2,var(--bg-soft));border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:8px 13px}
 .rep-line span{color:var(--brand);font-weight:600}
 .rep-line.none span{color:var(--text-mute);font-weight:400}
 @media (max-width:560px){ .rep-row{grid-template-columns:1fr auto} .rep-row .mm-arrow{display:none} }
@@ -223,7 +241,7 @@
 }
 .sign-thumb.on{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent)}
 .sign-thumb img{display:block;height:44px;width:auto;max-width:170px;object-fit:contain}
-.sign-thumb .icon-btn{position:absolute;top:-9px;right:-9px;width:22px;height:22px;background:var(--surface);font-size:11px}
+.sign-thumb .icon-btn{position:absolute;top:-9px;right:-9px;width:22px;height:22px;background:var(--surface,var(--card));font-size:11px}
 
 .sign-viewer{margin-top:16px}
 .sign-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
@@ -244,7 +262,7 @@
 .sign-item:hover::after{opacity:.8}
 .sign-del{
   position:absolute;top:-11px;right:-11px;width:22px;height:22px;border-radius:50%;
-  border:1px solid var(--line);background:var(--surface);color:var(--err);
+  border:1px solid var(--line);background:var(--surface,var(--card));color:var(--err);
   font-size:11px;cursor:pointer;opacity:0;transition:opacity .15s;line-height:1;
 }
 .sign-item:hover .sign-del,.sign-item:focus-within .sign-del{opacity:1}
@@ -266,7 +284,7 @@
 }
 .sample-box > div:first-child{flex:1;min-width:230px}
 .sample-links{display:flex;gap:7px;flex-wrap:wrap}
-.sample-links .chip{background:var(--surface);font-size:12px;padding:6px 12px}
+.sample-links .chip{background:var(--surface,var(--card));font-size:12px;padding:6px 12px}
 
 /* ── ชุดเครื่องมือไทย: ชิปสรุป + ตารางพรีวิว ── */
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 10px}

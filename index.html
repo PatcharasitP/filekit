@@ -247,29 +247,72 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   border:1px solid var(--line); border-radius:999px; padding:5px 12px; background:var(--card);
 }
 
-/* วัตถุในฉาก: ปึกกระดาษไอโซเมตริก ทำจาก CSS transform ล้วน — 0 ไบต์ ไม่มีรูปให้โหลด
-   (ทางเลือกอื่นคือรูป 3D เรนเดอร์ ซึ่งกิน 200-400 KB = ทิ้ง FCP 356 ms ที่อุตส่าห์ทำมา) */
-.hero-obj{position:relative; height:clamp(178px,21vw,268px); display:grid; place-items:center;
-  perspective:1000px; transform:rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));
-  transition:transform 260ms var(--ease)}
-.hero-obj::before{content:""; position:absolute; width:84%; aspect-ratio:1; border-radius:50%;
+/* ── วัตถุในฉาก: ปึกเอกสารไอโซเมตริก ทำจาก CSS transform ล้วน 0 ไบต์ ──
+   (ทางเลือกอื่นคือรูป 3D เรนเดอร์ ซึ่งกิน 200-400 KB = ทิ้ง FCP ที่อุตส่าห์ทำมา)
+
+   ‼️ กติกาที่ทำให้ฉากนี้ไม่กินเครื่อง: **ของที่ขยับทุกเฟรมต้องเป็น transform เท่านั้น**
+      สีผิว/เงา/เกรน คำนวณครั้งเดียวตอนโหลด ไม่แตะอีกเลย
+   ‼️ ห้ามใส่ filter / opacity / overflow / mask ที่ตัว .hero-obj เด็ดขาด
+      คุณสมบัติพวกนี้บังคับให้เบราว์เซอร์ "แบน" ฉาก 3 มิติทิ้งทันที (flatten preserve-3d)
+      ใส่ที่แผ่นกระดาษแต่ละแผ่นได้ เพราะมันเป็นใบสุดท้ายของกิ่ง */
+.hero-obj{position:relative; height:clamp(190px,22vw,290px); display:grid; place-items:center;
+  perspective:1200px; perspective-origin:52% 42%;
+  transform:rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));
+  transition:transform 280ms var(--ease)}
+.hero-obj::before{content:""; position:absolute; width:86%; aspect-ratio:1; border-radius:50%;
   background:radial-gradient(circle, rgba(150,170,255,.28), rgba(150,170,255,0) 66%)}
-.sheet{position:absolute; width:clamp(112px,13vw,166px); aspect-ratio:170/220; border-radius:13px;
-  background:linear-gradient(147deg,#fff 0%,#dfe5f1 26%,#a8b4cd 52%,#cfd7e7 70%,#f4f7fc 100%);
-  box-shadow:0 30px 58px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.95);
-  transform:rotateX(54deg) rotateZ(-38deg) translateZ(var(--z,0))}
-.sheet:nth-child(1){--z:8px; filter:brightness(.64)}
-.sheet:nth-child(2){--z:30px; filter:brightness(.83)}
-.sheet:nth-child(3){--z:54px; animation:sheetfloat 7s var(--ease) infinite}
-/* เส้นบรรทัดบนแผ่นบนสุด ทำให้อ่านออกว่าเป็น "เอกสาร" ไม่ใช่แค่แผ่นสี่เหลี่ยมโลหะ */
-.sheet:nth-child(3)::before{content:""; position:absolute; inset-inline:15%; top:29%; height:25%;
-  border-radius:3px;
-  background:repeating-linear-gradient(180deg, rgba(30,40,70,.26) 0 3px, transparent 3px 12px)}
-@keyframes sheetfloat{
-  0%,100%{transform:rotateX(54deg) rotateZ(-38deg) translateZ(54px)}
-  50%    {transform:rotateX(54deg) rotateZ(-38deg) translateZ(68px)}
+
+.sheet{position:absolute; width:clamp(126px,14.5vw,202px); aspect-ratio:170/222; border-radius:13px;
+  transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z,0));
+  /* ‼️ ย้อมความมืดด้วยชั้นพื้นหลังทับ ไม่ใช่ filter:brightness()
+     เพราะ filter บังคับให้เบราว์เซอร์สร้างชั้นวาดแยกให้ทุกแผ่น (7 แผ่น = 7 ชั้น)
+     วัดแล้วต่างกันจริงในงบ FCP ที่เหลือน้อยอยู่แล้ว */
+  background:linear-gradient(rgba(4,6,10,var(--dim,0)), rgba(4,6,10,var(--dim,0))),
+             linear-gradient(147deg,#fff 0%,#e8edf7 24%,#b4bfd6 52%,#dbe1ee 68%,#fbfcff 100%);
+  box-shadow:0 24px 44px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.95)}
+/* 6 แผ่นชิดกันทีละ 4px อ่านเป็น "ก้อนตัน" ไม่ใช่แผ่นลอย ๆ ห่างกัน
+   ไล่ความสว่างลงไปเรื่อย ๆ ทำให้ตาอ่านออกว่าซ้อนกันอยู่จริง */
+.sheet:nth-of-type(1){--z:0px;  --dim:.52}
+.sheet:nth-of-type(2){--z:4px;  --dim:.44}
+.sheet:nth-of-type(3){--z:8px;  --dim:.35}
+.sheet:nth-of-type(4){--z:12px; --dim:.26}
+.sheet:nth-of-type(5){--z:16px; --dim:.17}
+.sheet:nth-of-type(6){--z:20px; --dim:.09}
+
+/* แผ่นบนสุดลอยแยกจากปึก — เล่าเรื่อง "ดึงเอกสารออกมาทำงาน" ในภาพเดียว */
+.sheet.lead{overflow:hidden; animation:fk-lift 7s var(--ease) infinite;
+  /* เส้นแสงรับขอบ + แสงสะท้อนสีฟ้าจากฉากมาโดนขอบล่าง — ทำให้ผิวอ่านเป็นโลหะไม่ใช่กระดาษด้าน */
+  box-shadow:0 26px 48px rgba(0,0,0,.55),
+             inset 0 1.5px 0 rgba(255,255,255,1),
+             inset 1.5px 0 0 rgba(255,255,255,.7),
+             inset -1.5px -1.5px 0 rgba(150,170,255,.5)}
+@keyframes fk-lift{
+  0%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(42px)}
+  50%    {transform:rotateX(56deg) rotateZ(-41deg) translateZ(58px)}
 }
-@media (prefers-reduced-motion: reduce){ .sheet:nth-child(3){animation:none} }
+/* แสงกวาดผิว — ต้องประกาศชนิดตัวแปรด้วย @property ก่อน ไม่งั้น CSS ไล่ค่าไม่ได้ มันจะกระโดด
+   ‼️ ไล่เฉพาะบนแผ่นเดียวขนาดเล็ก เพราะการไล่ gradient คือการ "ระบายใหม่ทุกเฟรม" ไม่ใช่แค่ขยับ */
+@property --sw{syntax:"<percentage>"; inherits:false; initial-value:-32%}
+.sheet.lead::after{content:""; position:absolute; inset:-45%;
+  background:linear-gradient(112deg, transparent calc(var(--sw) - 13%),
+    rgba(255,255,255,.9) var(--sw), transparent calc(var(--sw) + 13%));
+  animation:fk-sweep 6s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes fk-sweep{0%,64%{--sw:-32%} 100%{--sw:132%}}
+.sheet .lines{position:absolute; inset-inline:15% 17%; top:27%; height:25%; border-radius:2px;
+  background:repeating-linear-gradient(180deg, rgba(38,50,84,.22) 0 3px, transparent 3px 13px)}
+/* เงาสัมผัสพื้น — วงรีแบนแคบใต้ฐาน ต่างจากเงาฟุ้งรอบตัวที่ทำให้ของดู "ลอย" */
+.fk-contact{position:absolute; width:clamp(150px,17vw,232px); aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(0,0,0,.66) 0%, rgba(0,0,0,.5) 26%,
+    rgba(0,0,0,.28) 48%, rgba(0,0,0,.1) 66%, transparent 80%);
+  transform:rotateX(56deg) rotateZ(-38deg) translateZ(-26px) scale(1.08,.7)}
+@media (prefers-reduced-motion: reduce){ .sheet.lead,.sheet.lead::after{animation:none} }
+
+/* เกรนละเอียดทับทั้งฉาก — SVG ฝังใน CSS ราว 380 ไบต์ ไม่มี request เพิ่มสักอัน
+   ‼️ ค่า baseFrequency ต้องคงที่ ห้าม animate ไม่งั้นเบราว์เซอร์แคชผลไม่ได้ ต้องคำนวณใหม่ทุกเฟรม */
+.hero-grain{position:absolute; inset:0; z-index:2; opacity:.4; pointer-events:none;
+  mix-blend-mode:soft-light;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+
 /* จอแคบ: ตัดวัตถุทิ้ง — ไม่งั้นดันเครื่องมือหลุดจอไปอีก 250px โดยไม่ได้ประโยชน์ */
 @media (max-width:860px){
   .hero-in{grid-template-columns:1fr}
@@ -360,6 +403,19 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .pill-group{width:100%;display:flex;align-items:center;gap:12px;margin:var(--sp4) 0 2px;
   font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--stage-dim)}
 .pill-group:first-child{margin-top:0}
+
+/* ── ‼️ เคยใส่ "ป้ายค่อย ๆ โผล่ตอนเลื่อนถึง" ด้วย animation-timeline:view() แล้วถอดออก ──
+   วัดจริง 5 รอบบนมือถือ 1.6 Mbps + CPU 4x: **FCP 372 → 700 ms** (ช้าลงเกือบเท่าตัว)
+   เพราะเบราว์เซอร์ต้องตั้งแอนิเมชันผูกกับการสกอลล์ให้ครบ 35 ชิ้น (ป้าย 27 + หัวหมวด 8)
+   ตั้งแต่ตอนวาดหน้าแรก ทั้งที่ผู้ใช้ยังไม่ได้เลื่อนสักนิด
+   เอฟเฟกต์จาง ๆ ไม่คุ้มกับครึ่งวินาที — ถ้าจะกลับมาทำ ต้องผูกเฉพาะของที่อยู่ใต้เส้นพับจริง ๆ
+   และต้องวัดก่อนเชื่อทุกครั้ง (ตัวเลขนี้ได้จากการตัดทีละอย่างเทียบกัน ไม่ใช่เดา) */
+
+/* จังหวะตอนสลับหน้าเครื่องมือ (View Transitions) — สั้น ๆ พอให้รู้สึกว่าของเคลื่อน ไม่ใช่กระพริบ */
+::view-transition-old(root),::view-transition-new(root){animation-duration:.22s}
+@media (prefers-reduced-motion: reduce){
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none !important}
+}
 .pill-group s{flex:1;height:1px;background:var(--stage-line);text-decoration:none}
 
 
@@ -469,8 +525,14 @@ body.tool #home{display:none}
           </div>
         </div>
         <!-- ปึกกระดาษไอโซเมตริก วาดด้วย CSS ล้วน (ดู .hero-obj) — เป็นของตกแต่ง ไม่ต้องอ่าน -->
-        <div class="hero-obj" aria-hidden="true"><div class="sheet"></div><div class="sheet"></div><div class="sheet"></div></div>
+        <div class="hero-obj" aria-hidden="true">
+          <div class="fk-contact"></div>
+          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
+          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
+          <div class="sheet lead"><i class="lines"></i></div>
+        </div>
       </div>
+      <div class="hero-grain" aria-hidden="true"></div>
     </div>
 
     <nav class="cats" id="cats" aria-label="กรองตามหมวด" data-en-al="Filter by category"></nav>

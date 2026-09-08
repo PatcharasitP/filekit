@@ -260,8 +260,20 @@ function withYear(y, rest) {
   let guessedYear = false;
   if (y < 100) { y = 2500 + y; guessedYear = true; } // "69" → เดาว่า พ.ศ. 2569
   if (rest.m != null && (rest.m < 1 || rest.m > 12)) return null;
-  if (rest.d != null && (rest.d < 1 || rest.d > 31)) return null;
+  // ‼️ เดิมเช็คแค่ 1-31 แบบกว้าง ๆ → "31 เมษายน" หรือ "30 กุมภาพันธ์" หลุดผ่านเป็นวันที่ใช้ได้
+  //    คนเอาไปแปลงคอลัมน์วันที่ในไฟล์งานจริง ถ้าต้นทางพิมพ์ผิดต้องบอกว่าผิด ไม่ใช่แปลงเงียบ ๆ
+  //    ‼️ ต้องแปลง พ.ศ. เป็น ค.ศ. ก่อนคำนวณปีอธิกสุรทิน ไม่งั้นผลผิดทุกปี
+  if (rest.d != null && rest.d < 1) return null;
+  if (rest.d != null && rest.m != null && rest.d > daysInMonth(toCE(y), rest.m)) return null;
+  if (rest.d != null && rest.m == null && rest.d > 31) return null;
   return { y, ...rest, guessedYear };
+}
+
+/** จำนวนวันจริงของเดือนนั้นในปีนั้น (รับปี ค.ศ. เท่านั้น) — กุมภาพันธ์ 29 วันเฉพาะปีอธิกสุรทิน
+ *  กฎอธิกสุรทิน: หาร 4 ลงตัว ยกเว้นหาร 100 ลงตัว แต่ถ้าหาร 400 ลงตัวก็เป็นอีก (เช่น 2000 เป็น, 1900 ไม่เป็น) */
+export function daysInMonth(ceYear, month) {
+  const leap = (ceYear % 4 === 0 && ceYear % 100 !== 0) || ceYear % 400 === 0;
+  return [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1] ?? 31;
 }
 
 export const isBE = (y) => y >= 2400;
@@ -290,8 +302,15 @@ export function formatDate(p, fmt) {
 /* ══ ส่วนที่ 4 · เลขบัตรประชาชน / เลขประจำตัวผู้เสียภาษี 13 หลัก ═══════════ */
 
 export function checkThaiId13(raw) {
-  const s = thaiToArabicDigits(String(raw ?? "")).replace(/[\s\-.]/g, "");
+  const src = thaiToArabicDigits(String(raw ?? "")).trim();
+  // ‼️ ตัดขีด/จุด/ช่องว่างที่ "คั่นระหว่างตัวเลข" เท่านั้น (รองรับ 1-1007-01541-23-4)
+  //    เดิมกวาดทั้งสตริงจึงตัดเครื่องหมายลบนำหน้าไปด้วย ทำให้ "-11007…" ผ่าน checksum
+  //    เลขบัตร/เลขผู้เสียภาษีไม่มีค่าติดลบตามนิยาม
+  const s = src.replace(/[\s\-.]/g, "");
+  // ‼️ เช็ค "ว่าง" ก่อนเสมอ — ช่องที่ใส่ขีดแทนค่าว่าง ("---") ควรบอกว่าไม่มีข้อมูล
+  //    ไม่ใช่บอกว่ามีตัวอักษรปน (ลำดับสลับกันแล้วข้อความจะชี้ผิดจุดให้ผู้ใช้)
   if (!s) return { ok: false, empty: true, reason: tr("ไม่มีข้อมูล", "No data"), digits: "" };
+  if (/^[+\-]/.test(src)) return { ok: false, reason: tr("มีตัวอักษรอื่นปนอยู่", "Contains non-digit characters"), digits: src };
   if (!/^\d+$/.test(s)) return { ok: false, reason: tr("มีตัวอักษรอื่นปนอยู่", "Contains non-digit characters"), digits: s };
   if (s.length !== 13) return { ok: false, reason: tr(`มี ${s.length} หลัก (ต้องมี 13 หลัก)`, `Has ${s.length} digits (needs 13)`), digits: s };
   let sum = 0;
@@ -342,7 +361,10 @@ export function bahtText(value) {
   if (!isFinite(n)) return null;
   const neg = n < 0;
   n = Math.abs(n);
-  const total = Math.round(n * 100);
+  // ‼️ 1.005 * 100 ได้ 100.49999999999999 ไม่ใช่ 100.5 พอดี → Math.round ปัดลง กลายเป็น
+  //    "หนึ่งบาทถ้วน" ทั้งที่ 0.005 ปัดขึ้นเป็น "หนึ่งสตางค์" (ไม่สม่ำเสมอ)
+  //    ปัดที่ทศนิยมตำแหน่งที่ 6 ก่อน เพื่อล้างเศษจากการคูณทศนิยมฐานสอง
+  const total = Math.round(Number((n * 100).toFixed(6)));
   const baht = Math.floor(total / 100), satang = total % 100;
   let out = "";
   if (baht === 0 && satang === 0) out = "ศูนย์บาทถ้วน";

@@ -253,8 +253,8 @@ export function columnTool(tool, cfg) {
     const L2 = cfg.labels || {};
     st.ok(tr(`บันทึกแล้ว — ${L2.ok || "แปลงสำเร็จ"} ${stat.ok.toLocaleString()} แถว`,
              `Saved — ${L2.ok || "converted"} ${stat.ok.toLocaleString()} rows`) +
-          (stat.bad ? tr(` · ${L2.bad || "อ่านไม่ออก"} ${stat.bad.toLocaleString()} แถว`,
-                          ` · ${L2.bad || "could not read"} ${stat.bad.toLocaleString()} rows`) : ""));
+          (stat.bad ? tr(`, ${L2.bad || "อ่านไม่ออก"} ${stat.bad.toLocaleString()} แถว`,
+                          `, ${L2.bad || "could not read"} ${stat.bad.toLocaleString()} rows`) : ""));
   }
 
   return wrap;

@@ -90,7 +90,7 @@ export const TOOLS = [
     libs:["pdflib"], keys:"image jpg png รูป รวม pdf", next:["pdf-compress","pdf-watermark"] },
 
   { id:"image-convert",group:"image", icon:"🔄", title:"แปลงชนิดไฟล์รูป",
-    desc:"สลับระหว่าง PNG · JPG · WEBP พร้อมปรับคุณภาพ",
+    desc:"สลับระหว่าง PNG, JPG, WEBP พร้อมปรับคุณภาพ",
     accepts:["image"],
     libs:["jszip"], keys:"png jpg webp แปลง รูป convert", next:["image-resize","images-to-pdf"] },
 
@@ -139,7 +139,7 @@ export const TOOLS = [
     libs:["jszip"], keys:"encoding tis-620 windows-874 utf-8 เพี้ยน ต่างดาว อ่านไม่ออก มั่ว csv ภาษาไทย ยึกยือ", next:["excel-csv","thai-date"] },
 
   { id:"thai-date", group:"thai", icon:"📅", title:"สลับปี พ.ศ. กับ ค.ศ. ทั้งคอลัมน์",
-    desc:"อ่านวันที่ไทยได้ทุกแบบ (15 ม.ค. 2569 · ๑๕/๐๑/๒๕๖๙) แปลงทั้งคอลัมน์แล้วเลือกรูปแบบผลลัพธ์ได้",
+    desc:"อ่านวันที่ไทยได้ทุกแบบ (15 ม.ค. 2569, ๑๕/๐๑/๒๕๖๙) แปลงทั้งคอลัมน์แล้วเลือกรูปแบบผลลัพธ์ได้",
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"พ.ศ. ค.ศ. buddhist christian ปี วันที่ 543 แปลงปี date excel", next:["thai-id","thai-number"] },
 
@@ -159,7 +159,7 @@ export const TOOLS = [
     libs:["xlsx"], keys:"ที่อยู่ จังหวัด อำเภอ ตำบล เขต แขวง รหัสไปรษณีย์ address province district subdistrict postcode แยกที่อยู่", next:["word-mailmerge","thai-name"] },
 
   { id:"thai-number", group:"thai", icon:"🔢", title:"ตัวเลข → บาทถ้วน / เลขไทย",
-    desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
+    desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค", next:["word-mailmerge","thai-date"] },
 ];
@@ -201,7 +201,7 @@ const EN_TOOLS = {
   "word-to-pdf":      ["Word → PDF", "Convert DOCX to PDF with full Thai support, several files at a time"],
   "excel-to-pdf":     ["Excel → PDF", "Lay every sheet out as a table in a PDF"],
   "images-to-pdf":    ["Images → PDF", "Combine many images into one PDF, page size fitted automatically"],
-  "image-convert":    ["Convert image format", "Move between PNG · JPG · WEBP and set the quality"],
+  "image-convert":    ["Convert image format", "Move between PNG, JPG, WEBP and set the quality"],
   "image-resize":     ["Resize & compress images", "Shrink dimensions and file size in bulk — see before and after"],
   "word-join":        ["Merge Word files", "Join several documents into one, images intact, drag to reorder"],
   "word-replace":     ["Find & replace in bulk", "Change the same wording across many files — a company name or a year, all at once"],
@@ -211,11 +211,11 @@ const EN_TOOLS = {
   "powerpoint-to-pdf":  ["PowerPoint → PDF", "Lay the deck out as a readable PDF — one slide per page, pick a theme"],
   "excel-csv":        ["Excel ⇄ CSV", "Turn XLSX into CSV (one per sheet), or fold CSV files back into Excel"],
   "thai-encoding":    ["Repair garbled Thai files", "Opened a CSV and got “เธชเธงเธฑ” or “à¸ªà¸§”? This detects the encoding and saves it back as UTF-8"],
-  "thai-date":        ["Buddhist ⇄ Gregorian years", "Reads every Thai date format (15 ม.ค. 2569 · ๑๕/๐๑/๒๕๖๙), converts a whole column, output format is yours to pick"],
+  "thai-date":        ["Buddhist ⇄ Gregorian years", "Reads every Thai date format (15 ม.ค. 2569, ๑๕/๐๑/๒๕๖๙), converts a whole column, output format is yours to pick"],
   "thai-id":          ["Check Thai ID / tax numbers", "Verify the check digit of every 13-digit number in a file and see which rows are mistyped"],
   "thai-name":        ["Split Thai name into columns", "Break a full name into title, first name and surname — ready to sort or mail-merge"],
   "thai-address":     ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
-  "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · swap Thai numerals ๑๒๓ and 123 across a column"],
+  "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
 };
 
 if (LANG === "en") {

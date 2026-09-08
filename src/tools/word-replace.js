@@ -79,7 +79,7 @@ export function mount(tool) {
         table.appendChild(el("div", { class: "rep-line" + (sum ? "" : " none") }, [
           el("strong", { text: f.name }),
           el("span", {}, sum
-            ? counts.map((c, i) => tr(`“${pairs[i].find}” ${c} จุด`, `“${pairs[i].find}” ${c} matches`)).filter((_, i) => counts[i]).join(" · ")
+            ? counts.map((c, i) => tr(`“${pairs[i].find}” ${c} จุด`, `“${pairs[i].find}” ${c} matches`)).filter((_, i) => counts[i]).join(", ")
             : tr("ไม่พบคำที่ค้นหา", "No matches found")),
         ]));
       });

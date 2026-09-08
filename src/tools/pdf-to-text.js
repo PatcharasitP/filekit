@@ -27,8 +27,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("การจัดวางข้อความ", "Text layout"), layout), field(tr("ตัวคั่นหน้า", "Page markers"), marker)]),
     el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
-    tr("ไฟล์สแกนอ่านด้วย OCR ได้ · ไฟล์มีรหัสผ่านใส่รหัสได้ที่นี่",
-       "Scanned files can use OCR · unlock password-protected files here")));
+    tr("ไฟล์สแกนอ่านด้วย OCR ได้, ไฟล์มีรหัสผ่านใส่รหัสได้ที่นี่",
+       "Scanned files can use OCR, unlock password-protected files here")));
 
   function present(pages, note) {
     // ‼️ นับเฉพาะ "เนื้อความจริง"ไม่รวมตัวคั่นหน้า มิฉะนั้นไฟล์สแกนที่อ่านไม่ได้เลย
@@ -40,8 +40,8 @@ export function mount(tool) {
       .map((p) => (marker.value === "yes" ? tr(`--- หน้า ${p.page} ---\n${p.text}`, `--- Page ${p.page} ---\n${p.text}`) : p.text))
       .join("\n\n");
     st.progress(null);
-    st.ok(tr(`ดึงข้อความสำเร็จ ${bodyChars.toLocaleString("th-TH")} ตัวอักษร จาก ${pages.length} หน้า${note ? " · " + note : ""}`,
-             `Done — ${bodyChars.toLocaleString("en-US")} characters from ${pages.length} pages${note ? " · " + note : ""}`));
+    st.ok(tr(`ดึงข้อความสำเร็จ ${bodyChars.toLocaleString("th-TH")} ตัวอักษร จาก ${pages.length} หน้า${note ? ", " + note : ""}`,
+             `Done — ${bodyChars.toLocaleString("en-US")} characters from ${pages.length} pages${note ? ", " + note : ""}`));
     preview.hidden = false;
     preview.textContent = text.slice(0, 4000) + (text.length > 4000 ? tr("\n\n… (แสดงตัวอย่าง 4,000 ตัวอักษรแรก)", "\n\n… (showing the first 4,000 characters)") : "");
     const name = stripExt(file.name) + ".txt";
@@ -86,8 +86,8 @@ export function mount(tool) {
         st.info(tr("ไม่มีชั้นข้อความ (อาจเป็นไฟล์สแกน)", "No text layer (probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            tr("อ่านด้วย OCR ได้ทั้งไทย-อังกฤษ · ครั้งแรกโหลดชุดภาษา ~10–30 MB",
-               "OCR reads Thai and English · first time downloads a ~10–30 MB language pack")),
+            tr("อ่านด้วย OCR ได้ทั้งไทย-อังกฤษ, ครั้งแรกโหลดชุดภาษา ~10–30 MB",
+               "OCR reads Thai and English, first time downloads a ~10–30 MB language pack")),
           el("div", { class: "actions" }, [
             button(tr("อ่านด้วย OCR", "Read with OCR"), { onclick: () => runOcr(pdf) }),
             button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),

@@ -124,7 +124,7 @@ export function mount(tool) {
       return splitThaiName(v);
     },
 
-    note: tr("นามสกุลมีวรรค (เช่น ณ อยุธยา) ก็แยกถูก · แถวที่แยกไม่ออกจะบอกเหตุผลไว้ให้",
-             "Two-part surnames are handled · rows it cannot split say why"),
+    note: tr("นามสกุลมีวรรค (เช่น ณ อยุธยา) ก็แยกถูก, แถวที่แยกไม่ออกจะบอกเหตุผลไว้ให้",
+             "Two-part surnames are handled, rows it cannot split say why"),
   });
 }

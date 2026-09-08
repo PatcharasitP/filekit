@@ -11,7 +11,7 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: "image/*",
-    hint: tr("JPG · PNG · WEBP · BMP · GIF", "JPG · PNG · WEBP · BMP · GIF"),
+    hint: tr("JPG, PNG, WEBP, BMP, GIF", "JPG, PNG, WEBP, BMP, GIF"),
     expect: ["image"], expectLabel: tr("ไฟล์รูปภาพ", "Image files"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
@@ -58,7 +58,7 @@ export function mount(tool) {
       });
       st.progress(null);
       if (!made.length) throw new Error(tr("แปลงไม่สำเร็จ — ตรวจว่าเป็นรูปจริง", "Could not convert — check they're valid images"));
-      st.ok(tr(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? ` · ข้าม ${failed.length} ไฟล์` : ""),
+      st.ok(tr(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? `, ข้าม ${failed.length} ไฟล์` : ""),
         `Done — ${made.length} files` + (failed.length ? `, skipped ${failed.length}` : "")));
       const fb = failedBox(failed); if (fb) results.appendChild(fb);
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [

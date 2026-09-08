@@ -312,7 +312,7 @@ export function mount(tool) {
       return parseAddress(v, geo);
     },
 
-    note: tr("มีคำนำหน้า (ต./อ./จ.) หรือไม่มีก็อ่านได้ · รหัสไปรษณีย์เอาจากฐานข้อมูล แก้พิมพ์ผิดให้ · ไม่มั่นใจจะบอก ไม่เดา",
-             "Works with or without ต./อ./จ. prefixes · Postcode comes from the database, fixing typos · Says so when unsure"),
+    note: tr("มีคำนำหน้า (ต./อ./จ.) หรือไม่มีก็อ่านได้, รหัสไปรษณีย์เอาจากฐานข้อมูล แก้พิมพ์ผิดให้, ไม่มั่นใจจะบอก ไม่เดา",
+             "Works with or without ต./อ./จ. prefixes, Postcode comes from the database, fixing typos, Says so when unsure"),
   });
 }

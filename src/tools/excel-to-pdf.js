@@ -13,7 +13,7 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv", multiple: false,
-    hint: tr("รองรับ .xlsx · .xls · .csv", "Supports .xlsx · .xls · .csv"),
+    hint: tr("รองรับ .xlsx, .xls, .csv", "Supports .xlsx, .xls, .csv"),
     expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV file"),
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
@@ -27,8 +27,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("แนวกระดาษ", "Page orientation"), orient), field(tr("หัวตาราง", "Table header"), headerRow), field(tr("ขนาดตัวอักษร", "Font size"), fontSize)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("แต่ละชีทขึ้นหน้าใหม่ · สูตรแปลงเป็นค่าล่าสุดที่บันทึกไว้",
-       "Each sheet starts a new page · formulas convert to their last saved values")));
+    tr("แต่ละชีทขึ้นหน้าใหม่, สูตรแปลงเป็นค่าล่าสุดที่บันทึกไว้",
+       "Each sheet starts a new page, formulas convert to their last saved values")));
 
   async function run() {
     if (!file) return st.err(tr("กรุณาเลือกไฟล์ Excel ก่อน", "Please choose an Excel file first"));
@@ -76,8 +76,8 @@ export function mount(tool) {
 
       const blob = doc.output("blob");
       st.progress(null);
-      st.ok(tr(`แปลงสำเร็จ ${doc.getNumberOfPages()} หน้า · ${totalRows.toLocaleString("th-TH")} แถว`,
-               `Done — ${doc.getNumberOfPages()} pages · ${totalRows.toLocaleString("en-US")} rows`));
+      st.ok(tr(`แปลงสำเร็จ ${doc.getNumberOfPages()} หน้า, ${totalRows.toLocaleString("th-TH")} แถว`,
+               `Done — ${doc.getNumberOfPages()} pages, ${totalRows.toLocaleString("en-US")} rows`));
       const outName = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, tr(`${doc.getNumberOfPages()} หน้า`, `${doc.getNumberOfPages()} pages`))]),

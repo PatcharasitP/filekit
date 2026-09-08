@@ -290,7 +290,7 @@ export function dropzone(opts = {}) {
     // โผล่แทนทั้งกล่องตอนยุบแล้ว (CSS สลับให้) — ยังลากไฟล์ทับได้เหมือนเดิม
     el("span", { class: "dz-more" }, tr("+ เพิ่มไฟล์", "+ Add files")),
     el("div", { class: "dz-hint" }, expect && expect.includes("image")
-      ? hint + tr(" · วางจากคลิปบอร์ดได้ (Ctrl+V)", " · or paste from clipboard (Ctrl+V)") : hint),
+      ? hint + tr(", วางจากคลิปบอร์ดได้ (Ctrl+V)", ", or paste from clipboard (Ctrl+V)") : hint),
     // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
     el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device — nothing is uploaded")]),
     input,
@@ -522,8 +522,8 @@ export function dropzone(opts = {}) {
       if (thumbs) ensureThumb(f, row);   // วาดไอคอนทั่วไปทันที แล้วเติมภาพจริงทีหลังถ้าทำได้
     });
     count.textContent = !files.length ? ""
-      : tr(`${files.length} ไฟล์ · รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}`,
-           `${files.length} files · ${fmtBytes(files.reduce((a, f) => a + f.size, 0))} total`);
+      : tr(`${files.length} ไฟล์, รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}`,
+           `${files.length} files, ${fmtBytes(files.reduce((a, f) => a + f.size, 0))} total`);
   }
 
   if (reorder) {

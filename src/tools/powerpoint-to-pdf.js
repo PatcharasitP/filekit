@@ -111,7 +111,7 @@ export function mount(tool) {
       st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done — ${slides.length} pages (1 slide = 1 page)`));
       const name = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์ · ${ratio.value}`, `${slides.length} slides · ${ratio.value}`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์, ${ratio.value}`, `${slides.length} slides, ${ratio.value}`))]),
         button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
       await yieldToBrowser();

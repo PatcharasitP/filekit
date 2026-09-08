@@ -29,7 +29,7 @@ export function mount(tool) {
   const dataZone = dropzone({
     expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV files"),
     accept: ".xlsx,.xls,.csv", multiple: false,
-    hint: tr("แถวแรก = หัวคอลัมน์ · 1 แถว = 1 เอกสาร", "Row 1 = headers · 1 row = 1 doc"),
+    hint: tr("แถวแรก = หัวคอลัมน์, 1 แถว = 1 เอกสาร", "Row 1 = headers, 1 row = 1 doc"),
     onChange: async (f) => { dataFile = f[0] || null; await scanData(); },
   });
 
@@ -111,8 +111,8 @@ export function mount(tool) {
     "Type placeholders like {{Title}}{{Name}} in Word, then match Excel columns — one document per row. Headers/footers supported")));
 
   body.appendChild(el("div", { class: "note" },
-    tr("เงื่อนไข: {{#โบนัส}}…{{/โบนัส}} + Excel ใส่ TRUE/FALSE (หรือ ใช่/ไม่ใช่, มี/ไม่มี) · ตรงข้าม {{#ไม่โบนัส}}…{{/ไม่โบนัส}} ไม่ต้องเพิ่มคอลัมน์",
-    "Condition: {{#Bonus}}…{{/Bonus}} + Excel TRUE/FALSE (ใช่/ไม่ใช่, มี/ไม่มี work too) · Opposite: {{#notBonus}}…{{/notBonus}}, no extra column")));
+    tr("เงื่อนไข: {{#โบนัส}}…{{/โบนัส}} + Excel ใส่ TRUE/FALSE (หรือ ใช่/ไม่ใช่, มี/ไม่มี), ตรงข้าม {{#ไม่โบนัส}}…{{/ไม่โบนัส}} ไม่ต้องเพิ่มคอลัมน์",
+    "Condition: {{#Bonus}}…{{/Bonus}} + Excel TRUE/FALSE (ใช่/ไม่ใช่, มี/ไม่มี work too), Opposite: {{#notBonus}}…{{/notBonus}}, no extra column")));
 
   body.appendChild(el("div", { class: "note" },
     tr("ตารางรายการ: ใส่ {{#รายการ}} ที่ช่องแรกและ {{/รายการ}} ที่ช่องสุดท้ายของแถว",
@@ -168,8 +168,8 @@ export function mount(tool) {
       rows = XLSXLib.utils.sheet_to_json(sheet, { defval: "", raw: false });
       if (!rows.length) throw new Error(tr("ไม่พบข้อมูล (ต้องมีหัวตาราง + 1 แถวข้อมูล)", "No data found (needs a header + 1 data row)"));
       columns = Object.keys(rows[0]);
-      st.ok(tr(`อ่านข้อมูลได้ ${rows.length.toLocaleString("th-TH")} แถว · ${columns.length} คอลัมน์ จากชีท “${wb.SheetNames[0]}”`,
-        `Read ${rows.length.toLocaleString("en-US")} rows · ${columns.length} columns from sheet “${wb.SheetNames[0]}”`));
+      st.ok(tr(`อ่านข้อมูลได้ ${rows.length.toLocaleString("th-TH")} แถว, ${columns.length} คอลัมน์ จากชีท “${wb.SheetNames[0]}”`,
+        `Read ${rows.length.toLocaleString("en-US")} rows, ${columns.length} columns from sheet “${wb.SheetNames[0]}”`));
     } catch (e) {
       st.err(tr("อ่านไฟล์ข้อมูลไม่สำเร็จ: ", "Could not read the data file: ") + e.message);
     }
@@ -327,7 +327,7 @@ export function mount(tool) {
 
       st.progress(null);
       const totalSize = made.reduce((a, m) => a + m.blob.size, 0);
-      st.ok(tr(`สร้างเอกสารสำเร็จ ${made.length.toLocaleString("th-TH")} ไฟล์ · รวม ${fmtBytes(totalSize)}`,
+      st.ok(tr(`สร้างเอกสารสำเร็จ ${made.length.toLocaleString("th-TH")} ไฟล์, รวม ${fmtBytes(totalSize)}`,
         `Done — ${made.length.toLocaleString("en-US")} files, ${fmtBytes(totalSize)} total`));
 
       if (made.length > 1) {
@@ -348,8 +348,8 @@ export function mount(tool) {
         button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
       ])));
       if (made.length > 50) results.appendChild(el("div", { class: "note" },
-        tr(`แสดง 50 ไฟล์แรก · ที่เหลืออยู่ใน ZIP ครบ ${made.length} ไฟล์`,
-           `Showing first 50 · rest included in the ZIP (${made.length} total)`)));
+        tr(`แสดง 50 ไฟล์แรก, ที่เหลืออยู่ใน ZIP ครบ ${made.length} ไฟล์`,
+           `Showing first 50, rest included in the ZIP (${made.length} total)`)));
       await yieldToBrowser();
     } catch (e) {
       st.progress(null);

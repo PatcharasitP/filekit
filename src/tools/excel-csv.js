@@ -11,7 +11,7 @@ export function mount(tool) {
   const dirSel = select([["to-csv", tr("Excel → CSV (แยกทีละชีท)", "Excel → CSV (one file per sheet)")], ["to-xlsx", tr("CSV → Excel (รวมเป็นไฟล์เดียว)", "CSV → Excel (combine into one file)")]], "to-csv");
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv",
-    hint: tr("Excel→CSV: 1 ไฟล์ · CSV→Excel: หลายไฟล์", "Excel→CSV: 1 file · CSV→Excel: multiple"),
+    hint: tr("Excel→CSV: 1 ไฟล์, CSV→Excel: หลายไฟล์", "Excel→CSV: 1 file, CSV→Excel: multiple"),
     expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV file"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
@@ -78,9 +78,9 @@ export function mount(tool) {
         const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         st.progress(null);
         st.ok(tr(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +
-          (fixedEnc ? ` · ซ่อมภาษาไทยที่เพี้ยนให้ ${fixedEnc} ไฟล์` : ""),
+          (fixedEnc ? `, ซ่อมภาษาไทยที่เพี้ยนให้ ${fixedEnc} ไฟล์` : ""),
           `Combined into Excel — ${wb.SheetNames.length} sheets` +
-          (fixedEnc ? ` · fixed garbled Thai text in ${fixedEnc} files` : "")));
+          (fixedEnc ? `, fixed garbled Thai text in ${fixedEnc} files` : "")));
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),

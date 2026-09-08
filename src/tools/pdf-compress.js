@@ -134,7 +134,7 @@ export function mount(tool) {
       node: el("div", { class: "cmp-right" }, [field(tr("ระดับการบีบอัด", "Compression level"), level), statsBox]),
     },
     toolbar: [
-      el("span", { class: "cmp-toolbar-hint" }, tr("หน้าแรก · ลากเทียบได้", "Page 1 · drag to compare")),
+      el("span", { class: "cmp-toolbar-hint" }, tr("หน้าแรก, ลากเทียบได้", "Page 1, drag to compare")),
       el("span", { class: "sep", "aria-hidden": "true" }),
       button(tr("รีเซ็ตตำแหน่ง", "Reset position"), { ghost: true, icon: "undo", onclick: () => setHandlePos(50) }),
     ],
@@ -352,13 +352,13 @@ export function mount(tool) {
                  "Already well compressed — try \"Strong\" or keep it."))
         );
       } else {
-        st.ok(tr(`เล็กลง ${Math.round(diff * 100)}% · ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`,
-                 `Reduced by ${Math.round(diff * 100)}% · ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`));
+        st.ok(tr(`เล็กลง ${Math.round(diff * 100)}%, ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`,
+                 `Reduced by ${Math.round(diff * 100)}%, ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`));
       }
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
-          el("small", {}, tr(`${fmtBytes(file.size)} → ${fmtBytes(blob.size)} · ระดับ${levelDefs()[level.value].label}`,
-                              `${fmtBytes(file.size)} → ${fmtBytes(blob.size)} · ${levelDefs()[level.value].label} level`))]),
+          el("small", {}, tr(`${fmtBytes(file.size)} → ${fmtBytes(blob.size)}, ระดับ${levelDefs()[level.value].label}`,
+                              `${fmtBytes(file.size)} → ${fmtBytes(blob.size)}, ${levelDefs()[level.value].label} level`))]),
         button(tr("ดาวน์โหลด", "Download"), { icon: "download", onclick: () => download(blob, name) }),
       ]));
     } catch (e) {

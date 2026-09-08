@@ -25,12 +25,12 @@ export function mount(tool) {
 
   body.append(dz.container,
     el("div", { class: "row" }, [field(tr("ภาษาในเอกสาร", "Document language"), lang),
-      field(tr("หน้าที่ต้องการ", "Pages to read"), rangeInput, tr("ว่าง = ทุกหน้า · แนะนำทดลองหน้าเดียวก่อน", "Empty = all pages · try one page first")),
+      field(tr("หน้าที่ต้องการ", "Pages to read"), rangeInput, tr("ว่าง = ทุกหน้า, แนะนำทดลองหน้าเดียวก่อน", "Empty = all pages, try one page first")),
       field(tr("ความละเอียดในการอ่าน", "Reading quality"), quality)]),
     el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
-    tr("ครั้งแรกโหลดชุดภาษา ~10-30MB · อ่านช้าราว 3-15 วิ/หน้า",
-    "First run downloads a ~10-30MB language pack · reading takes 3-15s per page")));
+    tr("ครั้งแรกโหลดชุดภาษา ~10-30MB, อ่านช้าราว 3-15 วิ/หน้า",
+    "First run downloads a ~10-30MB language pack, reading takes 3-15s per page")));
 
   async function pageImages() {
     // คืนรายการ dataURL ของภาพที่จะส่งให้ OCR — รองรับทั้ง PDF และไฟล์รูป

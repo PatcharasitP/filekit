@@ -88,7 +88,7 @@ export function mount(tool) {
 
       const blob = await Packer.toBlob(new Document({ sections: [{ properties: {}, children }] }));
       st.progress(null);
-      st.ok(tr(`แปลงสำเร็จ ${slides.length} สไลด์ · ${words.toLocaleString("th-TH")} ตัวอักษร`,
+      st.ok(tr(`แปลงสำเร็จ ${slides.length} สไลด์, ${words.toLocaleString("th-TH")} ตัวอักษร`,
         `Done — ${slides.length} slides, ${words.toLocaleString("en-US")} characters`));
       preview.hidden = false;
       preview.textContent = previewLines.join("\n").slice(0, 4000);

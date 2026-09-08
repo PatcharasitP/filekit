@@ -66,10 +66,10 @@ function renderHome(q = "") {
   hits.textContent = "";
   const shown = TOOLS.filter((t) => !activeCat || t.group === activeCat);
   if (stageH) stageH.textContent = activeCat
-    ? tr(`${(GROUPS.find((g) => g.id === activeCat) || {}).label} · ${shown.length} เครื่องมือ`,
-         `${(GROUPS.find((g) => g.id === activeCat) || {}).label} · ${shown.length} tools`)
+    ? tr(`${(GROUPS.find((g) => g.id === activeCat) || {}).label}, ${shown.length} เครื่องมือ`,
+         `${(GROUPS.find((g) => g.id === activeCat) || {}).label}, ${shown.length} tools`)
     : tr(`${TOOLS.length} เครื่องมือ ทำงานในเครื่องคุณทั้งหมด`,
-         `${TOOLS.length} tools · all of them run on your device`);
+         `${TOOLS.length} tools, all of them run on your device`);
 
   const box = el("div", { class: "pills" });
   // แถวเพิ่งใช้ล่าสุดขึ้นก่อน เฉพาะตอนดูทั้งหมด — คนกลับมาเว็บนี้มักใช้ตัวเดิมซ้ำ
@@ -116,7 +116,7 @@ async function takeHomeFiles(incoming) {
   // เสนอเฉพาะเครื่องมือที่ทำงานกับ "ทุกไฟล์" ในชุดได้ — ถ้าเสนอตัวที่รับได้แค่บางใบ
   // พอกดเข้าไปไฟล์ที่เหลือจะถูกทิ้งเงียบ ๆ โดยผู้ใช้ไม่รู้ตัว
   const tools = kinds.length ? TOOLS.filter((t) => kinds.every((k) => (t.accepts || []).includes(k))) : [];
-  dropped = { files, kinds, tools, label: kinds.map(typeLabel).join(" · "), mixed: kinds.length > 1 };
+  dropped = { files, kinds, tools, label: kinds.map(typeLabel).join(", "), mixed: kinds.length > 1 };
   search.value = "";
   activeCat = "";
   renderCats();
@@ -175,7 +175,7 @@ function renderDropped(stageH) {
                        "No tool handles all of them at once — press “Clear” and add one type at a time")),
     ] : [
       el("b", {}, tr("ไฟล์ชนิดนี้ยังไม่มีเครื่องมือรองรับ", "No tool supports this file type yet")),
-      el("div", {}, tr("ลองไฟล์ PDF · Word · Excel · CSV · PowerPoint · รูปภาพ",
+      el("div", {}, tr("ลองไฟล์ PDF, Word, Excel, CSV, PowerPoint, รูปภาพ",
                        "Try a PDF, Word, Excel, CSV, PowerPoint or image file")),
     ]));
     return;
@@ -217,8 +217,8 @@ document.addEventListener("paste", (e) => {
 function showEmpty(q) {
   grids.appendChild(el("div", { class: "empty" }, [
     el("b", {}, tr(`ไม่พบเครื่องมือที่ตรงกับ “${q}”`, `No tool matches “${q}”`)),
-    el("div", {}, tr("ลองพิมพ์สั้นลง หรือใช้คำอื่น เช่น “PDF” · “Word” · “รูป” · “ไทย”",
-                     "Try a shorter word, or another one — “PDF” · “Word” · “image” · “Excel”")),
+    el("div", {}, tr("ลองพิมพ์สั้นลง หรือใช้คำอื่น เช่น “PDF”, “Word”, “รูป”, “ไทย”",
+                     "Try a shorter word, or another one — “PDF”, “Word”, “image”, “Excel”")),
     el("button", { class: "btn-soft", type: "button", onclick: clearSearch }, tr("ล้างคำค้นหา แล้วดูทั้งหมด", "Clear search and show everything")),
   ]));
 }
@@ -358,11 +358,6 @@ grids.addEventListener("keydown", (e) => {
 
 /* ── ธีม / มุมมอง ── */
 const THEMES = ["auto", "light", "dark"];
-const THEME_SVG = {
-  auto:  `<circle cx="12"cy="12"r="8.2"/><path d="M12 3.8a8.2 8.2 0 0 0 0 16.4z"fill="currentColor"stroke="none"/>`,
-  light: `<circle cx="12"cy="12"r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/>`,
-  dark:  `<path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/>`,
-};
 const THEME_NAME = IS_EN
   ? { auto: "system", light: "light", dark: "dark" }
   : { auto: "ตามระบบ", light: "โหมดสว่าง", dark: "โหมดมืด" };
@@ -371,10 +366,7 @@ function applyTheme(v) {
   if (v === "auto") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = v;
   store.set("fk-theme", v);
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("class", "btn-ico"); svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true"); svg.innerHTML = THEME_SVG[v];
-  themeBtn.replaceChildren(svg);
+  // ไอคอนทั้ง 3 แบบอยู่ในหน้าแล้ว CSS เลือกโชว์เอง — JS ไม่ต้องยัดทีหลัง (กันปุ่มว่างแวบ)
   themeBtn.title = themeBtn.ariaLabel = tr(`ธีม: ${THEME_NAME[v]} (กดเพื่อเปลี่ยน)`,
                                           `Theme: ${THEME_NAME[v]} (click to change)`);
 }
@@ -432,8 +424,6 @@ document.addEventListener("keydown", (e) => {
 
 // ป้ายปุ่มลัดต้องตรงกับเครื่องที่ใช้จริง — Mac ใช้ ⌘ ไม่ใช่ Ctrl
 {
-  const k = document.getElementById("kbdkey");
-  if (k && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) k.textContent = "⌘";
   const n = document.getElementById("fact-n");
   if (n) n.textContent = String(TOOLS.length);
 }

@@ -85,8 +85,8 @@ export function mount(tool) {
     const keep = items.filter((i) => !i.dropped).length;
     summary.innerHTML = "";
     summary.append(el("div", {}, [
-      tr("ทั้งหมด ", "Total "), el("b", {}, String(items.length)), tr(" หน้า · เก็บ ", " pages · keep "),
-      el("b", {}, String(keep)), tr(" · ลบ ", " · remove "), el("b", {}, String(items.length - keep)),
+      tr("ทั้งหมด ", "Total "), el("b", {}, String(items.length)), tr(" หน้า, เก็บ ", " pages, keep "),
+      el("b", {}, String(keep)), tr(", ลบ ", ", remove "), el("b", {}, String(items.length - keep)),
     ]));
   }
 

@@ -10,7 +10,7 @@ export function mount(tool) {
   const dz = dropzone({
     accept: "application/pdf,.pdf",
     reorder: true,
-    hint: tr("หลายไฟล์ได้ · ลากสลับลำดับ", "Multiple files · drag to reorder"),
+    hint: tr("หลายไฟล์ได้, ลากสลับลำดับ", "Multiple files, drag to reorder"),
     expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });

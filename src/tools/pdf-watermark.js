@@ -163,8 +163,8 @@ export function mount(tool) {
       const { width, height } = first.getSize();
       meta = { pages: doc.getPageCount(), w: width, h: height };
       paper.style.aspectRatio = `${width} / ${height}`;
-      metaLine.textContent = tr(`หน้า 1 ตัวอย่าง (${meta.pages} หน้า · ${Math.round(width)}×${Math.round(height)} pt)`,
-                                 `Page 1 preview (${meta.pages} pages · ${Math.round(width)}×${Math.round(height)} pt)`);
+      metaLine.textContent = tr(`หน้า 1 ตัวอย่าง (${meta.pages} หน้า, ${Math.round(width)}×${Math.round(height)} pt)`,
+                                 `Page 1 preview (${meta.pages} pages, ${Math.round(width)}×${Math.round(height)} pt)`);
       ws.showCanvas(true);
       drawPreview();
     } catch (e) {

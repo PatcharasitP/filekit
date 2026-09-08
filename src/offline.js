@@ -68,12 +68,12 @@ export function offlineBar() {
       return;
     }
     bar.appendChild(el("span", {}, [
-      el("strong", {}, [uiIcon("offline", "ob-ico"), tr("ใช้งานตอนไม่มีเน็ต", "Works without internet")]),
+      el("strong", {}, [uiIcon("offline", "ob-ico"), tr("ใช้ได้แม้ไม่มีอินเทอร์เน็ต", "Works without internet")]),
       // ‼️ ประโยคเดิมยาว 2 บรรทัดและขึ้นต้นด้วยขีดยาว — พี่ปอนด์ทักว่าอ่านแล้วรก
       //    เหลือเฉพาะสิ่งที่ผู้ใช้ต้องรู้: ได้อะไร กินที่เท่าไร · รายละเอียดที่เหลือไม่จำเป็น
       el("span", { class: "ob-detail" },
-        tr("  โหลดเครื่องมือทั้ง 29 ตัวไว้ล่วงหน้า ใช้ได้แม้เน็ตหลุด (5 MB)",
-           "  Download all 29 tools in advance so they work with no internet (5 MB)")),
+        tr("  โหลดเครื่องมือทั้งหมดไว้ล่วงหน้า (5 MB)",
+           "  Download every tool in advance (5 MB)")),
     ]));
     bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, tr("โหลดไว้ใช้ออฟไลน์", "Download for offline")));
   };

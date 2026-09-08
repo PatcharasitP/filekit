@@ -16,7 +16,7 @@
 <meta property="og:site_name" content="FileKit">
 <meta property="og:locale" content="th_TH">
 <meta property="og:title" content="FileKit — เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน">
-<meta property="og:description" content="29 เครื่องมือ แปลง รวม แยก บีบอัด PDF · Word · Excel · รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
+<meta property="og:description" content="29 เครื่องมือ แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
 <meta property="og:url" content="https://patcharasitp.github.io/filekit/">
 <meta property="og:image" content="https://patcharasitp.github.io/filekit/assets/social/og.jpg">
 <meta property="og:image:width" content="1200">
@@ -41,7 +41,7 @@
  "applicationCategory":"UtilitiesApplication","operatingSystem":"Any web browser",
  "inLanguage":["th-TH","en"],"isAccessibleForFree":true,
  "browserRequirements":"ต้องเปิดใช้งาน JavaScript",
- "description":"29 เครื่องมือแปลง รวม แยก บีบอัด PDF · Word · Excel · PowerPoint · รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
+ "description":"29 เครื่องมือแปลง รวม แยก บีบอัด PDF, Word, Excel, PowerPoint, รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"THB"},
  "featureList":["รวมไฟล์ PDF","แยกไฟล์ PDF","บีบอัดไฟล์ PDF","จัดการหน้า PDF","เซ็นชื่อบน PDF","ใส่ลายน้ำ PDF","OCR อ่านข้อความจากสแกน","PDF เป็น Word","PDF เป็น Excel","PDF เป็นรูปภาพ","PDF เป็นข้อความ","Word เป็น PDF","Excel เป็น PDF","PowerPoint เป็น PDF","PowerPoint เป็น Word","รูปภาพเป็น PDF","ย่อและบีบอัดรูปภาพ","แปลงชนิดไฟล์รูป","รวมไฟล์ Word","ค้นหาและแทนที่ทั้งชุด","ตรวจเอกสารก่อนส่ง","จดหมายเวียน Word กับ Excel","สลับ Excel กับ CSV","ซ่อมไฟล์ไทยเพี้ยน","สลับปี พ.ศ. กับ ค.ศ.","ตรวจเลขบัตรประชาชน","ตัวเลขเป็นบาทถ้วน"]}
 ]}
@@ -179,6 +179,17 @@ button{font-family:inherit}
   border-radius:999px; font-size:16px; transition:color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
 }
 .iconbtn:hover{background:var(--card-hi); color:var(--text)}
+/* ‼️ ไอคอนปุ่มธีมอยู่ในหน้าตั้งแต่แรกทั้ง 3 แบบ แล้วเลือกโชว์ด้วย CSS ตาม data-theme
+   ที่สคริปต์ก่อนวาดหน้าตั้งไว้ให้แล้ว — เดิม JS เป็นคนยัดไอคอนทีหลัง ปุ่มจึงว่างแวบหนึ่ง
+   ทุกครั้งที่โหลดหน้า (เจ้าของเว็บเห็นเป็นอาการ "วูบ" ตอนกด Ctrl+Shift+R) */
+/* ‼️ ต้องนำหน้าด้วย #theme — .btn-ico ตั้ง display:block ไว้และประกาศทีหลัง
+   ถ้าใช้แค่ .th-ic{display:none} จะแพ้ แล้วไอคอนโผล่พร้อมกันทั้ง 3 อัน (วัดแล้วเจอจริง) */
+#theme .th-ic{display:none}
+#theme .th-auto{display:block}
+:root[data-theme="light"] #theme .th-auto,
+:root[data-theme="dark"] #theme .th-auto{display:none}
+:root[data-theme="light"] #theme .th-light{display:block}
+:root[data-theme="dark"] #theme .th-dark{display:block}
 /* ‼️ ปุ่มไอคอนล้วนไม่มีข้อความให้ยึด กรอบจึงเป็นสิ่งเดียวที่บอกว่า 'นี่คือปุ่ม'
    วัดแล้วกรอบเดิมได้แค่ 1.21-1.44:1 ตาแทบแยกไม่ออกจากพื้น — ใช้สีเข้มขึ้นเฉพาะปุ่มกลุ่มนี้ */
 .iconbtn{box-shadow:var(--ring-top); border-color:var(--text-mute)}
@@ -530,7 +541,14 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 /* แถบเตรียมใช้งานออฟไลน์ */
 .offline-bar{
   display:flex;align-items:center;gap:var(--sp4);flex-wrap:wrap;
-  max-width:1160px;margin:var(--sp5) auto 0;padding:14px 20px;
+  /* ‼️ อยู่นอก <main> จึงไม่ได้ padding ของ main ด้วย — ต้องหักออกเองให้ขอบตรงกับแผงเครื่องมือ
+     (วัดจริงบนจอ 1440: แผง 172→1268 · แถบเดิม 140→1300 = ล้ำออกไปข้างละ 32px) */
+  /* ‼️ อยู่นอก <main> จึงไม่โดน padding ของ main ด้วย ต้องหักออกเองให้ขอบตรงกับแผงเครื่องมือ
+     main = max-width 1160 + padding-inline clamp(14px,4vw,32px) → เนื้อในเหลือเท่านี้
+     (วัดจริงจอ 1440: แผง 172→1268 · แถบเดิม 140→1300 ล้ำออกข้างละ 32px) */
+  width:calc(100% - 2 * clamp(14px,4vw,32px));
+  max-width:calc(1160px - 2 * clamp(14px,4vw,32px));
+  margin:var(--sp5) auto 0;padding:14px 20px;
   background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);
   font-size:13px;color:var(--text-dim);
 }
@@ -573,7 +591,7 @@ body.tool #home{display:none}
     <button class="langopt" type="button" data-lang="th" lang="th">ไทย</button>
     <button class="langopt" type="button" data-lang="en" lang="en">EN</button>
   </div>
-  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม" data-en-al="Switch theme"></button>
+  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม" data-en-al="Switch theme"><svg class="btn-ico th-ic th-auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.6" width="18" height="12.4" rx="2.2"/><path d="M9 20.4h6M12 17v3.4"/><path d="M7.6 10.8h3.2M8.4 13.4h5.6" opacity=".55"/></svg><svg class="btn-ico th-ic th-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/></svg><svg class="btn-ico th-ic th-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/></svg></button>
   <button class="back" id="back" type="button" aria-label="กลับไปหน้าเครื่องมือทั้งหมด"
     data-en-al="Back to all tools"><span aria-hidden="true">←</span><b data-en="All tools">เครื่องมือทั้งหมด</b></button>
 </header>
@@ -585,7 +603,7 @@ body.tool #home{display:none}
         <div class="hero-copy">
           <span class="kicker" data-en-html="<s></s>100% on your device"><s></s>ทำงานในเครื่องคุณ 100%</span>
           <h1 data-en-html="File tools<br><em>that upload nothing</em>">เครื่องมือจัดการไฟล์<br><em>ที่ไม่ส่งไฟล์คุณไปไหน</em></h1>
-          <p data-en="Convert, merge, split and compress PDF · Word · Excel · images">แปลง รวม แยก บีบอัด PDF · Word · Excel · รูปภาพ</p>
+          <p data-en="Convert, merge, split and compress PDF, Word, Excel, images">แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ</p>
           <div class="searchwrap">
             <div class="search" id="searchbox">
               <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8L21 21"/></svg>
@@ -593,7 +611,6 @@ body.tool #home{display:none}
                      data-en-ph="Search tools — e.g. merge PDF, split, compress" data-en-al="Search tools"
                      aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
               <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา" data-en-al="Clear search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button>
-              <span class="kbd" aria-hidden="true"><span id="kbdkey">Ctrl</span><span>+K</span></span>
             </div>
             <div class="hits" id="hits" role="status" aria-live="polite"></div>
           </div>
@@ -625,7 +642,7 @@ body.tool #home{display:none}
   <section id="tool" aria-live="polite"></section>
 </main>
 
-<footer>FileKit &nbsp;<a href="https://github.com/PatcharasitP/filekit" target="_blank" rel="noopener" data-en="Source code on GitHub">โค้ดทั้งหมดเปิดดูได้บน GitHub</a></footer>
+<footer><a href="https://github.com/PatcharasitP/filekit" target="_blank" rel="noopener" data-en="Source code on GitHub">โค้ดทั้งหมดเปิดดูได้บน GitHub</a></footer>
 
 <!-- แปลข้อความที่เขียนตายใน HTML ให้เสร็จก่อนวาดจอ — app.js เป็น module จึงถูกเลื่อนไปท้ายสุด
      ถ้ารอมัน ผู้ใช้ภาษาอังกฤษจะเห็นภาษาไทยแวบหนึ่งก่อน (ตรรกะเดียวกับ applyStatic ใน src/i18n.js) -->

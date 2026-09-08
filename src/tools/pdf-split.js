@@ -184,7 +184,7 @@ export function mount(tool) {
       el("div", { class: "sp-cluster-head" }, [
         el("span", { class: "sp-dot" }),
         el("span", { class: "sp-cluster-label" }, tr(`ไฟล์ ${meta.ordinal}`, `File ${meta.ordinal}`)),
-        el("span", { class: "sp-cluster-range" }, tr(`${range} · ${seg.pages.length} หน้า`, `${range} · ${seg.pages.length} pages`)),
+        el("span", { class: "sp-cluster-range" }, tr(`${range}, ${seg.pages.length} หน้า`, `${range}, ${seg.pages.length} pages`)),
       ]),
       el("div", { class: "sp-tiles" }, seg.pages.map(pageTile)),
     ]);

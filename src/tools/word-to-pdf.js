@@ -16,7 +16,7 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["docx"], expectLabel: tr("ไฟล์ Word (.docx)", "Word file (.docx)"),
     accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    multiple: true, hint: tr("ไฟล์ .docx · เลือกได้หลายไฟล์", ".docx files · choose multiple"),
+    multiple: true, hint: tr("ไฟล์ .docx, เลือกได้หลายไฟล์", ".docx files, choose multiple"),
     onChange: (f) => { files = f; st.clear(); results.innerHTML = ""; },
   });
 
@@ -28,8 +28,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("ขนาดกระดาษ", "Paper size"), size), field(tr("ขนาดตัวอักษร", "Font size"), fontSize)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("ฝังฟอนต์ไทยอัตโนมัติ คงหัวข้อ/ย่อหน้า/ตัวหนา · ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน",
-       "Thai font embedded automatically, keeps headings/paragraphs/bold · tables, images, and complex layouts aren't kept")));
+    tr("ฝังฟอนต์ไทยอัตโนมัติ คงหัวข้อ/ย่อหน้า/ตัวหนา, ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน",
+       "Thai font embedded automatically, keeps headings/paragraphs/bold, tables, images, and complex layouts aren't kept")));
 
   // แปลง HTML ที่ mammoth ให้มา เป็นบล็อกข้อความพร้อมระดับความสำคัญ
   function htmlToBlocks(html) {
@@ -131,12 +131,12 @@ export function mount(tool) {
       if (!made.length) { st.err(tr("แปลงไม่สำเร็จสักไฟล์", "Could not convert any files")); return; }
 
       const pages = made.reduce((a, m) => a + m.pages, 0);
-      st.ok(tr(`แปลงสำเร็จ ${made.length} ไฟล์ · รวม ${pages} หน้า` +
-        (failed ? ` · ล้มเหลว ${failed} ไฟล์` : "") +
-        (warned ? ` · มี ${warned} จุดที่จัดรูปแบบไม่ครบ` : ""),
-        `Done — ${made.length} files · ${pages} pages total` +
-        (failed ? ` · ${failed} failed` : "") +
-        (warned ? ` · ${warned} spots with incomplete formatting` : "")));
+      st.ok(tr(`แปลงสำเร็จ ${made.length} ไฟล์, รวม ${pages} หน้า` +
+        (failed ? `, ล้มเหลว ${failed} ไฟล์` : "") +
+        (warned ? `, มี ${warned} จุดที่จัดรูปแบบไม่ครบ` : ""),
+        `Done — ${made.length} files, ${pages} pages total` +
+        (failed ? `, ${failed} failed` : "") +
+        (warned ? `, ${warned} spots with incomplete formatting` : "")));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: async () => {

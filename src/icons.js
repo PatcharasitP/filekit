@@ -96,7 +96,7 @@ export const UI = {
   upload:   `<path d="M12 16V4"/><path d="M7.5 8.5L12 4l4.5 4.5"/><path d="M3.5 15v3.5A2.5 2.5 0 0 0 6 21h12a2.5 2.5 0 0 0 2.5-2.5V15"/>`,
   lock:     `<rect x="4.5"y="10"width="15"height="10.5"rx="2.4"/><path d="M8 10V7.2a4 4 0 0 1 8 0V10"/><circle cx="12"cy="15.2"r="1.3"/>`,
   search:   `<circle cx="10.8"cy="10.8"r="6.8"/><path d="M15.8 15.8L21 21"/>`,
-  offline:  `<path d="M12 3.5v10"/><path d="M8 9.8l4 4 4-4"/><path d="M4 16v2.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V16"/><path d="M3 3l18 18"opacity=".35"/>`,
+  offline:  `<path d="M2.4 8.9A15 15 0 0 1 8 5.7M15.6 5.6a15 15 0 0 1 6 3.3"/><path d="M5.6 12.6A10 10 0 0 1 9 10.7M14.6 10.5a10 10 0 0 1 3.8 2.1"/><path d="M9 16.3a5 5 0 0 1 5.4.6"/><circle cx="12" cy="19.6" r="1.15" fill="currentColor" stroke="none"/><path d="M3.2 3.2l17.6 17.6"/>`,
   rows:     `<rect x="3.5"y="4"width="17"height="6"rx="1.4"/><rect x="3.5"y="14"width="17"height="6"rx="1.4"/>`,
 };
 

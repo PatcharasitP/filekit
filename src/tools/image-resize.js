@@ -235,7 +235,7 @@ export function mount(tool) {
     files.forEach((f, i) => {
       const r = resultsByFile.get(f);
       const sizeLine = r
-        ? (r.kept ? tr("คงไฟล์เดิม (บีบแล้วใหญ่กว่า)", "Kept original (compressing made it larger)") : `${r.dim} · ${fmtBytes(f.size)} → ${fmtBytes(r.blob.size)}`)
+        ? (r.kept ? tr("คงไฟล์เดิม (บีบแล้วใหญ่กว่า)", "Kept original (compressing made it larger)") : `${r.dim}, ${fmtBytes(f.size)} → ${fmtBytes(r.blob.size)}`)
         : fmtBytes(f.size);
       gallery.appendChild(el("div", {
         class: "rz-item" + (i === activeIndex ? " active" : ""),
@@ -338,9 +338,9 @@ export function mount(tool) {
       ws.showCanvas(true);
       hideEl(compareBox, false); hideEl(previewErr, true); hideEl(statsBox, false);
       setPos(pos);
-      toolbarLabel.textContent = `${f.name} · ${r.bmpW}×${r.bmpH} → ${r.w}×${r.h}`;
-      statOrig.textContent = `${r.bmpW}×${r.bmpH} · ${fmtBytes(f.size)}`;
-      statOut.textContent = `${r.w}×${r.h} · ${fmtBytes(r.blob.size)}`;
+      toolbarLabel.textContent = `${f.name}, ${r.bmpW}×${r.bmpH} → ${r.w}×${r.h}`;
+      statOrig.textContent = `${r.bmpW}×${r.bmpH}, ${fmtBytes(f.size)}`;
+      statOut.textContent = `${r.w}×${r.h}, ${fmtBytes(r.blob.size)}`;
       const diff = f.size ? Math.round((1 - r.blob.size / f.size) * 100) : 0;
       statVerdict.textContent = diff > 0 ? tr(`เล็กลง ${diff}%`, `${diff}% smaller`) : diff < 0 ? tr(`ใหญ่ขึ้น ${-diff}%`, `${-diff}% larger`) : tr("ขนาดเท่าเดิม", "Same size");
       statVerdict.className = "rz-verdict " + (diff > 0 ? "ok" : diff < 0 ? "err" : "warn");
@@ -382,8 +382,8 @@ export function mount(tool) {
       const saved = before ? Math.round((1 - after / before) * 100) : 0;
       const keptCount = made.filter((m) => m.kept).length;
       const verdict = saved > 0 ? tr(`เล็กลง ${saved}%`, `${saved}% smaller`) : saved < 0 ? tr(`ใหญ่ขึ้น ${-saved}%`, `${-saved}% larger`) : tr("ขนาดเท่าเดิม", "Same size");
-      const tail = keptCount ? tr(` · ${keptCount} ไฟล์คงต้นฉบับ (เล็กกว่าอยู่แล้ว)`, ` · ${keptCount} kept original (already smaller)`) : "";
-      st.ok(tr(`เสร็จ ${made.length} ไฟล์ · ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`,
+      const tail = keptCount ? tr(`, ${keptCount} ไฟล์คงต้นฉบับ (เล็กกว่าอยู่แล้ว)`, `, ${keptCount} kept original (already smaller)`) : "";
+      st.ok(tr(`เสร็จ ${made.length} ไฟล์, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`,
         `Done — ${made.length} files, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`));
       lastMade = made;
       hideEl(zipBtn, made.length <= 1);

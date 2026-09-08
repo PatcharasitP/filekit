@@ -331,6 +331,37 @@ with sync_playwright() as pw:
        len(after_orphans) > len(before_orphans), f"ก่อนลบ {len(before_orphans)} → หลังลบ {len(after_orphans)}")
     canary3.close()
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # ⑥ "ของที่ควรซ่อน ถูกซ่อนจริงไหม" — ตรวจ computed style ไม่ใช่แค่ว่ามีกฎ CSS
+    #
+    # ‼️ ทำไมต้องมี: CSS แพ้กันเงียบ ๆ ไม่มี error ไม่มีคำเตือน หน้าเว็บโหลดได้ปกติ
+    #    แค่ผลลัพธ์ผิด · เคสจริง 08/09/2026: เขียน .th-ic{display:none} ถูกทุกตัวอักษร
+    #    แต่แพ้ .btn-ico{display:block} ที่ประกาศทีหลังด้วย specificity เท่ากัน
+    #    → ไอคอนปุ่มธีมโผล่พร้อมกัน 3 อันซ้อน โดยไม่มีอะไรฟ้องเลย
+    #    กฎที่ได้: ทุกครั้งที่ใช้ CSS สลับการมองเห็น ต้องมีเทสวัด computed style จริง
+    #    ไม่ใช่แค่ตรวจว่า "เขียนกฎไว้แล้ว"
+    print("\n━━ ⑥ ของที่สลับการมองเห็นด้วย CSS ต้องเห็นทีละอันจริง ━━")
+    pg6 = browser.new_page(viewport={"width": 1280, "height": 900})
+    VISIBLE_ICONS = """() => [...document.querySelectorAll('#theme svg')]
+        .filter(s => getComputedStyle(s).display !== 'none')
+        .map(s => (s.getAttribute('class') || '').split(' ').pop())"""
+    for want, theme in [("th-auto", None), ("th-light", "light"), ("th-dark", "dark")]:
+        pg6.goto(BASE, wait_until="domcontentloaded")
+        pg6.evaluate("(t) => { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }", theme)
+        pg6.wait_for_timeout(120)
+        vis = pg6.evaluate(VISIBLE_ICONS)
+        ck(f"ปุ่มธีม ({theme or 'ตามระบบ'}): ต้องเห็นไอคอนเดียวคือ {want}",
+           vis == [want], f" (เห็นจริง {vis})")
+
+    # self-test: ฉีดกฎที่ทำให้ไอคอนโผล่พร้อมกัน แล้วตัวตรวจต้องจับได้
+    pg6.goto(BASE, wait_until="domcontentloaded")
+    pg6.add_style_tag(content="#theme .th-ic{display:block !important}")
+    pg6.wait_for_timeout(120)
+    broken = pg6.evaluate(VISIBLE_ICONS)
+    ck("self-test: ฉีดกฎให้ไอคอนโผล่พร้อมกัน แล้วตัวตรวจต้องเห็นมากกว่า 1 อัน (ตัวตรวจไม่ใช่ no-op)",
+       len(broken) > 1, f" (เห็น {broken})")
+    pg6.close()
+
     browser.close()
 
 print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

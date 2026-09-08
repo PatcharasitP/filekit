@@ -26,8 +26,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("การขึ้นหน้า", "Page breaks"), breakMode), field(tr("ขนาดตัวอักษร", "Font size"), fontSize)]),
     el("div", { class: "actions" }, [go]), st.node, extra, results);
   body.appendChild(el("div", { class: "note" },
-    tr("ได้ไฟล์ DOCX แก้ไขต่อได้ · ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน",
-       "You get an editable DOCX · tables, images, and complex layouts aren't kept")));
+    tr("ได้ไฟล์ DOCX แก้ไขต่อได้, ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน",
+       "You get an editable DOCX, tables, images, and complex layouts aren't kept")));
 
   function buildDocx(blocks) {
     const { Document, Packer, Paragraph, TextRun } = docx;
@@ -49,8 +49,8 @@ export function mount(tool) {
     if (!chars) throw new Error(tr("อ่านไม่พบข้อความในไฟล์นี้เลย", "No text was found in this file"));
     const blob = await buildDocx(blocks);
     st.progress(null);
-    st.ok(tr(`แปลงสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${blocks.length} หน้า${note ? " · " + note : ""}`,
-             `Done — ${chars.toLocaleString("en-US")} characters from ${blocks.length} pages${note ? " · " + note : ""}`));
+    st.ok(tr(`แปลงสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${blocks.length} หน้า${note ? ", " + note : ""}`,
+             `Done — ${chars.toLocaleString("en-US")} characters from ${blocks.length} pages${note ? ", " + note : ""}`));
     const name = stripExt(file.name) + ".docx";
     results.innerHTML = "";
     results.appendChild(el("div", { class: "result" }, [
@@ -96,8 +96,8 @@ export function mount(tool) {
         st.info(tr("ไม่มีชั้นข้อความ (อาจเป็นไฟล์สแกน)", "No text layer (probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            tr("OCR อ่านไทย-อังกฤษได้ · ครั้งแรกโหลดชุดภาษา ~10–30 MB ใช้เวลา ~3–15 วิ/หน้า",
-               "OCR reads Thai and English · first time downloads a ~10–30 MB pack, ~3–15 sec/page")),
+            tr("OCR อ่านไทย-อังกฤษได้, ครั้งแรกโหลดชุดภาษา ~10–30 MB ใช้เวลา ~3–15 วิ/หน้า",
+               "OCR reads Thai and English, first time downloads a ~10–30 MB pack, ~3–15 sec/page")),
           el("div", { class: "actions" }, [
             button(tr("อ่านด้วย OCR", "Read with OCR"), { onclick: () => runOcr(pdf) }),
             button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),

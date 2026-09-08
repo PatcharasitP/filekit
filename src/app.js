@@ -112,6 +112,33 @@ async function takeHomeFiles(files) {
   grids.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/* ‼️ ชื่อไฟล์อย่างเดียวไม่พอ — ภาพที่แคปมาจากคลิปบอร์ดชื่อ "image.png" เหมือนกันหมด
+   ต้องเห็นรูปถึงจะรู้ว่าหยิบถูกใบ · กดแล้วดูใหญ่ได้ด้วย (โหลดตัวดูตอนกดครั้งแรกเท่านั้น) */
+function dropThumb(file) {
+  if (!file) return null;
+  const btn = el("button", {
+    class: "drop-thumb", type: "button",
+    title: tr("กดเพื่อดูรูปใหญ่", "Click to view larger"),
+    "aria-label": tr(`ดู ${file.name} ขนาดใหญ่`, `View ${file.name} larger`),
+    onclick: async () => { const m = await import("./preview.js"); m.viewFile(file); },
+  });
+  import("./filetype.js").then(({ detectType }) => {
+    if (detectType(file) !== "image") {
+      btn.classList.add("as-icon");
+      import("./icons.js").then(({ fileKindIcon, uiIcon }) => {
+        btn.appendChild(fileKindIcon(detectType(file)) || uiIcon("list"));
+      });
+      return;
+    }
+    const u = URL.createObjectURL(file);
+    const img = el("img", { alt: "", decoding: "async" });
+    img.addEventListener("load", () => btn.appendChild(img), { once: true });
+    img.addEventListener("error", () => URL.revokeObjectURL(u), { once: true });
+    img.src = u;
+  });
+  return btn;
+}
+
 function renderDropped(stageH) {
   const { files, tools, label } = dropped;
   const what = files.length === 1 ? files[0].name : tr(`${files.length} ไฟล์`, `${files.length} files`);
@@ -120,6 +147,7 @@ function renderDropped(stageH) {
     : tr("ยังไม่มีเครื่องมือที่รับไฟล์ชนิดนี้", "No tool takes this file type yet");
   hits.textContent = "";
   grids.appendChild(el("div", { class: "drop-head" }, [
+    dropThumb(files[0]),
     el("div", { class: "drop-what" }, [el("b", {}, what), label ? el("span", {}, label) : null]),
     el("button", { class: "btn-soft", type: "button",
       onclick: () => { dropped = null; renderHome(); } }, tr("ล้าง", "Clear")),

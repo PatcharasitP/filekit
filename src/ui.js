@@ -473,6 +473,24 @@ export function dropzone(opts = {}) {
     },
   });
 
+  /** กล่องภาพย่อ — ถ้าไฟล์เปิดดูได้ ทำเป็นปุ่มกดดูรูปใหญ่ ไม่ใช่แค่รูปประดับ */
+  function thumbBox(f) {
+    const kind = detectType(f);
+    if (kind !== "image" && kind !== "pdf") {
+      return el("span", { class: "thumb generic", "aria-hidden": "true" });
+    }
+    return el("button", {
+      class: "thumb generic", type: "button",
+      title: tr("กดเพื่อดูรูปใหญ่", "Click to view larger"),
+      "aria-label": tr(`ดู ${f.name} ขนาดใหญ่`, `View ${f.name} larger`),
+      onclick: async (e) => {
+        e.stopPropagation();
+        const m = await import("./preview.js");
+        m.viewFile(f);
+      },
+    });
+  }
+
   function render() {
     // ‼️ วัดจริงบนมือถือ: กล่องลากไฟล์สูง 243px = 29% ของจอ และไม่หดเลยหลังเลือกไฟล์แล้ว
     //    พอมีไฟล์ในมือ คำเชิญ "ลากไฟล์มาวางที่นี่" กับปุ่มลองไฟล์ตัวอย่างหมดหน้าที่แล้ว
@@ -487,7 +505,7 @@ export function dropzone(opts = {}) {
       const row = el("div", { class: "file-row", draggable: reorder || null, "data-i": i,
         "data-state": states.get(f) || "pending" }, [
         reorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
-        thumbs ? el("span", { class: "thumb generic", "aria-hidden": "true" }) : null,
+        thumbs ? thumbBox(f) : null,
         el("span", { class: "f-meta" }, [
           el("span", { class: "f-name" }, f.name),
           el("span", { class: "f-size" }, fmtBytes(f.size)),

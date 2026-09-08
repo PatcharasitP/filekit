@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ‼️ มี URL เดียวเพราะเว็บเป็นหน้าเดียวใช้ hash route (#/pdf-merge)
+     เครื่องมือแต่ละตัวยังไม่มี URL ของตัวเอง — เรื่องนี้พี่ปอนด์เคาะ 08/09 ว่า "ยังไม่ทำตอนนี้"
+     ถ้าวันไหนทำหน้าแยก 27 หน้า ต้องกลับมาเติมที่นี่ -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://patcharasitp.github.io/filekit/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

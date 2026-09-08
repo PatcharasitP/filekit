@@ -1,0 +1,45 @@
+# FileKit — https://patcharasitp.github.io/filekit/
+# เจ้าของเว็บ (พี่ปอนด์) เคาะเมื่อ 2026-09-08: เปิดให้บอท AI เข้าอ่านได้ทั้งหมด
+#
+# เหตุผล: เว็บนี้ไม่มีข้อมูลส่วนตัวของใครเลย — ไฟล์ของผู้ใช้ประมวลผลในเบราว์เซอร์
+# ไม่เคยถูกอัปโหลดขึ้นเซิร์ฟเวอร์ ไม่มีระบบสมาชิก ไม่มี tracking
+# สิ่งที่บอทอ่านได้จึงมีแค่ "คำอธิบายเครื่องมือ" ซึ่งเราอยากให้คนเจออยู่แล้ว
+#
+# ที่ตั้งใจให้เกิด: เวลาใครถามผู้ช่วย AI ว่า "มีเว็บแปลง PDF ที่ไม่ต้องอัปโหลดไฟล์ไหม"
+# แล้ว AI ตอบชื่อเว็บนี้ได้
+
+User-agent: *
+Allow: /
+
+# ── บอทของผู้ช่วย AI (ระบุแยกให้ชัด ไม่ต้องเดาจากกฎ * ข้างบน) ──
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://patcharasitp.github.io/filekit/sitemap.xml

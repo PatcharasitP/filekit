@@ -345,12 +345,14 @@ with sync_playwright() as pw:
     VISIBLE_ICONS = """() => [...document.querySelectorAll('#theme svg')]
         .filter(s => getComputedStyle(s).display !== 'none')
         .map(s => (s.getAttribute('class') || '').split(' ').pop())"""
-    for want, theme in [("th-auto", None), ("th-light", "light"), ("th-dark", "dark")]:
+    # ‼️ ปุ่มธีมเหลือ 2 สถานะ · ก่อนผู้ใช้เลือกเอง (ไม่มี data-theme) ให้โชว์ตามระบบจริง
+    #    เทสนี้รันด้วย color-scheme เริ่มต้นของ Playwright = light จึงคาด th-light
+    for want, theme in [("th-light", None), ("th-light", "light"), ("th-dark", "dark")]:
         pg6.goto(BASE, wait_until="domcontentloaded")
         pg6.evaluate("(t) => { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }", theme)
         pg6.wait_for_timeout(120)
         vis = pg6.evaluate(VISIBLE_ICONS)
-        ck(f"ปุ่มธีม ({theme or 'ตามระบบ'}): ต้องเห็นไอคอนเดียวคือ {want}",
+        ck(f"ปุ่มธีม ({theme or 'ตามเครื่อง'}): ต้องเห็นไอคอนเดียวคือ {want}",
            vis == [want], f" (เห็นจริง {vis})")
 
     # self-test: ฉีดกฎที่ทำให้ไอคอนโผล่พร้อมกัน แล้วตัวตรวจต้องจับได้

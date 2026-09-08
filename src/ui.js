@@ -486,7 +486,7 @@ export function dropzone(opts = {}) {
       onclick: async (e) => {
         e.stopPropagation();
         const m = await import("./preview.js");
-        m.viewFile(f);
+        m.viewFile(f, files);        // ส่งทั้งชุดไปด้วย จะได้เลื่อนดูใบอื่นต่อได้เลย
       },
     });
   }

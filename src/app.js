@@ -126,13 +126,13 @@ async function takeHomeFiles(incoming) {
 
 /* ‼️ ชื่อไฟล์อย่างเดียวไม่พอ — ภาพที่แคปมาจากคลิปบอร์ดชื่อ "image.png" เหมือนกันหมด
    ต้องเห็นรูปถึงจะรู้ว่าหยิบถูกใบ · กดแล้วดูใหญ่ได้ด้วย (โหลดตัวดูตอนกดครั้งแรกเท่านั้น) */
-function dropThumb(file) {
+function dropThumb(file, allFiles) {
   if (!file) return null;
   const btn = el("button", {
     class: "drop-thumb", type: "button",
     title: tr("กดเพื่อดูรูปใหญ่", "Click to view larger"),
     "aria-label": tr(`ดู ${file.name} ขนาดใหญ่`, `View ${file.name} larger`),
-    onclick: async () => { const m = await import("./preview.js"); m.viewFile(file); },
+    onclick: async () => { const m = await import("./preview.js"); m.viewFile(file, allFiles); },
   });
   import("./filetype.js").then(({ detectType }) => {
     if (detectType(file) !== "image") {
@@ -160,7 +160,7 @@ function renderDropped(stageH) {
   hits.textContent = "";
   grids.appendChild(el("div", { class: "drop-head" }, [
     el("div", { class: "drop-thumbs" }, [
-      ...files.slice(0, MAX_THUMBS).map(dropThumb),
+      ...files.slice(0, MAX_THUMBS).map((f) => dropThumb(f, files)),
       files.length > MAX_THUMBS
         ? el("span", { class: "drop-more" }, `+${files.length - MAX_THUMBS}`) : null,
     ]),
@@ -357,22 +357,31 @@ grids.addEventListener("keydown", (e) => {
 });
 
 /* ── ธีม / มุมมอง ── */
-const THEMES = ["auto", "light", "dark"];
+const THEMES = ["light", "dark"];   // ‼️ ไม่มี "auto" ในวงจรกด — ดูหมายเหตุที่ applyTheme
 const THEME_NAME = IS_EN
-  ? { auto: "system", light: "light", dark: "dark" }
-  : { auto: "ตามระบบ", light: "โหมดสว่าง", dark: "โหมดมืด" };
+  ? { light: "light", dark: "dark" }
+  : { light: "โหมดสว่าง", dark: "โหมดมืด" };
 const themeBtn = $("#theme");
 function applyTheme(v) {
-  if (v === "auto") delete document.documentElement.dataset.theme;
+  if (v === "auto") delete document.documentElement.dataset.theme;   // ค่าเริ่มต้นก่อนผู้ใช้เลือกเอง
   else document.documentElement.dataset.theme = v;
   store.set("fk-theme", v);
   // ไอคอนทั้ง 3 แบบอยู่ในหน้าแล้ว CSS เลือกโชว์เอง — JS ไม่ต้องยัดทีหลัง (กันปุ่มว่างแวบ)
-  themeBtn.title = themeBtn.ariaLabel = tr(`ธีม: ${THEME_NAME[v]} (กดเพื่อเปลี่ยน)`,
-                                          `Theme: ${THEME_NAME[v]} (click to change)`);
+  const name = THEME_NAME[v] || tr("ตามเครื่อง", "system");
+  themeBtn.title = themeBtn.ariaLabel = tr(`ธีม: ${name} (กดเพื่อสลับ)`, `Theme: ${name} (click to switch)`);
 }
+/* ‼️ ค่าเริ่มต้นยังเป็น "ตามระบบ" (ไม่เขียนลง localStorage จนกว่าผู้ใช้จะกดเลือกเอง)
+   แต่ปุ่มมีแค่ 2 สถานะให้กดสลับ — คนกดปุ่มธีมเพราะอยากได้สว่างหรือมืด ไม่มีใครกดเพื่อขอ
+   "ตามระบบ" · ปุ่ม 3 สถานะทำให้ต้องกดวน 3 ครั้งและมีไอคอนที่ต้องเดาความหมาย
+   (เจ้าของเว็บงงกับไอคอนจอมอนิเตอร์เอง 08/09/2026) */
 applyTheme(store.get("fk-theme", "auto"));
-themeBtn.addEventListener("click", () =>
-  applyTheme(THEMES[(THEMES.indexOf(store.get("fk-theme", "auto")) + 1) % THEMES.length]));
+themeBtn.addEventListener("click", () => {
+  // ยังไม่เคยเลือกเอง → กดครั้งแรกให้ไป "ตรงข้ามกับที่เห็นอยู่ตอนนี้"
+  const cur = store.get("fk-theme", "auto");
+  const now = cur !== "auto" ? cur
+    : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(now === "dark" ? "light" : "dark");
+});
 
 /* ปุ่มภาษา 2 ตัว — ตัวที่ใช้อยู่ทำเครื่องหมายด้วย aria-current (ไม่ใช่แค่สี)
    คนที่ใช้โปรแกรมอ่านหน้าจอจึงรู้ด้วยว่าตอนนี้อยู่ภาษาไหน · กดตัวที่ใช้อยู่แล้วไม่ทำอะไร */

@@ -702,7 +702,9 @@ select,
 /* ── ดูไฟล์เต็มจอ ─────────────────────────────────────────────────────── */
 .pv{border:0;padding:0;background:transparent;max-width:100vw;max-height:100vh;
   width:100vw;height:100dvh;overflow:auto;color:#fff}
-.pv::backdrop{background:rgba(6,8,13,.86);backdrop-filter:blur(3px)}
+/* ‼️ ห้ามใส่ backdrop-filter ตรงนี้ — เบลอพื้นเต็มจอทำให้ทุกเฟรมต้องคำนวณใหม่ทั้งจอ
+   วัดจริง: ตัวดูรูปนิ่ง ๆ ไฟล์เดียวก็ได้แค่ ~10fps · พื้นทึบ .92 ให้ผลตาเกือบเหมือนกัน */
+.pv::backdrop{background:rgba(6,8,13,.92)}
 .pv-stage{min-height:70dvh;display:grid;place-items:center;padding:56px 16px 8px;
   overflow:auto;max-height:88dvh;touch-action:pinch-zoom;overscroll-behavior:contain}
 .pv-stage img,.pv-stage canvas{cursor:zoom-in;-webkit-user-drag:none;user-select:none}

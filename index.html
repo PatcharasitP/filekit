@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0f1220" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
 <!-- ‼️ ไม่ preload ฟอนต์: บนเน็ตช้ามันไปแย่งแบนด์วิดท์กับ JS ที่ต้องใช้วาดหน้า
-     ทำให้ FCP ช้าลงจาก 296 เป็น 568 ms · font-display:swap ทำให้ข้อความขึ้นทันที
+     ทำให้ FCP ช้าลงจาก 296 เป็น 568 ms · font-display:optional ทำให้ข้อความขึ้นทันที
      ด้วยฟอนต์ระบบแล้วค่อยสลับ ผู้ใช้ไม่เห็นจอว่าง -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="canonical" href="https://patcharasitp.github.io/filekit/">
@@ -56,12 +56,19 @@
 /* ฟอนต์ของเราเอง — ประกาศไว้ในไฟล์หลักเลย ไม่โหลดทีหลังและไม่ข้ามถ้าเครื่องมีอยู่แล้ว
    ‼️ subset ชุดก่อนขาดตัว "⇄" ที่ใช้อยู่บนหน้าแรก ตัวที่ขาดตกไปใช้ฟอนต์ระบบ
       ทำให้เห็นเป็น "ฟอนต์สองแบบปนกัน" · ชุดนี้สร้างจากตัวอักษรที่เว็บใช้จริง (tools/build-fonts.py) */
+/* ‼️ optional ไม่ใช่ swap — swap ทำให้ข้อความขึ้นด้วยฟอนต์ระบบก่อนแล้วสลับเป็น Sarabun
+   ตัวอักษรจึงขยับให้เห็น (เจ้าของเว็บทักเอง) · optional = ถ้าฟอนต์ไม่ทันในเสี้ยววินาทีแรก
+   ก็ใช้ฟอนต์สำรองไปทั้งรอบนั้นเลย ไม่สลับกลางคัน = ไม่มีการขยับ
+   รอบต่อ ๆ ไปฟอนต์อยู่ในแคชแล้วจึงมาทันเสมอ · ยังไม่ preload ด้วยเหตุผลด้านบน
+   ‼️ ฟอนต์สำรองต้องระบุ metric ให้ใกล้เคียง ไม่งั้นความสูงบรรทัดต่างกันจนหน้าขยับอยู่ดี */
+@font-face{font-family:"FK Fallback";src:local("Leelawadee UI"),local("Tahoma"),local("Arial");
+  size-adjust:97%;ascent-override:92%;descent-override:26%;line-gap-override:0%}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-Regular.woff2") format("woff2");
-  font-weight:400;font-style:normal;font-display:swap}
+  font-weight:400;font-style:normal;font-display:optional}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-SemiBold.woff2") format("woff2");
-  font-weight:600;font-style:normal;font-display:swap}
+  font-weight:600;font-style:normal;font-display:optional}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-Bold.woff2") format("woff2");
-  font-weight:700;font-style:normal;font-display:swap}
+  font-weight:700;font-style:normal;font-display:optional}
 
 :root{
   /* ── พื้นผิวและเส้น (โหมดมืดเป็นค่าตั้งต้น) ── */
@@ -97,7 +104,7 @@
   --ring-top:inset 0 1px 0 0 rgba(255,255,255,.06);
   /* ── ตัวอักษร: ภาษาไทยต้องการ line-height สูงกว่าอังกฤษเพราะมีสระบน-ล่าง ── */
   --lh:1.75; --lh-tight:1.4;
-  --font:"FK Sarabun","Sarabun","IBM Plex Sans Thai","Noto Sans Thai",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font:"FK Sarabun","FK Fallback","Sarabun","IBM Plex Sans Thai","Noto Sans Thai",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
 }
 /* โหมดสว่าง — ประกาศซ้ำ 2 ที่ ให้ทั้ง "ตามระบบ" และ "ผู้ใช้เลือกเอง" ทำงานถูกทั้งคู่ */
 @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
@@ -184,12 +191,14 @@ button{font-family:inherit}
    ทุกครั้งที่โหลดหน้า (เจ้าของเว็บเห็นเป็นอาการ "วูบ" ตอนกด Ctrl+Shift+R) */
 /* ‼️ ต้องนำหน้าด้วย #theme — .btn-ico ตั้ง display:block ไว้และประกาศทีหลัง
    ถ้าใช้แค่ .th-ic{display:none} จะแพ้ แล้วไอคอนโผล่พร้อมกันทั้ง 3 อัน (วัดแล้วเจอจริง) */
+/* ‼️ ปุ่มธีมมี 2 สถานะ: สว่าง/มืด · ก่อนผู้ใช้เลือกเอง (ไม่มี data-theme) ให้โชว์ไอคอน
+   ตามที่ "ระบบ" เป็นอยู่จริง — ไม่ใช่ไอคอนที่สาม เพราะไอคอนที่ต้องเดาความหมาย
+   ผู้ใช้ก็เดาไม่ออก (เจ้าของเว็บงงกับไอคอนจอมอนิเตอร์เอง แล้วยังดูเป็นก้อนดำในปุ่มกลม) */
 #theme .th-ic{display:none}
-#theme .th-auto{display:block}
-:root[data-theme="light"] #theme .th-auto,
-:root[data-theme="dark"] #theme .th-auto{display:none}
 :root[data-theme="light"] #theme .th-light{display:block}
 :root[data-theme="dark"] #theme .th-dark{display:block}
+@media (prefers-color-scheme: dark){ :root:not([data-theme]) #theme .th-dark{display:block} }
+@media (prefers-color-scheme: light){ :root:not([data-theme]) #theme .th-light{display:block} }
 /* ‼️ ปุ่มไอคอนล้วนไม่มีข้อความให้ยึด กรอบจึงเป็นสิ่งเดียวที่บอกว่า 'นี่คือปุ่ม'
    วัดแล้วกรอบเดิมได้แค่ 1.21-1.44:1 ตาแทบแยกไม่ออกจากพื้น — ใช้สีเข้มขึ้นเฉพาะปุ่มกลุ่มนี้ */
 .iconbtn{box-shadow:var(--ring-top); border-color:var(--text-mute)}
@@ -591,7 +600,7 @@ body.tool #home{display:none}
     <button class="langopt" type="button" data-lang="th" lang="th">ไทย</button>
     <button class="langopt" type="button" data-lang="en" lang="en">EN</button>
   </div>
-  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม" data-en-al="Switch theme"><svg class="btn-ico th-ic th-auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.6" width="18" height="12.4" rx="2.2"/><path d="M9 20.4h6M12 17v3.4"/><path d="M7.6 10.8h3.2M8.4 13.4h5.6" opacity=".55"/></svg><svg class="btn-ico th-ic th-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/></svg><svg class="btn-ico th-ic th-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/></svg></button>
+  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม" data-en-al="Switch theme"><svg class="btn-ico th-ic th-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/></svg><svg class="btn-ico th-ic th-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/></svg></button>
   <button class="back" id="back" type="button" aria-label="กลับไปหน้าเครื่องมือทั้งหมด"
     data-en-al="Back to all tools"><span aria-hidden="true">←</span><b data-en="All tools">เครื่องมือทั้งหมด</b></button>
 </header>

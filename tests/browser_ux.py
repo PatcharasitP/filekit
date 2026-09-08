@@ -113,17 +113,25 @@ with sync_playwright() as p:
     ck("ลูกศรขวา → ย้ายไปการ์ดถัดไป", pg.evaluate("document.activeElement.dataset.id") != first, True)
 
     print("\n━━ ⑤ สลับธีม / มุมมองแบบแน่น ━━")
+    # ‼️ ปุ่มธีมเหลือ 2 สถานะ (สว่าง/มืด) · ก่อนเลือกเองยังตามเครื่อง
+    #    กดครั้งแรก = สลับไปตรงข้ามกับ "ที่เห็นอยู่ตอนนี้" ไม่ใช่ไปสว่างเสมอ
+    sysDark = pg.evaluate("matchMedia('(prefers-color-scheme: dark)').matches")
+    want1 = "light" if sysDark else "dark"
     pg.locator("#theme").click(); pg.wait_for_timeout(150)
-    t1 = pg.evaluate("document.documentElement.dataset.theme")
-    ck("กดสลับธีมครั้งแรก → โหมดสว่าง", t1, "light")
-    ck("พื้นหลังเปลี่ยนเป็นสีสว่างจริง (สว่างกว่า 90%)",
-       pg.evaluate("""() => { const m = getComputedStyle(document.body).backgroundColor.match(/[\\d.]+/g).map(Number);
-         return (m[0]+m[1]+m[2])/3 > 230; }"""), True)
+    ck(f"กดครั้งแรก → สลับตรงข้ามกับที่เห็นอยู่ ({want1})",
+       pg.evaluate("document.documentElement.dataset.theme"), want1)
+    bright = pg.evaluate("""() => { const m = getComputedStyle(document.body).backgroundColor.match(/[\\d.]+/g).map(Number);
+         return (m[0]+m[1]+m[2])/3; }""")
+    ck(f"พื้นหลังเปลี่ยนตามจริง ({'มืด' if want1=='dark' else 'สว่าง'})",
+       (bright < 60) if want1 == "dark" else (bright > 230), True)
+    want2 = "dark" if want1 == "light" else "light"
     pg.locator("#theme").click(); pg.wait_for_timeout(150)
-    ck("กดอีกครั้ง → โหมดมืด", pg.evaluate("document.documentElement.dataset.theme"), "dark")
+    ck(f"กดอีกครั้ง → กลับไปอีกโหมด ({want2})", pg.evaluate("document.documentElement.dataset.theme"), want2)
     pg.reload(wait_until="networkidle")
-    ck("จำธีมไว้หลังรีเฟรช", pg.evaluate("document.documentElement.dataset.theme"), "dark")
-    pg.locator("#theme").click(); pg.wait_for_timeout(150)   # กลับเป็น auto
+    ck("จำธีมไว้หลังรีเฟรช", pg.evaluate("document.documentElement.dataset.theme"), want2)
+    ck("ปุ่มธีมโชว์ไอคอนเดียวเสมอ (ไม่มีไอคอนที่สามที่ต้องเดาความหมาย)",
+       pg.evaluate("""() => [...document.querySelectorAll('#theme svg')]
+         .filter(s => getComputedStyle(s).display !== 'none').length"""), 1)
 
     # ปุ่มสลับมุมมองถูกถอดออก (พี่ปอนด์ถามว่าจำเป็นไหม 08/09) — เหลือมุมมองป้ายกลมอย่างเดียว
     # แถว "เพิ่งใช้ล่าสุด" ที่เคยอยู่เฉพาะมุมมองละเอียด ย้ายมาเป็นแถวป้ายกลมบนสุดแล้ว

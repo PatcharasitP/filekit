@@ -205,14 +205,15 @@
 /* ── จดหมายเวียน: ขั้นตอนแบบทีละสเต็ป ── */
 .mm-step{display:flex;gap:14px;margin-bottom:26px;transition:opacity .2s}
 .mm-step[data-locked="1"]{opacity:.48}
-.mm-step[data-locked="1"] .mm-num{background:var(--line);color:var(--text-mute);box-shadow:none}
+/* ‼️ เลขขั้นตอนตอนล็อกเคยได้แค่ 3.07:1 (ตัวมิวท์บนเส้นจาง) อ่านไม่ออกจริง ๆ */
+.mm-step[data-locked="1"] .mm-num{background:var(--line-soft);color:var(--text-dim);box-shadow:none}
 .step-wait{font-size:13px;color:var(--text-mute);border:1px dashed var(--line);
   border-radius:var(--r-sm);padding:11px 14px;background:var(--bg-soft)}
 .mm-step > div{flex:1;min-width:0}
 .mm-step h3{font-size:15px;margin:0 0 10px}
 .mm-num{
   flex:none;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;
-  background:var(--brand);color:#fff;font-size:13px;font-weight:700;margin-top:1px;
+  background:var(--btn-bg);color:var(--btn-fg);font-size:13px;font-weight:700;margin-top:1px;
 }
 .mm-box{margin-top:12px}
 .mm-label{font-size:13px;color:var(--text-dim);margin:0 0 9px}
@@ -517,3 +518,23 @@
   .ws-right .ws-scroll{max-height:none}
   .ws-left .ws-scroll{max-height:340px}
 }
+
+/* ‼️ ช่องกรอก/ดรอปดาวน์ต้อง 'ดูกรอกได้' ก่อนผู้ใช้จะรู้ว่ากดได้
+   วัดแล้วขอบเดิม var(--line) ได้แค่ 1.32:1 · ดรอปดาวน์ที่ยังไม่มีตัวเลือก (จดหมายเวียนก่อนใส่ไฟล์)
+   จึงกลายเป็นกล่องเปล่าที่ตาแยกจากพื้นไม่ออกเลย — ใช้ขอบเข้มขึ้นเฉพาะกลุ่มนี้ */
+select,
+.field input,.field select,.field textarea,
+.mm-grid select{border-color:var(--text-mute)}
+
+/* ปุ่มรองที่เป็นไอคอนล้วน (หมุนหน้า/ลบหน้า) ไม่มีข้อความให้ยึด กรอบคือสิ่งเดียวที่บอกว่ากดได้ */
+.btn.ghost{border-color:var(--text-mute)}
+
+/* ข้อความตัวอย่างในช่องกรอก (placeholder) เดิมได้ 3.78:1 — เป็นคำใบ้วิธีพิมพ์ ต้องอ่านออก */
+.field input::placeholder,.field textarea::placeholder{color:var(--text-dim);opacity:1}
+
+/* ‼️ ขนาดพื้นที่กดขั้นต่ำ 36px — วัดจริงที่จอ 390px เจอปุ่มสูงแค่ 28-35px หลายจุด
+   (ลบหน้า/หมุนหน้า/รีเซ็ต/ลิงก์ตัวอย่าง) นิ้วโป้งคนทั่วไปพลาดง่ายที่ขนาดนั้น
+   ตั้งเป็น min-height ไม่ใช่ height เพื่อให้ข้อความ 2 บรรทัดยังยืดได้ */
+.btn,.btn.ghost{min-height:36px}
+.icon-btn{width:36px;height:36px}
+.chip{min-height:36px}

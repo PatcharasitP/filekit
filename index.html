@@ -66,8 +66,8 @@
 :root{
   /* ── พื้นผิวและเส้น (โหมดมืดเป็นค่าตั้งต้น) ── */
   --bg:#101216; --bg-soft:#171a20; --card:#1c2027; --card-hi:#232830;
-  --line:#2c313b; --line-soft:#242932;
-  --text:#f0f1f3; --text-dim:#a8adb8; --text-mute:#878d99;
+  --line:#39404e; --line-soft:#2b313d;
+  --text:#f0f1f3; --text-dim:#a8adb8; --text-mute:#949ba7;
   /* แผงเข้มที่ใส่ป้ายเครื่องมือ — ใช้สีเดียวกันทั้งสองโหมด ให้เป็น "จุดยึด" ของหน้า */
   --stage:#1b2029; --stage-2:#12161d; --stage-line:#2b323d; --stage-dim:#98a0ae;
   --brand:#6c8cff; --brand-text:#8aa3ff; --brand-2:#9d7bff; --brand-ink:#fff;
@@ -105,7 +105,7 @@
   --hairline:rgba(16,22,50,.10); --ring-top:inset 0 1px 0 0 rgba(255,255,255,.7);
   --bg:#f6f5f3; --bg-soft:#efeeea; --card:#fff; --card-hi:#faf9f7;
   --line:#e2e0da; --line-soft:#ebe9e4;
-  --text:#14161c; --text-dim:#585d68; --text-mute:#6a6f7a;
+  --text:#14161c; --text-dim:#585d68; --text-mute:#626771;
   /* สีความหมายชุดเดิมสว่างเกินไปสำหรับพื้นขาว (เขียวได้แค่ 1.34:1) ต้องมีชุดเข้มแยก */
   --ok:#0b6b42; --warn:#8f5200; --err:#ad2740;
   --brand-text:#3a57c8;
@@ -119,7 +119,7 @@
   --hairline:rgba(16,22,50,.10); --ring-top:inset 0 1px 0 0 rgba(255,255,255,.7);
   --bg:#f6f5f3; --bg-soft:#efeeea; --card:#fff; --card-hi:#faf9f7;
   --line:#e2e0da; --line-soft:#ebe9e4;
-  --text:#14161c; --text-dim:#585d68; --text-mute:#6a6f7a;
+  --text:#14161c; --text-dim:#585d68; --text-mute:#626771;
   /* สีความหมายชุดเดิมสว่างเกินไปสำหรับพื้นขาว (เขียวได้แค่ 1.34:1) ต้องมีชุดเข้มแยก */
   --ok:#0b6b42; --warn:#8f5200; --err:#ad2740;
   --brand-text:#3a57c8;
@@ -144,7 +144,7 @@ button{font-family:inherit}
 :focus-visible{outline:2.5px solid var(--brand); outline-offset:2px; border-radius:6px}
 
 .skip{position:absolute; left:-9999px; top:8px; z-index:99;
-  background:var(--brand); color:#fff; padding:10px 18px; border-radius:999px; font-weight:700; text-decoration:none}
+  background:var(--btn-bg); color:var(--btn-fg); padding:10px 18px; border-radius:999px; font-weight:700; text-decoration:none}
 .skip:focus{left:12px}
 
 /* ---------- แถบบน ---------- */
@@ -179,9 +179,11 @@ button{font-family:inherit}
   border-radius:999px; font-size:16px; transition:color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
 }
 .iconbtn:hover{background:var(--card-hi); color:var(--text)}
-.iconbtn{box-shadow:var(--ring-top)}
+/* ‼️ ปุ่มไอคอนล้วนไม่มีข้อความให้ยึด กรอบจึงเป็นสิ่งเดียวที่บอกว่า 'นี่คือปุ่ม'
+   วัดแล้วกรอบเดิมได้แค่ 1.21-1.44:1 ตาแทบแยกไม่ออกจากพื้น — ใช้สีเข้มขึ้นเฉพาะปุ่มกลุ่มนี้ */
+.iconbtn{box-shadow:var(--ring-top); border-color:var(--text-mute)}
 /* ปุ่มภาษาเป็นตัวอักษรไม่ใช่ไอคอน จึงต้องกว้างตามข้อความ */
-.langbtn{width:auto; min-width:44px; padding:0 12px; font:700 12px/1 var(--font);
+.langbtn{width:auto; min-width:44px; padding:0 12px; font:700 12px/1.4 var(--font);
   letter-spacing:.06em; color:var(--text-dim)}
 .langbtn:hover{color:var(--text)}
 .back{
@@ -229,7 +231,7 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   /* บีบระยะตัวอักษร -3.4% ตามที่วัดจากเว็บชั้นนำ — ใช้กับไทยได้ ทดสอบแล้วสระไม่ชนกัน
      แต่ line-height ห้ามต่ำกว่า 1.3 เด็ดขาด (ที่ 1.0 สระบน-ล่างล้นกล่อง 6px ชนบรรทัดบน) */
   letter-spacing:calc(1em * -0.034);
-  line-height:1.24; padding-block:2px; max-width:19ch; text-wrap:balance;
+  line-height:1.3; padding-block:2px; max-width:19ch; text-wrap:balance;
 }
 .hero h1 em{font-style:normal; color:#79808e}
 :root[lang="en"] .hero h1{max-width:24ch}

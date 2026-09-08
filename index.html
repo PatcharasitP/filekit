@@ -380,6 +380,14 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .stage-h{display:flex;align-items:baseline;gap:10px;
   font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--stage-dim);
   margin-bottom:var(--sp5)}
+/* แถบหัวตอนลากไฟล์ลงหน้าแรก — บอกว่ากำลังดูเครื่องมือสำหรับไฟล์ไหนอยู่ */
+.drop-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 var(--sp4);padding:10px 14px;border-radius:12px;
+  background:color-mix(in srgb,var(--brand) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--brand) 38%,transparent)}
+.drop-what{display:flex;flex-direction:column;gap:1px;min-width:0}
+.drop-what b{color:#fff;font-size:14.5px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drop-what span{color:var(--stage-dim);font-size:12px;line-height:1.5}
 .pills{display:flex;flex-wrap:wrap;gap:11px}
 .pill{
   display:inline-flex;align-items:center;gap:10px;flex:none;cursor:pointer;text-align:start;

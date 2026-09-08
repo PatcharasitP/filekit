@@ -21,3 +21,16 @@ export function el(tag, attrs = {}, children = []) {
   }
   return n;
 }
+
+/* ── ผ้าคลุมทั้งจอตอนลากไฟล์เข้ามา ────────────────────────────────────
+ * ใช้ร่วมกันทั้งหน้าแรกและหน้าเครื่องมือ · มีชิ้นเดียวทั้งเว็บ สร้างตอนถูกใช้ครั้งแรก
+ * ‼️ ต้อง pointer-events:none (อยู่ใน tool.css) ไม่งั้นมันจะกิน dragleave/drop ของหน้าเอง */
+let dropVeil = null;
+export function showVeil(on, label) {
+  if (!dropVeil) {
+    dropVeil = el("div", { class: "dropveil", "aria-hidden": "true" }, [el("div", { class: "dropveil-in" })]);
+    document.body.appendChild(dropVeil);
+  }
+  if (label) dropVeil.firstChild.textContent = label;
+  dropVeil.classList.toggle("on", !!on);
+}

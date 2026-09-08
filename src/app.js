@@ -5,7 +5,7 @@
 import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
-import { el, $ } from "./dom.js";
+import { el, $, showVeil } from "./dom.js";
 import { toolIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic } from "./i18n.js";
 
@@ -26,7 +26,7 @@ function pushRecent(id) {
 }
 
 /* ── ป้ายเครื่องมือ (มุมมองหลัก) ── */
-function pillOf(t, q = "") {
+function pillOf(t, q = "", onPick = null) {
   const r = q ? highlightRange(t.title, q) : null;
   const label = r
     ? [t.title.slice(0, r[0]), el("mark", {}, t.title.slice(r[0], r[1])), t.title.slice(r[1])]
@@ -34,7 +34,7 @@ function pillOf(t, q = "") {
   return el("button", {
     class: "pill", type: "button", "data-id": t.id, style: `--ac:${accentOf(t.group)}`,
     title: t.desc,                       // คำอธิบายยังอยู่ แค่ย้ายไปอยู่ในทูลทิป
-    onclick: () => go(t.id),
+    onclick: () => (onPick ? onPick() : go(t.id)),
     onmouseenter: () => prefetch(t), onfocus: () => prefetch(t), ontouchstart: () => prefetch(t),
   }, [el("i", { "aria-hidden": "true" }, [toolIcon(t) || t.icon]), el("span", {}, label),
       isNew(t) && el("b", { class: "new" }, tr("ใหม่", "New"))]);
@@ -49,6 +49,9 @@ function renderHome(q = "") {
   const found = searchTools(TOOLS, q);
   const stageH = $("#stageh");
   grids.innerHTML = "";
+
+  // ลากไฟล์เข้ามาแล้ว: ไม่ต้องไล่หาเครื่องมือเอง เว็บคัดให้เลยว่าไฟล์ชนิดนี้ทำอะไรได้บ้าง
+  if (dropped && !q.trim()) return renderDropped(stageH);
 
   // กำลังค้นหา: เรียงตามคะแนน ไม่แบ่งหมวด — คนกำลังค้นอยากเห็นตัวที่ตรงที่สุดก่อน
   if (q.trim()) {
@@ -87,6 +90,82 @@ function renderHome(q = "") {
   grids.appendChild(box);
 }
 
+/* ── ลากไฟล์ลงหน้าแรกได้เลย ───────────────────────────────────────────────
+ * คนคิดจากไฟล์ในมือ ("มี PDF ใบนี้ ทำอะไรได้บ้าง") ไม่ได้คิดจากชื่อเครื่องมือ
+ * เดิมต้องเดาชื่อเครื่องมือให้ถูกก่อนถึงจะลากไฟล์ได้ ตอนนี้ลากลงหน้าแรกแล้วเว็บคัดให้
+ * ทะเบียนรู้ชนิดที่แต่ละเครื่องมือรับ (accepts) อยู่แล้ว จึงจับคู่ได้โดยไม่ต้องเปิดเครื่องมือ */
+let dropped = null;         // { files, kinds, tools }
+let homeDragDepth = 0;
+let uiMod = null;           // ui.js ที่โหลดแล้ว — ใช้ล้างไฟล์ฝากตอนกลับหน้าแรก
+const onHomeNow = () => !document.body.classList.contains("tool");
+const dragHasFiles = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+
+async function takeHomeFiles(files) {
+  const { detectType, typeLabel } = await import("./filetype.js");
+  const kinds = [...new Set(files.map(detectType).filter(Boolean))];
+  const tools = TOOLS.filter((t) => (t.accepts || []).some((k) => kinds.includes(k)));
+  dropped = { files, kinds, tools, label: kinds.map(typeLabel).join(" · ") };
+  search.value = "";
+  activeCat = "";
+  renderCats();
+  renderHome();
+  grids.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderDropped(stageH) {
+  const { files, tools, label } = dropped;
+  const what = files.length === 1 ? files[0].name : tr(`${files.length} ไฟล์`, `${files.length} files`);
+  if (stageH) stageH.textContent = tools.length
+    ? tr(`ไฟล์ของคุณใช้ได้กับ ${tools.length} เครื่องมือ`, `Your file works with ${tools.length} tools`)
+    : tr("ยังไม่มีเครื่องมือที่รับไฟล์ชนิดนี้", "No tool takes this file type yet");
+  hits.textContent = "";
+  grids.appendChild(el("div", { class: "drop-head" }, [
+    el("div", { class: "drop-what" }, [el("b", {}, what), label ? el("span", {}, label) : null]),
+    el("button", { class: "btn-soft", type: "button",
+      onclick: () => { dropped = null; renderHome(); } }, tr("ล้าง", "Clear")),
+  ]));
+  if (!tools.length) {
+    grids.appendChild(el("div", { class: "empty" }, [
+      el("b", {}, tr("ไฟล์ชนิดนี้ยังไม่มีเครื่องมือรองรับ", "No tool supports this file type yet")),
+      el("div", {}, tr("ลองไฟล์ PDF · Word · Excel · CSV · PowerPoint · รูปภาพ",
+                       "Try a PDF, Word, Excel, CSV, PowerPoint or image file")),
+    ]));
+    return;
+  }
+  grids.appendChild(el("div", { class: "pills" }, tools.map((t) => pillOf(t, "", async () => {
+    uiMod = uiMod || await import("./ui.js");
+    uiMod.stashFiles(files);          // ไฟล์ตามไปด้วย ไม่ต้องเลือกใหม่ที่หน้าเครื่องมือ
+    dropped = null;
+    go(t.id);
+  }))));
+}
+
+document.addEventListener("dragenter", (e) => {
+  if (!onHomeNow() || !dragHasFiles(e)) return;
+  homeDragDepth++;
+  showVeil(true, tr("ปล่อยไฟล์เพื่อดูว่าทำอะไรได้บ้าง", "Drop a file to see what you can do"));
+});
+document.addEventListener("dragover", (e) => { if (onHomeNow() && dragHasFiles(e)) e.preventDefault(); });
+document.addEventListener("dragleave", () => {
+  if (!onHomeNow()) return;
+  if (--homeDragDepth <= 0) { homeDragDepth = 0; showVeil(false); }
+});
+document.addEventListener("drop", (e) => {
+  if (!onHomeNow()) return;
+  homeDragDepth = 0; showVeil(false);
+  const f = [...(e.dataTransfer?.files || [])];
+  if (!f.length) return;
+  e.preventDefault();
+  takeHomeFiles(f);
+});
+document.addEventListener("paste", (e) => {
+  if (!onHomeNow()) return;
+  const f = [...(e.clipboardData?.files || [])];
+  if (!f.length) return;             // วางข้อความธรรมดา (เช่นในช่องค้นหา) ปล่อยผ่านตามปกติ
+  e.preventDefault();
+  takeHomeFiles(f);
+});
+
 function showEmpty(q) {
   grids.appendChild(el("div", { class: "empty" }, [
     el("b", {}, tr(`ไม่พบเครื่องมือที่ตรงกับ “${q}”`, `No tool matches “${q}”`)),
@@ -103,7 +182,7 @@ function renderCats() {
     el("button", {
       class: "cat", type: "button", "aria-pressed": String(activeCat === id),
       style: `--ac:${accent}`,
-      onclick: () => { activeCat = activeCat === id ? "" : id; renderCats(); renderHome(search.value); },
+      onclick: () => { dropped = null; activeCat = activeCat === id ? "" : id; renderCats(); renderHome(search.value); },
     }, [label, el("b", {}, String(count))]);
   cats.appendChild(mk("", tr("ทั้งหมด", "All"), TOOLS.length, "var(--text)"));   // หมวดรวมใช้สีกลาง ไม่แย่งสีประจำหมวด
   for (const g of GROUPS) {
@@ -124,6 +203,7 @@ function prefetch(t) {
 
 /* ── เราเตอร์ ── */
 const mounted = new Map();              // เก็บ DOM ของเครื่องมือที่เคยเปิด กลับมาแล้วสถานะยังอยู่
+const mounting = new Map();             // เครื่องมือที่กำลังโหลดอยู่ — กันสร้างซ้อนตอนถูกเรียกพร้อมกัน
 const swap = (fn) =>
   document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches
     ? document.startViewTransition(fn) : fn();
@@ -148,10 +228,20 @@ async function go(id, push = true) {
   if (mounted.has(id)) return;
 
   try {
-    // โหลดโค้ดเครื่องมือกับไลบรารีขนานกัน ไม่ต่อคิวกัน
-    const [mod] = await Promise.all([import(`./tools/${id}.js`), loadLibs(...tool.libs)]);
-    const node = mod.mount(tool);
-    mounted.set(id, node);
+    // ‼️ กดป้ายครั้งเดียวแต่ go() ถูกเรียก 2 รอบเสมอ — รอบแรกจากปุ่ม รอบสองจาก hashchange
+    //    ที่ go() เองเป็นคนตั้ง · ตอนนั้น mounted ยังว่างอยู่ (ยังไม่ await เสร็จ) กันไม่ทัน
+    //    ผลคือ mount() ถูกเรียก 2 ครั้ง สร้างเครื่องมือซ้อนกัน 2 ชุด ชุดแรกถูกทิ้ง
+    //    (จับได้ตอนทำ "ลากไฟล์ลงหน้าแรก" — ไฟล์ที่ฝากไว้ถูกชุดที่ถูกทิ้งหยิบไปกิน)
+    //    จองคิวด้วย promise เดียวต่อเครื่องมือ ทั้งสองรอบจึงได้ DOM ก้อนเดียวกัน
+    let job = mounting.get(id);
+    if (!job) {
+      // โหลดโค้ดเครื่องมือกับไลบรารีขนานกัน ไม่ต่อคิวกัน
+      job = Promise.all([import(`./tools/${id}.js`), loadLibs(...tool.libs)])
+        .then(([mod]) => { const node = mod.mount(tool); mounted.set(id, node); return node; });
+      mounting.set(id, job);
+      job.catch(() => {}).finally(() => mounting.delete(id));
+    }
+    const node = await job;
     toolBox.innerHTML = "";
     toolBox.appendChild(node);
   } catch (err) {
@@ -192,7 +282,7 @@ let searchTimer;
 search.addEventListener("input", () => {
   searchBox.classList.toggle("has", !!search.value);
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { activeCat = ""; renderCats(); renderHome(search.value); }, 90);
+  searchTimer = setTimeout(() => { if (search.value.trim()) dropped = null; activeCat = ""; renderCats(); renderHome(search.value); }, 90);
 });
 $("#qclear").addEventListener("click", clearSearch);
 search.addEventListener("keydown", (e) => {

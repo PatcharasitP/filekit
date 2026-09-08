@@ -54,6 +54,34 @@ export const ICONS = {
 
 /** ไอคอนใช้งานทั่วไปสำหรับปุ่ม — แทนอักขระสัญลักษณ์ที่ฟอนต์ไทยไม่มี (⬇ ⠿ ⏹ ↺)
  *  ตัวพวกนั้นจะตกไปใช้ฟอนต์อื่นของระบบ ทำให้ปุ่มดูไม่เข้าชุดกัน */
+/* ── ไอคอน "ชนิดไฟล์" สำหรับกล่องภาพย่อ ──────────────────────────────────
+ * ‼️ คนละเรื่องกับไอคอนเครื่องมือ — เดิมยืมไอคอน "Excel → PDF" มาใช้แทนไฟล์ .xlsx
+ *    ทำให้แถวไฟล์ขึ้นไอคอนลูกศรแปลงไฟล์ อ่านแล้วเหมือนไอคอนเครื่องมือซ้ำ ไม่ใช่ "นี่คือไฟล์ Excel"
+ * ทุกตัวเป็นแผ่นเอกสารมุมพับเหมือนกัน ต่างกันแค่สัญลักษณ์ข้างใน — กวาดตาแล้วแยกออกทันที */
+export const FILE_KIND = {
+  pdf:   `<path d="${DOC}"/><path d="M8.4 17.6c2.6-1.4 4-4.6 3.4-6-.5-1.2-1.9-.6-1.7 1 .3 2.4 3 5 5.5 5.3"/>`,
+  docx:  `<path d="${DOC}"/><path d="M8 12.2l1.5 5 1.6-4 1.6 4 1.5-5"/>`,
+  xlsx:  `<path d="${DOC}"/><path d="M8.6 12.4l4.8 5.6M13.4 12.4l-4.8 5.6"/>`,
+  csv:   `<path d="${DOC}"/><path d="M7.6 12.6h8.8M7.6 15.2h8.8M7.6 17.8h8.8M10.5 12.6v5.2M13.5 12.6v5.2"/>`,
+  pptx:  `<path d="${DOC}"/><path d="M9 18v-5.6h2.4a1.7 1.7 0 0 1 0 3.4H9"/>`,
+  image: `<path d="${DOC}"/><circle cx="9.6" cy="13.4" r="1"/><path d="M7.4 17.6l2.9-2.6 2.4 2 1.5-1.2 1.8 1.6"/>`,
+  zip:   `<path d="${DOC}"/><path d="M11.2 11.4h1.6M11.2 13.4h1.6M11.2 15.4h1.6"/><rect x="10.9" y="17" width="2.2" height="2.6" rx=".8"/>`,
+};
+FILE_KIND.doc = FILE_KIND.docx;
+FILE_KIND.ppt = FILE_KIND.pptx;
+
+/** คืน <svg> ไอคอนชนิดไฟล์ (ไม่มีชนิดนั้น = คืน null ให้ผู้เรียกหาทางอื่น) */
+export function fileKindIcon(kind, cls = "ico-svg") {
+  const d = FILE_KIND[kind];
+  if (!d) return null;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", cls);
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = d;
+  return svg;
+}
+
 export const UI = {
   download: `<path d="M12 3.5v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 17v1.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V17"/>`,
   zip:      `<path d="M4 7.5l8-4 8 4v9l-8 4-8-4z"/><path d="M4 7.5l8 4 8-4M12 11.5V20"/><path d="M10.2 5.4h1.6M10.2 7.2h1.6M10.2 9h1.6"/>`,

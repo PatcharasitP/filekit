@@ -21,117 +21,146 @@ export const GROUPS = [
 export const TOOLS = [
   { id:"pdf-pages",   group:"pdf", icon:"📑", title:"จัดการหน้า PDF",
     desc:"เลือกเก็บ ลบ สลับลำดับ และหมุนหน้า พร้อมพรีวิวทุกหน้า",
+    accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ", next:["pdf-merge","pdf-compress"] },
 
   { id:"pdf-merge",   group:"pdf", icon:"🔗", title:"รวมไฟล์ PDF",
     desc:"รวมหลายไฟล์เป็นเล่มเดียว ลากสลับลำดับได้",
+    accepts:["pdf"],
     libs:["pdflib"], keys:"merge combine รวม ต่อ เล่ม", next:["pdf-compress","pdf-watermark","pdf-sign"] },
 
   { id:"pdf-split",   group:"pdf", icon:"✂", title:"แยกไฟล์ PDF",
     desc:"แยกตามช่วงหน้า ทุก N หน้า หรือแยกทีละหน้า",
+    accepts:["pdf"],
     libs:["pdflib","jszip"], keys:"split แยก ตัด ช่วงหน้า", next:["pdf-merge","pdf-pages"] },
 
   { id:"pdf-compress",group:"pdf", icon:"🗜", title:"บีบอัดไฟล์ PDF",
     desc:"ลดขนาดไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ เทียบขนาดก่อน–หลังให้เห็น",
+    accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"compress บีบอัด ลดขนาด เล็กลง", next:["pdf-merge","pdf-to-images"] },
 
   { id:"pdf-sign",group:"pdf", icon:"🖊", title:"เซ็นชื่อบน PDF",
     desc:"วาดลายเซ็นหรืออัปโหลดรูป แล้วลากไปวางบนเอกสาร เก็บลายเซ็นไว้ใช้ซ้ำได้",
+    accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"sign signature เซ็น ลายเซ็น เซ็นชื่อ สัญญา ใบลา อนุมัติ", next:["pdf-compress","pdf-watermark"] },
 
   { id:"pdf-watermark",group:"pdf", icon:"💧", title:"ใส่ลายน้ำ PDF",
     desc:"ประทับข้อความไทย–อังกฤษลงทุกหน้า เลือกตำแหน่ง สี และความเข้มได้",
+    accepts:["pdf"],
     libs:["pdflib"], keys:"watermark ลายน้ำ ประทับ ลับ confidential ตราประทับ", next:["pdf-compress","pdf-sign"] },
 
   { id:"pdf-ocr",     group:"pdf", icon:"🔍", title:"OCR อ่านข้อความจากสแกน",
     desc:"อ่านตัวอักษรไทย–อังกฤษจาก PDF สแกน ได้เป็นข้อความหรือ PDF ที่ค้นหาได้",
+    accepts:["pdf","image"],
     libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร recognize", next:["pdf-to-text","pdf-to-word"] },
 
   { id:"pdf-to-images",group:"from-pdf", icon:"🖼", title:"PDF → รูปภาพ",
     desc:"แปลงทุกหน้าเป็น PNG หรือ JPG เลือกความละเอียดได้",
+    accepts:["pdf"],
     libs:["pdfjs","jszip"], keys:"image png jpg รูป ภาพ export", next:["image-resize","images-to-pdf"] },
 
   { id:"pdf-to-text", group:"from-pdf", icon:"📄", title:"PDF → ข้อความ",
     desc:"ดึงข้อความออกมาเป็นไฟล์ TXT พร้อมคัดลอกได้ทันที",
+    accepts:["pdf"],
     libs:["pdfjs"], keys:"text txt ข้อความ ดึง copy", next:["pdf-to-word","pdf-ocr"] },
 
   { id:"pdf-to-word", group:"from-pdf", icon:"📝", title:"PDF → Word",
     desc:"แปลงเนื้อหาเป็นเอกสาร DOCX ที่แก้ไขต่อได้",
+    accepts:["pdf"],
     libs:["pdfjs","docx"], keys:"word docx เอกสาร แก้ไข", next:["word-clean","word-to-pdf"] },
 
   { id:"pdf-to-excel",group:"from-pdf", icon:"📊", title:"PDF → Excel",
     desc:"จับตารางในไฟล์ PDF ออกมาเป็น XLSX",
+    accepts:["pdf"],
     libs:["pdfjs","xlsx"], keys:"excel xlsx ตาราง table sheet", next:["excel-csv","thai-date"] },
 
   { id:"word-to-pdf", group:"to-pdf", icon:"📘", title:"Word → PDF",
     desc:"แปลง DOCX เป็น PDF รองรับภาษาไทยเต็มรูปแบบ ทำได้ทีละหลายไฟล์",
+    accepts:["docx"],
     libs:["mammoth","jspdf"], keys:"word docx pdf แปลง", next:["pdf-merge","pdf-sign"] },
 
   { id:"excel-to-pdf",group:"to-pdf", icon:"📕", title:"Excel → PDF",
     desc:"แปลงแต่ละชีทเป็นตารางในไฟล์ PDF",
+    accepts:["xlsx","csv"],
     libs:["xlsx","jspdf","jspdfTable"], keys:"excel xlsx sheet ตาราง pdf", next:["pdf-merge","pdf-watermark"] },
 
   { id:"images-to-pdf",group:"to-pdf", icon:"🧩", title:"รูปภาพ → PDF",
     desc:"รวมรูปหลายไฟล์เป็น PDF เดียว จัดขนาดหน้าอัตโนมัติ",
+    accepts:["image"],
     libs:["pdflib"], keys:"image jpg png รูป รวม pdf", next:["pdf-compress","pdf-watermark"] },
 
   { id:"image-convert",group:"image", icon:"🔄", title:"แปลงชนิดไฟล์รูป",
     desc:"สลับระหว่าง PNG · JPG · WEBP พร้อมปรับคุณภาพ",
+    accepts:["image"],
     libs:["jszip"], keys:"png jpg webp แปลง รูป convert", next:["image-resize","images-to-pdf"] },
 
   { id:"image-resize",group:"image", icon:"📐", title:"ย่อ–บีบอัดรูปภาพ",
     desc:"ย่อขนาดและลดน้ำหนักไฟล์รูปทีละหลายไฟล์ เห็นขนาดก่อน–หลัง",
+    accepts:["image"],
     libs:["jszip"], keys:"resize compress ย่อ ลดขนาด บีบอัด รูป", next:["image-convert","images-to-pdf"] },
 
   { id:"word-join",group:"doc", icon:"🔗", title:"รวมไฟล์ Word",
     desc:"ต่อเอกสารหลายไฟล์เป็นเล่มเดียว พร้อมรูปภาพครบ ลากจัดลำดับได้",
+    accepts:["docx"],
     libs:["jszip"], keys:"merge join รวม ต่อ เอกสาร word docx เล่ม รายงาน", next:["word-clean","word-to-pdf"] },
 
   { id:"word-replace",group:"doc", icon:"✏", title:"ค้นหา–แทนที่ทั้งชุด",
     desc:"แก้คำเดิมพร้อมกันหลายไฟล์ เช่นเปลี่ยนชื่อบริษัทหรือปีในเอกสารทั้งกอง",
+    accepts:["docx"],
     libs:["jszip"], keys:"find replace ค้นหา แทนที่ หลายไฟล์ batch แก้ทั้งชุด word", next:["word-clean","word-to-pdf"] },
 
   { id:"word-clean",group:"doc", icon:"🧹", title:"ตรวจเอกสารก่อนส่ง",
     desc:"หาคอมเมนต์ค้าง ประวัติแก้ไข และชื่อผู้เขียนที่ติดมากับไฟล์ แล้วล้างให้ในคลิกเดียว",
+    accepts:["docx"],
     libs:["jszip"], keys:"clean metadata comment track changes ตรวจ ล้าง คอมเมนต์ ประวัติ ผู้เขียน ความลับ ส่งออก", next:["word-to-pdf","word-join"] },
 
   { id:"word-mailmerge",group:"doc", icon:"📬", title:"จดหมายเวียน Word + Excel",
     desc:"เอาข้อมูลจาก Excel เติมลงเทมเพลต Word ทีละแถว ได้เอกสารครบทั้งชุดในครั้งเดียว",
+    accepts:["docx"],
     libs:["jszip","xlsx"], keys:"mailmerge mail merge จดหมายเวียน เทมเพลต template word excel ใบรับรอง ใบเสร็จ เวียน", next:["thai-number","word-to-pdf","word-clean"] },
 
   { id:"powerpoint-to-word",group:"ppt", icon:"📽", title:"PowerPoint → Word",
     desc:"ดึงข้อความทุกสไลด์ หัวข้อย่อย และโน้ตผู้บรรยาย เป็นเอกสาร Word",
+    accepts:["pptx"],
     libs:["jszip","docx"], keys:"powerpoint ppt pptx สไลด์ word docx โน้ต presentation แปลง", next:["word-clean","word-to-pdf"] },
 
   { id:"powerpoint-to-pdf",group:"ppt", icon:"🖥", title:"PowerPoint → PDF",
     desc:"จัดสไลด์เป็นไฟล์ PDF อ่านง่าย 1 สไลด์ = 1 หน้า เลือกธีมได้",
+    accepts:["pptx"],
     libs:["jszip","jspdf"], keys:"powerpoint ppt pptx สไลด์ pdf presentation แปลง แจก", next:["pdf-merge","pdf-compress"] },
 
   { id:"excel-csv",   group:"data", icon:"🔁", title:"สลับ Excel กับ CSV",
     desc:"แปลง XLSX เป็น CSV (แยกทีละชีท) หรือรวม CSV กลับเป็น Excel",
+    accepts:["xlsx","csv"],
     libs:["xlsx","jszip"], keys:"csv excel xlsx แปลง data ข้อมูล", next:["thai-encoding","excel-to-pdf"] },
   { id:"thai-encoding", group:"thai", icon:"🩹", title:"ซ่อมไฟล์ไทยเพี้ยน",
     desc:"เปิด CSV แล้วเจอ “เธชเธงเธฑ” หรือ “à¸ªà¸§” — ตรวจการเข้ารหัสให้เอง แล้วบันทึกใหม่เป็น UTF-8",
+    accepts:["csv","txt","tsv","json","sql","log","md"],
     libs:["jszip"], keys:"encoding tis-620 windows-874 utf-8 เพี้ยน ต่างดาว อ่านไม่ออก มั่ว csv ภาษาไทย ยึกยือ", next:["excel-csv","thai-date"] },
 
   { id:"thai-date", group:"thai", icon:"📅", title:"สลับปี พ.ศ. กับ ค.ศ. ทั้งคอลัมน์",
     desc:"อ่านวันที่ไทยได้ทุกแบบ (15 ม.ค. 2569 · ๑๕/๐๑/๒๕๖๙) แปลงทั้งคอลัมน์แล้วเลือกรูปแบบผลลัพธ์ได้",
+    accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"พ.ศ. ค.ศ. buddhist christian ปี วันที่ 543 แปลงปี date excel", next:["thai-id","thai-number"] },
 
   { id:"thai-id", group:"thai", icon:"🪪", title:"ตรวจเลขบัตร ปชช. / ผู้เสียภาษี",
     desc:"ตรวจหลักตรวจสอบเลข 13 หลักทั้งไฟล์ บอกได้ว่าแถวไหนพิมพ์ผิดและควรเป็นเลขอะไร",
+    accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"บัตรประชาชน เลขบัตร ผู้เสียภาษี tax id 13 หลัก ตรวจสอบ checksum", next:["thai-date","thai-number"] },
 
   { id:"thai-name", group:"thai", icon:"👤", since:"2026-09-08", title:"แยกคำนำหน้า–ชื่อ–นามสกุล",
     desc:"แยก “นางสาวสมหญิง ใจดี” เป็น 3 คอลัมน์ เรียงลำดับและทำจดหมายเวียนต่อได้",
+    accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"ชื่อ นามสกุล คำนำหน้า นาย นาง นางสาว แยกชื่อ split name title prefix hr รายชื่อ", next:["word-mailmerge","thai-id"] },
 
   { id:"thai-address", group:"thai", icon:"📍", since:"2026-09-08", title:"แยกที่อยู่ไทยเป็นคอลัมน์",
     desc:"แยกตำบล อำเภอ จังหวัด รหัสไปรษณีย์ ออกจากที่อยู่ที่อยู่รวมกันในช่องเดียว",
+    accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"ที่อยู่ จังหวัด อำเภอ ตำบล เขต แขวง รหัสไปรษณีย์ address province district subdistrict postcode แยกที่อยู่", next:["word-mailmerge","thai-name"] },
 
   { id:"thai-number", group:"thai", icon:"🔢", title:"ตัวเลข → บาทถ้วน / เลขไทย",
     desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
+    accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค", next:["word-mailmerge","thai-date"] },
 ];
 

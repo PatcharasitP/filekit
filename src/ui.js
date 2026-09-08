@@ -1,7 +1,7 @@
 import { detectType, wrongTypeMessage } from "./filetype.js";
-import { $, $$, el } from "./dom.js";
+import { $, $$, el, showVeil } from "./dom.js";
 import { byId } from "./registry.js";
-import { toolIcon, uiIcon } from "./icons.js";
+import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
 import { tr } from "./i18n.js";
 export { $, $$, el } from "./dom.js";
 
@@ -195,15 +195,8 @@ const SAMPLE_FILES = {
  * FileKit เดิมโชว์แค่ชื่อ+ขนาดเป็นตัวหนังสือ เว็บเดียวที่ไม่มีภาพย่อเลย
  * ‼️ ต้องไม่ทำให้ add()/render() ช้าลง — วาดแถวด้วยไอคอนทั่วไปก่อนเสมอ แล้วค่อยเติมภาพจริงทีหลัง (async)
  */
-const THUMB_ICON_FOR_KIND = {
-  pdf: "pdf-pages", docx: "word-to-pdf", doc: "word-to-pdf",
-  xlsx: "excel-to-pdf", csv: "excel-csv", pptx: "powerpoint-to-pdf", ppt: "powerpoint-to-pdf",
-  image: "image-convert",
-};
 function genericThumbIcon(kind) {
-  if (kind === "zip") return uiIcon("zip");
-  const id = THUMB_ICON_FOR_KIND[kind];
-  return (id && toolIcon({ id })) || uiIcon("list");
+  return fileKindIcon(kind) || uiIcon("list");   // ไม่รู้จักชนิด = เส้น 3 ขีดกลาง ๆ
 }
 /** เติมภาพย่อ/ไอคอนลงกล่อง .thumb ของแถวไฟล์หนึ่งแถว — ไม่มีสถานะภายในของตัวเอง ใช้ซ้ำได้ทุก dropzone */
 function paintThumb(row, entry) {
@@ -246,6 +239,14 @@ const stateWatchers = new Set();
  * จึงให้ "ใบที่รับชนิดนี้ได้" คว้าเหตุการณ์ไปก่อน · ถ้าไม่มีใบไหนรับได้เลย ใบแรกค่อยเตือนใบเดียว
  * (เช็คทีหลังใน microtask — ตอนนั้นตัวรับแบบ sync ของทุกใบทำงานจบแล้ว) */
 const claimedEvents = new WeakSet();
+
+/* ── ส่งไฟล์ข้ามหน้า ────────────────────────────────────────────────────
+ * หน้าแรกรับไฟล์ที่ลาก/วางเข้ามาแล้วเสนอเครื่องมือให้เลือก — พอกดเลือก ไฟล์ต้องตามไปด้วย
+ * ไม่ใช่ให้ผู้ใช้เลือกไฟล์ใหม่อีกรอบ · ฝากไว้ตรงนี้แล้วกล่องของเครื่องมือปลายทางมาหยิบเอง
+ * เก็บได้ครั้งละชุดเดียวและหยิบแล้วหายไป — กันไฟล์เก่าค้างไปโผล่ในเครื่องมือถัดไป */
+let stashed = null;
+export function stashFiles(files) { stashed = files && files.length ? [...files] : null; }
+export function hasStashedFiles() { return !!stashed; }
 function emitFileState(file, state) {
   for (const w of stateWatchers) { if (w.dead()) stateWatchers.delete(w); else w.fn(file, state); }
 }
@@ -254,16 +255,6 @@ function emitFileState(file, state) {
  * เว็บเครื่องมือรุ่นใหม่ไม่บังคับให้เล็งกล่องเล็ก ๆ อีกแล้ว — ลากเข้าหน้าจอที่ไหนก็รับ
  * และแคปหน้าจอแล้วกด Ctrl+V ได้เลยโดยไม่ต้องเซฟไฟล์ก่อน
  * ผ้าคลุมมีชิ้นเดียวทั้งเว็บ (ทีละหน้ามีกล่องเดียวอยู่แล้ว) สร้างตอนถูกใช้ครั้งแรกเท่านั้น */
-let dropVeil = null;
-function showVeil(on, label) {
-  if (!dropVeil) {
-    dropVeil = el("div", { class: "dropveil", "aria-hidden": "true" }, [el("div", { class: "dropveil-in" })]);
-    document.body.appendChild(dropVeil);
-  }
-  dropVeil.firstChild.textContent = label || "";
-  dropVeil.classList.toggle("on", !!on);
-}
-
 /** ── กล่องลากวางไฟล์ ───────────────────────────────────────────────────── */
 export function dropzone(opts = {}) {
   const {
@@ -296,6 +287,8 @@ export function dropzone(opts = {}) {
     el("div", { class: "dz-ico", "aria-hidden": "true" }, [uiIcon("upload", "dz-svg")]),
     el("div", { class: "dz-main" }, tr("ลากไฟล์มาวางที่นี่", "Drop your files here")),
     chooseBtn,
+    // โผล่แทนทั้งกล่องตอนยุบแล้ว (CSS สลับให้) — ยังลากไฟล์ทับได้เหมือนเดิม
+    el("span", { class: "dz-more" }, tr("+ เพิ่มไฟล์", "+ Add files")),
     el("div", { class: "dz-hint" }, expect && expect.includes("image")
       ? hint + tr(" · วางจากคลิปบอร์ดได้ (Ctrl+V)", " · or paste from clipboard (Ctrl+V)") : hint),
     // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
@@ -481,6 +474,10 @@ export function dropzone(opts = {}) {
   });
 
   function render() {
+    // ‼️ วัดจริงบนมือถือ: กล่องลากไฟล์สูง 243px = 29% ของจอ และไม่หดเลยหลังเลือกไฟล์แล้ว
+    //    พอมีไฟล์ในมือ คำเชิญ "ลากไฟล์มาวางที่นี่" กับปุ่มลองไฟล์ตัวอย่างหมดหน้าที่แล้ว
+    //    ยุบเหลือแถบเตี้ย "เพิ่มไฟล์" — ผลลัพธ์กับปุ่มลงมือจะเลื่อนขึ้นมาอยู่ในสายตาแทน
+    container.classList.toggle("has-files", files.length > 0);
     list.innerHTML = "";
     files.forEach((f, i) => {
       // ‼️ การลากวางแบบ HTML5 ใช้ไม่ได้เลยบนมือถือและกับคนที่ใช้คีย์บอร์ดอย่างเดียว
@@ -573,7 +570,13 @@ export function dropzone(opts = {}) {
     sampleBox = el("div", { class: "dz-sample", style: { marginTop: "10px" } }, [sampleBtn, sampleErr]);
   }
 
-  const container = el("div", {}, [zone, sampleBox, warn, count, list]);
+  const container = el("div", { class: "dz-wrap" }, [zone, sampleBox, warn, count, list]);
+
+  // หยิบไฟล์ที่หน้าแรกฝากไว้ (ถ้าชนิดตรงกับที่เครื่องมือนี้รับ) — ผู้ใช้จะได้ไม่ต้องเลือกไฟล์ซ้ำ
+  if (stashed) {
+    const mine = expect ? stashed.filter((f) => expect.includes(detectType(f))) : stashed;
+    if (mine.length) { const take = mine; stashed = null; queueMicrotask(() => add(take)); }
+  }
   return { container, get files() { return files; },
            clear() { files = []; warn.innerHTML = ""; render(); onChange(files); } };
 }

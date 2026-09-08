@@ -68,5 +68,28 @@ for (const [what, re] of [
   ck(!!m && +m[1] === toolCount, `${what} ต้องบอกจำนวนเครื่องมือให้ตรง (หน้าเขียน ${m ? m[1] : "ไม่เจอ"} · จริง ${toolCount})`);
 }
 
+/* ‼️ กฎถาวรของโปรเจกต์: ห้ามใช้จุดกลาง (·) ในข้อความที่ผู้ใช้เห็น
+   เจ้าของเว็บบอกซ้ำ 3 ครั้งแล้วยังหลุดกลับมาทุกรอบ — กฎที่ไม่มีเครื่องบังคับก็ลืมเสมอ
+   (บทเรียนเดียวกับ W41: สิ่งที่กันได้จริงคือเครื่องจับ ไม่ใช่ความตั้งใจ)
+   ตรวจเฉพาะ "ข้อความในเครื่องหมายคำพูด" — คอมเมนต์ในโค้ดใช้ได้ตามสบาย */
+const MIDDOT_STR = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
+const middotHits = [];
+for (const f of [...toolFiles.map((n) => join("src/tools", n)),
+                 ...readdirSync(join(ROOT, "src")).filter((n) => n.endsWith(".js")).map((n) => join("src", n))]) {
+  const txt = readFileSync(join(ROOT, f), "utf8");
+  txt.split("\n").forEach((ln, i) => {
+    const t = ln.trimStart();
+    if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) return;
+    for (const m of ln.match(MIDDOT_STR) || []) {
+      if (m.includes("\u00b7")) middotHits.push(`${f}:${i + 1} ${m.slice(0, 46)}`);
+    }
+  });
+}
+const htmlBody = html.slice(html.indexOf("<body"));
+const htmlMiddot = (htmlBody.match(/>[^<]*\u00b7[^<]*</g) || []).map((x) => "index.html " + x.slice(0, 46));
+ck(middotHits.length + htmlMiddot.length === 0,
+   `ห้ามมีจุดกลาง (·) ในข้อความที่ผู้ใช้เห็น (พบ ${middotHits.length + htmlMiddot.length})` +
+   (middotHits.length + htmlMiddot.length ? "\n      " + [...middotHits, ...htmlMiddot].slice(0, 6).join("\n      ") : ""));
+
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);
 process.exit(fail.length ? 1 : 0);

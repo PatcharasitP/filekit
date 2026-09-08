@@ -5,3 +5,4 @@ Thumbs.db
 
 # หลักฐาน screenshot ตอนเทส — เก็บนอก repo ที่ ../.claude/evidence/ ไม่ต้องขึ้นเว็บ
 .claude/
+tests/__pycache__/

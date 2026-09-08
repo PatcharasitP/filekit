@@ -38,8 +38,12 @@ const STYLE = `
   }
   /* ‼️ รูปในการ์ดกลางต้องพอดีการ์ด ไม่ใช่พอดีจอ — tool.css เดิมตั้ง max-width:min(92vw,1200px)
      ซึ่งใหญ่กว่าการ์ด coverflow (640px) รูปจึงล้นออกนอกการ์ด 276px (วัดจริง) */
+  /* ‼️ การ์ดกลางต้องใหญ่พอให้อ่านเนื้อในภาพออก — จำกัดแค่ 100% ของการ์ด (640px) ทำให้
+     ภาพแคปหน้าจอเล็กจนตัวหนังสืออ่านไม่ออก (เจ้าของทัก "ภาพไม่ค่อยชัด")
+     ให้การ์ดกลางกว้างกว่าการ์ดข้างชัดเจน แล้วภาพเต็มการ์ด */
+  .pv.pv-gallery:not(.is-zoomed) .pv-stage-wrap{ width:min(86vw,1100px); }
   .pv.pv-gallery:not(.is-zoomed) .pv-stage img,
-  .pv.pv-gallery:not(.is-zoomed) .pv-stage canvas{ max-width:100%; max-height:64dvh; }
+  .pv.pv-gallery:not(.is-zoomed) .pv-stage canvas{ max-width:100%; max-height:74dvh; }
   .pv-card img{
     max-width:100%; max-height:64dvh; width:auto; height:auto; object-fit:contain;
     display:block; -webkit-user-drag:none; user-select:none; pointer-events:none;
@@ -99,6 +103,14 @@ export const canView = (file) =>
  * scale 0 = พอดีจอ · >0 = เท่าของขนาดจริง · ให้ .pv-stage เลื่อนดูเอง (overflow:auto)
  * มือถือใช้นิ้วหุบ-กางได้ตามปกติเพราะ touch-action:pinch-zoom */
 let scale = 0, media = null;
+/* ปุ่มที่กดเปิดกล่อง — ใช้คืนโฟกัสตอนปิด
+   ‼️ จับตอน "กดจริง" ไม่ใช่ตอน viewFile() ทำงาน เพราะผู้เรียก await import() ก่อน
+   กว่าจะถึงตรงนั้น activeElement เปลี่ยนไปแล้ว (วัดเจอ: กลายเป็น body) */
+let openerEl = null;
+addEventListener("pointerdown", (e) => {
+  const t = e.target instanceof Element ? e.target.closest("button,[tabindex],a") : null;
+  if (t && !t.closest("dialog.pv")) openerEl = t;
+}, true);
 const MIN = 0.1, MAX = 6;
 
 function applyScale(atX, atY) {
@@ -172,7 +184,7 @@ function mountCard(i) {
   }
   const objUrl = URL.createObjectURL(f);
   const wrap = el("div", { class: "pv-card", onclick: jump },
-    [el("img", { src: objUrl, alt: f.name || "", draggable: "false" })]);
+    [el("img", { src: objUrl, alt: f.name || "" })]);
   box._scene.appendChild(wrap);
   mounted.set(i, { wrap, url: objUrl });
 }
@@ -237,7 +249,7 @@ function updateNavButtons() {
 function updateCaption(extra) {
   const f = list[idx];
   let base = f?.name || tr("รูปจากคลิปบอร์ด", "Image from clipboard");
-  if (list.length > 1) base = `${idx + 1} / ${list.length}  ·  ${base}`;
+  if (list.length > 1) base = `${idx + 1} / ${list.length}\u2002\u2002${base}`;
   box._cap.textContent = base + (extra || "");
 }
 
@@ -253,7 +265,7 @@ async function loadIntoStage(file, expectedIdx) {
 
   if (detectType(file) === "image") {
     url = URL.createObjectURL(file);
-    media = el("img", { src: url, alt: file.name || "", draggable: "false" });
+    media = el("img", { src: url, alt: file.name || "" });
     d._stage.appendChild(media);
     return;
   }
@@ -273,7 +285,7 @@ async function loadIntoStage(file, expectedIdx) {
     doc.destroy?.();
     if (d.open && expectedIdx === idx) {   // ผู้ใช้อาจปิด/เลื่อนไปใบอื่นแล้วระหว่างวาด
       media = canvas; d._stage.appendChild(canvas);
-      updateCaption(tr(`  ·  หน้า 1 จาก ${doc.numPages}`, `  ·  page 1 of ${doc.numPages}`));
+      updateCaption(tr(`\u2002\u2002หน้า 1 จาก ${doc.numPages}`, `\u2002\u2002page 1 of ${doc.numPages}`));
     }
   } catch (e) {
     console.error(e);
@@ -340,6 +352,11 @@ function ensureBox() {
   // เอง (เว้นแต่ตัวการ์ด/สเตจ) คลิกพื้นที่ว่างจึงทะลุมาเจอ box ตรงนี้ได้เหมือนของเดิมทุกโหมด
   box.addEventListener("click", (e) => { if (e.target === box) box.close(); });
   box.addEventListener("close", () => {
+    // ‼️ คืนโฟกัสกลับปุ่มที่เปิดกล่องนี้ ไม่งั้นคนใช้คีย์บอร์ดต้อง Tab ใหม่ตั้งแต่ต้นหน้า
+    //    (จับได้จาก tests/browser_a11y.py — activeElement กลายเป็น <body>)
+    const back = openerEl;
+    openerEl = null;
+    if (back && back.isConnected) queueMicrotask(() => back.focus());
     if (url) { URL.revokeObjectURL(url); url = null; }
     stage.innerHTML = ""; media = null; scale = 0;
     box.classList.remove("is-zoomed", "pv-gallery");
@@ -347,14 +364,8 @@ function ensureBox() {
   });
 
   // คลิกที่รูปกลาง = สลับ พอดีจอ ↔ ขนาดจริง (ซูมตรงจุดที่คลิก) — ของเดิม ไม่แตะ
-  stage.addEventListener("click", (e) => {
-    if (!media || !media.contains(e.target)) return;
-    e.stopPropagation();
-    if (moved > 4) { moved = 0; return; }   // เพิ่งลากอยู่ (ซูม-แพน หรือปัดเปลี่ยนใบ) ไม่ใช่ตั้งใจกดสลับซูม
-    const r = stage.getBoundingClientRect();
-    scale = scale > 0 ? 0 : Math.max(fitScale() * 2, 1);
-    applyScale(e.clientX - r.left, e.clientY - r.top);
-  });
+  // ‼️ ไม่มี "กดที่รูปเพื่อซูม" แล้ว — คลิกบนรูปต้องปล่อยให้เป็นการเริ่มลากไฟล์ออกไปข้างนอก
+  //    ซูมใช้ล้อเมาส์ (และนิ้วหุบ-กางบนมือถือ) ซึ่งไม่ชนกับการลาก
   // ล้อเมาส์: แนวนอน (แทร็คแพด 2 นิ้ว/shift+wheel) = เลื่อนใบ ตอนไม่ได้ซูมอยู่ · แนวตั้ง = ซูมของเดิม
   stage.addEventListener("wheel", (e) => {
     if (!media) return;
@@ -392,7 +403,8 @@ function ensureBox() {
      มันจะเริ่ม native drag (เงารูปลอยตามเมาส์) แล้วตัด pointer event ของเราทิ้งกลางคัน
      ‼️ ห้ามกันด้วย preventDefault ที่ pointerdown — จะกัน click ที่ใช้ย่อกลับไปด้วย
      ต้องกันเฉพาะ dragstart ตัวเดียว */
-  stage.addEventListener("dragstart", (e) => e.preventDefault());
+  // ‼️ ห้ามกัน dragstart — เจ้าของเว็บใช้การ "ลากรูปออกไปวางในแท็บ/โฟลเดอร์อื่น" เป็นประจำ
+  //    ซึ่งเป็นความสามารถที่เบราว์เซอร์ให้มาฟรี ๆ · ซูมใช้ล้อเมาส์แทนได้ (ไม่ต้องกดที่รูป)
   // ‼️ ต้องคืน pointer capture ทุกครั้ง ไม่งั้น click ที่ตามมาถูกยิงไปที่ .pv-stage แทนตัวรูป
   const endDrag = () => { drag = null; stage.classList.remove("dragging"); };
   addEventListener("pointerup", endDrag);        // ปล่อยเมาส์นอกกรอบก็ยังหลุดโหมดลาก
@@ -463,6 +475,7 @@ function ensureBox() {
  *   คือดูได้ทีละใบ (backward compatible เต็มร้อย) ใส่แล้วมีไฟล์ที่ดูได้ >1 ใบ = เปิดเป็น
  *   coverflow เลื่อนดูใบอื่นในชุดได้ทันที ไม่ต้องปิดแล้วเปิดใหม่ */
 export async function viewFile(file, allFiles) {
+
   if (!canView(file)) return false;
   const pool = Array.isArray(allFiles) && allFiles.length ? allFiles : [file];
   const newList = pool.filter(canView);
@@ -474,6 +487,10 @@ export async function viewFile(file, allFiles) {
   idx = target = Math.max(0, list.indexOf(file));
   position = idx;
   d.classList.toggle("pv-gallery", list.length > 1);
+  // ‼️ จับปุ่มต้นทางก่อน showModal — พอเปิด dialog แล้วโฟกัสถูกย้ายเข้ากล่องทันที
+  //    (ตัวดัก pointerdown ด้านบนไม่ทันครั้งแรก เพราะโมดูลนี้เพิ่งถูก import ตอนคลิก)
+  if (document.activeElement instanceof HTMLElement && !document.activeElement.closest('dialog.pv'))
+    openerEl = document.activeElement;
   d.showModal();
 
   await loadIntoStage(list[idx], idx);

@@ -19,7 +19,7 @@ IMG = base64.b64encode((ROOT / "samples/ตัวอย่าง-รูปภา
 PASTE_LIKE_WINDOWS = """(b64)=>{
   const bin=atob(b64); const u=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
-  const file=new File([new Blob([u],{type:'image/png'})],'',{type:'image/png'});
+  const file=new File([new Blob([u],{type:'image/png'})],'image.png',{type:'image/png'});  // ชื่อโหลที่ Chrome ตั้งให้เอง
   const fake={files:[], items:[{kind:'file',type:'image/png',getAsFile:()=>file}]};
   const ev=new Event('paste',{bubbles:true,cancelable:true});
   Object.defineProperty(ev,'clipboardData',{value:fake});
@@ -68,9 +68,19 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     home, tool = run(pg)
     ck("หน้าแรก: วางแล้วต้องขึ้นแถบ 'ไฟล์ของคุณ…' พร้อมชื่อไฟล์", bool(home), f" (ได้ {home!r})")
-    ck("หน้าแรก: ตั้งชื่อไฟล์ให้เองเพราะภาพแคปไม่มีชื่อ", home.startswith("วางจากคลิปบอร์ด-") and home.endswith(".png"), f" (ได้ {home!r})")
+    # ‼️ Chrome ตั้งชื่อภาพจากคลิปบอร์ดว่า "image.png" ทุกใบเหมือนกันหมด วางหลายใบแล้วแยกไม่ออก
+    #    ต้องถูกตั้งชื่อใหม่ตามเวลาที่วาง (พี่ปอนด์ทักเอง 08/09/2026)
+    ck("หน้าแรก: เปลี่ยนชื่อโหล image.png เป็นชื่อตามเวลา", home.startswith("แคปหน้าจอ-") and home.endswith(".png"), f" (ได้ {home!r})")
     ck("หน้าเครื่องมือ: วางแล้วไฟล์เข้าแถวจริง", bool(tool), f" (ได้ {tool!r})")
     ck("ไม่มี error ตอนวาง", not errs, f" ({errs[:1]})")
+
+    print("\n━━ ①ข ไฟล์ที่มีชื่อจริง (ก๊อปจาก File Explorer) ต้องไม่ถูกเปลี่ยนชื่อ ━━")
+    # ‼️ ต้อง reload จริง — hash route เดิมไม่ล้างไฟล์ที่ค้างจากเคสก่อน (SPA เก็บ state ไว้)
+    pg.goto(f"{BASE}/#/image-convert", wait_until="networkidle")
+    pg.reload(wait_until="networkidle"); pg.wait_for_timeout(1200)
+    pg.evaluate(PASTE_LIKE_WINDOWS.replace("'image.png'", "'รายงานประชุม.png'"), IMG); pg.wait_for_timeout(900)
+    real = pg.eval_on_selector(".file-row .f-name", "e=>e.textContent") if pg.locator(".file-row .f-name").count() else ""
+    ck("ชื่อไฟล์จริงต้องคงไว้ ไม่ไปตั้งใหม่ทับ", real == "รายงานประชุม.png", f" (ได้ {real!r})")
 
     print("\n━━ ② วางข้อความธรรมดา ต้องไม่ไปกวนหน้าเว็บ ━━")
     pg.goto(f"{BASE}/", wait_until="networkidle"); pg.wait_for_timeout(500)

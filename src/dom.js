@@ -1,6 +1,7 @@
 // ตัวช่วย DOM ขั้นพื้นฐาน — แยกไว้ต่างหากเพราะหน้าแรกใช้แค่ส่วนนี้
 // (ถ้ารวมไว้ใน ui.js หน้าแรกจะต้องลากโค้ด dropzone/ปุ่ม/ตรวจชนิดไฟล์มาด้วยโดยไม่ได้ใช้)
 
+import { IS_EN } from "./i18n.js";
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -48,7 +49,8 @@ export function filesFromClipboard(e) {
     const key = `${f.name}|${f.size}|${f.type}`;
     if (seen.has(key)) return;
     seen.add(key);
-    out.push(f.name ? f : renameBlank(f));
+    // ชื่อว่าง หรือเป็นชื่อโหลของเบราว์เซอร์ (image.png) = ตั้งใหม่ให้
+    out.push(GENERIC_NAME.test(f.name || "") ? autoName(f) : f);
   };
   for (const f of e.clipboardData?.files || []) push(f);
   for (const it of e.clipboardData?.items || []) {
@@ -57,11 +59,21 @@ export function filesFromClipboard(e) {
   return out;
 }
 
-/** รูปที่วางมาจากคลิปบอร์ดมักไม่มีชื่อไฟล์ — ตั้งให้เองจะได้ดาวน์โหลดผลลัพธ์แล้วอ่านออก */
-function renameBlank(f) {
-  const ext = (f.type.split("/")[1] || "png").replace("jpeg", "jpg");
+/* ‼️ เบราว์เซอร์ตั้งชื่อภาพจากคลิปบอร์ดว่า "image.png" ทุกใบเหมือนกันหมด
+ *    วางหลายใบแล้วแยกไม่ออกว่าใบไหนคือใบไหน และผลลัพธ์ที่ดาวน์โหลดออกไปก็ชนกันเอง
+ *    (พี่ปอนด์ทักเอง 08/09/2026) → ตั้งชื่อตามเวลาที่วาง ไม่ซ้ำและบอกได้ว่าแคปตอนไหน
+ *    ‼️ เปลี่ยนเฉพาะชื่อ "โหล" ที่เบราว์เซอร์ตั้งเอง — ไฟล์จริงที่ก๊อปจาก File Explorer
+ *    มีชื่อของมันอยู่แล้ว ห้ามไปแตะ */
+const GENERIC_NAME = /^(image|screenshot|unknown)?\.?(png|jpe?g|webp|gif|bmp|avif)?$/i;
+let lastStamp = "", sameSec = 0;
+function autoName(f) {
+  const ext = (f.type.split("/")[1] || "png").replace("jpeg", "jpg").replace("svg+xml", "svg");
   const d = new Date();
   const two = (n) => String(n).padStart(2, "0");
-  const name = `วางจากคลิปบอร์ด-${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}${two(d.getSeconds())}.${ext}`;
-  try { return new File([f], name, { type: f.type }); } catch { return f; }
+  const stamp = `${two(d.getHours())}.${two(d.getMinutes())}.${two(d.getSeconds())}`;
+  sameSec = stamp === lastStamp ? sameSec + 1 : 0;   // แคปรัว ๆ ในวินาทีเดียวกันก็ยังไม่ชนกัน
+  lastStamp = stamp;
+  const th = `แคปหน้าจอ-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
+  const en = `Screenshot-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
+  try { return new File([f], IS_EN ? en : th, { type: f.type }); } catch { return f; }
 }

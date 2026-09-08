@@ -396,6 +396,15 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .drop-thumb img{width:100%;height:100%;object-fit:contain;display:block}
 .drop-thumb.as-icon svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
+/* ‼️ กดได้แต่ไม่มีอะไรบอกว่ากดได้ = เท่ากับไม่มี (พี่ปอนด์ถามเอง "แล้วซูมยังไงนะ")
+   ป้ายแว่นขยายมุมขวาล่าง เห็นตลอดเวลา ไม่ต้องเอาเมาส์ไปชี้ก่อนถึงจะรู้ */
+.drop-thumb{position:relative}
+.drop-thumb::after{content:"";position:absolute;inset-block-end:2px;inset-inline-end:2px;
+  width:15px;height:15px;border-radius:5px;background:rgba(10,13,20,.78);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.2'/%3E%3Cpath d='M15.4 15.4L21 21M8 10.5h5M10.5 8v5'/%3E%3C/svg%3E") center/10px 10px no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.2'/%3E%3Cpath d='M15.4 15.4L21 21M8 10.5h5M10.5 8v5'/%3E%3C/svg%3E") center/10px 10px no-repeat;
+  box-shadow:0 0 0 99px rgba(10,13,20,.78) inset}
+.drop-thumb:hover::after{background:#fff;box-shadow:0 0 0 99px #fff inset}
 .drop-thumb:hover{border-color:#fff}
 .drop-thumb:focus-visible{outline:2.5px solid #fff;outline-offset:2px}
 .drop-what{display:flex;flex-direction:column;gap:1px;min-width:0;margin-inline-end:auto}

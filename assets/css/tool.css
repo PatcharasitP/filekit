@@ -1,25 +1,45 @@
 /* สไตล์เฉพาะหน้าเครื่องมือ — โหลดหลังจากหน้าแรกวาดเสร็จแล้ว จึงไม่หน่วง FCP */
 
-.tool-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}
+/* เดิม tool-head เป็นแค่ไอคอน+หัวข้อลอยบนพื้นหน้าเฉย ๆ — หน้าแรกมี .hero/.stage เป็น
+   "แผงมืดโค้งใหญ่" ทำหน้าที่จุดยึดสายตาของทั้งหน้า แต่หน้าเครื่องมือไม่มีอะไรแบบนั้นเลย
+   เปิดมาเจอหัวข้อเล็ก ๆ บนพื้นขาว/เทา รู้สึกเหมือนคนละเว็บ ให้ tool-head เป็นแผงมืดแบบเดียวกับ
+   .stage ไปเลย ใช้โทเค็น --stage/--stage-2/--stage-dim ชุดเดียวกับหน้าแรก (ค่าคงที่ ไม่สลับ
+   ตามธีม จึงเป็น "จุดยึด" ได้ทั้งสองโหมดเหมือนกัน) ตรวจคอนทราสต์จริงแล้ว: หัวข้อ #f0f1f3 บนพื้น
+   เข้มสุด #1b2029 = 14.46:1 · คำอธิบาย stage-dim บนพื้นเดียวกัน = 6.2:1 (ทั้งคู่ผ่าน AA ขาด ๆ) */
+.tool-head{
+  --text:#f0f1f3; --text-dim:var(--stage-dim);
+  display:flex; gap:var(--sp4); align-items:flex-start;
+  margin-bottom:var(--sp5);
+  border-radius:24px; padding:clamp(18px,3.4vw,26px) clamp(18px,3.4vw,28px);
+  background:linear-gradient(152deg,var(--stage),var(--stage-2));
+  box-shadow:0 30px 60px -26px rgba(8,10,16,.45), inset 0 1px 0 0 rgba(255,255,255,.05);
+}
 .tool-ico{
   width:46px;height:46px;flex:0 0 46px;border-radius:13px;display:grid;place-items:center;font-size:22px;
   color:#fff;
   background:linear-gradient(140deg,color-mix(in srgb,var(--ac,var(--brand)) 92%,#fff),color-mix(in srgb,var(--ac,var(--brand)) 72%,#000));
-  box-shadow:0 6px 16px color-mix(in srgb,var(--ac,var(--brand)) 32%,transparent), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:0 6px 16px color-mix(in srgb,var(--ac,var(--brand)) 40%,transparent), inset 0 1px 0 rgba(255,255,255,.3);
 }
-.tool-head h1{margin:0;font-size:21px;font-weight:700;line-height:1.4;letter-spacing:calc(1em * -0.015)}
-.tool-head p{margin:3px 0 0;color:var(--text-dim);font-size:13.5px;max-width:70ch}
+/* เดิม h1 21px/700 จืดมากเทียบกับหัวข้อ 52px บนหน้าแรก — ไม่ต้องเท่าหน้าแรก (นี่คือหัวข้อ
+   เครื่องมือย่อย ไม่ใช่ hero การตลาด) แต่ต้องมีน้ำหนักพอจะเป็น "หัวเรื่องของแผงมืด" ได้ */
+.tool-head h1{margin:0;color:var(--text);font-size:clamp(21px,2.6vw,27px);font-weight:800;line-height:1.32;letter-spacing:calc(1em * -0.02)}
+.tool-head p{margin:5px 0 0;color:var(--text-dim);font-size:13.5px;max-width:70ch}
 
 .panel{
   background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);
-  padding:clamp(14px,3vw,22px);box-shadow:var(--shadow), var(--ring-top);
+  padding:clamp(var(--sp4),3vw,var(--sp5));box-shadow:var(--shadow), var(--ring-top);
 }
-.panel + .panel{margin-top:14px}
+.panel + .panel{margin-top:var(--sp4)}
 .note{font-size:12.5px;color:var(--text-mute);margin-top:10px;line-height:1.6}
 
 /* ---- dropzone ---- */
+/* เดิมกล่องลากไฟล์คือกรอบเส้นประ 14px มุมกับพื้น bg-soft เฉย ๆ — เป็นองค์ประกอบที่ผู้ใช้
+   เจอก่อนสิ่งอื่นในหน้าเครื่องมือ (พระเอกของหน้า) แต่ไม่มีสีประจำเครื่องมือ (--ac) เกาะอยู่เลยตอน
+   idle ทั้งที่ตัวแปรพร้อมใช้อยู่แล้ว ทุกเครื่องมือเลยหน้าตาเหมือนกันหมด — ขยายระยะห่าง+มุมโค้ง
+   ให้สมกับเป็นจุดเด่น แล้วให้เส้นขอบ idle ก็มีสีตระกูลเครื่องมือจาง ๆ ไม่ใช่แค่ตอน hover */
 .dz{
-  border:1.5px dashed var(--line);border-radius:var(--r);padding:20px 18px;text-align:center;
+  border:1.5px dashed color-mix(in srgb,var(--ac,var(--brand)) 24%,var(--line));
+  border-radius:var(--r-lg);padding:clamp(28px,4.5vw,40px) var(--sp5);text-align:center;
   cursor:pointer;background:var(--bg-soft);
   transition:border-color .15s,background .15s,transform var(--t-panel,.22s) var(--ease-spring,ease),box-shadow var(--t-panel,.22s) var(--ease-spring,ease);
 }
@@ -31,11 +51,21 @@
   border-color:var(--ac,var(--brand));border-style:solid;transform:scale(1.008);
   background:color-mix(in srgb,var(--ac,var(--brand)) 10%,var(--card-hi));
 }
-.dz-ico{font-size:26px;line-height:1}
-.dz-main{font-weight:700;margin-top:6px}
-.dz-hint{font-size:12.5px;color:var(--text-mute);margin-top:4px}
-.dz-safe{font-size:11.5px;color:var(--text-mute);margin-top:9px;opacity:.85}
-@media (prefers-reduced-motion: reduce){ .dz.over,.dz:hover{transform:none;box-shadow:none} }
+/* วงกลมสีตระกูลเครื่องมือหุ้มไอคอน — ทำให้กล่องนี้ "เป็นของเครื่องมือนี้" ตั้งแต่แวบแรกที่เห็น
+   เหมือน .tool-ico ที่หัวหน้า ไม่ใช้ไล่สีแบบ .tool-ico (สต็อปสว่างของไล่สีให้คอนทราสต์ไอคอนขาว
+   ต่ำกว่า 3:1 ในหลายสี — วัดจริงแล้ว เช่น g-data ตกที่ 2.0:1) ใช้สีทึบผสมดำ 72% แทน
+   วัดจริง: ไอคอนขาวบนวงกลมนี้ต่ำสุด (g-data) = 3.93:1 สูงสุด (g-pdf) = 5.91:1 ผ่าน 3:1 ของกราฟิกทุกสี */
+.dz-ico{
+  width:52px;height:52px;margin:0 auto;border-radius:50%;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--ac,var(--brand)) 72%,#000);
+  box-shadow:0 8px 18px -8px color-mix(in srgb,var(--ac,var(--brand)) 55%,transparent), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.dz-ico .dz-svg{stroke:#fff}
+.dz:hover .dz-ico .dz-svg,.dz.over .dz-ico .dz-svg{stroke:#fff}
+.dz-main{font-weight:800;font-size:16px;margin-top:14px}
+.dz-hint{font-size:12.5px;color:var(--text-mute);margin-top:5px}
+.dz-safe{font-size:11.5px;color:var(--text-mute);margin-top:11px;opacity:.85}
+@media (prefers-reduced-motion: reduce){ .dz.over,.dz:hover,.next-card:hover,.chip:hover{transform:none;box-shadow:none} }
 .dz-count{font-size:12.5px;color:var(--text-dim);margin:10px 2px 0}
 
 .files{display:flex;flex-direction:column;gap:6px;margin-top:8px}
@@ -93,26 +123,33 @@
 }
 .icon-btn:hover{color:var(--text);border-color:var(--brand)}
 .icon-btn.danger:hover{color:var(--err);border-color:var(--err)}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center}
+.actions{display:flex;gap:var(--sp3);flex-wrap:wrap;margin-top:var(--sp5);align-items:center}
 
 /* ---- status / progress ---- */
-.status-wrap{margin-top:14px}
-.status{display:none;font-size:13.5px;padding:10px 14px;border-radius:var(--r-sm);font-weight:600;border:1px solid transparent}
+.status-wrap{margin-top:var(--sp4)}
+.status{display:none;position:relative;font-size:13.5px;padding:11px 16px 11px 34px;border-radius:var(--r);font-weight:600;border:1px solid transparent}
 .status.show{display:block}
 /* เดิมไม่มีเส้นขอบเลย มีแค่พื้นย้อมสี — ในขณะที่กล่องแจ้งเตือนแบบอื่นในหน้าเดียวกัน
    (.fail-box, .wrong-type, .stat) ทุกกล่องมีเส้นขอบย้อมสีคู่กับพื้นเสมอ ทำให้ .status ดูจางกว่าเพื่อนแบบไม่มีเหตุผล */
 .status.info{background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand);border-color:color-mix(in srgb,var(--brand) 30%,transparent)}
 .status.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 32%,transparent)}
 .status.err{background:color-mix(in srgb,var(--err) 15%,transparent);color:var(--err);border-color:color-mix(in srgb,var(--err) 32%,transparent)}
+/* จุดสีหน้าข้อความ — ใช้ currentColor เกาะสีของ .info/.ok/.err ที่มีอยู่แล้วเอง ไม่ต้องเพิ่มไอคอน SVG
+   (แก้ไฟล์นี้ไฟล์เดียว ต่อ JS ไม่ได้) แต่ทำให้กล่องสถานะดูตั้งใจออกแบบขึ้นแทนที่จะเป็นแถบสีเรียบ ๆ */
+.status::before{content:"";position:absolute;inset-inline-start:15px;top:50%;translate:0 -50%;
+  width:7px;height:7px;border-radius:50%;background:currentColor}
 .progress{display:none;height:7px;border-radius:99px;background:var(--bg-soft);overflow:hidden;margin-top:10px;border:1px solid var(--line-soft)}
 .progress.show{display:block}
 .progress .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .18s ease}
 
 /* ---- results ---- */
-.results{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.results{display:flex;flex-direction:column;gap:8px;margin-top:var(--sp4)}
+/* เดิม .result เป็นแถวสีพื้น bg-soft ล้วน ไม่มีอะไรบอกว่า "ไฟล์นี้เป็นผลลัพธ์ของเครื่องมือนี้"
+   ต่างจาก .tool-ico/.dz-ico ที่มีสีตระกูล (--ac) ชัดเจน — เติมเส้นซ้ายสีเดียวกันให้ครบชุด */
 .result{
   display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--r-sm);
   background:var(--bg-soft);border:1px solid var(--line-soft);
+  border-inline-start:3px solid color-mix(in srgb,var(--ac,var(--brand)) 55%,var(--line-soft));
 }
 .result .r-name{flex:1;min-width:0;font-size:13.5px;font-weight:600}
 .result .r-name strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
@@ -284,6 +321,19 @@
 }
 .sample-box > div:first-child{flex:1;min-width:230px}
 .sample-links{display:flex;gap:7px;flex-wrap:wrap}
+/* ‼️ .chip ไม่มีสไตล์พื้นฐานเลยที่ไหนในเว็บ — word-mailmerge.js ใช้ class="chip" กับลิงก์ดาวน์โหลด
+   ตัวอย่าง แต่มีแค่กฎ .sample-links .chip ด้านล่างที่ทับ background/font-size/padding เท่านั้น
+   ไม่มี border/รัศมี/hover เลย จึงเรนเดอร์เป็นลิงก์ default ไม่มีกรอบ ดูดิบกว่าปุ่ม/ป้ายอื่นทั้งหน้า
+   เติมฐานให้เหมือนป้าย .badge/.next-card ที่เหลือ (เส้นขอบ+สปริง hover+focus) */
+.chip{
+  display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+  color:var(--text-dim);background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;
+  transition:color var(--t-btn,.1s) var(--ease-snap,ease),border-color var(--t-btn,.1s) var(--ease-snap,ease),
+    background var(--t-btn,.1s) var(--ease-snap,ease),transform var(--t-panel,.22s) var(--ease-spring,ease);
+}
+.chip:hover{color:var(--text);border-color:color-mix(in srgb,var(--ac,var(--brand)) 55%,var(--line));background:var(--card-hi);transform:translateY(-1px)}
+.chip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .sample-links .chip{background:var(--surface,var(--card));font-size:12px;padding:6px 12px}
 
 /* ── ชุดเครื่องมือไทย: ชิปสรุป + ตารางพรีวิว ── */
@@ -312,7 +362,11 @@
 
 /* ── ซ่อมไฟล์ไทยเพี้ยน ── */
 .enc-list{display:flex;flex-direction:column;gap:14px;margin-top:16px}
-.enc-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card)}
+/* เดิมไม่มีเงาเลย ทั้งที่เป็นการ์ดระดับเดียวกับ .panel (มีเส้นขอบ+background:var(--card) เหมือนกัน)
+   .panel ทุกอันในหน้าอื่นมี var(--shadow),var(--ring-top) เป็นภาษาแสงจากด้านบนเดียวกันหมด
+   การ์ดนี้เลยดูแบนแปลกแยกไปเมื่อวางถัดจาก .panel จริง */
+.enc-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card);
+  box-shadow:var(--sh1), var(--ring-top)}
 .enc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
 .enc-head strong{flex:1;min-width:0;overflow-wrap:anywhere}
 .enc-cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
@@ -339,13 +393,17 @@
           mask-image:linear-gradient(90deg,#000,#000 70%,transparent)}
 .next-steps h2{font-size:13.5px;font-weight:700;color:var(--text-mute);margin:0 0 12px}
 .next-row{display:flex;flex-wrap:wrap;gap:10px}
+/* เดิม hover ใช้ --t-micro (.12s ease) ธรรมดา ไม่มีสปริง — การ์ดนี้คือ .pill ตัวเดียวกันแค่ย้าย
+   มาอยู่ท้ายหน้าเครื่องมือ (โครงสร้างเหมือนกันเป๊ะ: ไอคอนวงกลมสี --ac + ข้อความ) ควรสปริงแบบเดียวกัน */
 .next-card{
   display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);
   background:var(--card);border:1px solid var(--line-soft);border-radius:999px;
   padding:9px 18px 9px 10px;font-size:13.5px;font-weight:600;min-height:44px;
-  transition:border-color var(--t-micro,.12s) ease,background var(--t-micro,.12s) ease,transform var(--t-micro,.12s) ease;
+  transition:border-color var(--t-micro,.12s) ease,background var(--t-micro,.12s) ease,
+    transform var(--t-panel,.22s) var(--ease-spring,ease),box-shadow var(--t-panel,.22s) var(--ease-spring,ease);
 }
-.next-card:hover{border-color:color-mix(in srgb,var(--ac) 60%,transparent);background:var(--card-hi);transform:translateY(-1px)}
+.next-card:hover{border-color:color-mix(in srgb,var(--ac) 60%,transparent);background:var(--card-hi);
+  transform:translateY(-2px);box-shadow:0 10px 20px -12px color-mix(in srgb,var(--ac) 45%,transparent)}
 .next-ico{
   width:28px;height:28px;flex:none;border-radius:9px;display:grid;place-items:center;font-size:15px;color:#fff;
   background:linear-gradient(140deg,color-mix(in srgb,var(--ac) 92%,#fff),color-mix(in srgb,var(--ac) 72%,#000));

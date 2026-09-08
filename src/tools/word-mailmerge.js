@@ -21,7 +21,7 @@ export function mount(tool) {
   const tplZone = dropzone({
     expect: ["docx"], expectLabel: tr("ไฟล์ Word (.docx)", "Word files (.docx)"),
     accept: ".docx", multiple: false,
-    hint: tr("ไฟล์ Word ที่ใส่ตัวยึดไว้ เช่น {{ชื่อ}} {{ตำแหน่ง}}", "A Word file with placeholders in it, e.g. {{Name}} {{Position}}"),
+    hint: tr("ไฟล์ Word ที่มีตัวยึด เช่น {{ชื่อ}}", "Word file with placeholders, e.g. {{Name}}"),
     onChange: async (f) => { tplFile = f[0] || null; await scanTemplate(); },
   });
 
@@ -29,7 +29,7 @@ export function mount(tool) {
   const dataZone = dropzone({
     expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV files"),
     accept: ".xlsx,.xls,.csv", multiple: false,
-    hint: tr("แถวแรกต้องเป็นชื่อคอลัมน์ · หนึ่งแถว = หนึ่งเอกสาร", "The first row must be column headers · one row = one document"),
+    hint: tr("แถวแรก = หัวคอลัมน์ · 1 แถว = 1 เอกสาร", "Row 1 = headers · 1 row = 1 doc"),
     onChange: async (f) => { dataFile = f[0] || null; await scanData(); },
   });
 
@@ -37,10 +37,10 @@ export function mount(tool) {
   const mapBox = el("div", { class: "mm-box", hidden: true });
   const previewBox = el("div", { class: "mm-box", hidden: true });
 
-  const modeSel = select([["row", tr("หนึ่งแถว = หนึ่งเอกสาร", "One row = one document")], ["group", tr("รวมหลายแถวเป็นเอกสารเดียว (ใช้กับตารางรายการ)", "Combine multiple rows into one document (for item tables)")]], "row");
+  const modeSel = select([["row", tr("หนึ่งแถว = หนึ่งเอกสาร", "One row = one document")], ["group", tr("รวมหลายแถวเป็น 1 เอกสาร (ตารางรายการ)", "Combine rows into 1 doc (item tables)")]], "row");
   const groupCol = el("select", {});
   const loopSel = el("select", {});
-  const groupField = field(tr("จัดกลุ่มด้วยคอลัมน์", "Group by column"), groupCol, tr("แถวที่ค่าตรงกันจะรวมเป็นเอกสารเดียว", "Rows with matching values are combined into one document"));
+  const groupField = field(tr("จัดกลุ่มด้วยคอลัมน์", "Group by column"), groupCol, tr("ค่าตรงกันรวมเป็นเอกสารเดียว", "Matching values combine into one doc"));
   const loopField = field(tr("ใส่รายการลงบล็อก", "Fill list items into block"), loopSel);
   const nameCol = el("select", {});
   const go = button(tr("สร้างเอกสารทั้งชุด", "Generate all documents"), { onclick: run });
@@ -64,11 +64,11 @@ export function mount(tool) {
       el("div", {}, [el("h3", {}, tr("เลือกไฟล์ข้อมูล", "Choose a data file")), dataZone.container])]),
     step3 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "3"),
       el("div", {}, [el("h3", {}, tr("จับคู่ข้อมูลกับตัวยึด", "Match data to placeholders")),
-        wait3 = el("div", { class: "step-wait" }, tr("รอไฟล์จากขั้นที่ 1 และ 2 ก่อน — ระบบจะจับคู่คอลัมน์ให้อัตโนมัติ", "Waiting for files from steps 1 and 2 — columns will be matched automatically")),
+        wait3 = el("div", { class: "step-wait" }, tr("รอไฟล์จากขั้นที่ 1-2 — จับคู่คอลัมน์ให้อัตโนมัติ", "Waiting for files from steps 1–2 — columns match automatically")),
         mapBox])]),
     step4 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "4"),
       el("div", {}, [el("h3", {}, tr("ตรวจดูก่อนสร้าง", "Preview before generating")),
-        wait4 = el("div", { class: "step-wait" }, tr("จะแสดงตัวอย่างเอกสารของแถวแรกให้ดูก่อน เมื่อจับคู่ข้อมูลเรียบร้อย", "A preview of the first row's document will show here once the data is matched")),
+        wait4 = el("div", { class: "step-wait" }, tr("จะโชว์ตัวอย่างแถวแรกเมื่อจับคู่ข้อมูลเสร็จ", "Preview shows once the data is matched")),
         previewBox,
         el("div", { class: "row" }, [
           field(tr("รูปแบบเอกสาร", "Document mode"), modeSel),
@@ -84,8 +84,8 @@ export function mount(tool) {
     el("div", {}, [
       el("strong", {}, tr("ยังไม่มีไฟล์? ลองด้วยตัวอย่างสำเร็จรูปได้เลย", "No files yet? Try the ready-made sample")),
       el("p", { class: "mm-label", style: { margin: "5px 0 0" } },
-        tr("มีทั้งแบบหนึ่งแถวหนึ่งใบ (หนังสือแจ้งผลประเมิน) และแบบมีตารางรายการ (ใบเสนอราคา) พร้อมตัวอย่างเงื่อนไข",
-           "Includes a one-row-per-document sample (evaluation letter) and a table-based sample (quotation) with conditional examples")),
+        tr("มีทั้งแบบเรียบง่ายและแบบตารางรายการ พร้อมตัวอย่างเงื่อนไข",
+           "Includes a simple sample and a table-based sample with conditions")),
     ]),
     el("div", { class: "sample-links" }, [
       el("a", { class: "chip", href: "samples/ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx", download: true }, tr("เทมเพลตประเมิน", "Evaluation template")),
@@ -97,20 +97,16 @@ export function mount(tool) {
   ]));
 
   body.appendChild(el("div", { class: "note" },
-    tr("วิธีใช้: เปิดไฟล์ Word ของคุณแล้วพิมพ์ตัวยึดในตำแหน่งที่ต้องการเติมข้อมูล เช่น " +
-    "“เรียน {{คำนำหน้า}}{{ชื่อ}}” จากนั้นเตรียม Excel ที่มีคอลัมน์ชื่อเดียวกัน ระบบจะสร้างเอกสารให้ทีละแถว · " +
-    "รองรับหัวกระดาษและท้ายกระดาษด้วย · ทุกอย่างทำในเครื่องคุณเอง ไฟล์ไม่ถูกอัปโหลดไปไหน",
-    "How to use: open your Word file and type a placeholder where you want data inserted, e.g. " +
-    "“Dear {{Title}} {{Name}}” — then prepare an Excel file with columns of the same names. One document is generated per row · " +
-    "Headers and footers are supported too · Everything runs on your device — files are never uploaded")));
+    tr("พิมพ์ตัวยึดในไฟล์ Word เช่น {{คำนำหน้า}}{{ชื่อ}} แล้วจับคู่คอลัมน์ Excel — สร้างเอกสารทีละแถว รองรับหัว-ท้ายกระดาษ",
+    "Type placeholders like {{Title}}{{Name}} in Word, then match Excel columns — one document per row. Headers/footers supported")));
 
   body.appendChild(el("div", { class: "note" },
-    tr("เงื่อนไข: ใส่ {{#ได้โบนัส}}ข้อความเมื่อจริง{{/ได้โบนัส}} แล้วใน Excel ใส่ TRUE / FALSE (หรือ ใช่ / ไม่ใช่, มี / ไม่มี) · " +
-    "อยากได้ข้อความกรณีตรงข้ามให้ใช้ {{#ไม่ได้โบนัส}}…{{/ไม่ได้โบนัส}} — ไม่ต้องเพิ่มคอลัมน์ ระบบสร้างตัวขึ้นต้นด้วย “ไม่” ให้เอง · " +
-    "ตารางรายการหลายบรรทัด: ในแถวตารางใส่ {{#รายการ}} ที่ช่องแรกและ {{/รายการ}} ที่ช่องสุดท้าย",
-    "Conditions: write {{#Bonus}}text shown when true{{/Bonus}}, then in Excel put TRUE / FALSE (Thai ใช่ / ไม่ใช่ and มี / ไม่มี work too) · " +
-    "For the opposite case, use {{#notBonus}}…{{/notBonus}} — no extra column needed, the opposite block is created for you (Thai templates use the “ไม่” prefix instead) · " +
-    "Multi-row item tables: in the table row, put {{#Items}} in the first cell and {{/Items}} in the last cell (the loop name just has to match your grouping)")));
+    tr("เงื่อนไข: {{#โบนัส}}…{{/โบนัส}} + Excel ใส่ TRUE/FALSE (หรือ ใช่/ไม่ใช่, มี/ไม่มี) · ตรงข้าม {{#ไม่โบนัส}}…{{/ไม่โบนัส}} ไม่ต้องเพิ่มคอลัมน์",
+    "Condition: {{#Bonus}}…{{/Bonus}} + Excel TRUE/FALSE (ใช่/ไม่ใช่, มี/ไม่มี work too) · Opposite: {{#notBonus}}…{{/notBonus}}, no extra column")));
+
+  body.appendChild(el("div", { class: "note" },
+    tr("ตารางรายการ: ใส่ {{#รายการ}} ที่ช่องแรกและ {{/รายการ}} ที่ช่องสุดท้ายของแถว",
+    "Item table: put {{#Items}} in the first cell and {{/Items}} in the last cell")));
 
   // ── อ่านตัวยึดจากเทมเพลต ─────────────────────────────────────────────────
   async function scanTemplate() {
@@ -125,8 +121,8 @@ export function mount(tool) {
       fieldsBox.hidden = false;
       if (!fields.length && !loops.length) {
         fieldsBox.appendChild(el("div", { class: "status show err" },
-          tr("ไม่พบตัวยึดในไฟล์นี้ — ตัวยึดต้องอยู่ในรูป {{ชื่อคอลัมน์}} เช่น {{ชื่อ}} หรือ {{ตำแหน่ง}}",
-             "No placeholders found in this file — a placeholder looks like {{ColumnName}}, e.g. {{Name}} or {{Position}}")));
+          tr("ไม่พบตัวยึด — ต้องอยู่ในรูป {{ชื่อคอลัมน์}} เช่น {{ชื่อ}}",
+             "No placeholders found — must look like {{ColumnName}}, e.g. {{Name}}")));
       } else {
         fieldsBox.append(
           el("p", { class: "mm-label" }, tr(`พบตัวยึด ${fields.length} รายการ` +
@@ -136,7 +132,7 @@ export function mount(tool) {
         );
         if (loops.length) {
           fieldsBox.append(
-            el("p", { class: "mm-label", style: { marginTop: "10px" } }, tr("บล็อกวนซ้ำ (ใช้กับตารางรายการหลายบรรทัด)", "Repeat blocks (for multi-row item tables)")),
+            el("p", { class: "mm-label", style: { marginTop: "10px" } }, tr("บล็อกวนซ้ำ (ตารางรายการ)", "Repeat blocks (item tables)")),
             el("div", { class: "stack" }, loops.map((f) => el("span", { class: "mm-loop", text: `{{#${f}}} … {{/${f}}}` })))
           );
         }
@@ -160,7 +156,7 @@ export function mount(tool) {
         : XLSXLib.read(dbuf, { type: "array" });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       rows = XLSXLib.utils.sheet_to_json(sheet, { defval: "", raw: false });
-      if (!rows.length) throw new Error(tr("ไม่พบข้อมูลในไฟล์ (ต้องมีแถวหัวตารางและอย่างน้อย 1 แถวข้อมูล)", "No data found in the file (needs a header row and at least 1 data row)"));
+      if (!rows.length) throw new Error(tr("ไม่พบข้อมูล (ต้องมีหัวตาราง + 1 แถวข้อมูล)", "No data found (needs a header + 1 data row)"));
       columns = Object.keys(rows[0]);
       st.ok(tr(`อ่านข้อมูลได้ ${rows.length.toLocaleString("th-TH")} แถว · ${columns.length} คอลัมน์ จากชีท “${wb.SheetNames[0]}”`,
         `Read ${rows.length.toLocaleString("en-US")} rows · ${columns.length} columns from sheet “${wb.SheetNames[0]}”`));
@@ -326,7 +322,7 @@ export function mount(tool) {
 
       if (made.length > 1) {
         results.appendChild(el("div", { class: "actions" }, [
-          button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
+          button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {
             st.info(tr("กำลังบีบเป็น ZIP…", "Zipping…"));
             const [JSZipLib] = await loadLibs("jszip");
             const zip = new JSZipLib();
@@ -342,8 +338,8 @@ export function mount(tool) {
         button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
       ])));
       if (made.length > 50) results.appendChild(el("div", { class: "note" },
-        tr(`แสดง 50 ไฟล์แรกในรายการ · ไฟล์ที่เหลืออยู่ในไฟล์ ZIP ครบทั้ง ${made.length} ไฟล์`,
-           `Showing the first 50 files in the list · the rest are included in the ZIP — all ${made.length} files`)));
+        tr(`แสดง 50 ไฟล์แรก · ที่เหลืออยู่ใน ZIP ครบ ${made.length} ไฟล์`,
+           `Showing first 50 · rest included in the ZIP (${made.length} total)`)));
       await yieldToBrowser();
     } catch (e) {
       st.progress(null);

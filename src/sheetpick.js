@@ -20,8 +20,8 @@ export async function readWorkbook(file) {
 
   const d = smartDecode(buf);
   let encNote = null;
-  if (d.undo) encNote = tr("ไฟล์นี้ภาษาไทยเพี้ยนซ้อน — ซ่อมให้อัตโนมัติตอนอ่านแล้ว", "This file's Thai text was double-garbled — fixed automatically while reading");
-  else if (d.enc !== "utf-8") encNote = tr(`ไฟล์นี้เข้ารหัสแบบ ${ENC_LABEL[d.enc] || d.enc} — แปลงให้อัตโนมัติแล้ว`, `This file used ${ENC_LABEL[d.enc] || d.enc} encoding — converted automatically`);
+  if (d.undo) encNote = tr("ไฟล์นี้ไทยเพี้ยนซ้อน — ซ่อมให้แล้ว", "Thai text was double-garbled — fixed automatically");
+  else if (d.enc !== "utf-8") encNote = tr(`เข้ารหัส ${ENC_LABEL[d.enc] || d.enc} — แปลงแล้ว`, `${ENC_LABEL[d.enc] || d.enc} encoding — converted`);
   return { wb: XLSX.read(d.text, { type: "string", cellDates: true }), encNote };
 }
 
@@ -83,8 +83,8 @@ export function columnTool(tool, cfg) {
 
   const sheetSel = select([["0", "—"]], "0");
   const colSel = select([["0", "—"]], "0");
-  const modeSel = select([["add", tr("เพิ่มเป็นคอลัมน์ใหม่ (เก็บของเดิมไว้)", "Add as a new column (keep the original)")],
-                          ["replace", tr("เขียนทับคอลัมน์เดิม", "Overwrite the original column")]], "add");
+  const modeSel = select([["add", tr("เพิ่มคอลัมน์ใหม่ (เก็บของเดิม)", "Add new column (keeps original)")],
+                          ["replace", tr("เขียนทับคอลัมน์เดิม", "Overwrite original")]], "add");
   const sheetField = field(tr("ชีท", "Sheet"), sheetSel);
   const colField = field(tr("คอลัมน์ที่จะแปลง", "Column to convert"), colSel);
   const modeField = field(tr("ผลลัพธ์", "Result"), modeSel);
@@ -193,8 +193,8 @@ export function columnTool(tool, cfg) {
       preview.appendChild(t);
       if (stat.ok + stat.bad > rows.length)
         preview.appendChild(el("div", { class: "note" },
-          tr(`แสดง ${rows.length} แถวแรกจาก ${(stat.ok + stat.bad).toLocaleString()} แถว — ดาวน์โหลดแล้วจะได้ครบทุกแถว`,
-             `Showing the first ${rows.length} of ${(stat.ok + stat.bad).toLocaleString()} rows — the download will have all of them`)));
+          tr(`แสดง ${rows.length}/${(stat.ok + stat.bad).toLocaleString()} แถว — ดาวน์โหลดครบ`,
+             `Showing ${rows.length}/${(stat.ok + stat.bad).toLocaleString()} rows — download has all`)));
     }
     if (encNote) st.info(encNote); else st.clear();
   }

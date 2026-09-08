@@ -21,7 +21,7 @@ export function mount(tool) {
   const lang = segmented([["tha+eng", tr("ไทย + อังกฤษ", "Thai + English")], ["tha", tr("ไทย", "Thai")], ["eng", tr("อังกฤษ", "English")]], "tha+eng");
   const rangeInput = el("input", { type: "text", value: "1-", placeholder: tr("เช่น 1-3", "e.g. 1-3") });
   const quality = select([["2", tr("ปกติ (เร็ว)", "Normal (fast)")], ["2.6", tr("ละเอียด (แนะนำ)", "Detailed (recommended)")], ["3.4", tr("ละเอียดสูง (ช้า)", "High detail (slow)")]], "2.6");
-  const go = button(tr("เริ่มอ่านข้อความ", "Start reading text"), { onclick: run });
+  const go = button(tr("เริ่มอ่าน", "Start reading"), { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field(tr("ภาษาในเอกสาร", "Document language"), lang),
@@ -29,17 +29,15 @@ export function mount(tool) {
       field(tr("ความละเอียดในการอ่าน", "Reading quality"), quality)]),
     el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
-    tr("ครั้งแรกของแต่ละภาษาจะต้องดาวน์โหลดชุดข้อมูลการอ่าน (ภาษาไทยประมาณ 10-30 MB) เบราว์เซอร์จะเก็บไว้ใช้ซ้ำครั้งต่อไป · " +
-    "การอ่านใช้เวลาราว 3-15 วินาทีต่อหน้าขึ้นกับเครื่อง · ทั้งหมดทำงานในเครื่องคุณเอง ไม่มีการส่งไฟล์ออกไปไหน",
-    "The first time you use a language, it downloads a reading data pack (Thai is about 10-30 MB) — your browser keeps it for next time · " +
-    "Reading takes about 3-15 seconds per page depending on your device · everything runs on your device — no files are sent anywhere")));
+    tr("ครั้งแรกโหลดชุดภาษา ~10-30MB · อ่านช้าราว 3-15 วิ/หน้า",
+    "First run downloads a ~10-30MB language pack · reading takes 3-15s per page")));
 
   async function pageImages() {
     // คืนรายการ dataURL ของภาพที่จะส่งให้ OCR — รองรับทั้ง PDF และไฟล์รูป
     if (file.type.startsWith("image/")) return [{ label: file.name, url: URL.createObjectURL(file) }];
     const pdf = await openPdf(file, passwordBox(extra));
     const pages = parsePages(rangeInput.value || "1-", pdf.numPages);
-    if (!pages.length) throw new Error(tr(`ไฟล์นี้มี ${pdf.numPages} หน้า — ช่วงที่ระบุไม่ตรงกับหน้าใดเลย`, `This file has ${pdf.numPages} pages — the range you entered does not match any page`));
+    if (!pages.length) throw new Error(tr(`ไฟล์มี ${pdf.numPages} หน้า — ช่วงที่ระบุไม่ตรงหน้าใดเลย`, `File has ${pdf.numPages} pages — range matches none`));
     const out = [];
     for (const p of pages) {
       const page = await pdf.getPage(p);
@@ -60,14 +58,14 @@ export function mount(tool) {
   }
 
   async function run() {
-    if (!file) return st.err(tr("กรุณาเลือกไฟล์ก่อน", "Please choose a file first"));
+    if (!file) return st.err(tr("เลือกไฟล์ก่อน", "Choose a file first"));
     results.innerHTML = ""; preview.hidden = true;
     go.disabled = true;
     st.info(tr("กำลังเตรียมภาพ…", "Preparing images…"));
     try {
       const images = await pageImages();
 
-      st.info(tr("กำลังเตรียมตัวอ่าน (ครั้งแรกอาจใช้เวลาดาวน์โหลดชุดภาษา)…", "Preparing the reader (the first time may take a while to download the language pack)…"));
+      st.info(tr("เตรียมตัวอ่าน (ครั้งแรกอาจช้า)…", "Preparing reader (first run may be slow)…"));
       // Tesseract ทำงานใน worker ของตัวเองอยู่แล้ว จอจึงไม่ค้างระหว่างอ่าน
       worker = await Tesseract.createWorker(lang.value, 1, {
         logger: (m) => {
@@ -90,10 +88,10 @@ export function mount(tool) {
       const text = parts.join("\n\n");
       const chars = text.replace(/\s/g, "").length;
       st.progress(null);
-      if (!chars) { st.err(tr("อ่านไม่พบตัวอักษร — ลองเพิ่มความละเอียด หรือตรวจว่าภาพชัดพอ", "No text found — try higher quality, or check that the image is clear enough")); return; }
+      if (!chars) { st.err(tr("ไม่พบตัวอักษร ลองเพิ่มความละเอียด", "No text found — try higher quality")); return; }
       st.ok(tr(`อ่านสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${images.length} หน้า`, `Done — ${chars.toLocaleString("en-US")} characters from ${images.length} pages`));
       preview.hidden = false;
-      preview.textContent = text.slice(0, 4000) + (text.length > 4000 ? tr("\n\n… (แสดงตัวอย่าง 4,000 ตัวอักษรแรก)", "\n\n… (showing the first 4,000 characters)") : "");
+      preview.textContent = text.slice(0, 4000) + (text.length > 4000 ? tr("\n\n… (ตัวอย่าง 4,000 ตัวแรก)", "\n\n… (first 4,000 chars)") : "");
 
       const name = stripExt(file.name) + "-ocr.txt";
       results.appendChild(el("div", { class: "actions" }, [
@@ -101,12 +99,12 @@ export function mount(tool) {
           download(new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" }), name) }),
         button(tr("คัดลอกทั้งหมด", "Copy all"), { ghost: true, onclick: async () => {
           try { await navigator.clipboard.writeText(text); st.ok(tr("คัดลอกลงคลิปบอร์ดแล้ว", "Copied to clipboard")); }
-          catch { st.err(tr("เบราว์เซอร์ไม่อนุญาตให้คัดลอก — ใช้ปุ่มดาวน์โหลดแทนได้", "Your browser did not allow copying — try the Download button instead")); }
+          catch { st.err(tr("คัดลอกไม่ได้ — ลองใช้ปุ่มดาวน์โหลดแทน", "Couldn't copy — try Download instead")); }
         } }),
       ]));
     } catch (e) {
       st.progress(null);
-      st.err(tr("อ่านข้อความไม่สำเร็จ: ", "Could not read the text: ") + e.message);
+      st.err(tr("อ่านไม่สำเร็จ: ", "Couldn't read text: ") + e.message);
       if (worker) { try { await worker.terminate(); } catch {} worker = null; }
     } finally { go.disabled = false; }
   }

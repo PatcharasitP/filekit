@@ -12,8 +12,8 @@ export function mount(tool) {
 
   const bomChk = el("input", { type: "checkbox", checked: true });
   const bomBox = el("label", { class: "clean-check" }, [bomChk,
-    el("span", {}, tr("ใส่เครื่องหมาย BOM ให้ไฟล์ CSV (แนะนำ — เปิดใน Excel แล้วภาษาไทยไม่เพี้ยนซ้ำ)",
-                     "Add a BOM to the CSV (recommended — keeps Thai text intact when opened in Excel)"))]);
+    el("span", {}, tr("ใส่ BOM ให้ CSV (กันไทยเพี้ยนใน Excel)",
+                     "Add BOM to CSV (prevents Thai garbling in Excel)"))]);
 
   const list = el("div", { class: "enc-list" });
   const actions = el("div", { class: "actions" });
@@ -21,14 +21,14 @@ export function mount(tool) {
   const dz = dropzone({
     accept: ".csv,.txt,.tsv,.json,.sql,.log,.md",
     expect: ["csv", "txt", "tsv", "json", "sql", "log", "md"], expectLabel: tr("ไฟล์ข้อความหรือ CSV", "a text or CSV file"),
-    hint: tr("รับ .csv .txt .tsv .json — เลือกหลายไฟล์พร้อมกันได้", "Accepts .csv .txt .tsv .json — pick multiple files at once"),
+    hint: tr(".csv .txt .tsv .json — หลายไฟล์ได้", ".csv .txt .tsv .json — multiple files"),
     onChange: scan,
   });
 
   body.append(dz.container, bomBox, st.node, list, actions);
   body.appendChild(el("div", { class: "note" },
-    tr("ไฟล์ Excel (.xlsx) ไม่ต้องใช้เครื่องมือนี้ — .xlsx เก็บข้อความเป็น UTF-8 เสมอ ปัญหาไทยเพี้ยนเกิดกับไฟล์ข้อความล้วนอย่าง CSV เท่านั้น",
-       "Excel files (.xlsx) don't need this tool — .xlsx always stores text as UTF-8. Garbled Thai text only happens with plain text files like CSV.")));
+    tr("ไม่เกี่ยวกับ .xlsx — ปัญหานี้เกิดเฉพาะไฟล์ CSV",
+       "Doesn't apply to .xlsx — only affects CSV files.")));
 
   async function scan() {
     list.innerHTML = ""; actions.innerHTML = ""; st.clear();
@@ -42,8 +42,8 @@ export function mount(tool) {
     }
     render();
     const fixable = items.filter((it) => needsFix(it)).length;
-    if (!fixable) st.ok(tr(`ตรวจ ${items.length} ไฟล์ — เป็น UTF-8 ที่ถูกต้องอยู่แล้วทุกไฟล์ ไม่ต้องซ่อม`,
-                           `Checked ${items.length} files — all already valid UTF-8, nothing to fix`));
+    if (!fixable) st.ok(tr(`ตรวจ ${items.length} ไฟล์ — UTF-8 ถูกต้องแล้วทุกไฟล์`,
+                           `Checked ${items.length} files — all valid UTF-8`));
     else st.info(tr(`ตรวจ ${items.length} ไฟล์ — ต้องซ่อม ${fixable} ไฟล์`,
                     `Checked ${items.length} files — ${fixable} need fixing`));
   }
@@ -81,8 +81,8 @@ export function mount(tool) {
     actions.innerHTML = "";
     if (!items.length) return;
     actions.append(
-      button(tr("บันทึกเป็น UTF-8 ทุกไฟล์", "Save all as UTF-8"), { onclick: () => saveAll(false) }),
-      items.length > 1 ? button(tr("ดาวน์โหลดรวมเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: () => saveAll(true), ghost: true }) : null,
+      button(tr("บันทึกเป็น UTF-8", "Save as UTF-8"), { onclick: () => saveAll(false) }),
+      items.length > 1 ? button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: () => saveAll(true), ghost: true }) : null,
     );
   }
 

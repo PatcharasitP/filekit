@@ -14,7 +14,7 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["docx"], expectLabel: tr("ไฟล์ Word (.docx)", "Word files (.docx)"),
     accept: ".docx", multiple: true,
-    hint: tr("เลือกได้หลายไฟล์ · แก้พร้อมกันทั้งชุดด้วยกฎเดียวกัน", "Choose multiple files · apply the same rules to the whole batch at once"),
+    hint: tr("แก้หลายไฟล์ด้วยกฎเดียวกัน", "Apply the same rules to all files"),
     onChange: (f) => { files = f; previewBox.innerHTML = ""; results.innerHTML = ""; st.clear(); refresh(); },
   });
 
@@ -24,7 +24,7 @@ export function mount(tool) {
 
   const addRule = (find = "", replace = "") => {
     const fi = el("input", { type: "text", placeholder: tr("ค้นหาคำนี้", "Find this text"), value: find, oninput: () => { refresh(); previewBox.innerHTML = ""; } });
-    const ri = el("input", { type: "text", placeholder: tr("แทนที่ด้วย (เว้นว่าง = ลบคำนั้น)", "Replace with (leave blank to delete it)"), value: replace });
+    const ri = el("input", { type: "text", placeholder: tr("แทนที่ด้วย (ว่าง = ลบ)", "Replace with (blank = delete)"), value: replace });
     const row = el("div", { class: "rep-row" }, [
       fi, el("span", { class: "mm-arrow" }, "→"), ri,
       el("button", { class: "icon-btn danger", type: "button", title: tr("เอาออก", "Remove"),
@@ -36,28 +36,24 @@ export function mount(tool) {
   };
   addRule();
 
-  const preview = button(tr("ดูก่อนว่าจะเปลี่ยนกี่จุด", "Preview how many matches"), { ghost: true, onclick: runPreview });
-  const go = button(tr("แทนที่แล้วดาวน์โหลด", "Replace and download"), { onclick: run });
+  const preview = button(tr("ดูตัวอย่าง", "Preview"), { ghost: true, onclick: runPreview });
+  const go = button(tr("แทนที่", "Replace"), { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "rep-head" }, [
-      el("p", { class: "mm-label" }, tr("กฎการแทนที่ (ใส่ได้หลายคู่ ทำงานพร้อมกัน)", "Replacement rules (add multiple pairs, all applied together)")),
+      el("p", { class: "mm-label" }, tr("กฎการแทนที่ (ใส่ได้หลายคู่)", "Replacement rules (multiple pairs)")),
       button(tr("+ เพิ่มคู่", "+ Add pair"), { ghost: true, onclick: () => { addRule(); refresh(); } }),
     ]),
     rulesBox,
     el("div", { class: "clean-opts" }, [
-      el("label", { class: "clean-check" }, [matchCase, el("span", {}, tr("ตรงตัวพิมพ์ใหญ่–เล็ก (มีผลกับภาษาอังกฤษ)", "Match case (affects English text)"))]),
-      el("label", { class: "clean-check" }, [wholeWord, el("span", {}, tr("ต้องเป็นทั้งคำ (ใช้ได้กับคำภาษาอังกฤษ ภาษาไทยไม่มีขอบเขตคำจึงข้ามให้)", "Whole word only (applies to English; Thai has no word boundaries so this is skipped)"))]),
+      el("label", { class: "clean-check" }, [matchCase, el("span", {}, tr("ตรงตัวพิมพ์ใหญ่–เล็ก (อังกฤษ)", "Match case (English)"))]),
+      el("label", { class: "clean-check" }, [wholeWord, el("span", {}, tr("ทั้งคำ (เฉพาะอังกฤษ)", "Whole word (English only)"))]),
     ]),
     el("div", { class: "actions" }, [preview, go]), st.node, previewBox, results);
 
   body.appendChild(el("div", { class: "note" },
-    tr("เหมาะกับงานที่ต้องแก้เหมือนกันทั้งชุด เช่น เปลี่ยนชื่อบริษัท เปลี่ยนปีในหัวเอกสาร หรือแก้ตำแหน่งผู้ลงนามในเอกสารหลายสิบไฟล์ · " +
-    "ระบบค้นข้ามการหั่นข้อความของ Word ให้ (คำที่ถูกตัดคาไว้คนละท่อนก็ยังเจอ) และรักษารูปแบบตัวอักษรเดิม · " +
-    "แนะนำให้กด “ดูก่อน” ทุกครั้งเพื่อเช็คจำนวนก่อนแก้จริง",
-    "Good for edits that repeat across a batch — e.g. changing a company name, a year in the header, or a signatory across dozens of files · " +
-    "The search works across Word's internal text splitting (matches spanning separate runs are still found) and keeps the original formatting · " +
-    "We recommend clicking “Preview” every time to check the count before applying the change")));
+    tr("แก้หลายไฟล์พร้อมกัน — กด “ดูตัวอย่าง” เช็คจำนวนก่อนแก้จริงเสมอ",
+    "Batch-edit many files — always click “Preview” to check the count first")));
 
   const getPairs = () => [...rulesBox.children].map((r) => r._get()).filter((p) => p.find);
   function refresh() {
@@ -93,7 +89,7 @@ export function mount(tool) {
         el("div", { class: "status show " + (grand ? "info" : "err") },
           grand ? tr(`จะแทนที่ทั้งหมด ${grand.toLocaleString("th-TH")} จุด ใน ${files.length} ไฟล์`,
                      `Will replace ${grand.toLocaleString("en-US")} matches across ${files.length} files`)
-                : tr("ไม่พบคำที่ค้นหาในไฟล์ที่เลือกเลย", "No matches found in any of the selected files")),
+                : tr("ไม่พบคำที่ค้นหาเลย", "No matches found")),
         table);
     } catch (e) {
       st.err(tr("ตรวจไม่สำเร็จ: ", "Check failed: ") + e.message);
@@ -114,12 +110,12 @@ export function mount(tool) {
         made.push({ name: tr(`${stripExt(f.name)}-แก้แล้ว.docx`, `${stripExt(f.name)}-edited.docx`), blob, n });
       });
       st.progress(null);
-      if (!made.length) throw new Error(tr("แก้ไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็น .docx จริงหรือไม่", "Could not process any file — check that they are valid .docx files"));
+      if (!made.length) throw new Error(tr("แก้ไม่สำเร็จ — ตรวจว่าเป็น .docx จริง", "Could not process — check they're valid .docx files"));
       if (failed.length) results.appendChild(failedBox(failed));
       st.ok(tr(`แทนที่ ${total.toLocaleString("th-TH")} จุด ใน ${made.length} ไฟล์`,
         `Replaced ${total.toLocaleString("en-US")} matches in ${made.length} files`));
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
-        button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
+        button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {
           const [JSZipLib] = await loadLibs("jszip");
           const zip = new JSZipLib();
           made.forEach((m) => zip.file(m.name, m.blob));

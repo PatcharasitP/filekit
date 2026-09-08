@@ -10,21 +10,21 @@ export function mount(tool) {
   const dz = dropzone({
     accept: "application/pdf,.pdf",
     reorder: true,
-    hint: tr("เลือกได้หลายไฟล์ · ลากแถวเพื่อสลับลำดับก่อนรวม", "Choose multiple files · drag rows to reorder before merging"),
+    hint: tr("หลายไฟล์ได้ · ลากสลับลำดับ", "Multiple files · drag to reorder"),
     expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 
-  const go = button(tr("รวมเป็นไฟล์เดียว", "Merge into one file"), { onclick: run });
+  const go = button(tr("รวมไฟล์", "Merge"), { onclick: run });
 
   body.append(dz.container, el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("ลำดับหน้าในไฟล์ผลลัพธ์จะเรียงตามลำดับไฟล์ด้านบน · บุ๊กมาร์กและฟอร์มของไฟล์ต้นทางอาจไม่ถูกคัดลอกมาทั้งหมด",
-       "Pages in the result follow the file order above · bookmarks and form fields from the source files may not all carry over")));
+    tr("บุ๊กมาร์กและฟอร์มจากไฟล์ต้นทางอาจไม่ถูกคัดลอกมาทั้งหมด",
+       "Bookmarks and form fields from source files may not all carry over")));
 
   async function run() {
     const files = dz.files;
-    if (files.length < 2) return st.err(tr("ต้องเลือกอย่างน้อย 2 ไฟล์จึงจะรวมได้", "Choose at least 2 files to merge"));
+    if (files.length < 2) return st.err(tr("เลือกอย่างน้อย 2 ไฟล์", "Choose at least 2 files"));
     results.innerHTML = "";
     go.disabled = true;
     st.info(tr("กำลังรวมไฟล์…", "Merging files…"));

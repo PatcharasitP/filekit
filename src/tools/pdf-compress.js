@@ -86,7 +86,7 @@ export function mount(tool) {
   });
 
   /* ── ขวา: ระดับการบีบ + ตัวเลขสรุป ─────────────────────────────────── */
-  const level = select([["light", tr("เบา — คงความคมไว้มาก", "Light — keeps most of the sharpness")], ["medium", tr("ปานกลาง — แนะนำ", "Medium — recommended")], ["strong", tr("แรง — ไฟล์เล็กสุด", "Strong — smallest file")]], "medium");
+  const level = select([["light", tr("เบา — คมชัดสุด", "Light — sharpest")], ["medium", tr("ปานกลาง — แนะนำ", "Medium — recommended")], ["strong", tr("แรง — ไฟล์เล็กสุด", "Strong — smallest file")]], "medium");
   level.addEventListener("change", () => renderAfterPreview());
 
   const statOrigin = el("span", { class: "cmp-stat-v" }, "–");
@@ -123,28 +123,24 @@ export function mount(tool) {
   const ws = workspace(tool, {
     left: {
       title: tr("ไฟล์", "File"), node: el("div", { class: "cmp-left" }, [dz.container, extra]),
-      hint: tr("ลากไฟล์ PDF มาวาง หรือคลิกเพื่อเลือก", "Drag a PDF file here, or click to choose"),
+      hint: tr("ลากมาวาง หรือคลิกเลือก", "Drag or click to choose"),
     },
     center: {
       title: tr("พรีวิวเทียบก่อน–หลัง", "Before–after preview"), node: sliderWrap,
-      empty: tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างเทียบก่อน–หลัง", "No file yet — choose a PDF file to see a before–after preview"),
+      empty: tr("ยังไม่มีไฟล์ — เลือก PDF เพื่อเทียบก่อน–หลัง", "No file yet — choose a PDF to compare"),
     },
     right: {
       title: tr("ตัวเลือก", "Options"),
       node: el("div", { class: "cmp-right" }, [field(tr("ระดับการบีบอัด", "Compression level"), level), statsBox]),
     },
     toolbar: [
-      el("span", { class: "cmp-toolbar-hint" }, tr("พรีวิวหน้าแรก · ลากเส้นหรือแตะเพื่อเทียบ", "Previewing page 1 · drag the line or tap to compare")),
+      el("span", { class: "cmp-toolbar-hint" }, tr("หน้าแรก · ลากเทียบได้", "Page 1 · drag to compare")),
       el("span", { class: "sep", "aria-hidden": "true" }),
       button(tr("รีเซ็ตตำแหน่ง", "Reset position"), { ghost: true, icon: "undo", onclick: () => setHandlePos(50) }),
     ],
     footer: [go, st.node, results],
-    note: tr("วิธีนี้เรนเดอร์แต่ละหน้าเป็นภาพแล้วประกอบกลับเป็น PDF ใหม่ — ได้ผลดีมากกับไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ " +
-      "แต่ข้อความในไฟล์จะกลายเป็นภาพ (คัดลอก/ค้นหาข้อความไม่ได้อีก) · " +
-      "ถ้าไฟล์เป็นข้อความล้วนอยู่แล้ว การบีบแบบนี้อาจได้ไฟล์ใหญ่ขึ้น ระบบจะเตือนให้ทราบ",
-      "This method renders each page as an image and rebuilds it into a new PDF — great for scans or image-heavy files. " +
-      "But text in the file becomes an image (no longer copyable or searchable) · " +
-      "if the file is already all text, this may make the file bigger — we will warn you if that happens"),
+    note: tr("วิธีนี้แปลงแต่ละหน้าเป็นภาพ ข้อความจะคัดลอก/ค้นหาไม่ได้อีก",
+      "This turns each page into an image — text can no longer be copied or searched"),
   });
   ws.wrap.prepend(styleEl);
 
@@ -231,7 +227,7 @@ export function mount(tool) {
       ws.showCanvas(true);
     } catch (e) {
       if (token !== previewToken) return;
-      st.err(tr("เปิดไฟล์พรีวิวไม่สำเร็จ: ", "Could not open the preview: ") + e.message);
+      st.err(tr("เปิดพรีวิวไม่ได้: ", "Couldn't open preview: ") + e.message);
     }
   }
 
@@ -257,7 +253,7 @@ export function mount(tool) {
       if (token !== previewToken) return;
       setImgSrc(afterImg, blob, "after");
     } catch (e) {
-      if (token === previewToken) st.err(tr("สร้างพรีวิวไม่สำเร็จ: ", "Could not generate the preview: ") + e.message);
+      if (token === previewToken) st.err(tr("สร้างพรีวิวไม่ได้: ", "Couldn't generate preview: ") + e.message);
     } finally {
       frame.classList.remove("cmp-loading");
     }
@@ -292,7 +288,7 @@ export function mount(tool) {
 
   /* ── บีบอัดจริงทุกหน้า (เหมือนเดิมทุกประการ ต่างแค่ใช้เอกสารที่เปิดไว้แล้วร่วมกับพรีวิว) ── */
   async function run() {
-    if (!file) return st.err(tr("กรุณาเลือกไฟล์ PDF ก่อน", "Please choose a PDF file first"));
+    if (!file) return st.err(tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF file first"));
     results.innerHTML = "";
     go.disabled = true;
     level.disabled = true;               // กันชนกับ getPage()/render() ของพรีวิวขณะกำลังบีบอัด
@@ -347,13 +343,13 @@ export function mount(tool) {
         // จะพาผู้ใช้ไปผิดทาง (ไฟล์ภาพที่บีบมาดีแล้วควรได้คำแนะนำคนละแบบ)
         const textual = hadText;
         st.err(
-          tr(`บีบแล้วไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `,
-             `Compression did not shrink the file (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `) +
+          tr(`ไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `,
+             `Didn't shrink (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `) +
           (textual
-            ? tr("ไฟล์นี้เป็นข้อความล้วนอยู่แล้ว การบีบแบบแปลงเป็นภาพจึงไม่ช่วย แนะนำให้ใช้ไฟล์เดิมต่อไป",
-                 "This file is already all text, so converting it to images does not help — we recommend keeping the original file")
-            : tr("ไฟล์นี้ถูกบีบมาดีอยู่แล้ว ลองเลือกระดับ “แรง” ดูอีกครั้ง หรือใช้ไฟล์เดิมต่อไป",
-                 "This file is already well compressed — try the \"Strong\" level, or keep the original file"))
+            ? tr("เป็นข้อความล้วน แปลงภาพไม่ช่วย ใช้ไฟล์เดิม",
+                 "Text-only — converting won't help. Keep the original.")
+            : tr("บีบมาดีแล้ว ลองระดับ “แรง” หรือใช้ไฟล์เดิม",
+                 "Already well compressed — try \"Strong\" or keep it."))
         );
       } else {
         st.ok(tr(`เล็กลง ${Math.round(diff * 100)}% · ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`,
@@ -367,7 +363,7 @@ export function mount(tool) {
       ]));
     } catch (e) {
       st.progress(null);
-      st.err(tr("บีบอัดไม่สำเร็จ: ", "Could not compress: ") + e.message);
+      st.err(tr("บีบอัดไม่ได้: ", "Couldn't compress: ") + e.message);
     } finally {
       go.disabled = false;
       level.disabled = false;

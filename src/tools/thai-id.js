@@ -8,7 +8,7 @@ import { tr } from "../i18n.js";
 export function mount(tool) {
   return columnTool(tool, {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
-    hint: tr("รับ .xlsx .xls .csv ครั้งละ 1 ไฟล์ — มีขีดคั่นหรือเป็นเลขไทยก็อ่านได้", "Accepts one .xlsx .xls .csv file at a time — reads numbers with dashes or Thai digits too"),
+    hint: tr("ไฟล์เดียว .xlsx .xls .csv — อ่านขีด/เลขไทยได้", "One .xlsx .xls .csv file — reads dashes or Thai digits"),
     suffix: tr("-ตรวจแล้ว", "-checked"), writeFail: true,
     guessColumn: (h) => /บัตร|ประชาชน|ผู้เสียภาษี|ภาษี|เลขประจำตัว|citizen|tax|id/i.test(h),
     labels: { ok: tr("ถูกต้อง", "Valid"), bad: tr("ผิด/ไม่ครบ", "Invalid/Incomplete") },
@@ -35,7 +35,7 @@ export function mount(tool) {
       return { ok: true, value: tr("ถูกต้อง", "Valid") };
     },
 
-    note: tr("ตรวจด้วยสูตรหลักตรวจสอบมาตรฐานของเลข 13 หลัก (ผลรวมถ่วงน้ำหนัก 13…2 หารเอาเศษ 11) — บอกได้ว่าเลขพิมพ์ผิด แต่ยืนยันไม่ได้ว่าเลขนั้นมีเจ้าของอยู่จริง",
-             "Checked with the standard 13-digit check-digit formula (weighted sum 13…2 mod 11) — this can tell you the number was typed wrong, but not whether it actually belongs to someone"),
+    note: tr("ตรวจด้วยสูตร check-digit มาตรฐาน — บอกได้แค่ว่าพิมพ์ผิด ไม่ยืนยันว่ามีเจ้าของจริง",
+             "Uses the standard check-digit formula — flags typos only, doesn't confirm the ID belongs to anyone"),
   });
 }

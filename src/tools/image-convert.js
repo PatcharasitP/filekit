@@ -11,14 +11,14 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: "image/*",
-    hint: tr("รองรับ JPG · PNG · WEBP · BMP · GIF (เลือกได้หลายไฟล์)", "Supports JPG · PNG · WEBP · BMP · GIF (choose multiple files)"),
+    hint: tr("JPG · PNG · WEBP · BMP · GIF", "JPG · PNG · WEBP · BMP · GIF"),
     expect: ["image"], expectLabel: tr("ไฟล์รูปภาพ", "Image files"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
 
-  const typeSel = select([["png", tr("PNG (ไม่สูญเสียคุณภาพ รองรับพื้นโปร่งใส)", "PNG (lossless, supports transparency)")],
-                          ["jpeg", tr("JPG (ไฟล์เล็ก เหมาะกับภาพถ่าย)", "JPG (small file size, good for photos)")],
-                          ["webp", tr("WEBP (เล็กที่สุด รองรับโปร่งใส)", "WEBP (smallest size, supports transparency)")]], "jpeg");
+  const typeSel = select([["png", tr("PNG (ไม่เสียคุณภาพ โปร่งใส)", "PNG (lossless, transparent)")],
+                          ["jpeg", tr("JPG (ไฟล์เล็ก เหมาะภาพถ่าย)", "JPG (small, good for photos)")],
+                          ["webp", tr("WEBP เล็ก โปร่งใส", "WEBP (small, transparent)")]], "jpeg");
   const quality = el("input", { type: "range", min: "40", max: "100", value: "88" });
   const qLabel = el("small", {}, tr("คุณภาพ 88%", "Quality 88%"));
   quality.addEventListener("input", () => { qLabel.textContent = tr(`คุณภาพ ${quality.value}%`, `Quality ${quality.value}%`); });
@@ -57,7 +57,7 @@ export function mount(tool) {
         made.push({ name: `${stripExt(f.name)}.${typeSel.value === "jpeg" ? "jpg" : typeSel.value}`, blob, from: f.size });
       });
       st.progress(null);
-      if (!made.length) throw new Error(tr("แปลงไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็นรูปภาพจริงหรือไม่", "Could not convert any file — check that they are valid image files"));
+      if (!made.length) throw new Error(tr("แปลงไม่สำเร็จ — ตรวจว่าเป็นรูปจริง", "Could not convert — check they're valid images"));
       st.ok(tr(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? ` · ข้าม ${failed.length} ไฟล์` : ""),
         `Done — ${made.length} files` + (failed.length ? `, skipped ${failed.length}` : "")));
       const fb = failedBox(failed); if (fb) results.appendChild(fb);
@@ -67,7 +67,7 @@ export function mount(tool) {
         button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
       ])));
       if (made.length > 1) results.prepend(el("div", { class: "actions" }, [
-        button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
+        button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {
           const zip = new JSZip();
           made.forEach((m) => zip.file(m.name, m.blob));
           download(await zip.generateAsync({ type: "blob" }), tr("รูปที่แปลงแล้ว.zip", "converted-images.zip"));

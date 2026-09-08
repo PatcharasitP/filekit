@@ -13,17 +13,17 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["docx"], expectLabel: tr("ไฟล์ Word (.docx)", "Word files (.docx)"),
     accept: ".docx", multiple: true,
-    hint: tr("เลือกได้หลายไฟล์ · ระบบจะตรวจให้ก่อน ยังไม่แก้อะไรจนกว่าจะกดล้าง", "Choose multiple files · we'll scan first — nothing changes until you click Clean"),
+    hint: tr("ตรวจก่อน ยังไม่แก้จนกว่าจะกดล้าง", "We scan first — nothing changes until you click Clean"),
     onChange: async (f) => { files = f; await scan(); },
   });
 
   const opts = {
     comments: checkbox(tr("ลบคอมเมนต์ทั้งหมด", "Remove all comments"), true),
-    trackChanges: checkbox(tr("ยอมรับการแก้ไขที่ค้างอยู่ (ข้อความที่เพิ่มคงไว้ ที่ลบให้หายจริง)", "Accept pending tracked changes (keep inserted text, actually remove deleted text)"), true),
-    metadata: checkbox(tr("ล้างชื่อผู้เขียน ผู้แก้ไขล่าสุด บริษัท และเวลาที่ใช้ทำ", "Clear author, last-modified-by, company, and time spent"), true),
-    rsid: checkbox(tr("ลบรหัสรอบการบันทึกที่บอกได้ว่าใครแก้ช่วงไหน", "Remove save-session IDs that reveal who edited what and when"), true),
+    trackChanges: checkbox(tr("ยอมรับแก้ไขค้าง (เก็บเพิ่ม ลบที่ลบ)", "Accept tracked changes (keep insertions, remove deletions)"), true),
+    metadata: checkbox(tr("ล้างชื่อผู้เขียน บริษัท และเวลาที่ใช้ทำ", "Clear author, company, and time spent"), true),
+    rsid: checkbox(tr("ลบรหัสรอบบันทึก (ระบุผู้แก้ไขได้)", "Remove save-session IDs (identifies editors)"), true),
   };
-  const go = button(tr("ล้างแล้วดาวน์โหลด", "Clean and download"), { onclick: run });
+  const go = button(tr("ล้าง", "Clean"), { onclick: run });
   go.disabled = true;
 
   body.append(dz.container, reportBox,
@@ -34,12 +34,8 @@ export function mount(tool) {
     el("div", { class: "actions" }, [go]), st.node, results);
 
   body.appendChild(el("div", { class: "note" },
-    tr("เอกสารที่ผ่านการรีวิวหลายรอบมักพกของที่ไม่ควรออกไปด้วย — คอมเมนต์ภายใน ประวัติการแก้ไขที่ยังไม่ยอมรับ " +
-    "ชื่อคนที่แก้ ชื่อบริษัท และเวลาที่ใช้ทำงาน ของพวกนี้มองไม่เห็นบนหน้าจอถ้าไม่เปิดโหมดรีวิว แต่ผู้รับเปิดดูได้ทั้งหมด · " +
-    "ไฟล์ต้นฉบับในเครื่องคุณไม่ถูกแก้ไข ระบบสร้างไฟล์ใหม่ให้ดาวน์โหลดเท่านั้น",
-    "Documents that have gone through several review rounds often carry things that shouldn't leave your desk — internal comments, unaccepted tracked changes, " +
-    "the editors' names, company name, and time spent. None of this is visible on screen unless review mode is on, but the recipient can see all of it · " +
-    "Your original file on this device is never modified — a new file is created for you to download")));
+    tr("ล้างคอมเมนต์ ประวัติแก้ไข ชื่อผู้เขียน — ไฟล์ต้นฉบับไม่ถูกแก้ไข สร้างไฟล์ใหม่แทน",
+    "Removes comments, edit history, author info — your original file is untouched, a new one is created")));
 
   function checkbox(label, checked) {
     const input = el("input", { type: "checkbox", checked: checked || null });
@@ -54,7 +50,7 @@ export function mount(tool) {
       const scanFailed = await eachFile(files, null, async (f) => {
         reports.push({ file: f, report: await inspect(f) });
       });
-      if (!reports.length) throw new Error(tr("เปิดไฟล์ไม่ได้สักไฟล์ — ตรวจว่าเป็น .docx จริงหรือไม่", "Could not open any file — check that they are valid .docx files"));
+      if (!reports.length) throw new Error(tr("เปิดไฟล์ไม่ได้ — ตรวจว่าเป็น .docx จริง", "Could not open — check they're valid .docx files"));
       st.clear();
       renderReport();
       if (scanFailed.length) reportBox.appendChild(failedBox(scanFailed));
@@ -69,7 +65,7 @@ export function mount(tool) {
     reportBox.append(el("div", { class: "status show " + (dirty ? "err" : "ok") },
       dirty
         ? tr(`พบร่องรอยที่ควรล้างใน ${dirty} จาก ${reports.length} ไฟล์`, `Found traces to clean in ${dirty} of ${reports.length} files`)
-        : tr(`ตรวจแล้ว ${reports.length} ไฟล์ — ไม่พบคอมเมนต์ ประวัติแก้ไข หรือชื่อผู้เขียนที่ติดมา`, `Checked ${reports.length} files — no comments, tracked changes, or author info found`)));
+        : tr(`ตรวจแล้ว ${reports.length} ไฟล์ — ไม่พบร่องรอยที่ต้องล้าง`, `Checked ${reports.length} files — nothing to clean`)));
 
     reports.forEach(({ file, report: r }) => {
       const items = [];
@@ -117,11 +113,11 @@ export function mount(tool) {
       st.progress(null);
       if (!made.length) throw new Error(tr("ล้างไม่สำเร็จสักไฟล์", "Could not clean any file"));
       if (failed.length) results.appendChild(failedBox(failed));
-      st.ok(tr(`ล้างเสร็จ ${made.length} ไฟล์${failed.length ? ` · ข้าม ${failed.length}` : ""} — ตรวจผลได้จากการอัปโหลดไฟล์ที่ล้างแล้วกลับเข้ามาใหม่`,
-        `Done — cleaned ${made.length} files${failed.length ? `, skipped ${failed.length}` : ""} — check the result by uploading the cleaned file back in`));
+      st.ok(tr(`ล้างเสร็จ ${made.length} ไฟล์${failed.length ? ` · ข้าม ${failed.length}` : ""}`,
+        `Done — cleaned ${made.length} files${failed.length ? `, skipped ${failed.length}` : ""}`));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
-        button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
+        button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {
           const [JSZipLib] = await loadLibs("jszip");
           const zip = new JSZipLib();
           made.forEach((m) => zip.file(m.name, m.blob));

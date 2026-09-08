@@ -16,7 +16,7 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["docx"], expectLabel: tr("ไฟล์ Word (.docx)", "Word file (.docx)"),
     accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    multiple: true, hint: tr("รองรับไฟล์ .docx (Word 2007 ขึ้นไป) · เลือกได้หลายไฟล์พร้อมกัน", "Supports .docx files (Word 2007 and later) · Choose multiple files at once"),
+    multiple: true, hint: tr("ไฟล์ .docx · เลือกได้หลายไฟล์", ".docx files · choose multiple"),
     onChange: (f) => { files = f; st.clear(); results.innerHTML = ""; },
   });
 
@@ -28,10 +28,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("ขนาดกระดาษ", "Paper size"), size), field(tr("ขนาดตัวอักษร", "Font size"), fontSize)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("รองรับภาษาไทยเต็มรูปแบบ (ฝังฟอนต์ Sarabun ให้อัตโนมัติ) · คงหัวข้อ ย่อหน้า ตัวหนา และรายการ · แปลงได้ทีละหลายไฟล์ · " +
-       "ยังไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อนจากไฟล์ต้นฉบับ",
-       "Full Thai language support (Sarabun font embedded automatically) · Keeps headings, paragraphs, bold text, and lists · Convert several files at once · " +
-       "Tables, images, and complex layouts from the original file are not kept yet")));
+    tr("ฝังฟอนต์ไทยอัตโนมัติ คงหัวข้อ/ย่อหน้า/ตัวหนา · ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน",
+       "Thai font embedded automatically, keeps headings/paragraphs/bold · tables, images, and complex layouts aren't kept")));
 
   // แปลง HTML ที่ mammoth ให้มา เป็นบล็อกข้อความพร้อมระดับความสำคัญ
   function htmlToBlocks(html) {
@@ -141,7 +139,7 @@ export function mount(tool) {
         (warned ? ` · ${warned} spots with incomplete formatting` : "")));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
-        button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
+        button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: async () => {
           const [JSZipLib] = await loadLibs("jszip");
           const zip = new JSZipLib();
           made.forEach((m) => zip.file(m.name, m.blob));

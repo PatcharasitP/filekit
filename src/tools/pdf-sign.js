@@ -61,7 +61,7 @@ export function mount(tool) {
 
   // ── แผงขวา: สร้างลายเซ็น + คลังลายเซ็น + ตัวปรับขนาด ────────────────────────
   const pad = signaturePad({ onChange: () => refreshPad() });
-  const padUse = button(tr("ใช้ลายเซ็นนี้", "Use this signature"), { onclick: useDrawn });
+  const padUse = button(tr("ใช้ลายเซ็น", "Use signature"), { onclick: useDrawn });
   const padClear = button(tr("ล้าง", "Clear"), { ghost: true, onclick: () => pad.clear() });
   const upInput = el("input", { type: "file", accept: "image/*", hidden: true,
     onchange: async (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) await useImage(f); } });
@@ -75,18 +75,18 @@ export function mount(tool) {
     } });
   const sizeVal = el("span", { class: "ps-sizeval" }, "—");
   const sizeBox = el("div", {}, [
-    el("p", { class: "mm-label" }, tr("คลิกลายเซ็นที่วางไว้บนหน้าเอกสารเพื่อเลือก แล้วปรับขนาดที่นี่", "Click a signature placed on the page to select it, then adjust its size here")),
+    el("p", { class: "mm-label" }, tr("คลิกลายเซ็นบนหน้าเพื่อเลือก แล้วปรับขนาดที่นี่", "Click a placed signature to select it, then resize here")),
     el("div", { class: "ps-sizerow" }, [sizeSlider, sizeVal]),
   ]);
 
   const rightNode = el("div", {}, [
-    el("p", { class: "mm-label" }, tr("วาดในกรอบด้านล่าง (ใช้นิ้วบนมือถือได้) หรืออัปโหลดรูปลายเซ็นที่ถ่าย/สแกนไว้", "Draw in the box below (works with your finger on mobile), or upload a photo/scan of your signature")),
+    el("p", { class: "mm-label" }, tr("วาดในกรอบด้านล่าง หรืออัปโหลดรูปลายเซ็น", "Draw below, or upload a signature image")),
     el("div", { class: "sign-pad-wrap" }, [pad.node]),
     el("div", { class: "actions" }, [padUse, padClear,
-      button(tr("อัปโหลดรูปลายเซ็น", "Upload a signature image"), { ghost: true, onclick: () => upInput.click() }), upInput]),
+      button(tr("อัปโหลดรูป", "Upload image"), { ghost: true, onclick: () => upInput.click() }), upInput]),
     savedBox,
     el("div", { class: "ps-sep" }),
-    el("h3", { class: "sign-h" }, tr("ขนาดลายเซ็นที่วางแล้ว", "Size of the placed signature")),
+    el("h3", { class: "sign-h" }, tr("ขนาดลายเซ็น", "Signature size")),
     sizeBox,
   ]);
 
@@ -100,15 +100,15 @@ export function mount(tool) {
   const prevBtn = button(tr("หน้าก่อน", "Previous page"), { ghost: true, onclick: () => gotoPage(current - 1) });
   const nextBtn = button(tr("หน้าถัดไป →", "Next page →"), { ghost: true, onclick: () => gotoPage(current + 1) });
   const pageLabel = el("span", { class: "sign-pageno" });
-  const delSelBtn = button(tr("ลบลายเซ็นที่เลือก", "Remove selected signature"), { ghost: true, danger: true, icon: "trash", onclick: deleteSelected });
-  const clearPageBtn = button(tr("ล้างหน้านี้", "Clear this page"), { ghost: true, danger: true, onclick: clearPage });
+  const delSelBtn = button(tr("ลบที่เลือก", "Remove selected"), { ghost: true, danger: true, icon: "trash", onclick: deleteSelected });
+  const clearPageBtn = button(tr("ล้างหน้า", "Clear page"), { ghost: true, danger: true, onclick: clearPage });
 
-  const go = button(tr("บันทึกเป็น PDF ที่เซ็นแล้ว", "Save as a signed PDF"), { onclick: save });
+  const go = button(tr("บันทึกไฟล์เซ็นแล้ว", "Save signed PDF"), { onclick: save });
   go.disabled = true;
 
   const ws = workspace(tool, {
-    left: { title: tr("เอกสาร PDF", "PDF document"), node: leftNode, hint: tr("เลือกไฟล์แล้วคลิกเลขหน้าในรายการเพื่อกระโดดไปดู", "Choose a file, then click a page number in the list to jump to it") },
-    center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ PDF — เลือกไฟล์ทางแผงซ้ายก่อนเพื่อดูตัวอย่างและวางลายเซ็น", "No PDF file yet — choose a file on the left to preview it and place your signature") },
+    left: { title: tr("เอกสาร PDF", "PDF document"), node: leftNode, hint: tr("เลือกไฟล์แล้วคลิกเลขหน้า", "Choose a file, click a page") },
+    center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ — เลือกทางซ้ายเพื่อเซ็น", "No file yet — choose one on the left") },
     right: { title: tr("ลายเซ็นของคุณ", "Your signature"), node: rightNode },
     toolbar: [prevBtn, pageLabel, nextBtn, el("span", { class: "sep" }), delSelBtn, clearPageBtn],
     footer: [go, st.node],
@@ -116,12 +116,8 @@ export function mount(tool) {
   const { wrap, body, setBusy, showCanvas } = ws;
   body.append(results);
   body.appendChild(el("div", { class: "note" },
-    tr("ลายเซ็นถูกวางเป็นภาพทับบนหน้าเอกสาร เหมือนการเซ็นแล้วสแกน — เหมาะกับเอกสารทั่วไปในองค์กร · " +
-    "นี่ไม่ใช่ลายเซ็นดิจิทัลแบบมีใบรับรอง (Digital Signature) ที่ใช้ยืนยันตัวตนทางกฎหมาย · " +
-    "ลายเซ็นที่บันทึกไว้เก็บอยู่ในเบราว์เซอร์ของคุณเครื่องเดียว ไม่ถูกส่งไปไหน",
-    "Your signature is placed as an image over the page, like a signed and scanned document — good for everyday office paperwork · " +
-    "This is not a certificate-based Digital Signature used for legal identity verification · " +
-    "Saved signatures stay in your browser only — they are never sent anywhere")));
+    tr("ลายเซ็นเป็นภาพวางทับหน้าเอกสาร ไม่ใช่ลายเซ็นดิจิทัลที่มีใบรับรองทางกฎหมาย",
+    "This is an image overlay, not a certificate-based digital signature for legal use")));
 
   renderSaved();
   refreshPad();
@@ -132,7 +128,7 @@ export function mount(tool) {
 
   function useDrawn() {
     const url = pad.toDataURL();
-    if (!url) return st.err(tr("ยังไม่ได้วาดลายเซ็น", "You have not drawn a signature yet"));
+    if (!url) return st.err(tr("ยังไม่ได้วาดลายเซ็น", "No signature drawn yet"));
     setSignature(url, true);
     pad.clear();
   }
@@ -142,25 +138,25 @@ export function mount(tool) {
       st.info(tr("กำลังเตรียมรูปลายเซ็น…", "Preparing signature image…"));
       setSignature(await imageToSignature(f), true);
       st.clear();
-    } catch (e) { st.err(tr("อ่านรูปไม่สำเร็จ: ", "Could not read the image: ") + e.message); }
+    } catch (e) { st.err(tr("อ่านรูปไม่ได้: ", "Couldn't read image: ") + e.message); }
   }
 
   function setSignature(url, persist) {
     signature = url;
     if (persist) saveSignature(url);
     renderSaved();
-    st.ok(tr("เลือกลายเซ็นแล้ว — คลิกบนหน้าเอกสารเพื่อวาง", "Signature selected — click on the page to place it"));
+    st.ok(tr("เลือกแล้ว — คลิกบนหน้าเพื่อวาง", "Selected — click the page to place"));
   }
 
   function renderSaved() {
     savedBox.innerHTML = "";
     const list = savedSignatures();
     if (!list.length) return;
-    savedBox.append(el("p", { class: "mm-label" }, tr("ลายเซ็นที่เก็บไว้ในเครื่อง (คลิกเพื่อเลือก)", "Signatures saved on this device (click to select)")));
+    savedBox.append(el("p", { class: "mm-label" }, tr("ลายเซ็นที่บันทึกไว้ (คลิกเลือก)", "Saved signatures (click to select)")));
     const row = el("div", { class: "sign-thumbs" });
     list.forEach((url) => {
       const item = el("div", { class: "sign-thumb" + (url === signature ? " on" : "") }, [
-        el("img", { src: url, alt: tr("ลายเซ็น", "Signature"), onclick: () => { signature = url; renderSaved(); st.ok(tr("เลือกลายเซ็นแล้ว — คลิกบนหน้าเอกสารเพื่อวาง", "Signature selected — click on the page to place it")); } }),
+        el("img", { src: url, alt: tr("ลายเซ็น", "Signature"), onclick: () => { signature = url; renderSaved(); st.ok(tr("เลือกแล้ว — คลิกบนหน้าเพื่อวาง", "Selected — click the page to place")); } }),
         el("button", { class: "icon-btn danger", type: "button", title: tr("ลบออก", "Remove"),
           onclick: (e) => { e.stopPropagation(); removeSignature(url); if (signature === url) signature = null; renderSaved(); } }, [uiIcon("close", "pg-ico")]),
       ]);
@@ -184,12 +180,12 @@ export function mount(tool) {
       current = 1;
       showCanvas(true);
       await gotoPage(1);
-      st.ok(tr(`เปิดไฟล์แล้ว ${pageCount} หน้า — เลือกลายเซ็นแล้วคลิกบนหน้าเอกสาร`, `File opened — ${pageCount} pages — choose a signature, then click on the page`));
+      st.ok(tr(`เปิดแล้ว ${pageCount} หน้า — เลือกลายเซ็นแล้วคลิกวาง`, `Opened — ${pageCount} pages — pick a signature, click to place`));
     } catch (e) {
       pdf = null; pageCount = 0;
       showCanvas(false);
       refresh();
-      st.err(tr("เปิดไฟล์ไม่สำเร็จ: ", "Could not open the file: ") + e.message);
+      st.err(tr("เปิดไฟล์ไม่ได้: ", "Couldn't open file: ") + e.message);
     }
   }
 
@@ -212,7 +208,7 @@ export function mount(tool) {
   // ── วางลายเซ็นบนหน้า ─────────────────────────────────────────────────────
   stage.addEventListener("click", (e) => {
     if (e.target.closest(".sign-item")) return;      // คลิกบนลายเซ็นเดิม = เลือก ไม่วางใหม่
-    if (!signature) return st.err(tr("เลือกหรือวาดลายเซ็นก่อน แล้วค่อยคลิกบนเอกสาร", "Choose or draw a signature first, then click on the document"));
+    if (!signature) return st.err(tr("เลือกหรือวาดลายเซ็นก่อน", "Choose or draw a signature first"));
     const r = stage.getBoundingClientRect();
     const rx = (e.clientX - r.left) / r.width;
     const ry = (e.clientY - r.top) / r.height;
@@ -303,7 +299,7 @@ export function mount(tool) {
 
   // ── บันทึกลงไฟล์จริง ─────────────────────────────────────────────────────
   async function save() {
-    if (!placed.length) return st.err(tr("ยังไม่ได้วางลายเซ็นบนเอกสาร", "You have not placed any signature on the document yet"));
+    if (!placed.length) return st.err(tr("ยังไม่ได้วางลายเซ็น", "No signature placed yet"));
     go.disabled = true;
     setBusy(true);
     results.innerHTML = "";
@@ -337,7 +333,7 @@ export function mount(tool) {
         button(tr("ดาวน์โหลด", "Download"), { icon: "download", onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
-      st.err(tr("บันทึกไม่สำเร็จ: ", "Could not save: ") + e.message);
+      st.err(tr("บันทึกไม่ได้: ", "Couldn't save: ") + e.message);
     } finally { go.disabled = !placed.length; setBusy(false); }
   }
 

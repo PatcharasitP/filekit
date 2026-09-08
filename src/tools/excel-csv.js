@@ -11,7 +11,7 @@ export function mount(tool) {
   const dirSel = select([["to-csv", tr("Excel → CSV (แยกทีละชีท)", "Excel → CSV (one file per sheet)")], ["to-xlsx", tr("CSV → Excel (รวมเป็นไฟล์เดียว)", "CSV → Excel (combine into one file)")]], "to-csv");
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv",
-    hint: tr("Excel → CSV รับครั้งละ 1 ไฟล์ · CSV → Excel เลือกหลายไฟล์ได้ (1 ไฟล์ = 1 ชีท)", "Excel → CSV takes 1 file at a time · CSV → Excel accepts multiple files (1 file = 1 sheet)"),
+    hint: tr("Excel→CSV: 1 ไฟล์ · CSV→Excel: หลายไฟล์", "Excel→CSV: 1 file · CSV→Excel: multiple"),
     expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV file"),
     onChange: () => { st.clear(); results.innerHTML = ""; },
   });
@@ -20,8 +20,8 @@ export function mount(tool) {
   body.append(el("div", { class: "row" }, [field(tr("ทิศทางการแปลง", "Conversion direction"), dirSel)]), dz.container,
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("ไฟล์ CSV ที่สร้างจะใส่ BOM (UTF-8) ให้อัตโนมัติ — เปิดใน Excel ภาษาไทยแล้วไม่กลายเป็นอักษรต่างดาว",
-       "Generated CSV files automatically include a UTF-8 BOM — Thai text opens correctly in Excel instead of turning into garbled characters")));
+    tr("CSV ใส่ BOM (UTF-8) อัตโนมัติ — ไทยไม่เพี้ยนใน Excel",
+       "CSV gets a UTF-8 BOM — Thai text won't garble in Excel")));
 
   async function run() {
     const files = dz.files;
@@ -52,7 +52,7 @@ export function mount(tool) {
           button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
         ])));
         if (made.length > 1) results.prepend(el("div", { class: "actions" }, [
-          button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
+          button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {
             const zip = new JSZip();
             made.forEach((m) => zip.file(m.name, m.blob));
             download(await zip.generateAsync({ type: "blob" }), base + "-csv.zip");

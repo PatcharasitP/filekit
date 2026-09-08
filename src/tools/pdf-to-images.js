@@ -34,7 +34,7 @@ export function mount(tool) {
     try {
       const pdf = await openPdf(file, passwordBox(extra));
       const pages = parsePages(rangeInput.value || "1-", pdf.numPages);
-      if (!pages.length) throw new Error(tr(`ไฟล์นี้มี ${pdf.numPages} หน้า — ช่วงที่ระบุไม่ตรงกับหน้าใดเลย`, `This file has ${pdf.numPages} pages — the range you entered does not match any of them`));
+      if (!pages.length) throw new Error(tr(`ไม่พบหน้า (ไฟล์มี ${pdf.numPages} หน้า)`, `No matching pages (${pdf.numPages} total)`));
 
       const scale = +dpi.value;
       const mime = fmt.value === "png" ? "image/png" : "image/jpeg";
@@ -63,7 +63,7 @@ export function mount(tool) {
       st.progress(null);
       st.ok(tr(`แปลงเสร็จ ${made.length} รูป`, `Done — ${made.length} images`));
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
-        button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",  onclick: async () => {
+        button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: async () => {
           st.info(tr("กำลังบีบเป็น ZIP…", "Zipping files…"));
           const zip = new JSZip();
           made.forEach((m) => zip.file(m.name, m.blob));

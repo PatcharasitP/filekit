@@ -38,28 +38,28 @@ export function mount(tool) {
   const leftNode = el("div", { class: "pp-left" }, [dz.container, extra, summary]);
 
   // ── แถบเครื่องมือลอย: ทำงานกับหน้าที่เลือกอยู่ ──────────────────────
-  const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: tr("หมุนซ้ายหน้าที่เลือก", "Rotate the selected page left"), onclick: () => rotateSelected(270) });
-  const rotateRBtn = button("", { icon: "rotateR", ghost: true, label: tr("หมุนขวาหน้าที่เลือก", "Rotate the selected page right"), onclick: () => rotateSelected(90) });
-  const toggleBtn = button("", { icon: "trash", ghost: true, label: tr("ลบ/เอากลับหน้าที่เลือก", "Remove/restore the selected page"), onclick: toggleSelected });
+  const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: tr("หมุนซ้าย", "Rotate left"), onclick: () => rotateSelected(270) });
+  const rotateRBtn = button("", { icon: "rotateR", ghost: true, label: tr("หมุนขวา", "Rotate right"), onclick: () => rotateSelected(90) });
+  const toggleBtn = button("", { icon: "trash", ghost: true, label: tr("ลบ/เอากลับ", "Remove/restore"), onclick: toggleSelected });
   const resetBtn = button(tr("รีเซ็ตทั้งหมด", "Reset all"), { icon: "undo", ghost: true, onclick: () => { if (file) loadPreview(); } });
   [rotateLBtn, rotateRBtn, toggleBtn, resetBtn].forEach((b) => { b.disabled = true; });
 
   // ── แผงขวา: เก็บเฉพาะบางหน้าแบบพิมพ์ช่วง ────────────────────────────
   const rangeInput = el("input", { type: "text", placeholder: tr("เช่น 1-3,5,8-", "e.g. 1-3,5,8-"), disabled: true });
-  const rangeBtn = button(tr("ใช้ช่วงนี้", "Apply this range"), { ghost: true, onclick: applyRange });
+  const rangeBtn = button(tr("ใช้ช่วงนี้", "Apply range"), { ghost: true, onclick: applyRange });
   rangeBtn.disabled = true;
   const rightNode = el("div", { class: "pp-right" }, [
-    field(tr("เก็บเฉพาะหน้า", "Keep only these pages"), rangeInput, tr("อ้างอิงตามลำดับที่แสดงอยู่ตอนนี้ — หน้านอกช่วงจะถูกทำเครื่องหมายลบให้อัตโนมัติ",
-      "Based on the order shown now — pages outside the range are marked for removal automatically")),
+    field(tr("เก็บเฉพาะหน้า", "Keep only these pages"), rangeInput, tr("หน้านอกช่วงจะถูกทำเครื่องหมายลบอัตโนมัติ",
+      "Pages outside the range are marked for removal automatically")),
     rangeBtn,
   ]);
 
-  const saveBtn = button(tr("บันทึกเป็นไฟล์ใหม่", "Save as a new file"), { onclick: save });
+  const saveBtn = button(tr("บันทึก", "Save"), { onclick: save });
   saveBtn.disabled = true;
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ PDF", "PDF file"), node: leftNode },
-    center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างหน้า", "No file yet — choose a PDF file to preview its pages") },
+    center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ — เลือก PDF เพื่อดูตัวอย่าง", "No file yet — choose a PDF to preview") },
     right: { title: tr("ตัวเลือก", "Options"), node: rightNode },
     toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }), resetBtn],
     footer: [st.node, saveBtn],
@@ -68,8 +68,8 @@ export function mount(tool) {
   ws.body.append(
     results,
     el("div", { class: "note" },
-      tr("คลิกที่หน้าเพื่อเลือก แล้วใช้แถบเครื่องมือด้านบนหมุน/ลบ/เอากลับ — หรือกดปุ่มเล็กบนการ์ดแต่ละใบได้เหมือนเดิม · ลากการ์ดเพื่อสลับลำดับ · พิมพ์ช่วงหน้าในแผงขวาเพื่อเลือกเก็บเฉพาะบางหน้าอย่างรวดเร็ว",
-         "Click a page to select it, then use the toolbar above to rotate/remove/restore — or use the small buttons on each card as before · drag cards to reorder · type a page range on the right to quickly keep only certain pages")),
+      tr("คลิกหน้าเพื่อเลือก ลากเพื่อสลับลำดับ หรือพิมพ์ช่วงหน้าด้านขวาเพื่อเก็บเฉพาะบางหน้า",
+         "Click a page to select, drag to reorder, or type a range on the right to keep pages")),
   );
   ws.showCanvas(false);
 
@@ -118,14 +118,14 @@ export function mount(tool) {
       pdf.destroy();
       ws.setBusy(false);
       st.progress(null);
-      st.ok(tr(`โหลด ${items.length} หน้าเรียบร้อย — จัดเรียงได้เลย`, `Loaded ${items.length} pages — ready to arrange`));
+      st.ok(tr(`โหลดแล้ว ${items.length} หน้า`, `Loaded ${items.length} pages`));
       setLoaded(true);
       ws.showCanvas(true);
       render();
     } catch (e) {
       ws.setBusy(false);
       st.progress(null);
-      st.err(tr("เปิดไฟล์ไม่สำเร็จ: ", "Could not open the file: ") + e.message);
+      st.err(tr("เปิดไฟล์ไม่ได้: ", "Couldn't open file: ") + e.message);
       updateSummary();
     }
   }
@@ -153,8 +153,8 @@ export function mount(tool) {
       pagesGrid.appendChild(card);
     });
     updateSummary();
-    st.info(tr(`เหลือ ${items.filter((i) => !i.dropped).length} หน้าจากทั้งหมด ${items.length} หน้า`,
-                `${items.filter((i) => !i.dropped).length} of ${items.length} pages left`));
+    st.info(tr(`เหลือ ${items.filter((i) => !i.dropped).length}/${items.length} หน้า`,
+                `${items.filter((i) => !i.dropped).length}/${items.length} pages left`));
     syncToolbar();
   }
 
@@ -194,8 +194,8 @@ export function mount(tool) {
     items.forEach((it, i) => { it.dropped = !keepSet.has(i); });
     selected = null;
     render();
-    st.ok(tr(`ตั้งค่าเก็บเฉพาะหน้า ${rangeInput.value} แล้ว (${pages.length} หน้า) — ตรวจสอบก่อนบันทึก`,
-             `Set to keep pages ${rangeInput.value} (${pages.length} pages) — please review before saving`));
+    st.ok(tr(`ตั้งช่วง ${rangeInput.value} (${pages.length} หน้า)`,
+             `Set range ${rangeInput.value} (${pages.length} pages)`));
   }
 
   let dragging = null;
@@ -225,7 +225,7 @@ export function mount(tool) {
 
   async function save() {
     const keep = items.filter((i) => !i.dropped);
-    if (!file) return st.err(tr("กรุณาเลือกไฟล์ก่อน", "Please choose a file first"));
+    if (!file) return st.err(tr("เลือกไฟล์ก่อน", "Choose a file first"));
     if (!keep.length) return st.err(tr("ต้องเหลืออย่างน้อย 1 หน้า", "At least 1 page must remain"));
     results.innerHTML = "";
     saveBtn.disabled = true;
@@ -252,7 +252,7 @@ export function mount(tool) {
         button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
-      st.err(tr("บันทึกไม่สำเร็จ: ", "Could not save: ") + e.message);
+      st.err(tr("บันทึกไม่ได้: ", "Couldn't save: ") + e.message);
     } finally {
       ws.setBusy(false);
       saveBtn.disabled = false;

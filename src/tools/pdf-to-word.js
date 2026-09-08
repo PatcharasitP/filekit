@@ -26,10 +26,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("การขึ้นหน้า", "Page breaks"), breakMode), field(tr("ขนาดตัวอักษร", "Font size"), fontSize)]),
     el("div", { class: "actions" }, [go]), st.node, extra, results);
   body.appendChild(el("div", { class: "note" },
-    tr("ได้ไฟล์ DOCX ที่เปิดแก้ไขต่อได้ทันที · คงข้อความและการขึ้นบรรทัด แต่ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน · " +
-       "ถ้าเป็นไฟล์สแกน ระบบจะเสนออ่านด้วย OCR ให้เอง · ไฟล์ที่ล็อกรหัสผ่านใส่รหัสได้ในหน้านี้เลย",
-       "You get a DOCX file you can edit right away · Text and line breaks are kept, but tables, images, and complex layouts are not · " +
-       "If it's a scanned file, we'll offer to read it with OCR · Password-protected files can be unlocked right here")));
+    tr("ได้ไฟล์ DOCX แก้ไขต่อได้ · ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน",
+       "You get an editable DOCX · tables, images, and complex layouts aren't kept")));
 
   function buildDocx(blocks) {
     const { Document, Packer, Paragraph, TextRun } = docx;
@@ -65,7 +63,7 @@ export function mount(tool) {
   async function runOcr(pdf) {
     extra.innerHTML = "";
     go.disabled = true;
-    st.info(tr("กำลังเตรียมตัวอ่าน OCR (ครั้งแรกต้องดาวน์โหลดชุดภาษา อาจใช้เวลาสักครู่)…", "Getting OCR ready (first time needs to download the language pack — this may take a moment)…"));
+    st.info(tr("กำลังเตรียม OCR…", "Preparing OCR…"));
     try {
       const pages = await ocrPdf(pdf, {
         onProgress: (p) => {
@@ -95,15 +93,13 @@ export function mount(tool) {
       if (!(await hasTextLayer(pdf))) {
         // ไม่มีชั้นข้อความ = ไฟล์สแกน ให้ผู้ใช้ตัดสินใจก่อนโหลดตัว OCR ที่หนัก
         st.progress(null);
-        st.info(tr("ไฟล์นี้ไม่มีชั้นข้อความ (น่าจะเป็นไฟล์สแกนหรือรูปถ่ายเอกสาร)", "This file has no text layer (it's probably a scan or a photo of a document)"));
+        st.info(tr("ไม่มีชั้นข้อความ (อาจเป็นไฟล์สแกน)", "No text layer (probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            tr("ระบบอ่านตัวอักษรจากภาพให้ได้ด้วย OCR รองรับไทย–อังกฤษ · ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10–30 MB " +
-               "และใช้เวลาประมาณ 3–15 วินาทีต่อหน้า · ทุกอย่างทำในเครื่องคุณเอง",
-               "We can read text from the image with OCR — Thai and English supported · First time needs to download a ~10–30 MB language pack " +
-               "and takes about 3–15 seconds per page · Everything runs on your device")),
+            tr("OCR อ่านไทย-อังกฤษได้ · ครั้งแรกโหลดชุดภาษา ~10–30 MB ใช้เวลา ~3–15 วิ/หน้า",
+               "OCR reads Thai and English · first time downloads a ~10–30 MB pack, ~3–15 sec/page")),
           el("div", { class: "actions" }, [
-            button(tr("อ่านด้วย OCR แล้วแปลงเป็น Word", "Read with OCR, then convert to Word"), { onclick: () => runOcr(pdf) }),
+            button(tr("อ่านด้วย OCR", "Read with OCR"), { onclick: () => runOcr(pdf) }),
             button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),
           ]),
         ]));

@@ -27,8 +27,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("การจัดวางข้อความ", "Text layout"), layout), field(tr("ตัวคั่นหน้า", "Page markers"), marker)]),
     el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
-    tr("ถ้าไฟล์เป็นสแกนหรือรูปถ่ายเอกสาร ระบบจะเสนออ่านด้วย OCR ให้เอง · ไฟล์ที่ล็อกรหัสผ่านใส่รหัสได้ในหน้านี้",
-       "If the file is a scan or a photo of a document, we'll offer to read it with OCR · Password-protected files can be unlocked right here")));
+    tr("ไฟล์สแกนอ่านด้วย OCR ได้ · ไฟล์มีรหัสผ่านใส่รหัสได้ที่นี่",
+       "Scanned files can use OCR · unlock password-protected files here")));
 
   function present(pages, note) {
     // ‼️ นับเฉพาะ "เนื้อความจริง"ไม่รวมตัวคั่นหน้า มิฉะนั้นไฟล์สแกนที่อ่านไม่ได้เลย
@@ -51,7 +51,7 @@ export function mount(tool) {
         download(new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" }), name) }),
       button(tr("คัดลอกทั้งหมด", "Copy all"), { ghost: true, onclick: async () => {
         try { await navigator.clipboard.writeText(text); st.ok(tr("คัดลอกลงคลิปบอร์ดแล้ว", "Copied to clipboard")); }
-        catch { st.err(tr("เบราว์เซอร์ไม่อนุญาตให้คัดลอก — ใช้ปุ่มดาวน์โหลดแทนได้", "This browser doesn't allow copying — use the download button instead")); }
+        catch { st.err(tr("คัดลอกไม่ได้ ใช้ดาวน์โหลดแทน", "Can't copy — use download")); }
       } }),
     ]));
   }
@@ -59,7 +59,7 @@ export function mount(tool) {
   async function runOcr(pdf) {
     extra.innerHTML = "";
     go.disabled = true;
-    st.info(tr("กำลังเตรียมตัวอ่าน OCR (ครั้งแรกต้องดาวน์โหลดชุดภาษา)…", "Getting OCR ready (first time needs to download the language pack)…"));
+    st.info(tr("กำลังเตรียม OCR…", "Preparing OCR…"));
     try {
       const pages = await ocrPdf(pdf, {
         onProgress: (p) => {
@@ -83,11 +83,11 @@ export function mount(tool) {
       pdf = await openPdf(file, passwordBox(extra));
       if (!(await hasTextLayer(pdf))) {
         st.progress(null);
-        st.info(tr("ไฟล์นี้ไม่มีชั้นข้อความ (น่าจะเป็นไฟล์สแกนหรือรูปถ่ายเอกสาร)", "This file has no text layer (it's probably a scan or a photo of a document)"));
+        st.info(tr("ไม่มีชั้นข้อความ (อาจเป็นไฟล์สแกน)", "No text layer (probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            tr("ระบบอ่านตัวอักษรจากภาพให้ได้ด้วย OCR รองรับไทย–อังกฤษ · ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10–30 MB · ทำในเครื่องคุณเอง",
-               "We can read text from the image with OCR — Thai and English supported · First time needs to download a ~10–30 MB language pack · Everything runs on your device")),
+            tr("อ่านด้วย OCR ได้ทั้งไทย-อังกฤษ · ครั้งแรกโหลดชุดภาษา ~10–30 MB",
+               "OCR reads Thai and English · first time downloads a ~10–30 MB language pack")),
           el("div", { class: "actions" }, [
             button(tr("อ่านด้วย OCR", "Read with OCR"), { onclick: () => runOcr(pdf) }),
             button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),

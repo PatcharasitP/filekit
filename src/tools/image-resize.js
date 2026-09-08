@@ -85,7 +85,7 @@ export function mount(tool) {
   // ── แผงซ้าย: เลือกไฟล์ + รายการรูปคลิกเลือกดูได้ ──────────────────────────
   const dz = dropzone({
     accept: "image/*",
-    hint: tr("เลือกได้หลายไฟล์ · ย่อและบีบอัดพร้อมกันทั้งชุด", "Choose multiple files · resize and compress the whole batch at once"),
+    hint: tr("ย่อและบีบอัดพร้อมกันทั้งชุด", "Resize and compress the whole batch"),
     expect: ["image"], expectLabel: tr("ไฟล์รูปภาพ", "Image files"),
     onChange: onFilesChanged,
   });
@@ -110,7 +110,7 @@ export function mount(tool) {
   const compareWrap = el("div", {}, [compareBox, previewErr]);
 
   const toolbarLabel = el("div", { class: "rz-toolbar-label" }, tr("เลือกรูปเพื่อดูตัวอย่าง", "Select an image to preview"));
-  const resetPosBtn = button(tr("รีเซ็ตตำแหน่งเลื่อน", "Reset slider position"), { ghost: true, onclick: () => setPos(50) });
+  const resetPosBtn = button(tr("รีเซ็ต", "Reset"), { ghost: true, onclick: () => setPos(50) });
 
   // ── แผงขวา: ตัวเลือกทั้งหมด + ตัวเลขขนาดสด ──────────────────────────────
   const modeSel = select([["long", tr("จำกัดด้านที่ยาวที่สุด", "Limit the longest side")], ["width", tr("กำหนดความกว้าง", "Set width")], ["pct", tr("ย่อเป็นเปอร์เซ็นต์", "Scale by percentage")], ["none", tr("ไม่ย่อ (บีบอัดอย่างเดียว)", "Don't resize (compress only)")]], "long");
@@ -150,20 +150,20 @@ export function mount(tool) {
   // ── แถบล่าง: สถานะ + ปุ่มลงมือ + ดาวน์โหลด ──────────────────────────────
   const go = button(tr("ย่อและบีบอัด", "Resize and compress"), { onclick: run });
   let lastMade = [];
-  const zipBtn = button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip", ghost: true, onclick: async () => {
+  const zipBtn = button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip", ghost: true, onclick: async () => {
     const zip = new JSZip();
     lastMade.forEach((m) => zip.file(m.name, m.blob));
     download(await zip.generateAsync({ type: "blob" }), tr("รูปย่อแล้ว.zip", "resized-images.zip"));
   } });
   hideEl(zipBtn, true);
   // ไฟล์เดียวไม่ควรต้องไปหาไอคอนเล็ก ๆ บนรูปย่อ — ให้ปุ่มดาวน์โหลดเด่นอยู่แถบล่างเลย
-  const oneBtn = button(tr("ดาวน์โหลดรูปที่ย่อแล้ว", "Download the resized image"), { icon: "download",
+  const oneBtn = button(tr("ดาวน์โหลดรูป", "Download image"), { icon: "download",
     onclick: () => { const m = lastMade[0]; if (m) download(m.blob, m.name); } });
   hideEl(oneBtn, true);
 
   const ws = workspace(tool, {
-    left: { title: tr("ไฟล์รูปภาพ", "Image files"), node: leftBody, hint: tr("คลิกที่รูปในรายการเพื่อดูตัวอย่างก่อน–หลังของไฟล์นั้น", "Click an image in the list to preview its before/after"), aside: galCount },
-    center: { node: compareWrap, empty: tr("ยังไม่มีไฟล์ — เลือกรูปก่อนเพื่อดูตัวอย่างก่อน–หลัง", "No files yet — choose an image to see a before/after preview") },
+    left: { title: tr("ไฟล์รูปภาพ", "Image files"), node: leftBody, hint: tr("คลิกรูปเพื่อดูก่อน–หลัง", "Click an image for before/after"), aside: galCount },
+    center: { node: compareWrap, empty: tr("ยังไม่มีไฟล์ — เลือกรูปเพื่อดูตัวอย่าง", "No files yet — choose an image to preview") },
     right: { title: tr("ตัวเลือก", "Options"), node: rightBody },
     toolbar: [toolbarLabel, resetPosBtn],
     footer: [st.node, go, oneBtn, zipBtn],
@@ -172,8 +172,8 @@ export function mount(tool) {
   const failedNote = el("div", {});
   ws.body.appendChild(failedNote);
   ws.body.appendChild(el("div", { class: "note" },
-    tr("เหมาะกับการเตรียมรูปส่งอีเมล แนบเอกสาร หรืออัปโหลดเว็บที่จำกัดขนาดไฟล์ · รูปต้นฉบับในเครื่องไม่ถูกแก้ไข",
-       "Good for preparing images to email, attach to documents, or upload to sites with file size limits · your original image on this device is not modified")));
+    tr("เหมาะกับรูปแนบอีเมลหรือเว็บที่จำกัดขนาด — รูปต้นฉบับไม่ถูกแก้ไข",
+       "Good for email attachments or size-limited uploads — your original image is untouched")));
 
   // ── ตรรกะย่อขนาด (เหมือนเดิมทุกจุด) ────────────────────────────────────
   function targetSize(w, h) {
@@ -377,11 +377,11 @@ export function mount(tool) {
       st.progress(null);
       failedNote.innerHTML = "";
       const fb = failedBox(failed); if (fb) failedNote.appendChild(fb);
-      if (!made.length) throw new Error(tr("ไม่สำเร็จสักไฟล์ — ตรวจว่าไฟล์เป็นรูปภาพจริงหรือไม่", "Could not process any file — check that they are valid image files"));
+      if (!made.length) throw new Error(tr("ไม่สำเร็จ — ตรวจว่าเป็นรูปจริง", "Could not process — check they're valid images"));
       const saved = before ? Math.round((1 - after / before) * 100) : 0;
       const keptCount = made.filter((m) => m.kept).length;
       const verdict = saved > 0 ? tr(`เล็กลง ${saved}%`, `${saved}% smaller`) : saved < 0 ? tr(`ใหญ่ขึ้น ${-saved}%`, `${-saved}% larger`) : tr("ขนาดเท่าเดิม", "Same size");
-      const tail = keptCount ? tr(` · ${keptCount} ไฟล์คงต้นฉบับไว้เพราะเล็กกว่าอยู่แล้ว`, ` · ${keptCount} files kept original because they were already smaller`) : "";
+      const tail = keptCount ? tr(` · ${keptCount} ไฟล์คงต้นฉบับ (เล็กกว่าอยู่แล้ว)`, ` · ${keptCount} kept original (already smaller)`) : "";
       st.ok(tr(`เสร็จ ${made.length} ไฟล์ · ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`,
         `Done — ${made.length} files, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`));
       lastMade = made;

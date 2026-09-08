@@ -20,17 +20,15 @@ export function mount(tool) {
   });
 
   const sheetMode = select([["per-page", tr("แยกชีทตามหน้า", "Separate sheet per page")], ["single", tr("รวมทุกหน้าในชีทเดียว", "Combine all pages into one sheet")]], "per-page");
-  const strict = select([["3", tr("ปกติ (คอลัมน์ต้องซ้ำ ≥3 บรรทัด)", "Normal (columns must repeat ≥3 lines)")], ["2", tr("ยืดหยุ่น (≥2 บรรทัด)", "Flexible (≥2 lines)")], ["5", tr("เข้มงวด (≥5 บรรทัด)", "Strict (≥5 lines)")]], "3");
+  const strict = select([["3", tr("ปกติ (≥3 บรรทัด)", "Normal (≥3 lines)")], ["2", tr("ยืดหยุ่น (≥2 บรรทัด)", "Flexible (≥2 lines)")], ["5", tr("เข้มงวด (≥5 บรรทัด)", "Strict (≥5 lines)")]], "3");
   const go = button(tr("แปลงเป็น Excel", "Convert to Excel"), { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field(tr("การจัดชีท", "Sheet layout"), sheetMode), field(tr("ความเข้มในการจับคอลัมน์", "Column-detection strictness"), strict, tr("ถ้าคอลัมน์เพี้ยน ลองสลับค่านี้", "If columns look wrong, try changing this"))]),
     el("div", { class: "actions" }, [go]), st.node, extra, results, preview);
   body.appendChild(el("div", { class: "note" },
-    tr("ระบบเดาขอบคอลัมน์จากตำแหน่งข้อความจริงในไฟล์ · ตารางที่มีเซลล์ผสาน (merge) หรือข้อความหลายบรรทัดในเซลล์เดียว " +
-       "อาจต้องจัดเพิ่มใน Excel เล็กน้อย · ใช้กับ PDF ที่มีชั้นข้อความเท่านั้น (ไฟล์สแกนให้ผ่าน OCR ก่อน)",
-       "We guess column edges from the real text positions in the file · Tables with merged cells or multi-line text in one cell " +
-       "may need a little extra tidying in Excel · Works with PDFs that have a text layer only (run scanned files through OCR first)")));
+    tr("เดาคอลัมน์จากข้อความจริง · เซลล์ผสานอาจเพี้ยน · ใช้ได้เฉพาะไฟล์มีชั้นข้อความ",
+       "Guesses columns from real text · merged cells may look off · text-layer files only")));
 
   async function runOcr(pdf) {
     extra.innerHTML = "";
@@ -60,7 +58,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".xlsx";
       results.innerHTML = "";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr("จาก OCR — ควรตรวจทานคอลัมน์", "From OCR — please review the columns"))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr("ควรตรวจทาน (OCR)", "OCR — please review"))]),
         button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
       ]));
     } catch (e) {
@@ -80,12 +78,10 @@ export function mount(tool) {
         st.info(tr("ไฟล์นี้ไม่มีชั้นข้อความ (น่าจะเป็นไฟล์สแกน)", "This file has no text layer (it's probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            tr("ระบบอ่านตัวเลขและข้อความจากภาพให้ได้ด้วย OCR แล้วจัดเป็นแถวใน Excel ให้ · " +
-               "ครั้งแรกต้องดาวน์โหลดชุดภาษาราว 10-30 MB ·  ตารางจาก OCR อาจต้องจัดคอลัมน์เพิ่มเองใน Excel",
-               "We can read numbers and text from the image with OCR and lay them out as rows in Excel · " +
-               "First time needs to download a ~10-30 MB language pack · Tables from OCR may need extra column tidying in Excel")),
+            tr("OCR อ่านตัวเลข/ข้อความแล้วจัดเป็นแถว · โหลดชุดภาษาครั้งแรก ~10-30 MB · อาจต้องจัดคอลัมน์เพิ่มเอง",
+               "OCR reads numbers and text into rows · first time downloads ~10-30 MB · columns may need manual tidying")),
           el("div", { class: "actions" }, [
-            button(tr("อ่านด้วย OCR แล้วทำเป็น Excel", "Read with OCR, then make Excel"), { onclick: () => runOcr(pdf) }),
+            button(tr("อ่านด้วย OCR", "Read with OCR"), { onclick: () => runOcr(pdf) }),
             button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),
           ]),
         ]));

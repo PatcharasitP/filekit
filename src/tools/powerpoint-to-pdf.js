@@ -17,25 +17,21 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["pptx"], expectLabel: tr("ไฟล์ PowerPoint (.pptx)", "PowerPoint files (.pptx)"),
     accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    multiple: false, hint: tr("รองรับไฟล์ .pptx (PowerPoint 2007 ขึ้นไป)", "Supports .pptx files (PowerPoint 2007 and later)"),
+    multiple: false, hint: tr(".pptx (PowerPoint 2007+)", ".pptx (PowerPoint 2007+)"),
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
   });
 
   const ratio = segmented([["16:9", "16:9"], ["4:3", "4:3"]], "16:9");
   const theme = select([["light", tr("พื้นขาว ตัวอักษรเข้ม", "Light background, dark text")], ["dark", tr("พื้นเข้ม ตัวอักษรสว่าง", "Dark background, light text")]], "light");
-  const withNotes = select([["no", tr("ไม่ใส่โน้ต", "No notes")], ["yes", tr("ใส่โน้ตผู้บรรยายท้ายสไลด์", "Add speaker notes at the bottom of each slide")]], "no");
+  const withNotes = select([["no", tr("ไม่ใส่โน้ต", "No notes")], ["yes", tr("ใส่โน้ตท้ายสไลด์", "Add notes at bottom")]], "no");
   const go = button(tr("สร้างไฟล์ PDF", "Create PDF"), { onclick: run });
 
   body.append(dz.container,
     el("div", { class: "row" }, [field(tr("สัดส่วนสไลด์", "Slide ratio"), ratio), field(tr("ธีมสี", "Color theme"), theme), field(tr("โน้ตผู้บรรยาย", "Speaker notes"), withNotes)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("สำคัญ: เครื่องมือนี้จัดหน้าสไลด์ขึ้นใหม่จากข้อความในไฟล์ ไม่ได้คัดลอกหน้าตาเดิม — " +
-    "สี ฟอนต์ รูปภาพ กราฟ และตำแหน่งของต้นฉบับจะไม่ถูกคงไว้ (การคงดีไซน์เป๊ะต้องใช้ PowerPoint เปิดแล้วสั่ง Save as PDF) · " +
-    "เหมาะกับการทำเอกสารอ่านเนื้อหา แจกในที่ประชุม หรือส่งให้คนที่ไม่มี PowerPoint",
-    "Important: this tool rebuilds the slide layout from the file's text — it does not copy the original look. " +
-    "Colors, fonts, images, charts, and positioning are not preserved (open PowerPoint and use Save as PDF for an exact copy) · " +
-    "Good for a plain-text handout, printing for a meeting, or sharing with someone who doesn't have PowerPoint")));
+    tr("สำคัญ: จัดหน้าใหม่จากข้อความ ไม่คงดีไซน์เดิม (ต้องเป๊ะ ใช้ PowerPoint → Save as PDF)",
+    "Note: rebuilds layout from text — design not kept (need it exact? use PowerPoint's Save as PDF)")));
 
   async function run() {
     if (!file) return st.err(tr("กรุณาเลือกไฟล์ .pptx ก่อน", "Please choose a .pptx file first"));

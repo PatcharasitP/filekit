@@ -27,8 +27,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("แนวกระดาษ", "Page orientation"), orient), field(tr("หัวตาราง", "Table header"), headerRow), field(tr("ขนาดตัวอักษร", "Font size"), fontSize)]),
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("แต่ละชีทจะขึ้นหน้าใหม่พร้อมชื่อชีทกำกับ · รองรับข้อความไทย · สูตรจะถูกแปลงเป็นค่าผลลัพธ์ล่าสุดที่บันทึกไว้ในไฟล์",
-       "Each sheet starts on a new page labeled with its sheet name · Thai text is supported · Formulas are converted to the last saved result values")));
+    tr("แต่ละชีทขึ้นหน้าใหม่ · สูตรแปลงเป็นค่าล่าสุดที่บันทึกไว้",
+       "Each sheet starts a new page · formulas convert to their last saved values")));
 
   async function run() {
     if (!file) return st.err(tr("กรุณาเลือกไฟล์ Excel ก่อน", "Please choose an Excel file first"));

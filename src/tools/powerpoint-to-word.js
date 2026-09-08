@@ -13,7 +13,7 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["pptx"], expectLabel: tr("ไฟล์ PowerPoint (.pptx)", "PowerPoint files (.pptx)"),
     accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    multiple: false, hint: tr("รองรับไฟล์ .pptx (PowerPoint 2007 ขึ้นไป)", "Supports .pptx files (PowerPoint 2007 and later)"),
+    multiple: false, hint: tr(".pptx (PowerPoint 2007+)", ".pptx (PowerPoint 2007+)"),
     onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; preview.hidden = true; },
   });
 
@@ -26,12 +26,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("โน้ตผู้บรรยาย", "Speaker notes"), withNotes), field(tr("รูปแบบเอกสาร", "Document format"), layout), field(tr("การขึ้นหน้า", "Page breaks"), breakMode)]),
     el("div", { class: "actions" }, [go]), st.node, results, preview);
   body.appendChild(el("div", { class: "note" },
-    tr("ดึงข้อความทุกกล่องในสไลด์ หัวเรื่อง ระดับหัวข้อย่อย และโน้ตผู้บรรยาย ออกมาเป็นเอกสาร Word ที่แก้ไขต่อได้ · " +
-    "เหมาะกับการทำสรุปการประชุม เอกสารประกอบการอบรม หรือส่งเนื้อหาให้คนที่ไม่ได้เปิด PowerPoint · " +
-    "ไม่คงรูปภาพ สี และการจัดวางของสไลด์ (ถ้าต้องการหน้าตาเดิม ให้ใช้ PowerPoint → PDF แทน)",
-    "Pulls text from every box on each slide — titles, bullet levels, and speaker notes — into an editable Word document · " +
-    "Good for meeting summaries, training handouts, or sharing content with people who don't have PowerPoint · " +
-    "Images, colors, and slide layout are not preserved (use PowerPoint → PDF instead if you need the original look)")));
+    tr("ดึงข้อความเป็น Word แก้ไขได้ — ไม่คงรูป/สี/เลย์เอาต์ (อยากได้เดิม ใช้ PowerPoint→PDF)",
+    "Pulls text into an editable Word doc — images/colors/layout not kept (exact look? use PowerPoint → PDF)")));
 
   async function run() {
     if (!file) return st.err(tr("กรุณาเลือกไฟล์ .pptx ก่อน", "Please choose a .pptx file first"));
@@ -88,7 +84,7 @@ export function mount(tool) {
           children.push(new Paragraph({ children: [], pageBreakBefore: true }));
       });
 
-      if (!words) throw new Error(tr("ไม่พบข้อความในสไลด์ — ไฟล์นี้อาจมีแต่รูปภาพ ลองใช้ PowerPoint → PDF แทน", "No text found in the slides — this file may contain only images. Try PowerPoint → PDF instead"));
+      if (!words) throw new Error(tr("ไม่พบข้อความ — ไฟล์นี้อาจมีแต่รูป ลองใช้ PowerPoint → PDF แทน", "No text found — this file may be images only. Try PowerPoint → PDF instead"));
 
       const blob = await Packer.toBlob(new Document({ sections: [{ properties: {}, children }] }));
       st.progress(null);

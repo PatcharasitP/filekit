@@ -17,7 +17,7 @@ function modeDefs() {
 export function mount(tool) {
   return columnTool(tool, {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
-    hint: tr("รับ .xlsx .xls .csv ครั้งละ 1 ไฟล์ — ตัวเลขมีคอมมาหรือเป็นเลขไทยก็อ่านได้", "Accepts one .xlsx .xls .csv file at a time — reads numbers with commas or Thai digits too"),
+    hint: tr("ไฟล์เดียว .xlsx .xls .csv — อ่านคอมมา/เลขไทยได้", "One .xlsx .xls .csv file — reads commas or Thai digits"),
     suffix: tr("-แปลงตัวเลขแล้ว", "-number-converted"),
     guessColumn: (h) => /ยอด|จำนวนเงิน|ราคา|เงิน|รวม|สุทธิ|amount|total|price/i.test(h),
     labels: { ok: tr("แปลงได้", "Converted"), bad: tr("ไม่ใช่ตัวเลข", "Not a number") },
@@ -45,7 +45,7 @@ export function mount(tool) {
       return { ok: true, value: bahtText(n) };
     },
 
-    note: tr("ใช้คู่กับ “จดหมายเวียน Word + Excel” ได้เลย — เติมคอลัมน์ตัวหนังสือไว้ในไฟล์ข้อมูล แล้วอ้างด้วย {{จำนวนเงินตัวหนังสือ}} ในเทมเพลต",
-             "Works great with a “Word + Excel mail merge” — add the words column to your data file and reference it as {{Amount in words}} in the template"),
+    note: tr("ใช้กับจดหมายเวียน Word ได้เลย — อ้างคอลัมน์นี้ด้วย {{จำนวนเงินตัวหนังสือ}}",
+             "Works with a Word mail merge — reference this column as {{Amount in words}}"),
   });
 }

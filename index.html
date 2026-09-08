@@ -172,7 +172,6 @@ button{font-family:inherit}
   box-shadow:none;
 }
 .mark-svg{width:18px;height:18px;display:block}
-.brand small{display:block;font-size:11px;font-weight:500;color:var(--text-mute);line-height:1.3}
 .top .spacer{flex:1}
 .iconbtn{
   width:38px;height:38px;flex:none; display:grid;place-items:center; cursor:pointer;
@@ -491,7 +490,7 @@ body.tool #home{display:none}
 <header class="top">
   <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก" data-en-al="Back to home">
     <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M14 6L30 6L38 14L38 42L14 42Z M20 22A4 4 0 1 0 28 22A4 4 0 1 0 20 22Z M22 25L26 25L24.5 34L23.5 34Z"/></svg></span>
-    <span>FileKit<small data-en="100% on your device">ทำงานในเครื่องคุณ 100%</small></span>
+    <span>FileKit</span>
   </button>
   <span class="spacer"></span>
   <button class="iconbtn langbtn" id="lang" type="button" aria-label="เปลี่ยนภาษา" title="เปลี่ยนภาษา" data-en-al="Change language">EN</button>
@@ -506,7 +505,7 @@ body.tool #home{display:none}
         <div class="hero-copy">
           <span class="kicker" data-en-html="<s></s>100% on your device"><s></s>ทำงานในเครื่องคุณ 100%</span>
           <h1 data-en-html="File tools<br><em>that upload nothing</em>">เครื่องมือจัดการไฟล์<br><em>ที่ไม่ส่งไฟล์คุณไปไหน</em></h1>
-          <p data-en="Convert, merge, split and compress PDF · Excel · Word · images. Everything runs inside your own browser — your files are never uploaded to any server.">แปลง รวม แยก บีบอัด PDF · Excel · Word · รูปภาพ ทุกอย่างประมวลผลในเบราว์เซอร์ของคุณเอง ไฟล์ไม่เคยถูกอัปโหลดขึ้นเซิร์ฟเวอร์</p>
+          <p data-en="Convert, merge, split and compress PDF · Word · Excel · images">แปลง รวม แยก บีบอัด PDF · Word · Excel · รูปภาพ</p>
           <div class="searchwrap">
             <div class="search" id="searchbox">
               <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8L21 21"/></svg>
@@ -539,14 +538,14 @@ body.tool #home{display:none}
     <div class="stage" id="stage">
       <div class="stage-h" id="stageh"></div>
       <div id="tools"></div>
-      <div class="stage-f" data-en="No sign-up · Unlimited use · No ads · Your files never leave your device">ไม่ต้องสมัคร · ใช้กี่ครั้งก็ได้ · ไม่มีโฆษณา · ไฟล์ไม่เคยออกจากเครื่องคุณ</div>
+      <div class="stage-f" data-en="No sign-up · No ads · Free, unlimited">ไม่ต้องสมัคร · ไม่มีโฆษณา · ใช้ฟรีไม่จำกัด</div>
     </div>
   </section>
 
   <section id="tool" aria-live="polite"></section>
 </main>
 
-<footer data-en="Everything is processed in your browser — your files are never sent to any server.">ประมวลผลฝั่งเบราว์เซอร์ทั้งหมด — ไฟล์ของคุณไม่ถูกส่งไปยังเซิร์ฟเวอร์ใด ๆ</footer>
+<footer data-en="FileKit · runs entirely in your browser">FileKit · ทำงานในเบราว์เซอร์ของคุณทั้งหมด</footer>
 
 <!-- แปลข้อความที่เขียนตายใน HTML ให้เสร็จก่อนวาดจอ — app.js เป็น module จึงถูกเลื่อนไปท้ายสุด
      ถ้ารอมัน ผู้ใช้ภาษาอังกฤษจะเห็นภาษาไทยแวบหนึ่งก่อน (ตรรกะเดียวกับ applyStatic ใน src/i18n.js) -->

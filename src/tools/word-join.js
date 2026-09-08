@@ -12,13 +12,13 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["docx"], expectLabel: tr("ไฟล์ Word (.docx)", "Word files (.docx)"),
     accept: ".docx", multiple: true, reorder: true,
-    hint: tr("เลือกหลายไฟล์ · ลากแถวเพื่อจัดลำดับก่อนรวม", "Choose multiple files · drag rows to reorder before merging"),
+    hint: tr("ลากแถวเพื่อจัดลำดับ", "Drag rows to reorder"),
     onChange: (f) => { files = f; st.clear(); results.innerHTML = ""; refresh(); },
   });
 
   const brk = select([["yes", tr("ขึ้นหน้าใหม่ทุกไฟล์", "Start a new page for each file")],
     ["no", tr("ต่อกันไปเลย ไม่ขึ้นหน้าใหม่", "Continue without a page break")]], "yes");
-  const go = button(tr("รวมเป็นไฟล์เดียว", "Merge into one file"), { onclick: run });
+  const go = button(tr("รวมไฟล์", "Merge files"), { onclick: run });
   go.disabled = true;
 
   body.append(dz.container,
@@ -26,14 +26,8 @@ export function mount(tool) {
     el("div", { class: "actions" }, [go]), st.node, results);
 
   body.appendChild(el("div", { class: "note" },
-    tr("ใช้ไฟล์แรกเป็นแม่แบบของเล่ม — รูปแบบตัวอักษร ระยะขอบ และการตั้งค่าหน้ากระดาษจะยึดตามไฟล์แรก " +
-    "ส่วนเนื้อหาของไฟล์ถัดไปถูกนำมาต่อ พร้อมย้ายรูปภาพมาด้วยและออกรหัสอ้างอิงใหม่ให้ไม่ชนกัน · " +
-    "ถ้าแต่ละไฟล์ตั้งค่าหน้ากระดาษต่างกันมาก (เช่นแนวตั้งกับแนวนอน) ผลลัพธ์จะยึดของไฟล์แรก " +
-    "และหัวกระดาษ–ท้ายกระดาษของไฟล์ที่นำมาต่อจะไม่ถูกนำมาด้วย",
-    "The first file is used as the template — fonts, margins, and page setup follow it. " +
-    "Content from the other files is appended, with images carried over and re-numbered to avoid clashes. " +
-    "If the files have very different page setups (e.g. portrait vs. landscape), the result follows the first file, " +
-    "and headers/footers from the appended files are not carried over")));
+    tr("ไฟล์แรกกำหนดฟอนต์และหน้ากระดาษ ไฟล์อื่นต่อท้ายโดยไม่รวมหัว-ท้ายกระดาษ",
+    "First file sets fonts and page setup; others append without headers/footers")));
 
   const refresh = () => { go.disabled = files.length < 2; };
 

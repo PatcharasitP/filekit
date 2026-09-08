@@ -83,14 +83,14 @@ export function mount(tool) {
   const modeSeg = segmented([["range", tr("ตามช่วงหน้า", "By page range")], ["every", tr("ทุก N หน้า", "Every N pages")], ["each", tr("ทีละหน้า", "One page each")]], "range");
   const rangeInput = el("input", { type: "text", placeholder: tr("เช่น 1-3,5,8-", "e.g. 1-3,5,8-"), value: "1-" });
   const everyInput = el("input", { type: "number", min: "1", value: "1" });
-  const fRange = field(tr("ช่วงหน้าที่ต้องการ", "Page range"), rangeInput, tr("ใช้ - สำหรับช่วง และ , คั่นหลายช่วง เช่น 1-3,7,10-", "Use - for a range and , to separate ranges, e.g. 1-3,7,10-"));
-  const fEvery = field(tr("แยกทุกกี่หน้า", "Split every N pages"), everyInput, tr("เช่น 2 = ได้ไฟล์ละ 2 หน้า", "e.g. 2 = each file gets 2 pages"));
+  const fRange = field(tr("ช่วงหน้าที่ต้องการ", "Page range"), rangeInput, tr("คั่นด้วย , เช่น 1-3,7,10-", "Separate with , e.g. 1-3,7,10-"));
+  const fEvery = field(tr("แยกทุกกี่หน้า", "Split every N pages"), everyInput, tr("เช่น 2 = ไฟล์ละ 2 หน้า", "e.g. 2 = 2 pages per file"));
   fEvery.style.display = "none";
 
   const summaryCount = el("div", { class: "sp-count" }, tr("เลือกไฟล์ก่อนเพื่อดูตัวอย่าง", "Choose a file first to preview"));
   const summaryList = el("div", { class: "sp-sumlist" });
   const rightNode = el("div", { class: "sp-right" }, [
-    field(tr("รูปแบบการแยก", "Split mode"), modeSeg, tr("เลือกวิธีแบ่งไฟล์ — แผนผังตรงกลางจะไฮไลต์ใหม่ทันที", "Choose how to split the file — the diagram in the middle updates right away")),
+    field(tr("รูปแบบการแยก", "Split mode"), modeSeg, tr("แผนผังกลางอัปเดตทันที", "The diagram updates instantly")),
     fRange, fEvery,
     summaryCount, summaryList,
   ]);
@@ -102,16 +102,16 @@ export function mount(tool) {
   go.disabled = true;
 
   const ws = workspace(tool, {
-    left: { title: tr("ไฟล์ต้นฉบับ", "Source file"), node: leftNode, hint: tr("รองรับไฟล์เดียวต่อครั้ง", "One file supported at a time") },
-    center: { title: tr("แผนผังหน้า", "Page layout"), node: centerNode, empty: tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูว่าจะตัดตรงไหน", "No file yet — choose a PDF file to see where it will be cut") },
+    left: { title: tr("ไฟล์ต้นฉบับ", "Source file"), node: leftNode, hint: tr("ครั้งละ 1 ไฟล์", "One file at a time") },
+    center: { title: tr("แผนผังหน้า", "Page layout"), node: centerNode, empty: tr("ยังไม่มีไฟล์ — เลือก PDF เพื่อดูจุดตัด", "No file yet — choose a PDF to preview cuts") },
     right: { title: tr("ตั้งค่าการแยก", "Split settings"), node: rightNode },
     toolbar: [toolbarStatus],
     footer: [st.node, go],
   });
   ws.wrap.prepend(el("style", {}, STYLE));
   ws.body.append(results, el("div", { class: "note" },
-    tr("พรีวิวแสดงเป็นกรอบเลขหน้าจำลอง (ไม่ใช่ภาพหน้าเอกสารจริง) เพื่อความเร็ว แต่กลุ่มสี รอยตัด และชื่อไฟล์ตรงกับผลลัพธ์จริงทุกประการ",
-       "The preview shows simple page-number tiles (not real page images) for speed, but the color groups, cuts, and file names exactly match the real result")));
+    tr("พรีวิวเป็นเลขหน้าจำลอง ไม่ใช่ภาพจริง แต่สี/รอยตัด/ชื่อไฟล์ตรงกับผลลัพธ์จริง",
+       "Preview uses number tiles, not real pages — colors, cuts, and file names match the real output")));
   ws.showCanvas(false);
 
   modeSeg.addEventListener("change", () => {
@@ -133,7 +133,7 @@ export function mount(tool) {
       cache = { file: myFile, doc, encrypted, total: doc.getPageCount() };
     } catch (e) {
       if (file !== myFile) return;
-      loadError = tr("เปิดไฟล์ไม่สำเร็จ: ", "Could not open the file: ") + e.message;
+      loadError = tr("เปิดไฟล์ไม่ได้: ", "Couldn't open file: ") + e.message;
     } finally {
       if (file === myFile) loading = false;
       updateAll();
@@ -146,7 +146,7 @@ export function mount(tool) {
       let pages;
       try { pages = parsePages(rangeInput.value, total); }
       catch (e) { return { groups: [], error: e.message }; }
-      if (!pages.length) return { groups: [], error: tr(`ช่วงหน้าที่ระบุไม่มีหน้าที่มีอยู่จริง (ไฟล์นี้มี ${total} หน้า)`, `The page range you entered has no pages in this file (it has ${total} pages)`) };
+      if (!pages.length) return { groups: [], error: tr(`ช่วงที่ระบุไม่มีหน้าในไฟล์นี้ (มี ${total} หน้า)`, `No pages match this range (file has ${total} pages)`) };
       return { groups: [pages], error: null };
     }
     if (modeSeg.value === "every") {
@@ -231,7 +231,7 @@ export function mount(tool) {
       el("span", {}, [tr("ขนาดไฟล์ ", "File size "), el("b", {}, fmtBytes(file.size))]),
     ]));
     if (cache && cache.encrypted)
-      infoBox.appendChild(el("div", { class: "status show info" }, tr("ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน ระบบจะพยายามอ่านต่อให้", "This file is password-protected — we will try to read it anyway")));
+      infoBox.appendChild(el("div", { class: "status show info" }, tr("ไฟล์ล็อกรหัสผ่าน ระบบจะพยายามอ่านให้", "Password-protected — attempting to read anyway")));
   }
 
   function renderCenter(total, groups, error) {
@@ -246,8 +246,8 @@ export function mount(tool) {
     if (error) { centerNode.appendChild(el("div", { class: "status show err" }, error)); return; }
     if (total > MAX_TILES) {
       centerNode.appendChild(el("div", { class: "status show info" },
-        tr(`ไฟล์นี้มี ${total} หน้า มากเกินกว่าจะแสดงแผนผังทีละหน้าได้ลื่นไหล — ดูรายชื่อไฟล์ที่จะได้ในแผงขวาแทน`,
-           `This file has ${total} pages — too many to show a smooth page-by-page diagram. See the file list on the right instead`)));
+        tr(`${total} หน้า มากเกินจะแสดงแผนผัง — ดูรายชื่อไฟล์ในแผงขวาแทน`,
+           `${total} pages — too many to diagram. See the list on the right.`)));
       return;
     }
     const base = stripExt(file.name);
@@ -297,7 +297,7 @@ export function mount(tool) {
   }
 
   async function run() {
-    if (!file) return st.err(tr("กรุณาเลือกไฟล์ PDF ก่อน", "Please choose a PDF file first"));
+    if (!file) return st.err(tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF file first"));
     results.innerHTML = "";
     go.disabled = true;
     ws.setBusy(true);
@@ -334,7 +334,7 @@ export function mount(tool) {
 
       if (made.length > 1) {
         results.prepend(el("div", { class: "actions" }, [
-          button(tr("ดาวน์โหลดทั้งหมดเป็น ZIP", "Download all as ZIP"), { icon: "zip",
+          button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",
             onclick: async () => {
               st.info(tr("กำลังบีบเป็น ZIP…", "Zipping…"));
               const zip = new JSZip();
@@ -347,7 +347,7 @@ export function mount(tool) {
       }
     } catch (e) {
       st.progress(null);
-      st.err(tr("แยกไฟล์ไม่สำเร็จ: ", "Could not split the file: ") + e.message);
+      st.err(tr("แยกไฟล์ไม่ได้: ", "Couldn't split file: ") + e.message);
     } finally {
       go.disabled = false;
       ws.setBusy(false);

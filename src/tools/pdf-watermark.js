@@ -103,7 +103,7 @@ export function mount(tool) {
     wmLayer.innerHTML = "";
     const text = textInput.value.trim();
     if (!text) {
-      wmLayer.appendChild(el("div", { class: "wmp-wm-empty" }, tr("พิมพ์ข้อความลายน้ำเพื่อดูตัวอย่าง", "Type watermark text to preview it")));
+      wmLayer.appendChild(el("div", { class: "wmp-wm-empty" }, tr("พิมพ์ข้อความเพื่อดูตัวอย่าง", "Type text to preview")));
       return;
     }
     const pw = paper.clientWidth || 300;
@@ -163,14 +163,14 @@ export function mount(tool) {
       const { width, height } = first.getSize();
       meta = { pages: doc.getPageCount(), w: width, h: height };
       paper.style.aspectRatio = `${width} / ${height}`;
-      metaLine.textContent = tr(`ตัวอย่างหน้าแรก (ทั้งไฟล์มี ${meta.pages} หน้า · ${Math.round(width)}×${Math.round(height)} pt)`,
-                                 `Preview of page 1 (the file has ${meta.pages} pages · ${Math.round(width)}×${Math.round(height)} pt)`);
+      metaLine.textContent = tr(`หน้า 1 ตัวอย่าง (${meta.pages} หน้า · ${Math.round(width)}×${Math.round(height)} pt)`,
+                                 `Page 1 preview (${meta.pages} pages · ${Math.round(width)}×${Math.round(height)} pt)`);
       ws.showCanvas(true);
       drawPreview();
     } catch (e) {
       meta = null;
       ws.showCanvas(false);
-      st.err(tr("เปิดไฟล์เพื่อดูตัวอย่างไม่สำเร็จ: ", "Could not open the file to preview: ") + e.message);
+      st.err(tr("เปิดไฟล์ดูตัวอย่างไม่ได้: ", "Couldn't open for preview: ") + e.message);
     } finally { ws.setBusy(false); }
   }
 
@@ -180,15 +180,13 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ PDF", "PDF file"), node: dz.container },
-    center: { node: stage, empty: tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อนเพื่อดูตัวอย่างลายน้ำ", "No file yet — choose a PDF file to preview the watermark") },
+    center: { node: stage, empty: tr("ยังไม่มีไฟล์ — เลือก PDF ก่อน", "No file yet — choose a PDF") },
     right: { title: tr("ตัวเลือกลายน้ำ", "Watermark options"), node: rightBox },
-    toolbar: [el("div", { class: "wmp-toolbar-note" }, tr("พรีวิวจำลอง — ตำแหน่ง สี ความเข้ม ขนาด ตรงกับค่าที่ตั้งจริง (ไม่ใช่เนื้อหาไฟล์จริง)",
-                                                            "Simulated preview — position, color, opacity, and size match your real settings (not the actual file content)"))],
+    toolbar: [el("div", { class: "wmp-toolbar-note" }, tr("พรีวิวจำลอง ไม่ใช่เนื้อหาไฟล์จริง",
+                                                            "Simulated preview, not real content"))],
     footer: [go, st.node],
-    note: tr("ลายน้ำเป็นภาพวางทับบนเนื้อหาเดิม ไม่แก้ไขข้อความในไฟล์ต้นฉบับ · รองรับข้อความไทยเต็มรูปแบบ · " +
-      "หมายเหตุ: ลายน้ำแบบนี้ป้องกันการคัดลอกภาพหน้าจอไม่ได้ ใช้เพื่อระบุสถานะเอกสารเป็นหลัก",
-      "The watermark is an image placed over the existing content — it does not edit the text in the original file · full Thai text support · " +
-      "note: this kind of watermark does not prevent screenshots — it is mainly for marking a document's status"),
+    note: tr("ลายน้ำเป็นภาพทับเนื้อหา ป้องกันการคัดลอกภาพหน้าจอไม่ได้ ใช้ระบุสถานะเอกสารเป็นหลัก",
+      "The watermark is an overlay image — it does not stop screenshots, it just marks status"),
   });
   ws.showCanvas(false);
   ws.wrap.prepend(el("style", {}, STYLE));
@@ -196,9 +194,9 @@ export function mount(tool) {
   drawPreview();
 
   async function run() {
-    if (!file) return st.err(tr("กรุณาเลือกไฟล์ PDF ก่อน", "Please choose a PDF file first"));
+    if (!file) return st.err(tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF file first"));
     const text = textInput.value.trim();
-    if (!text) return st.err(tr("กรุณาพิมพ์ข้อความลายน้ำ", "Please type watermark text"));
+    if (!text) return st.err(tr("พิมพ์ข้อความลายน้ำก่อน", "Type watermark text first"));
     results.innerHTML = "";
     go.disabled = true;
     ws.setBusy(true);
@@ -257,7 +255,7 @@ export function mount(tool) {
       ]));
     } catch (e) {
       st.progress(null);
-      st.err(tr("ใส่ลายน้ำไม่สำเร็จ: ", "Could not add the watermark: ") + e.message);
+      st.err(tr("ใส่ลายน้ำไม่ได้: ", "Couldn't add watermark: ") + e.message);
     } finally { go.disabled = false; ws.setBusy(false); }
   }
   return ws.wrap;

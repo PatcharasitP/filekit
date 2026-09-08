@@ -36,8 +36,12 @@ function pillOf(t, q = "") {
     title: t.desc,                       // คำอธิบายยังอยู่ แค่ย้ายไปอยู่ในทูลทิป
     onclick: () => go(t.id),
     onmouseenter: () => prefetch(t), onfocus: () => prefetch(t), ontouchstart: () => prefetch(t),
-  }, [el("i", { "aria-hidden": "true" }, [toolIcon(t) || t.icon]), el("span", {}, label)]);
+  }, [el("i", { "aria-hidden": "true" }, [toolIcon(t) || t.icon]), el("span", {}, label),
+      isNew(t) && el("b", { class: "new" }, tr("ใหม่", "New"))]);
 }
+// ป้าย "ใหม่" โผล่เอง 30 วันนับจาก `since` ในทะเบียน แล้วหายเอง — ไม่ต้องกลับมาถอด
+const NEW_DAYS = 30;
+const isNew = (t) => !!t.since && Date.now() - Date.parse(t.since) < NEW_DAYS * 864e5;
 
 /* ── วาดหน้าแรก ── */
 let activeCat = "";                     // "" = ทุกหมวด

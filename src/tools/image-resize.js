@@ -87,6 +87,7 @@ export function mount(tool) {
     accept: "image/*",
     hint: tr("ย่อและบีบอัดพร้อมกันทั้งชุด", "Resize and compress the whole batch"),
     expect: ["image"], expectLabel: tr("ไฟล์รูปภาพ", "Image files"),
+    thumbs: false,                 // มีแกลเลอรี .rz-item ที่โชว์รูปใหญ่กว่าอยู่แล้ว อย่าโชว์ซ้ำสองชั้น
     onChange: onFilesChanged,
   });
   const galCount = el("span", { class: "rz-count" }, "");

@@ -73,6 +73,11 @@ export function statusBar() {
   const fill = el("div", { class: "fill" });
   // ‼️ งานที่ใช้เวลานานต้องยกเลิกได้ ไม่งั้นลากมา 50 ไฟล์แล้วกดผิดต้องรอจนจบหรือปิดแท็บทิ้ง
   let cancelled = false;
+  // ‼️ Nielsen Norman: งานที่เสร็จใน <1 วิ ไม่ควรมีแถบความคืบหน้าเลย (กระพริบแว้บ ยิ่งดูช้า)
+  //    จึงหน่วงการ "โชว์" แถบไว้จนกว่าจะผ่านไป ≥800ms — ค่า % ยังอัปเดตข้างในตลอด
+  //    เผื่องานที่ยาวเกินคาดพอถึงจุดที่โชว์แถบจะได้ไม่กระโดดจาก 0 ทันที
+  let startedAt = 0;
+  const PROGRESS_DELAY_MS = 800;
   const stop = el("button", { class: "btn-cancel", type: "button", hidden: true,
     onclick: () => { cancelled = true; stop.disabled = true; stop.textContent = tr("กำลังหยุด…", "Stopping…"); } }, tr("หยุด", "Stop"));
   const bar = el("div", { class: "progress" }, [fill]);
@@ -82,7 +87,7 @@ export function statusBar() {
     node,
     get cancelled() { return cancelled; },
     /** เรียกก่อนเริ่มงานใหม่ทุกครั้ง — เปิดปุ่มหยุดและล้างธงเดิม */
-    begin: () => { cancelled = false; stop.hidden = false; stop.disabled = false; stop.textContent = tr("หยุด", "Stop"); },
+    begin: () => { cancelled = false; startedAt = performance.now(); stop.hidden = false; stop.disabled = false; stop.textContent = tr("หยุด", "Stop"); },
     end: () => { stop.hidden = true; },
     info: (t) => { msg.className = "status show info"; msg.textContent = t; label = t; },
     ok: (t) => { msg.className = "status show ok"; msg.textContent = t; },
@@ -90,8 +95,8 @@ export function statusBar() {
     clear: () => { msg.className = "status"; msg.textContent = ""; bar.classList.remove("show"); stop.hidden = true; },
     progress: (pct, note) => {
       if (pct === null) { bar.classList.remove("show"); return; }
-      bar.classList.add("show");
       fill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+      if (performance.now() - startedAt >= PROGRESS_DELAY_MS) bar.classList.add("show");
       if (note) msg.textContent = `${label ? label + " " : ""}${note}`;
     },
   };
@@ -185,6 +190,60 @@ const SAMPLE_FILES = {
   ],
 };
 
+/**
+ * ภาพย่อไฟล์ — วิจัยจริง 7 เว็บ (iLovePDF/PDF24/Squoosh ฯลฯ) ทุกเว็บโชว์ภาพย่อทันทีหลังใส่ไฟล์
+ * FileKit เดิมโชว์แค่ชื่อ+ขนาดเป็นตัวหนังสือ เว็บเดียวที่ไม่มีภาพย่อเลย
+ * ‼️ ต้องไม่ทำให้ add()/render() ช้าลง — วาดแถวด้วยไอคอนทั่วไปก่อนเสมอ แล้วค่อยเติมภาพจริงทีหลัง (async)
+ */
+const THUMB_ICON_FOR_KIND = {
+  pdf: "pdf-pages", docx: "word-to-pdf", doc: "word-to-pdf",
+  xlsx: "excel-to-pdf", csv: "excel-csv", pptx: "powerpoint-to-pdf", ppt: "powerpoint-to-pdf",
+  image: "image-convert",
+};
+function genericThumbIcon(kind) {
+  if (kind === "zip") return uiIcon("zip");
+  const id = THUMB_ICON_FOR_KIND[kind];
+  return (id && toolIcon({ id })) || uiIcon("list");
+}
+/** เติมภาพย่อ/ไอคอนลงกล่อง .thumb ของแถวไฟล์หนึ่งแถว — ไม่มีสถานะภายในของตัวเอง ใช้ซ้ำได้ทุก dropzone */
+function paintThumb(row, entry) {
+  const box = row && row.querySelector(".thumb");
+  if (!box) return;
+  box.innerHTML = "";
+  if (entry.node) { box.classList.remove("generic"); box.appendChild(entry.node); }
+  else { box.classList.add("generic"); const ic = genericThumbIcon(entry.kind); if (ic) box.appendChild(ic); }
+}
+/** วาดหน้าแรกของ PDF ลง <canvas> เล็ก ๆ ด้วย pdf.js — เรียกเฉพาะตอน window.pdfjsLib โหลดอยู่แล้วเท่านั้น
+ *  (เครื่องมือที่ไม่ได้ใช้ pdf.js จะไม่มีการโหลดเพิ่มเพื่อภาพย่อ — ผู้เรียกเป็นคนเช็คเงื่อนไขนี้ก่อน) */
+async function renderPdfThumbCanvas(file) {
+  try {
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    const page = await doc.getPage(1);
+    const vp0 = page.getViewport({ scale: 1 });
+    const scale = Math.min(88 / vp0.width, 112 / vp0.height) || 1; // ~2× ของกล่อง 44×56 ให้คมบนจอ retina
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(viewport.width));
+    canvas.height = Math.max(1, Math.round(viewport.height));
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+    doc.destroy?.();
+    return canvas;
+  } catch (e) {
+    console.error(e); // ไฟล์ PDF เปิดไม่ได้ตอนทำภาพย่อ — ไม่ใช่เรื่องใหญ่ ตกไปใช้ไอคอนทั่วไปเงียบ ๆ
+    return null;
+  }
+}
+
+/* ── ช่องประกาศสถานะรายไฟล์ ─────────────────────────────────────────────
+ * eachFile() รู้จักแค่ตัว File ไม่รู้ว่ากล่องลากวางอยู่ตรงไหน (เครื่องมือ 29 ตัวเรียกกันคนละที่)
+ * จึงประกาศออกมากลาง ๆ แล้วให้กล่องที่ "ถือไฟล์ใบนั้นอยู่จริง" หยิบไปแสดงเอง
+ * — ไม่ต้องแก้เครื่องมือสักตัว · กล่องที่หลุดจากหน้าไปแล้ว (isConnected=false) ถูกถอดทิ้งเอง */
+const stateWatchers = new Set();
+function emitFileState(file, state) {
+  for (const w of stateWatchers) { if (w.dead()) stateWatchers.delete(w); else w.fn(file, state); }
+}
+
 /** ── กล่องลากวางไฟล์ ───────────────────────────────────────────────────── */
 export function dropzone(opts = {}) {
   const {
@@ -192,22 +251,31 @@ export function dropzone(opts = {}) {
     hint = tr("ลากไฟล์มาวาง หรือคลิกเพื่อเลือก", "Drop files here, or click to choose"),
     onChange = () => {},
     expect = null,                 // เช่น ["pdf"] — ชนิดไฟล์ที่เครื่องมือนี้รับ
+    thumbs = true,                 // false = เครื่องมือมีแกลเลอรีภาพของตัวเองแล้ว อย่าโชว์ซ้ำ
     expectLabel = tr("ไฟล์ชนิดที่รองรับ", "a supported file type"),
   } = opts;
 
   let files = [];
+  // ‼️ ภาพย่อคงอยู่ข้าม render() (คีย์ด้วยตัว File เอง) — ไม่งั้นทุกครั้งที่มีไฟล์เพิ่ม/ลบ/สลับลำดับ
+  //    list.innerHTML="" ใน render() จะล้างภาพที่คำนวณไปแล้วทิ้ง ต้องมาคำนวณใหม่ทุกรอบ
+  const thumbCache = new Map();  // File -> { kind, node, pending }
+  const thumbUrls  = new Map();  // File -> objectURL ของรูป (เฉพาะรูป) — ต้อง revoke ตอนไฟล์หลุดจากลิสต์
+  const states = new Map();      // File -> "working" | "done" | "error" (ไม่มีในทะเบียน = ยังไม่เริ่ม)
   const input = el("input", {
     type: "file", accept, multiple: multiple || null, hidden: true,
     onchange: (e) => { add([...e.target.files]); input.value = ""; },
   });
   const list = el("div", { class: "files" });
+  const chooseBtn = el("button", { class: "dz-btn", type: "button",
+    onclick: (e) => { e.stopPropagation(); input.click(); } }, tr("เลือกไฟล์", "Choose files"));
   const zone = el("div", {
     class: "dz", tabindex: "0", role: "button",
     "aria-label": tr(`เลือกไฟล์: ${expectLabel} — คลิกหรือกด Enter เพื่อเลือก หรือลากไฟล์มาวาง`,
                      `Choose files: ${expectLabel} — click or press Enter to pick, or drop files here`),
   }, [
     el("div", { class: "dz-ico", "aria-hidden": "true" }, [uiIcon("upload", "dz-svg")]),
-    el("div", { class: "dz-main" }, tr("คลิกเพื่อเลือกไฟล์ หรือลากมาวาง", "Click to choose files, or drop them here")),
+    el("div", { class: "dz-main" }, tr("ลากไฟล์มาวางที่นี่", "Drop your files here")),
+    chooseBtn,
     el("div", { class: "dz-hint" }, hint),
     // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
     el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device — nothing is uploaded")]),
@@ -247,9 +315,51 @@ export function dropzone(opts = {}) {
       if (!usable.length) return;
     }
 
+    if (!multiple) files.forEach(revokeThumb); // โหมดไฟล์เดียว — ไฟล์เก่าถูกแทนที่ ต้องคืนหน่วยความจำก่อน
     files = multiple ? files.concat(usable) : usable.slice(0, 1);
     render();
     onChange(files);
+  }
+
+  /** เอา objectURL ของภาพย่อไฟล์นี้คืนหน่วยความจำ (ถ้ามี) — เรียกทุกครั้งที่ไฟล์หลุดจากลิสต์ */
+  function revokeThumb(file) {
+    const u = thumbUrls.get(file);
+    if (u) { URL.revokeObjectURL(u); thumbUrls.delete(file); }
+    thumbCache.delete(file);
+  }
+
+  /** วาดภาพย่อของแถวนี้: ถ้ามีผลอยู่แล้ว (จากรอบ render ก่อน) ใช้ทันที · ถ้ายัง เริ่มคำนวณแบบไม่บล็อก
+   *  (รูป → objectURL, PDF → หน้าแรกผ่าน pdf.js ถ้าโหลดอยู่แล้ว, อื่น ๆ → ไอคอนทั่วไปค้างไว้) */
+  function ensureThumb(file, row) {
+    let entry = thumbCache.get(file);
+    if (!entry) { entry = { kind: detectType(file), node: null, pending: false }; thumbCache.set(file, entry); }
+    paintThumb(row, entry);
+    if (entry.node || entry.pending) return; // มีภาพแล้ว หรือกำลังคำนวณจากรอบก่อนอยู่แล้ว ไม่ทำซ้ำ
+
+    if (entry.kind === "image") {
+      entry.pending = true;
+      const url = URL.createObjectURL(file);
+      thumbUrls.set(file, url);
+      const img = el("img", { alt: "", decoding: "async" });
+      img.addEventListener("load", () => { entry.pending = false; entry.node = img; rePaintIfPresent(file, entry); }, { once: true });
+      img.addEventListener("error", () => { entry.pending = false; URL.revokeObjectURL(url); thumbUrls.delete(file); }, { once: true });
+      img.src = url;
+    } else if (entry.kind === "pdf" && window.pdfjsLib) {
+      entry.pending = true;
+      renderPdfThumbCanvas(file).then((canvas) => {
+        entry.pending = false;
+        if (canvas) { entry.node = canvas; rePaintIfPresent(file, entry); }
+      });
+    }
+  }
+
+  /** วาดผลภาพย่อที่เพิ่งคำนวณเสร็จลงแถวปัจจุบันของไฟล์นี้ — ใช้ query สดเพราะ render() อาจสร้างแถวใหม่ไปแล้ว
+   *  ระหว่างที่รอ (เช่นผู้ใช้ลาก/ลบไฟล์อื่นระหว่างนั้น) ทำให้ node เดิมอ้างอิง DOM ที่หลุดไปแล้ว */
+  function rePaintIfPresent(file, entry) {
+    const i = files.indexOf(file);
+    if (i === -1) return; // ไฟล์ถูกเอาออกไปแล้วระหว่างรอภาพย่อ
+    const row = list.querySelector(`.file-row[data-i="${i}"]`);
+    if (row) paintThumb(row, entry);
   }
 
   function showWrongType(bad) {
@@ -269,12 +379,36 @@ export function dropzone(opts = {}) {
     ]);
     warn.appendChild(box);
   }
-  function remove(i) { files.splice(i, 1); render(); onChange(files); }
+  function remove(i) { revokeThumb(files[i]); states.delete(files[i]); files.splice(i, 1); render(); onChange(files); }
+
+  /** ป้ายสถานะท้ายแถว — ยังไม่เริ่มทำ = ไม่ต้องมีป้าย (แถวเปล่าอ่านง่ายกว่าป้าย "รอ" เต็มจอ) */
+  function stateBadge(st) {
+    if (!st || st === "pending") return null;
+    const label = st === "working" ? tr("กำลังทำ", "Working")
+                : st === "done"    ? tr("เสร็จ", "Done")
+                                   : tr("ไม่สำเร็จ", "Failed");
+    return el("span", { class: "state" }, label);
+  }
   function move(from, to) {
     if (from === to || from < 0 || to < 0) return;
     files.splice(to, 0, files.splice(from, 1)[0]);
     render(); onChange(files);
   }
+
+  stateWatchers.add({
+    dead: () => !zone.isConnected,
+    fn: (file, state) => {
+      const i = files.indexOf(file);
+      if (i === -1) return;
+      states.set(file, state);
+      const row = list.querySelector(`.file-row[data-i="${i}"]`);
+      if (!row) return;
+      row.dataset.state = state;
+      row.querySelector(".state")?.remove();
+      const badge = stateBadge(state);
+      if (badge) row.insertBefore(badge, row.querySelector(".icon-btn"));
+    },
+  });
 
   function render() {
     list.innerHTML = "";
@@ -283,10 +417,15 @@ export function dropzone(opts = {}) {
       //    จึงต้องมีปุ่มขึ้น-ลงคู่กันเสมอ ไม่ใช่ทางเลือกเสริม
       const move = (d) => { const j = i + d; if (j < 0 || j >= files.length) return;
         [files[i], files[j]] = [files[j], files[i]]; render(); onChange(files); };
-      const row = el("div", { class: "file-row", draggable: reorder || null, "data-i": i }, [
+      const row = el("div", { class: "file-row", draggable: reorder || null, "data-i": i,
+        "data-state": states.get(f) || "pending" }, [
         reorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
-        el("span", { class: "f-name" }, f.name),
-        el("span", { class: "f-size" }, fmtBytes(f.size)),
+        thumbs ? el("span", { class: "thumb generic", "aria-hidden": "true" }) : null,
+        el("span", { class: "f-meta" }, [
+          el("span", { class: "f-name" }, f.name),
+          el("span", { class: "f-size" }, fmtBytes(f.size)),
+        ]),
+        stateBadge(states.get(f)),
         reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
           title: tr("เลื่อนขึ้น", "Move up"), disabled: i === 0 || null, onclick: () => move(-1) }, "↑") : null,
         reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
@@ -295,6 +434,7 @@ export function dropzone(opts = {}) {
           "aria-label": tr(`เอา ${f.name} ออก`, `Remove ${f.name}`), onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),
       ]);
       list.appendChild(row);
+      if (thumbs) ensureThumb(f, row);   // วาดไอคอนทั่วไปทันที แล้วเติมภาพจริงทีหลังถ้าทำได้
     });
     count.textContent = !files.length ? ""
       : tr(`${files.length} ไฟล์ · รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}`,
@@ -403,8 +543,9 @@ export async function eachFile(files, st, fn) {
   let stopped = 0;
   for (let i = 0; i < files.length; i++) {
     if (st?.cancelled) { stopped = files.length - i; break; }
-    try { await fn(files[i], i); }
-    catch (e) { failed.push({ name: files[i].name, why: (e && e.message) || String(e) }); }
+    emitFileState(files[i], "working");
+    try { await fn(files[i], i); emitFileState(files[i], "done"); }
+    catch (e) { emitFileState(files[i], "error"); failed.push({ name: files[i].name, why: (e && e.message) || String(e) }); }
     st?.progress?.(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
     await yieldToBrowser();
   }

@@ -63,6 +63,12 @@ export function workspace(tool, cfg = {}) {
     /** เปิด/ปิดสถานะกำลังทำงาน (ผืนงานจะหรี่ลงและกดไม่ได้) */
     setBusy: (on) => grid.classList.toggle("busy", !!on),
     /** สลับระหว่าง "ยังไม่มีไฟล์" กับพรีวิวจริง */
-    showCanvas: (on) => { emptyBox.hidden = !!on; if (cfg.center) cfg.center.node.hidden = !on; },
+    showCanvas: (on) => {
+      emptyBox.hidden = !!on;
+      if (cfg.center) cfg.center.node.hidden = !on;
+      // บอก CSS ว่ามีไฟล์แล้ว — แถบปุ่มล่างจอบนมือถือค่อยเริ่มลอยตอนนี้
+      // (ตอนยังไม่มีไฟล์ ปุ่มยังกดไม่ได้อยู่แล้ว แถบลอยมีแต่จะไปบังข้อความ "ยังไม่มีไฟล์…")
+      body.classList.toggle("has-file", !!on);
+    },
   };
 }

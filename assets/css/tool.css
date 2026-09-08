@@ -68,6 +68,21 @@
 @media (prefers-reduced-motion: reduce){ .dz.over,.dz:hover,.next-card:hover,.chip:hover{transform:none;box-shadow:none} }
 .dz-count{font-size:12.5px;color:var(--text-dim);margin:10px 2px 0}
 
+/* ปุ่มทึบกลางกล่องลากไฟล์ (เช่น "เลือกไฟล์ตัวอย่าง") — ใช้ภาษาเดียวกับ .btn เป๊ะ
+   (สปริง hover/active/reduced-motion ชุดเดียวกัน) แค่บังคับสูง 40px คงที่ตามสัญญา
+   แทนที่จะเป็น min-height แบบ .btn ทั่วไป เพราะอยู่กลางกล่องที่มีจังหวะระยะห่างของตัวเอง */
+.dz-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:40px;padding:0 22px;border:0;border-radius:999px;font-family:inherit;
+  background:var(--btn-bg);color:var(--btn-fg);font-size:14px;font-weight:700;cursor:pointer;
+  box-shadow:0 6px 18px color-mix(in srgb,var(--brand) 35%,transparent);
+  transition:transform var(--t-panel,.22s) var(--ease-spring,ease), filter var(--t-btn,.1s) var(--ease-snap,ease), box-shadow var(--t-panel,.22s) var(--ease-spring,ease);
+}
+.dz-btn:hover{filter:brightness(1.07);transform:translateY(-2px);box-shadow:0 10px 24px -6px color-mix(in srgb,var(--brand) 42%,transparent)}
+.dz-btn:active{transform:translateY(1px)}
+.dz-btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;filter:grayscale(.65)}
+@media (prefers-reduced-motion: reduce){ .dz-btn{transition:filter var(--t-btn,.1s) ease} .dz-btn:hover{transform:none} }
+
 .files{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .file-row{
   display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-sm);
@@ -78,8 +93,61 @@
 .grip{cursor:grab;color:var(--text-mute);font-size:15px}
 @media (hover:none){.grip{display:none}}  /* มือถือใช้ปุ่มลูกศรแทน ลากไม่ได้อยู่แล้ว */
 .icon-btn:disabled{opacity:.3;cursor:not-allowed}
-.f-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ชื่อ+ขนาดซ้อน 2 บรรทัด — ในแผงซ้ายของเครื่องมือแบบแผง (กว้าง ~220px) ถ้าวางเรียงกันแนวนอน
+   ชื่อไฟล์จะเหลือที่ไม่ถึง 80px จนอ่านไม่ออก ("ตัวอย่า…") พอซ้อนบรรทัดชื่อได้เต็มความกว้างแถว */
+.f-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.f-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f-size{color:var(--text-mute);font-size:12px;font-variant-numeric:tabular-nums}
+
+/* ── ภาพย่อ + สถานะรายไฟล์ (ทำคู่ขนานกับ agent ที่แก้ ui.js — ชื่อ class ตามสัญญาคงที่) ── */
+.file-row .thumb{
+  width:44px;height:56px;flex:none;border-radius:6px;overflow:hidden;
+  background:var(--bg-soft);border:1px solid var(--line-soft);display:grid;place-items:center;
+}
+.file-row .thumb img,.file-row .thumb canvas{display:block;width:100%;height:100%;object-fit:cover}
+/* ไม่มีภาพจริง → โชว์ไอคอนหมวดกลางกล่อง สีตระกูลเครื่องมือ (--ac) แบบเดียวกับ .dz-ico/.tool-ico
+   ใช้ descendant selector เฉย ๆ (ไม่ผูกกับชื่อ class ของ svg) เพราะ ui.js อาจเรียก uiIcon()/toolIcon()
+   ที่มีชื่อ class ต่างกันไป — currentColor สืบสีจาก .thumb.generic ให้เองอยู่แล้ว */
+.file-row .thumb.generic{color:var(--ac,var(--brand))}
+.file-row .thumb.generic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ป้ายสถานะเล็ก ๆ ท้ายแถว — ฐานสีกลาง แล้วให้ data-state ของแถวกำหนดสีจริง
+   (สูตรพื้น/ขอบเดียวกับ .status .info/.ok/.err ที่มีอยู่แล้วในไฟล์นี้ ให้เข้าชุด) */
+.file-row .state{
+  display:inline-flex;align-items:center;flex:none;white-space:nowrap;
+  font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:999px;
+  padding:3px 10px;border:1px solid var(--line);color:var(--text-mute);background:var(--card);
+  line-height:1.5;  /* ‼️ ไทย: "ไม่สำเร็จ" มีไม้เอกบนสระ — ต่ำกว่า 1.3 สระโดนตัด */
+}
+/* ‼️ ตัวอักษร 11px = ต้อง ≥4.5:1 · สีสถานะดิบ ๆ บนพื้นที่ย้อมสีอ่อนได้แค่ 3.37 (สว่าง) — วัดมาแล้ว
+   ผสมกับ --text อีก 20% จึงเข้มพอในโหมดสว่างและสว่างพอในโหมดมืด ด้วยกฎเดียวทั้งสองธีม */
+.file-row[data-state="working"] .state{
+  color:color-mix(in srgb,var(--brand-text,var(--brand)) 80%,var(--text));
+  background:color-mix(in srgb,var(--brand) 14%,transparent);
+  border-color:color-mix(in srgb,var(--brand) 42%,transparent);
+}
+.file-row[data-state="done"] .state{
+  color:color-mix(in srgb,var(--ok) 80%,var(--text));
+  background:color-mix(in srgb,var(--ok) 15%,transparent);
+  border-color:color-mix(in srgb,var(--ok) 40%,transparent);
+}
+.file-row[data-state="error"] .state{
+  color:color-mix(in srgb,var(--err) 80%,var(--text));
+  background:color-mix(in srgb,var(--err) 15%,transparent);
+  border-color:color-mix(in srgb,var(--err) 40%,transparent);
+}
+/* แถวกำลังทำงาน — เส้นขอบซ้ายสีแบรนด์ + พื้นเต้นเบา ๆ ให้รู้สึกว่า "กำลังเคลื่อน" ปิดใน reduced-motion */
+.file-row[data-state="working"]{
+  border-inline-start:3px solid var(--brand);
+  animation:fk-row-pulse 1.7s ease-in-out infinite;
+}
+@keyframes fk-row-pulse{
+  0%,100%{background:var(--bg-soft)}
+  50%{background:color-mix(in srgb,var(--brand) 9%,var(--bg-soft))}
+}
+@media (prefers-reduced-motion: reduce){ .file-row[data-state="working"]{animation:none} }
+/* แถวพัง — ไม่ทำทั้งแถวแดง (อ่านยาก/ดูน่ากลัวเกินจำเป็น) แค่เส้นขอบเตือน + ป้ายพอ */
+.file-row[data-state="error"]{border-color:color-mix(in srgb,var(--err) 45%,var(--line-soft))}
 
 /* ---- controls ---- */
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:start;margin-top:16px}
@@ -569,4 +637,21 @@ select,
      บนจอสูง 844px แปลว่าแทบไม่เห็นพรีวิวเลยจนกว่าจะเลื่อน ทั้งที่พรีวิวคือสิ่งที่อยากเห็นที่สุด */
   .dz{padding:var(--sp5) var(--sp4)}
   .dz-safe{margin-top:var(--sp3)}
+
+  /* ‼️ .actions ข้างบนใช้กับเครื่องมือธรรมดา — เครื่องมือแบบ "แผง 3 ช่อง" (workspace():
+     pdf-pages · pdf-sign · pdf-watermark · pdf-compress · image-resize · pdf-split) ปุ่มลงมือ
+     ไม่ได้อยู่ใน .actions เลย แต่อยู่ใน .ws-footer (คนละก้อน) — เคยลอง sticky บน .actions
+     แล้ว "ไม่ได้ผล" กับ 6 ตัวนี้เพราะกฎมันไม่ตรง class เลย ไม่ใช่เพราะ sticky เกาะไม่ถึง
+     วัดจริงด้วย Playwright แล้ว: .ws-footer ไม่มี ancestor ไหน overflow:auto/hidden คั่นถึงขอบจอ
+     (ทั้งหน้าเลื่อนที่ window เดียว) sticky เกาะได้ปกติ — scroll ทีละสเต็ปแล้วเห็นปุ่มลอยติด
+     ขอบล่างจอตลอดช่วงเลื่อนแผงงาน แล้วค่อยหลุดลอยขึ้นไปพอดีตอนถึง .next-steps ท้ายหน้า
+     (เพราะ .ws-footer เป็นลูกตัวสุดท้ายของ .ws-body — containing block หมดพอดีตรงนั้น)
+     ไม่ทับ .next-steps เลย ไม่ต้องเผื่อ padding-bottom เพิ่ม · .ws-footer มีพื้นทึบ var(--card)
+     อยู่แล้ว ไม่ต้อง backdrop-blur ซ้อนเหมือน .actions */
+  /* ‼️ ลอยเฉพาะตอน "มีไฟล์แล้ว" (workspace.js เติม .has-file ให้ตอน showCanvas(true))
+     ตอนจอเปล่าแถบนี้เคยไปทับข้อความ "ยังไม่มีไฟล์ — เลือก PDF…" กลางผืนงาน
+     (จับได้จาก tests/browser_layout.py 18 จุด) และปุ่มก็ยังกดไม่ได้อยู่ดี ลอยไปก็ไม่มีประโยชน์ */
+  .ws-body.has-file .ws-footer{
+    position:sticky; bottom:calc(var(--sp3) + env(safe-area-inset-bottom,0px)); z-index:6;
+  }
 }

@@ -240,6 +240,12 @@ async function renderPdfThumbCanvas(file) {
  * จึงประกาศออกมากลาง ๆ แล้วให้กล่องที่ "ถือไฟล์ใบนั้นอยู่จริง" หยิบไปแสดงเอง
  * — ไม่ต้องแก้เครื่องมือสักตัว · กล่องที่หลุดจากหน้าไปแล้ว (isConnected=false) ถูกถอดทิ้งเอง */
 const stateWatchers = new Set();
+
+/* ‼️ บางเครื่องมือมีกล่องลากไฟล์ 2 ใบ (จดหมายเวียน: เทมเพลต Word + ข้อมูล Excel)
+ * ตัวรับระดับหน้าทำงานทุกใบ → วางไฟล์ทีเดียว ใบที่ไม่เกี่ยวเด้งเตือน "ผิดชนิด" ขึ้นมาด้วย
+ * จึงให้ "ใบที่รับชนิดนี้ได้" คว้าเหตุการณ์ไปก่อน · ถ้าไม่มีใบไหนรับได้เลย ใบแรกค่อยเตือนใบเดียว
+ * (เช็คทีหลังใน microtask — ตอนนั้นตัวรับแบบ sync ของทุกใบทำงานจบแล้ว) */
+const claimedEvents = new WeakSet();
 function emitFileState(file, state) {
   for (const w of stateWatchers) { if (w.dead()) stateWatchers.delete(w); else w.fn(file, state); }
 }
@@ -310,15 +316,30 @@ export function dropzone(opts = {}) {
       const f = [...(e.dataTransfer?.files || [])];
       if (!f.length) return;
       e.preventDefault();
-      add(f);
+      claim(e, f);
     },
     paste: (e) => {
       const f = [...(e.clipboardData?.files || [])];
       if (!f.length) return;                 // วางข้อความธรรมดา — ปล่อยผ่านไปตามปกติ
       e.preventDefault();
-      add(f);
+      claim(e, f);
     },
   };
+  /** กล่องนี้ควรรับไฟล์ชุดนี้ไหม — รับได้ = คว้าไปเลย · รับไม่ได้ = รอดูว่ามีใบอื่นคว้าไหม */
+  function claim(e, f) {
+    if (claimedEvents.has(e)) return;
+    if (!expect || f.some((x) => expect.includes(detectType(x)))) {
+      claimedEvents.add(e);
+      add(f);
+      return;
+    }
+    queueMicrotask(() => {                   // ตัวรับ sync ของกล่องอื่นทำงานจบแล้วตรงนี้
+      if (claimedEvents.has(e)) return;      // ใบอื่นรับไปแล้ว — เงียบไว้ อย่าเตือนซ้ำ
+      claimedEvents.add(e);
+      add(f);                                // ไม่มีใครรับได้เลย → เตือนผิดชนิดใบเดียว
+    });
+  }
+
   const onPage = (e) => {
     if (!zone.isConnected) {                 // เปลี่ยนเครื่องมือไปแล้ว — เก็บกวาดตัวเอง
       for (const t of Object.keys(pageHandlers)) document.removeEventListener(t, onPage);

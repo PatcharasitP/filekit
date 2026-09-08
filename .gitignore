@@ -2,3 +2,6 @@
 # (self-host ไลบรารีคือหัวใจของ performance ดูเหตุผลใน README)
 .DS_Store
 Thumbs.db
+
+# หลักฐาน screenshot ตอนเทส — เก็บนอก repo ที่ ../.claude/evidence/ ไม่ต้องขึ้นเว็บ
+.claude/

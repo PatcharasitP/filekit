@@ -48,11 +48,15 @@ export function mount(tool) {
   let step3, step4, wait3, wait4;
 
   // ขั้นที่ยังทำอะไรไม่ได้ต้องบอกให้รู้ว่ารออะไรอยู่ ไม่ใช่โชว์หัวข้อลอย ๆ แล้วปล่อยให้เดา
+  const goRow = el("div", { class: "actions", "data-locked": "1" }, [go]);
+
   function syncLocks() {
     const on3 = mapBox.childElementCount > 0;
     const on4 = previewBox.childElementCount > 0;
     step3?.setAttribute("data-locked", on3 ? "0" : "1");
     step4?.setAttribute("data-locked", on4 ? "0" : "1");
+    goRow.setAttribute("data-locked", on4 ? "0" : "1");   // ปุ่มยังหรี่ตามขั้นที่ 4 เหมือนเดิม
+    if (sampleBox) sampleBox.hidden = on4;                // มีไฟล์ครบแล้วไม่ต้องชวนโหลดตัวอย่างอีก
     if (wait3) wait3.hidden = on3;
     if (wait4) wait4.hidden = on4;
   }
@@ -74,13 +78,17 @@ export function mount(tool) {
           field(tr("รูปแบบเอกสาร", "Document mode"), modeSel),
           groupField, loopField,
           field(tr("ตั้งชื่อไฟล์จากคอลัมน์", "Name files from column"), nameCol, tr("เว้นไว้ = ตั้งชื่อตามลำดับ", "Leave blank = name by sequence")),
-        ]),
-        el("div", { class: "actions" }, [go])])]),
+        ])])]),
+    // ‼️ ปุ่มลงมือต้องเป็นลูกตรงของ .panel ไม่ใช่ซ้อนอยู่ในขั้นที่ 4
+    //    position:sticky ลอยได้แค่ในกรอบของพ่อตัวเอง — ตอนอยู่ในขั้นที่ 4 มันลอยไม่พ้นขั้นนั้น
+    //    บนมือถือจึงต้องเลื่อนลงไป 3,575px ถึงจะกดได้ (วัดจริงจาก tests/browser_mobile.py)
+    //    ย้ายออกมาแล้วแถบลอยติดขอบล่างจอตามกฎ .panel:has(.file-row) .actions
+    goRow,
     st.node, results);
-  syncLocks();
 
   // ให้ลองใช้ได้ทันทีโดยไม่ต้องเตรียมไฟล์เอง — คนส่วนใหญ่ติดตรงไม่รู้ว่าเทมเพลตหน้าตายังไง
-  body.appendChild(el("div", { class: "sample-box" }, [
+  // ‼️ พอมีไฟล์ครบทั้งสองขั้นแล้วกล่องนี้หมดหน้าที่ — ซ่อนทิ้ง (สูง 247px คั่นระหว่างปุ่มกับท้ายหน้า)
+  const sampleBox = el("div", { class: "sample-box" }, [
     el("div", {}, [
       el("strong", {}, tr("ยังไม่มีไฟล์? ลองด้วยตัวอย่างสำเร็จรูปได้เลย", "No files yet? Try the ready-made sample")),
       el("p", { class: "mm-label", style: { margin: "5px 0 0" } },
@@ -94,7 +102,9 @@ export function mount(tool) {
       el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx", download: true }, tr("ข้อมูลใบเสนอราคา", "Quotation data")),
       el("a", { class: "chip", href: "samples/อ่านก่อนใช้.txt", download: true }, tr("วิธีเขียนตัวยึด", "How to write placeholders")),
     ]),
-  ]));
+  ]);
+  body.appendChild(sampleBox);
+  syncLocks();          // เรียกหลังประกาศ sampleBox แล้วเท่านั้น — ไม่งั้นชนกับ TDZ ของ const
 
   body.appendChild(el("div", { class: "note" },
     tr("พิมพ์ตัวยึดในไฟล์ Word เช่น {{คำนำหน้า}}{{ชื่อ}} แล้วจับคู่คอลัมน์ Excel — สร้างเอกสารทีละแถว รองรับหัว-ท้ายกระดาษ",

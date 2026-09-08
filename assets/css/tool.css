@@ -254,6 +254,8 @@
 .pg .num{position:absolute;top:5px;inset-inline-start:5px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;padding:1px 7px;border-radius:99px}
 .pg .tools{position:absolute;bottom:0;inset-inline:0;display:flex;gap:4px;justify-content:center;padding:5px;background:linear-gradient(transparent,rgba(0,0,0,.6))}
 .pg .tools button{border:0;background:rgba(255,255,255,.9);color:#111;border-radius:6px;width:26px;height:24px;cursor:pointer;font-size:12px}
+/* บนมือถือกดด้วยนิ้ว ไม่ใช่เมาส์ — ขยายให้ถึงเกณฑ์ 36px (เดสก์ท็อปคงขนาดเดิม ไม่บังภาพหน้า) */
+@media (max-width:720px){ .pg .tools button{width:36px;height:36px} .pg .tools{gap:6px;padding:6px} }
 .pg .tools button:hover{background:#fff}
 
 /* ---- misc ---- */
@@ -288,7 +290,7 @@
 
 /* ── จดหมายเวียน: ขั้นตอนแบบทีละสเต็ป ── */
 .mm-step{display:flex;gap:14px;margin-bottom:26px;transition:opacity .2s}
-.mm-step[data-locked="1"]{opacity:.48}
+.mm-step[data-locked="1"],.actions[data-locked="1"]{opacity:.48}
 /* ‼️ เลขขั้นตอนตอนล็อกเคยได้แค่ 3.07:1 (ตัวมิวท์บนเส้นจาง) อ่านไม่ออกจริง ๆ */
 .mm-step[data-locked="1"] .mm-num{background:var(--line-soft);color:var(--text-dim);box-shadow:none}
 .step-wait{font-size:13px;color:var(--text-mute);border:1px dashed var(--line);
@@ -310,7 +312,7 @@
 .mm-grid select{
   font-family:inherit;font-size:13.5px;padding:6px 10px;border-radius:var(--r-sm);
   border:1px solid var(--line);background:var(--bg-soft);color:var(--text);width:100%;
-}
+;min-height:36px}
 .mm-val{font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mm-val.empty{color:var(--text-mute);font-style:italic}
 @media (max-width:560px){
@@ -327,7 +329,8 @@
 .clean-list li.bad{color:var(--err);font-weight:600}
 .clean-ok{margin:7px 0 0;font-size:13.5px;color:var(--ok)}
 .clean-opts{margin-top:18px;display:flex;flex-direction:column;gap:9px}
-.clean-check{display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text-dim);cursor:pointer;line-height:1.6}
+/* ‼️ นิ้วกดทั้งแถวได้ ไม่ใช่แค่ช่อง 16px — วัดจริงบนมือถือได้ 24px ต่ำกว่าเกณฑ์ 36px */
+.clean-check{display:flex;align-items:flex-start;gap:9px;font-size:14px;color:var(--text-dim);cursor:pointer;line-height:1.6;min-height:36px;padding-block:6px}
 .clean-check input{margin-top:5px;flex:none;width:16px;height:16px;accent-color:var(--brand)}
 .clean-check:hover span{color:var(--text)}
 

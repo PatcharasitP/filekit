@@ -12,7 +12,7 @@ const STYLE = `
   .ps-pglist{display:flex;flex-direction:column;gap:6px}
   .ps-pgrow{
     display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
-    padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--line-soft);
+    padding:8px 12px;min-height:36px;border-radius:var(--r-sm);border:1px solid var(--line-soft);
     background:var(--bg-soft);color:var(--text);font-size:13.5px;cursor:pointer;
     text-align:left;font-family:inherit;transition:border-color .15s,background .15s;
   }

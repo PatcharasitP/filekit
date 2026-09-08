@@ -36,6 +36,7 @@ function applyScale(atX, atY) {
   media.style.width = Math.round(natW * scale) + "px";
   media.classList.add("zoomed");
   box.classList.add("is-zoomed");
+  box._cap.dataset.zoomed = "1";
   // ซูมค้างไว้ตรงจุดที่ผู้ใช้เล็ง ไม่ใช่กระโดดกลับไปมุมบนซ้าย
   const fx = before.w ? (atX ?? st.clientWidth / 2) : 0;
   const fy = before.h ? (atY ?? st.clientHeight / 2) : 0;
@@ -72,6 +73,7 @@ function ensureBox() {
   stage.addEventListener("click", (e) => {
     if (!media || !media.contains(e.target)) return;
     e.stopPropagation();
+    if (moved > 4) { moved = 0; return; }   // เพิ่งลากเลื่อนอยู่ ไม่ใช่ตั้งใจกดย่อกลับ
     const r = stage.getBoundingClientRect();
     scale = scale > 0 ? 0 : Math.max(fitScale() * 2, 1);
     applyScale(e.clientX - r.left, e.clientY - r.top);
@@ -86,20 +88,34 @@ function ensureBox() {
     applyScale(e.clientX - r.left, e.clientY - r.top);
   }, { passive: false });
   // ลากเลื่อนดูตอนซูมอยู่
-  let drag = null;
+  let drag = null, moved = 0;
   stage.addEventListener("pointerdown", (e) => {
     if (!box.classList.contains("is-zoomed") || !media?.contains(e.target)) return;
+    moved = 0;
     drag = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop };
-    stage.setPointerCapture(e.pointerId); stage.classList.add("dragging");
+    stage.classList.add("dragging");
+    /* ‼️ ห้ามใช้ setPointerCapture ที่นี่ — พอจับ pointer ไว้ click ที่ตามมาหลังปล่อยเมาส์
+       จะถูกยิงไปที่ .pv-stage แทนตัวรูป (จับได้จาก event จริง: click → DIV.pv-stage)
+       เงื่อนไข media.contains(e.target) จึงไม่ผ่าน = กดย่อกลับไม่ได้เลยหลังลากครั้งแรก
+       ไม่ต้อง capture ก็ลากได้อยู่แล้วเพราะ .pv-stage เต็มจอ */
   });
   stage.addEventListener("pointermove", (e) => {
     if (!drag) return;
+    moved = Math.max(moved, Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y));
     stage.scrollLeft = drag.l - (e.clientX - drag.x);
     stage.scrollTop = drag.t - (e.clientY - drag.y);
   });
+  /* ‼️ รูปเป็นของที่เบราว์เซอร์ "ลากไปวางที่อื่น" ได้เองตามธรรมชาติ พอกดค้างแล้วขยับ
+     มันจะเริ่ม native drag (เงารูปลอยตามเมาส์) แล้วตัด pointer event ของเราทิ้งกลางคัน
+     ‼️ ห้ามกันด้วย preventDefault ที่ pointerdown — จะกัน click ที่ใช้ย่อกลับไปด้วย
+     ต้องกันเฉพาะ dragstart ตัวเดียว */
+  stage.addEventListener("dragstart", (e) => e.preventDefault());
+
+  // ‼️ ต้องคืน pointer capture ทุกครั้ง ไม่งั้น click ที่ตามมาถูกยิงไปที่ .pv-stage แทนตัวรูป
+  //    ทำให้เงื่อนไข media.contains(e.target) ไม่ผ่าน = กดย่อกลับไม่ได้เลยหลังลากครั้งแรก
   const endDrag = () => { drag = null; stage.classList.remove("dragging"); };
-  stage.addEventListener("pointerup", endDrag);
-  stage.addEventListener("pointercancel", endDrag);
+  addEventListener("pointerup", endDrag);        // ปล่อยเมาส์นอกกรอบก็ยังหลุดโหมดลาก
+  addEventListener("pointercancel", endDrag);
   // ปุ่มลัด: + − ซูม · 0 กลับพอดีจอ
   box.addEventListener("keydown", (e) => {
     if (!media) return;
@@ -122,9 +138,8 @@ export async function viewFile(file) {
 
   if (detectType(file) === "image") {
     url = URL.createObjectURL(file);
-    media = el("img", { src: url, alt: file.name || "" });
+    media = el("img", { src: url, alt: file.name || "", draggable: "false" });
     d._stage.appendChild(media);
-    d._cap.textContent += tr("  ·  กดที่รูปเพื่อซูม", "  ·  click the image to zoom");
     return true;
   }
   // PDF: วาดหน้าแรกใหญ่ ๆ พอให้อ่านออกว่าใช่ฉบับที่ต้องการไหม
@@ -142,8 +157,7 @@ export async function viewFile(file) {
     await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
     doc.destroy?.();
     if (d.open) { media = canvas; d._stage.appendChild(canvas); }   // ผู้ใช้อาจปิดไปแล้วระหว่างวาด
-    d._cap.textContent += tr(`  ·  หน้า 1 จาก ${doc.numPages}  ·  กดที่หน้าเพื่อซูม`,
-                             `  ·  page 1 of ${doc.numPages}  ·  click the page to zoom`);
+    d._cap.textContent += tr(`  ·  หน้า 1 จาก ${doc.numPages}`, `  ·  page 1 of ${doc.numPages}`);
   } catch (e) {
     console.error(e);
     d._stage.appendChild(el("div", { class: "pv-err" },

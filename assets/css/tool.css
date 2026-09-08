@@ -702,10 +702,13 @@ select,
 .pv::backdrop{background:rgba(6,8,13,.86);backdrop-filter:blur(3px)}
 .pv-stage{min-height:70dvh;display:grid;place-items:center;padding:56px 16px 8px;
   overflow:auto;max-height:88dvh;touch-action:pinch-zoom;overscroll-behavior:contain}
-.pv-stage.dragging{cursor:grabbing}
-.pv.is-zoomed .pv-stage{place-items:start center;cursor:grab}
-.pv-stage img,.pv-stage canvas{cursor:zoom-in}
-.pv.is-zoomed .pv-stage img,.pv.is-zoomed .pv-stage canvas{cursor:zoom-out}
+.pv-stage img,.pv-stage canvas{cursor:zoom-in;-webkit-user-drag:none;user-select:none}
+/* ‼️ ตอนซูมอยู่ เคอร์เซอร์ "มือจับ" ต้องอยู่บนตัวรูป — ที่ที่นิ้ว/เมาส์จะลากจริง
+   เดิมใส่ไว้ที่พื้นที่ว่างรอบรูป แล้วบนรูปกลับเป็นแว่นขยาย = ใส่ผิดที่
+   (พี่ปอนด์ทักเอง "อยากได้มือแบบจับป้ายไปขวาได้ด้วย") */
+.pv.is-zoomed .pv-stage{place-items:start center}
+.pv.is-zoomed .pv-stage img,.pv.is-zoomed .pv-stage canvas{cursor:grab}
+.pv-stage.dragging,.pv-stage.dragging img,.pv-stage.dragging canvas{cursor:grabbing}
 .pv-stage img.zoomed,.pv-stage canvas.zoomed{border-radius:0}
 .pv-stage img,.pv-stage canvas{max-width:min(92vw,1200px);max-height:78dvh;
   border-radius:10px;box-shadow:0 30px 70px -20px rgba(0,0,0,.8);background:#fff}

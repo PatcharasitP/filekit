@@ -73,7 +73,8 @@ function autoName(f) {
   const stamp = `${two(d.getHours())}.${two(d.getMinutes())}.${two(d.getSeconds())}`;
   sameSec = stamp === lastStamp ? sameSec + 1 : 0;   // แคปรัว ๆ ในวินาทีเดียวกันก็ยังไม่ชนกัน
   lastStamp = stamp;
-  const th = `แคปหน้าจอ-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
-  const en = `Screenshot-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
+  // ‼️ สั้นที่สุดเท่าที่ยังบอกได้ว่าอะไร-เมื่อไร — ชื่อยาวถูกตัดกลางคำในแถวไฟล์แคบ ๆ
+  const th = `แคป-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
+  const en = `snap-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
   try { return new File([f], IS_EN ? en : th, { type: f.type }); } catch { return f; }
 }

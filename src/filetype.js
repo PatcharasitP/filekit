@@ -3,7 +3,7 @@
 // ข้อความว่า "ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย"ซึ่งทำให้เข้าใจผิด
 // ว่าไฟล์ตัวเองพัง ทั้งที่ไฟล์ปกติดี แค่มาผิดเครื่องมือ
 // ไฟล์นี้ทำให้ระบบบอกได้ว่า "นี่คือไฟล์อะไร" และ "ควรไปใช้เครื่องมือไหนแทน"
-import { tr } from "./i18n.js";
+import { tr, IS_EN } from "./i18n.js";
 
 export const TYPES = {
   pdf:  { label: "PDF",        ext: [".pdf"] },
@@ -85,7 +85,14 @@ export function detectType(file) {
   return null;
 }
 
-export const typeLabel = (kind) => TYPES[kind]?.label || "ไฟล์ชนิดนี้";
+/* ‼️ ป้ายชนิดไฟล์ที่โชว์เดี่ยว ๆ (เช่นในแถบ "ไฟล์ของคุณ" หน้าแรก) ต้องแปลด้วย
+   เดิมคืนไทยเสมอ ทำให้หน้าอังกฤษขึ้นคำว่า "รูปภาพ" ปนอยู่ (พี่ปอนด์จับได้ 08/09/2026)
+   ‼️ คนละชุดกับ LABEL_EN ข้างบนซึ่งเป็นวลีในประโยค ("an image") ใช้เป็นป้ายเดี่ยวไม่ได้
+   ชื่อส่วนใหญ่เป็นคำสากลอยู่แล้ว (PDF/Word/Excel) จึงมีเฉพาะตัวที่ต่างจริง */
+const LABEL_SHORT_EN = { image: "Image", doc: "Word (legacy)", ppt: "PowerPoint (legacy)" };
+export const typeLabel = (kind) =>
+  (IS_EN ? LABEL_SHORT_EN[kind] || TYPES[kind]?.label : TYPES[kind]?.label)
+  || tr("ไฟล์ชนิดนี้", "this file type");
 
 /** ข้อความบอกทางเมื่อผู้ใช้เอาไฟล์มาผิดเครื่องมือ + ปลายทางที่ควรไป */
 export function wrongTypeMessage(kind, expectLabel) {

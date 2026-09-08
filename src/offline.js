@@ -69,11 +69,13 @@ export function offlineBar() {
     }
     bar.appendChild(el("span", {}, [
       el("strong", {}, [uiIcon("offline", "ob-ico"), tr("ใช้งานตอนไม่มีเน็ต", "Works without internet")]),
+      // ‼️ ประโยคเดิมยาว 2 บรรทัดและขึ้นต้นด้วยขีดยาว — พี่ปอนด์ทักว่าอ่านแล้วรก
+      //    เหลือเฉพาะสิ่งที่ผู้ใช้ต้องรู้: ได้อะไร กินที่เท่าไร · รายละเอียดที่เหลือไม่จำเป็น
       el("span", { class: "ob-detail" },
-        tr(" — ตอนนี้เครื่องมือที่เคยเปิดแล้วใช้ออฟไลน์ได้ กดปุ่มนี้เพื่อดึงทุกเครื่องมือมาเก็บไว้ล่วงหน้า (ประมาณ 5 MB)",
-           " — right now only tools you've already opened work offline. Tap this to get every tool ready in advance (about 5 MB)")),
+        tr("  เก็บเครื่องมือทั้งหมดไว้ในเครื่อง ใช้ได้แม้เน็ตหลุด (5 MB)",
+           "  Keep every tool on this device so it works with no internet (5 MB)")),
     ]));
-    bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, tr("เตรียมใช้งานออฟไลน์", "Get ready for offline use")));
+    bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, tr("เก็บไว้ในเครื่อง", "Save to this device")));
   };
 
   async function run() {

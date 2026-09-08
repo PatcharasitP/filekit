@@ -385,10 +385,15 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   margin:0 0 var(--sp4);padding:10px 14px;border-radius:12px;
   background:color-mix(in srgb,var(--brand) 14%,transparent);
   border:1px solid color-mix(in srgb,var(--brand) 38%,transparent)}
-.drop-thumb{flex:none;width:46px;height:46px;border-radius:9px;overflow:hidden;padding:0;cursor:zoom-in;
-  display:grid;place-items:center;background:rgba(255,255,255,.08);
+.drop-thumbs{display:flex;gap:6px;align-items:center;flex:none}
+.drop-more{font-size:12.5px;font-weight:700;color:var(--stage-dim);padding-inline:2px;line-height:1.5}
+/* ‼️ กล่องแนวนอน + contain — ภาพที่คนวางจากคลิปบอร์ดคือภาพแคปหน้าจอ ซึ่งกว้างกว่าสูงเสมอ
+   เดิมเป็นจัตุรัส+cover จึงครอปเหลือแต่เสี้ยวกลางภาพ เห็นเป็นเส้นทับกันมั่ว ดูไม่ออกว่ารูปอะไร
+   (พี่ปอนด์ทักเอง 08/09/2026 — "มันทับกันนะ") · contain = เห็นทั้งภาพ รู้ทันทีว่าใช่ใบที่ต้องการไหม */
+.drop-thumb{flex:none;width:64px;height:46px;border-radius:8px;overflow:hidden;padding:3px;cursor:zoom-in;
+  display:grid;place-items:center;background:rgba(0,0,0,.35);
   border:1px solid color-mix(in srgb,#fff 22%,transparent);color:#c9d2ff}
-.drop-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.drop-thumb img{width:100%;height:100%;object-fit:contain;display:block}
 .drop-thumb.as-icon svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
 .drop-thumb:hover{border-color:#fff}

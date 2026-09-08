@@ -94,17 +94,29 @@ function renderHome(q = "") {
  * คนคิดจากไฟล์ในมือ ("มี PDF ใบนี้ ทำอะไรได้บ้าง") ไม่ได้คิดจากชื่อเครื่องมือ
  * เดิมต้องเดาชื่อเครื่องมือให้ถูกก่อนถึงจะลากไฟล์ได้ ตอนนี้ลากลงหน้าแรกแล้วเว็บคัดให้
  * ทะเบียนรู้ชนิดที่แต่ละเครื่องมือรับ (accepts) อยู่แล้ว จึงจับคู่ได้โดยไม่ต้องเปิดเครื่องมือ */
-let dropped = null;         // { files, kinds, tools }
+let dropped = null;         // { files, kinds, tools, label, mixed }
+const MAX_THUMBS = 5;       // เกินนี้โชว์เป็น "+N" — แถวเดียวพอ ไม่ให้แถบสูงขึ้น
 let homeDragDepth = 0;
 let uiMod = null;           // ui.js ที่โหลดแล้ว — ใช้ล้างไฟล์ฝากตอนกลับหน้าแรก
 const onHomeNow = () => !document.body.classList.contains("tool");
 const dragHasFiles = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
 
-async function takeHomeFiles(files) {
+async function takeHomeFiles(incoming) {
   const { detectType, typeLabel } = await import("./filetype.js");
+  // ‼️ วางเพิ่มต้อง "สะสม" ไม่ใช่ทับของเดิม — คลิปบอร์ดวินโดวส์เก็บได้ทีละใบ คนที่แคป
+  //    หลายหน้าจอจึงต้องวางทีละครั้ง ถ้าทับทุกครั้งก็รวมเป็น PDF ทีเดียวไม่ได้เลย
+  //    (หน้าเครื่องมือสะสมอยู่แล้ว หน้าแรกเคยทับ — ไม่สอดคล้องกัน)
+  // ‼️ ห้ามเอา lastModified มาเป็นกุญแจ — ไฟล์ที่วางจากคลิปบอร์ดถูกสร้างใหม่ทุกครั้ง
+  //    เวลาจึงไม่เคยตรงกัน กันซ้ำไม่ได้เลย · ชื่อ+ขนาดตรงกันเป๊ะ = ไฟล์เดียวกันในทางปฏิบัติ
+  const key = (f) => `${f.name}|${f.size}`;
+  const seen = new Set((dropped?.files || []).map(key));
+  const files = [...(dropped?.files || []), ...incoming.filter((f) => !seen.has(key(f)))];
+
   const kinds = [...new Set(files.map(detectType).filter(Boolean))];
-  const tools = TOOLS.filter((t) => (t.accepts || []).some((k) => kinds.includes(k)));
-  dropped = { files, kinds, tools, label: kinds.map(typeLabel).join(" · ") };
+  // เสนอเฉพาะเครื่องมือที่ทำงานกับ "ทุกไฟล์" ในชุดได้ — ถ้าเสนอตัวที่รับได้แค่บางใบ
+  // พอกดเข้าไปไฟล์ที่เหลือจะถูกทิ้งเงียบ ๆ โดยผู้ใช้ไม่รู้ตัว
+  const tools = kinds.length ? TOOLS.filter((t) => kinds.every((k) => (t.accepts || []).includes(k))) : [];
+  dropped = { files, kinds, tools, label: kinds.map(typeLabel).join(" · "), mixed: kinds.length > 1 };
   search.value = "";
   activeCat = "";
   renderCats();
@@ -147,13 +159,21 @@ function renderDropped(stageH) {
     : tr("ยังไม่มีเครื่องมือที่รับไฟล์ชนิดนี้", "No tool takes this file type yet");
   hits.textContent = "";
   grids.appendChild(el("div", { class: "drop-head" }, [
-    dropThumb(files[0]),
+    el("div", { class: "drop-thumbs" }, [
+      ...files.slice(0, MAX_THUMBS).map(dropThumb),
+      files.length > MAX_THUMBS
+        ? el("span", { class: "drop-more" }, `+${files.length - MAX_THUMBS}`) : null,
+    ]),
     el("div", { class: "drop-what" }, [el("b", {}, what), label ? el("span", {}, label) : null]),
     el("button", { class: "btn-soft", type: "button",
       onclick: () => { dropped = null; renderHome(); } }, tr("ล้าง", "Clear")),
   ]));
   if (!tools.length) {
-    grids.appendChild(el("div", { class: "empty" }, [
+    grids.appendChild(el("div", { class: "empty" }, dropped.mixed ? [
+      el("b", {}, tr(`ไฟล์ที่วางมาเป็นคนละชนิดกัน (${label})`, `These files are different types (${label})`)),
+      el("div", {}, tr("ยังไม่มีเครื่องมือที่ทำงานกับทุกชนิดพร้อมกัน — กด “ล้าง” แล้วใส่ทีละชนิด",
+                       "No tool handles all of them at once — press “Clear” and add one type at a time")),
+    ] : [
       el("b", {}, tr("ไฟล์ชนิดนี้ยังไม่มีเครื่องมือรองรับ", "No tool supports this file type yet")),
       el("div", {}, tr("ลองไฟล์ PDF · Word · Excel · CSV · PowerPoint · รูปภาพ",
                        "Try a PDF, Word, Excel, CSV, PowerPoint or image file")),

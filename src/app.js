@@ -5,7 +5,7 @@
 import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
-import { el, $, showVeil, filesFromClipboard } from "./dom.js";
+import { el, $, $$, showVeil, filesFromClipboard } from "./dom.js";
 import { toolIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic } from "./i18n.js";
 
@@ -382,10 +382,14 @@ applyTheme(store.get("fk-theme", "auto"));
 themeBtn.addEventListener("click", () =>
   applyTheme(THEMES[(THEMES.indexOf(store.get("fk-theme", "auto")) + 1) % THEMES.length]));
 
-const langBtn = $("#lang");
-// ป้ายบนปุ่มคือ "ภาษาที่จะเปลี่ยนไป" ไม่ใช่ภาษาปัจจุบัน — กดแล้วได้อย่างที่เห็น
-langBtn.textContent = IS_EN ? "ไทย" : "EN";
-langBtn.addEventListener("click", () => setLang(IS_EN ? "th" : "en"));
+/* ปุ่มภาษา 2 ตัว — ตัวที่ใช้อยู่ทำเครื่องหมายด้วย aria-current (ไม่ใช่แค่สี)
+   คนที่ใช้โปรแกรมอ่านหน้าจอจึงรู้ด้วยว่าตอนนี้อยู่ภาษาไหน · กดตัวที่ใช้อยู่แล้วไม่ทำอะไร */
+$$("#lang .langopt").forEach((b) => {
+  const isCurrent = b.dataset.lang === (IS_EN ? "en" : "th");
+  b.setAttribute("aria-current", String(isCurrent));
+  b.setAttribute("aria-label", b.dataset.lang === "th" ? "ภาษาไทย" : "English");
+  if (!isCurrent) b.addEventListener("click", () => setLang(b.dataset.lang));
+});
 
 // แถบบนใสตอนอยู่บนสุด กลายเป็นกระจกฝ้าเมื่อเลื่อนลง
 // ‼️ อ่าน scrollY ใน rAF ไม่ใช่ในตัว handler — อ่านค่า layout ระหว่างสกอลล์บังคับให้เบราว์เซอร์

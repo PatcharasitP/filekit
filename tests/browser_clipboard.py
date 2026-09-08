@@ -74,7 +74,7 @@ with sync_playwright() as p:
     # ที่ต้องคงไว้จริง ๆ คือ ไม่ใช่ชื่อโหลอีกต่อไป + มีเวลาอยู่ในชื่อจึงไม่ซ้ำกัน
     import re as _re
     ck("หน้าแรก: เปลี่ยนชื่อโหล image.png เป็นชื่อที่มีเวลา (ไม่ซ้ำกัน)",
-       home != "image.png" and bool(_re.search(r"\d{2}\.\d{2}\.\d{2}\.png$", home)), f" (ได้ {home!r})")
+       home != "image.png" and bool(_re.search(r"^\d{2}\.\d{2}\.\d{2}(-\d+)?\.png$", home)), f" (ได้ {home!r})")
     ck("หน้าเครื่องมือ: วางแล้วไฟล์เข้าแถวจริง", bool(tool), f" (ได้ {tool!r})")
     ck("ไม่มี error ตอนวาง", not errs, f" ({errs[:1]})")
 

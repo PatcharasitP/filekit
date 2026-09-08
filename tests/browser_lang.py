@@ -82,6 +82,9 @@ VISIBLE_TEXT = """() => {
     const p = n.parentElement;
     if (!p || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(p.tagName)) continue;
     if (p.closest("[hidden]")) continue;
+    // ‼️ ปุ่มสลับภาษาโชว์ทั้งสองภาษาพร้อมกันโดยตั้งใจ ("ไทย" อยู่ตลอดแม้หน้าเป็นอังกฤษ)
+    //    เขียนชื่อภาษาด้วยภาษานั้นเองตามแนวทาง W3C — คนที่อ่านไทยไม่ออกยังหาปุ่มตัวเองเจอ
+    if (p.closest("#lang")) continue;
     // checkVisibility ไล่ดูบรรพบุรุษให้ครบ ต่างจาก getComputedStyle ที่ดูแค่ตัวมันเอง
     if (p.checkVisibility && !p.checkVisibility()) continue;
     out.push(t);
@@ -89,6 +92,7 @@ VISIBLE_TEXT = """() => {
   // placeholder / aria-label / title ก็เป็นสิ่งที่ผู้ใช้เจอ ต้องนับด้วย
   for (const el of document.querySelectorAll("[placeholder],[aria-label],[title]")) {
     if (el.checkVisibility && !el.checkVisibility()) continue;
+    if (el.closest("#lang")) continue;   // ปุ่มสลับภาษาโชว์ทั้งสองภาษาโดยตั้งใจ (ดูหมายเหตุข้างบน)
     for (const a of ["placeholder","aria-label","title"]) {
       const v = el.getAttribute(a); if (v) out.push(v);
     }
@@ -119,15 +123,20 @@ def main():
         ctx = b.new_context(); pg = ctx.new_page()
         pg.goto(BASE, wait_until="networkidle"); pg.wait_for_timeout(500)
         ck("ยังไม่เคยเลือกภาษา → ได้ภาษาไทย", pg.evaluate("document.documentElement.lang") == "th")
-        ck("ปุ่มบนแถบบนเขียนว่า EN (ภาษาที่จะเปลี่ยนไป)", pg.locator("#lang").inner_text().strip() == "EN")
+        # ‼️ ปุ่มภาษาเปลี่ยนจาก "ปุ่มเดียวสลับข้อความ" เป็น "2 ปุ่มโชว์ทั้งสองภาษา"
+        #    ของเดิมกำกวม อ่าน "EN" แล้วไม่รู้ว่าเป็นสถานะปัจจุบันหรือปุ่มให้กด
+        cur = pg.locator('#lang .langopt[aria-current="true"]').inner_text().strip()
+        ck("ตอนเป็นไทย ปุ่มที่ทำเครื่องหมายว่าใช้อยู่ต้องคือ ไทย", cur == "ไทย", f" (ได้ {cur!r})")
+        ck("ต้องเห็นทั้งสองภาษาพร้อมกัน", pg.locator("#lang .langopt").count() == 2)
         ck("ปุ่มสลับมุมมองแบบเก่าถูกถอดออกแล้ว", pg.locator("#density").count() == 0)
 
-        pg.locator("#lang").click(); pg.wait_for_timeout(900)
+        pg.locator('#lang .langopt[data-lang="en"]').click(); pg.wait_for_timeout(900)
         ck("กดแล้วเปลี่ยนเป็นอังกฤษ", pg.evaluate("document.documentElement.lang") == "en")
-        ck("ปุ่มเปลี่ยนเป็น ไทย", pg.locator("#lang").inner_text().strip() == "ไทย")
+        cur2 = pg.locator('#lang .langopt[aria-current="true"]').inner_text().strip()
+        ck("หลังกด EN ปุ่มที่ใช้อยู่ต้องเปลี่ยนเป็น EN", cur2 == "EN", f" (ได้ {cur2!r})")
         pg.reload(wait_until="networkidle"); pg.wait_for_timeout(400)
         ck("จำภาษาไว้หลังรีเฟรช", pg.evaluate("document.documentElement.lang") == "en")
-        pg.locator("#lang").click(); pg.wait_for_timeout(900)
+        pg.locator('#lang .langopt[data-lang="th"]').click(); pg.wait_for_timeout(900)
         ck("กดกลับเป็นไทยได้", pg.evaluate("document.documentElement.lang") == "th")
         ctx.close()
 

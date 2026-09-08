@@ -23,8 +23,8 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="FileKit — 29 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Cpath%20fill%3D%22%234a5bd1%22%20fill-rule%3D%22evenodd%22%20d%3D%22M14%206L30%206L38%2014L38%2042L14%2042Z%20M20%2022A4%204%200%201%200%2028%2022A4%204%200%201%200%2020%2022Z%20M22%2025L26%2025L24.5%2034L23.5%2034Z%22/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+<link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 
 <!-- schema.org: บอกเครื่องมือค้นหาว่านี่คือ "เว็บแอปฟรี" ไม่ใช่บทความ — เป็น JSON นิ่ง ๆ ไม่กระทบความเร็ว
      ‼️ inLanguage ต้องตรงกับของจริง (th-TH) · เว็บอ้างอิงที่ไปศึกษามาใส่ en-US ทั้งที่เนื้อหาเป็นไทยล้วน -->
@@ -182,16 +182,37 @@ button{font-family:inherit}
 /* ‼️ ปุ่มไอคอนล้วนไม่มีข้อความให้ยึด กรอบจึงเป็นสิ่งเดียวที่บอกว่า 'นี่คือปุ่ม'
    วัดแล้วกรอบเดิมได้แค่ 1.21-1.44:1 ตาแทบแยกไม่ออกจากพื้น — ใช้สีเข้มขึ้นเฉพาะปุ่มกลุ่มนี้ */
 .iconbtn{box-shadow:var(--ring-top); border-color:var(--text-mute)}
-/* ปุ่มภาษาเป็นตัวอักษรไม่ใช่ไอคอน จึงต้องกว้างตามข้อความ */
-.langbtn{width:auto; min-width:44px; padding:0 12px; font:700 12px/1.4 var(--font);
-  letter-spacing:.06em; color:var(--text-dim)}
-.langbtn:hover{color:var(--text)}
+/* ‼️ ปุ่มภาษา: เดิมเป็นปุ่มเดียวเขียนว่า "EN" ซึ่งกำกวม — อ่านแล้วไม่รู้ว่าหมายถึง
+   "ตอนนี้เป็นอังกฤษ" หรือ "กดเพื่อเปลี่ยนเป็นอังกฤษ" (พี่ปอนด์ทักเอง เทียบกับ kmitl.ac.th)
+   เปลี่ยนเป็นโชว์ทั้งสองภาษาพร้อมกัน อันที่ใช้อยู่ทึบ อีกอันจาง = เห็นทั้งสถานะและทางเลือกในทีเดียว
+   ‼️ เขียนชื่อภาษาด้วยภาษานั้นเอง ("ไทย" ไม่ใช่ "TH") ตามแนวทาง W3C — คนที่อ่านไทยไม่ออก
+   ก็ยังหาปุ่มของตัวเองเจอ · ห้ามใช้ธงชาติเพราะภาษาไม่ได้ผูกกับประเทศ */
+.langsw{display:flex; gap:4px; align-items:center; flex:none}
+.langopt{
+  min-width:38px; height:38px; padding:0 10px; cursor:pointer; flex:none;
+  border:1px solid var(--text-mute); background:transparent; color:var(--text-dim);
+  border-radius:999px; font:700 12px/1.4 var(--font); letter-spacing:.04em; font-family:var(--font);
+  transition:color var(--t-micro) var(--ease), background var(--t-micro) var(--ease),
+             border-color var(--t-micro) var(--ease);
+}
+.langopt:hover{color:var(--text); border-color:var(--text)}
+.langopt[aria-current="true"]{
+  background:var(--btn-bg); color:var(--btn-fg); border-color:transparent; cursor:default;
+  box-shadow:var(--ring-top);
+}
+.langopt:focus-visible{outline:2.5px solid var(--brand); outline-offset:2px}
+/* ‼️ ห้ามต่ำกว่า 36px แม้จอแคบ — เทส layout จับได้ 180 จุดตอนลองย่อเหลือ 34px */
+@media (max-width:560px){ .langopt{min-width:36px; height:36px; padding:0 8px; font-size:11.5px} }
 .back{
   display:none; align-items:center; gap:6px; cursor:pointer; white-space:nowrap;
   border:1px solid var(--line); background:var(--card); color:var(--text);
   border-radius:999px; padding:8px 15px; font-size:13px; font-weight:600; min-height:38px;
 }
 .back:hover{background:var(--card-hi)}
+.back b{font-weight:600}
+/* ‼️ จอแคบ: เหลือแค่ลูกศร — ปุ่มภาษา 2 ตัวกินที่มากกว่าปุ่มเดียว ทำให้ปุ่มนี้ล้นขอบ 21px
+   (เทส layout จับได้ 28 หน้า) · ยังกดได้และโปรแกรมอ่านหน้าจอยังรู้ความหมายจาก aria-label */
+@media (max-width:560px){ .back b{display:none} .back{padding:8px 13px; font-size:16px} }
 body.tool .back{display:inline-flex}
 body.tool .home-only{display:none}
 
@@ -524,8 +545,11 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 
 footer{position:relative; padding:18px; text-align:center; color:var(--text-mute); font-size:12.5px}
 /* ลิงก์ท้ายหน้า — สีเดียวกับข้อความรอบข้าง ขีดเส้นใต้จาง ๆ ให้รู้ว่ากดได้โดยไม่ตะโกน */
+/* ‼️ ลิงก์ในข้อความต้องมีพื้นที่กดพอสำหรับนิ้ว — ตัวหนังสือ 12.5px ให้กล่องสูงแค่ 16px
+   (เทส layout จับได้ 60 จุด) · inline-block + padding ทำให้ได้ 36px โดยข้อความยังอยู่บรรทัดเดิม */
 footer a{color:inherit; text-decoration:underline; text-decoration-color:var(--line);
-  text-underline-offset:3px; border-radius:4px}
+  text-underline-offset:3px; border-radius:4px;
+  display:inline-block; padding:10px 6px; min-height:36px; box-sizing:border-box}
 footer a:hover{color:var(--text); text-decoration-color:currentColor}
 footer::before{content:""; position:absolute; inset-inline:0; top:0; height:1px; background:var(--line);
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
@@ -541,13 +565,17 @@ body.tool #home{display:none}
 
 <header class="top">
   <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก" data-en-al="Back to home">
-    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M14 6L30 6L38 14L38 42L14 42Z M20 22A4 4 0 1 0 28 22A4 4 0 1 0 20 22Z M22 25L26 25L24.5 34L23.5 34Z"/></svg></span>
+    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12,4 L31,4 L36,9 L36,14 L22,14 L22,20 L31,20 L31,30 L22,30 L22,44 L12,44 Z"/></svg></span>
     <span>FileKit</span>
   </button>
   <span class="spacer"></span>
-  <button class="iconbtn langbtn" id="lang" type="button" aria-label="เปลี่ยนภาษา" title="เปลี่ยนภาษา" data-en-al="Change language">EN</button>
+  <div class="langsw" id="lang" role="group" aria-label="เลือกภาษา" data-en-al="Choose language">
+    <button class="langopt" type="button" data-lang="th" lang="th">ไทย</button>
+    <button class="langopt" type="button" data-lang="en" lang="en">EN</button>
+  </div>
   <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม" data-en-al="Switch theme"></button>
-  <button class="back" id="back" type="button" data-en="← All tools">← เครื่องมือทั้งหมด</button>
+  <button class="back" id="back" type="button" aria-label="กลับไปหน้าเครื่องมือทั้งหมด"
+    data-en-al="Back to all tools"><span aria-hidden="true">←</span><b data-en="All tools">เครื่องมือทั้งหมด</b></button>
 </header>
 
 <main id="main">
@@ -572,7 +600,7 @@ body.tool #home{display:none}
           <div class="facts">
             <div class="fact"><b id="fact-n">29</b><span data-en="tools">เครื่องมือ</span></div>
             <div class="fact"><b>0</b><span data-en="files uploaded">ไฟล์ที่ถูกอัปโหลด</span></div>
-            <div class="fact"><b>฿0</b><span data-en="free, no ads">ฟรี ไม่มีโฆษณา</span></div>
+            <div class="fact"><b data-en="$0">฿0</b><span data-en="free, no ads">ฟรี ไม่มีโฆษณา</span></div>
           </div>
         </div>
         <!-- ปึกกระดาษไอโซเมตริก วาดด้วย CSS ล้วน (ดู .hero-obj) — เป็นของตกแต่ง ไม่ต้องอ่าน -->

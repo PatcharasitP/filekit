@@ -74,7 +74,8 @@ function autoName(f) {
   sameSec = stamp === lastStamp ? sameSec + 1 : 0;   // แคปรัว ๆ ในวินาทีเดียวกันก็ยังไม่ชนกัน
   lastStamp = stamp;
   // ‼️ สั้นที่สุดเท่าที่ยังบอกได้ว่าอะไร-เมื่อไร — ชื่อยาวถูกตัดกลางคำในแถวไฟล์แคบ ๆ
-  const th = `แคป-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
-  const en = `snap-${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
+  // เหลือแค่เวลา — สั้นที่สุดเท่าที่ยังไม่ซ้ำกัน และไม่ถูกตัดกลางคำในแถวไฟล์แคบ ๆ
+  const name = `${stamp}${sameSec ? "-" + (sameSec + 1) : ""}.${ext}`;
+  const th = name, en = name;
   try { return new File([f], IS_EN ? en : th, { type: f.type }); } catch { return f; }
 }

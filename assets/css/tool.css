@@ -219,9 +219,12 @@
 .btn.ghost:hover{filter:none;background:var(--card-hi);border-color:color-mix(in srgb,var(--ac,var(--brand)) 55%,var(--line))}
 @media (prefers-reduced-motion: reduce){ .btn{transition:filter var(--t-btn,.1s) ease} .btn:hover{transform:none} }
 .btn.danger{background:linear-gradient(135deg,#ff6b81,#ff9068)}
+/* ‼️ 28px เล็กเกินไปทั้งสำหรับนิ้วและสำหรับตา — ลูกศรข้างในดูจิ๋วจนแทบมองไม่เห็น
+   (เจ้าของเว็บทักเอง 08/09/2026) · 36px คือเกณฑ์เดียวกับปุ่มอื่นทั้งเว็บ */
 .icon-btn{
   border:1px solid var(--line);background:var(--card);color:var(--text-dim);cursor:pointer;
-  border-radius:8px;width:28px;height:28px;display:grid;place-items:center;font-size:13px;
+  border-radius:9px;width:36px;height:36px;display:grid;place-items:center;
+  font-size:17px;line-height:1;
 }
 .icon-btn:hover{color:var(--text);border-color:var(--brand)}
 .icon-btn.danger:hover{color:var(--err);border-color:var(--err)}

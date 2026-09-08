@@ -1,5 +1,9 @@
 import sys, pathlib
 from playwright.sync_api import sync_playwright
+import os
+# รับ FK_BASE เหมือนไฟล์เทสอื่น เพื่อยิงใส่เว็บจริง/พอร์ตอื่นได้
+BASE = os.environ.get("FK_BASE", "http://localhost:8899")
+
 S = pathlib.Path("/mnt/c/Users/USER/Desktop/Claude Code/FileKit/samples")
 P,F = 0,[]
 def ck(n,g,w):
@@ -10,7 +14,7 @@ def ck(n,g,w):
 with sync_playwright() as p:
     b=p.chromium.launch(); pg=b.new_page(viewport={"width":1280,"height":950})
     errs=[]; pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto("http://localhost:8899/#/word-mailmerge", wait_until="networkidle")
+    pg.goto(f"{BASE}/#/word-mailmerge", wait_until="networkidle")
     pg.wait_for_selector(".mm-step")
     ck("ตอนเริ่ม ขั้นที่ 3 ล็อกอยู่", pg.locator('.mm-step').nth(2).get_attribute("data-locked"), "1")
     ck("ตอนเริ่ม ขั้นที่ 4 ล็อกอยู่", pg.locator('.mm-step').nth(3).get_attribute("data-locked"), "1")

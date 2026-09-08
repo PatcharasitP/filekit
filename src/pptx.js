@@ -9,6 +9,7 @@
 
 import { loadLibs } from "./loader.js";
 import { tr } from "./i18n.js";
+import { assertNotEmpty, friendlyZipOpenError } from "./filetype.js";
 
 const A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const P = "http://schemas.openxmlformats.org/presentationml/2006/main";
@@ -62,15 +63,22 @@ function readShapes(doc) {
  * คืน { slides: [{ no, title, paras, notes }], images: [{name, blob}] }
  */
 export async function readPptx(file, { withImages = false, onProgress } = {}) {
+  assertNotEmpty(file);
   const [JSZipLib] = await loadLibs("jszip");
-  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+  let buf, zip;
+  try {
+    buf = await file.arrayBuffer();
+    zip = await JSZipLib.loadAsync(buf);
+  } catch (e) {
+    throw friendlyZipOpenError(e, file, buf);
+  }
 
   const slideNames = Object.keys(zip.files)
     .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
     .sort((a, b) => numOf(a) - numOf(b));   // slide10 ต้องมาหลัง slide9 ไม่ใช่หลัง slide1
   if (!slideNames.length)
-    throw new Error(tr("ไม่พบสไลด์ในไฟล์นี้ — ตรวจว่าเป็นไฟล์ .pptx จริงหรือไม่ (ไฟล์ .ppt รุ่นเก่ายังไม่รองรับ)",
-      "No slides found in this file — check that it's really a .pptx (old .ppt files aren't supported yet)"));
+    throw new Error(tr(`${file.name} — ไม่พบสไลด์ในไฟล์ อาจไม่ใช่ .pptx จริง (.ppt รุ่นเก่ายังไม่รองรับ) · ตรวจไฟล์แล้วลองใหม่`,
+      `${file.name} — no slides found, this may not be a real .pptx (.ppt isn't supported yet) · check the file and try again`));
 
   const parser = new DOMParser();
   const slides = [];

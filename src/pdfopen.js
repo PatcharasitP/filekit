@@ -7,18 +7,23 @@
 import { el, button } from "./ui.js";
 import { uiIcon } from "./icons.js";
 import { tr } from "./i18n.js";
+import { assertNotEmpty } from "./filetype.js";
 
-/** แปลง error ของ pdf.js เป็นข้อความไทยที่บอกว่าต้องทำอะไรต่อ */
-export function friendlyPdfError(e) {
+/** แปลง error ของ pdf.js เป็นข้อความไทยที่บอกว่าต้องทำอะไรต่อ (log ของจริงลง console ก่อนเสมอ) */
+export function friendlyPdfError(e, filename) {
+  console.error(e);
   const name = e?.name || "";
   const msg = String(e?.message || e);
+  const pre = filename ? `${filename} — ` : "";
   if (name === "PasswordException" || /password/i.test(msg))
-    return new Error(tr("ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน — ต้องใส่รหัสให้ถูกก่อนจึงจะเปิดได้", "This file is password-protected — you need the correct password to open it"));
+    return new Error(tr(`${pre}ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน — ต้องใส่รหัสให้ถูกก่อนจึงจะเปิดได้`, `${pre}This file is password-protected — you need the correct password to open it`));
   if (name === "InvalidPDFException" || /invalid pdf/i.test(msg))
-    return new Error(tr("ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน", "This isn't a valid PDF, or the file is damaged — try opening it in a PDF reader first"));
+    return new Error(tr(`${pre}ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย · ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน`, `${pre}This isn't a valid PDF, or the file is damaged · try opening it in a PDF reader first`));
   if (/worker/i.test(msg))
-    return new Error(tr("โหลดตัวอ่าน PDF ไม่สำเร็จ — ลองรีเฟรชหน้าเว็บอีกครั้ง", "Could not load the PDF reader — try refreshing the page"));
-  return new Error(msg);
+    return new Error(tr(`${pre}โหลดตัวอ่าน PDF ไม่สำเร็จ — ลองรีเฟรชหน้าเว็บอีกครั้ง`, `${pre}Could not load the PDF reader — try refreshing the page`));
+  if (/out of memory|allocation failed|invalid (string|array|typed array) length/i.test(msg))
+    return new Error(tr(`${pre}ไฟล์ใหญ่เกินไป เบราว์เซอร์ประมวลผลไม่ไหว · ลองแบ่งไฟล์ให้เล็กลงหรือใช้เครื่องแรมเยอะขึ้น`, `${pre}This file is too large for the browser to handle · try splitting it or using a device with more memory`));
+  return new Error(pre + msg);
 }
 
 /** กล่องขอรหัสผ่านแบบอินไลน์ (ไม่ใช้ prompt() เพราะบางเบราว์เซอร์บล็อก) */
@@ -47,6 +52,7 @@ export function passwordBox(container) {
  * askPassword: (wrongBefore) => Promise<string|null>   ส่ง null = ผู้ใช้ยกเลิก
  */
 export async function openPdf(file, askPassword) {
+  assertNotEmpty(file);
   const buf = await file.arrayBuffer();
   let password;
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -57,13 +63,13 @@ export async function openPdf(file, askPassword) {
       if (e?.name === "PasswordException" && askPassword) {
         password = await askPassword(attempt > 0);
         if (password === null || password === undefined)
-          throw new Error(tr("ยกเลิกการเปิดไฟล์ที่ล็อกรหัสผ่าน", "Cancelled opening the password-protected file"));
+          throw new Error(tr(`${file.name} — ยกเลิกการเปิดไฟล์ที่ล็อกรหัสผ่าน`, `${file.name} — cancelled opening the password-protected file`));
         continue;
       }
-      throw friendlyPdfError(e);
+      throw friendlyPdfError(e, file.name);
     }
   }
-  throw new Error(tr("ใส่รหัสผ่านไม่ถูกต้องหลายครั้ง — ลองตรวจสอบรหัสอีกครั้ง", "Wrong password entered too many times — double-check the password and try again"));
+  throw new Error(tr(`${file.name} — ใส่รหัสผ่านไม่ถูกต้องหลายครั้ง · ลองตรวจสอบรหัสอีกครั้ง`, `${file.name} — wrong password entered too many times · double-check the password and try again`));
 }
 
 /**
@@ -72,6 +78,7 @@ export async function openPdf(file, askPassword) {
  * คืน { doc, encrypted } — encrypted = true แปลว่าผลลัพธ์อาจไม่สมบูรณ์
  */
 export async function loadPdfLib(file) {
+  assertNotEmpty(file);
   const { PDFDocument } = PDFLib;
   const buf = await file.arrayBuffer();
   try {
@@ -81,9 +88,10 @@ export async function loadPdfLib(file) {
       const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
       return { doc, encrypted: true };
     }
+    console.error(e);
     if (/invalid|parse/i.test(String(e?.message || e)))
-      throw new Error(tr("ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย", "This isn't a valid PDF, or the file is damaged"));
-    throw e;
+      throw new Error(tr(`${file.name} — ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย · ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน`, `${file.name} — this isn't a valid PDF, or the file is damaged · try opening it in a PDF reader first`));
+    throw new Error(`${file.name} — ${e?.message || e}`);
   }
 }
 

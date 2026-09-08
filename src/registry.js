@@ -122,6 +122,14 @@ export const TOOLS = [
     desc:"ตรวจหลักตรวจสอบเลข 13 หลักทั้งไฟล์ บอกได้ว่าแถวไหนพิมพ์ผิดและควรเป็นเลขอะไร",
     libs:["xlsx"], keys:"บัตรประชาชน เลขบัตร ผู้เสียภาษี tax id 13 หลัก ตรวจสอบ checksum", next:["thai-date","thai-number"] },
 
+  { id:"thai-name", group:"thai", icon:"👤", title:"แยกคำนำหน้า–ชื่อ–นามสกุล",
+    desc:"แยก “นางสาวสมหญิง ใจดี” เป็น 3 คอลัมน์ เรียงลำดับและทำจดหมายเวียนต่อได้",
+    libs:["xlsx"], keys:"ชื่อ นามสกุล คำนำหน้า นาย นาง นางสาว แยกชื่อ split name title prefix hr รายชื่อ", next:["word-mailmerge","thai-id"] },
+
+  { id:"thai-address", group:"thai", icon:"📍", title:"แยกที่อยู่ไทยเป็นคอลัมน์",
+    desc:"แยกตำบล อำเภอ จังหวัด รหัสไปรษณีย์ ออกจากที่อยู่ที่อยู่รวมกันในช่องเดียว",
+    libs:["xlsx"], keys:"ที่อยู่ จังหวัด อำเภอ ตำบล เขต แขวง รหัสไปรษณีย์ address province district subdistrict postcode แยกที่อยู่", next:["word-mailmerge","thai-name"] },
+
   { id:"thai-number", group:"thai", icon:"🔢", title:"ตัวเลข → บาทถ้วน / เลขไทย",
     desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
     libs:["xlsx"], keys:"บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค", next:["word-mailmerge","thai-date"] },
@@ -176,6 +184,8 @@ const EN_TOOLS = {
   "thai-encoding":    ["Repair garbled Thai files", "Opened a CSV and got “เธชเธงเธฑ” or “à¸ªà¸§”? This detects the encoding and saves it back as UTF-8"],
   "thai-date":        ["Buddhist ⇄ Gregorian years", "Reads every Thai date format (15 ม.ค. 2569 · ๑๕/๐๑/๒๕๖๙), converts a whole column, output format is yours to pick"],
   "thai-id":          ["Check Thai ID / tax numbers", "Verify the check digit of every 13-digit number in a file and see which rows are mistyped"],
+  "thai-name":        ["Split Thai name into columns", "Break a full name into title, first name and surname — ready to sort or mail-merge"],
+  "thai-address":     ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
   "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน · swap Thai numerals ๑๒๓ and 123 across a column"],
 };
 

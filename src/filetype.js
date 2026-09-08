@@ -37,6 +37,45 @@ const SUGGEST = {
   image: ["images-to-pdf", "รูปภาพ → PDF", "Image → PDF"],
 };
 
+/** ไฟล์ว่าง 0 ไบต์ — เช็คได้แน่นอนโดยไม่ต้องเดา ควรเรียกก่อนพยายามอ่านไฟล์ใด ๆ ทั้งนั้น */
+export function assertNotEmpty(file) {
+  if (file.size === 0)
+    throw new Error(tr(`${file.name} — ไฟล์นี้ว่างเปล่า (0 ไบต์) · เลือกไฟล์ที่มีเนื้อหาแล้วลองใหม่`,
+      `${file.name} — this file is empty (0 bytes) · choose one that has content and try again`));
+}
+
+const OLE_SIG = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]; // .doc/.ppt/.xls รุ่นเก่า (Compound File)
+const PDF_SIG = [0x25, 0x50, 0x44, 0x46]; // "%PDF"
+function sigMatch(buf, sig) {
+  if (!buf || buf.byteLength < sig.length) return false;
+  const b = new Uint8Array(buf, 0, sig.length);
+  return sig.every((v, i) => b[i] === v);
+}
+
+/**
+ * แปลง error ตอนเปิดไฟล์ที่โครงสร้างเป็น ZIP ภายใน (.docx .pptx .xlsx) เป็นข้อความที่คนอ่าน
+ * แล้วทำต่อได้ — ใช้เมื่อ JSZip.loadAsync()/อ่านชิ้นส่วนข้างในล้มเหลว
+ * ก่อนแปลงจะ log error จริงลง console เสมอ (กันบั๊กหายเงียบ ๆ) · ส่ง buf (ArrayBuffer ของไฟล์)
+ * มาด้วยถ้ามี จะช่วยจับกรณี "นามสกุลถูกแต่ข้างในเป็นไฟล์อื่น" ได้แม่นขึ้น
+ */
+export function friendlyZipOpenError(e, file, buf) {
+  console.error(e);
+  const name = file?.name ? `${file.name} — ` : "";
+  const msg = String(e?.message || e);
+  if (sigMatch(buf, OLE_SIG))
+    return new Error(tr(
+      `${name}ไฟล์ Office รุ่นเก่า (.doc/.ppt/.xls) เปลี่ยนนามสกุลมา · เปิดแล้วบันทึกเป็นรุ่นใหม่ก่อน`,
+      `${name}This is an old Office file (.doc/.ppt/.xls) with a renamed extension — open it and save as the new format first`));
+  if (sigMatch(buf, PDF_SIG))
+    return new Error(tr(`${name}เป็นไฟล์ PDF ที่เปลี่ยนนามสกุลเอง ไม่ใช่ไฟล์นี้จริง · เลือกไฟล์ต้นฉบับที่ถูกต้อง`,
+      `${name}This is actually a PDF with a renamed extension · choose the correct source file`));
+  if (/out of memory|allocation failed|invalid (string|array|typed array) length/i.test(msg))
+    return new Error(tr(`${name}ไฟล์ใหญ่เกินไป เบราว์เซอร์ประมวลผลไม่ไหว · ลองแบ่งไฟล์ให้เล็กลงหรือใช้เครื่องแรมเยอะขึ้น`,
+      `${name}This file is too large for the browser to handle · try splitting it or using a device with more memory`));
+  return new Error(tr(`${name}เปิดไม่ได้ ไฟล์นี้อาจเสียหายหรือเนื้อในไม่ตรงนามสกุล · เปิดต้นฉบับแล้วบันทึกใหม่อีกครั้ง`,
+    `${name}Could not open — the file may be damaged or its content doesn't match the extension · open the original and save again`));
+}
+
 export function detectType(file) {
   const name = (file.name || "").toLowerCase();
   for (const [kind, t] of Object.entries(TYPES)) {

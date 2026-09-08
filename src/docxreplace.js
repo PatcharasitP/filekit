@@ -8,9 +8,27 @@
 // วิธีนี้ทำให้รูปแบบตัวอักษรของคำเดิมถูกรักษาไว้
 
 import { loadLibs } from "./loader.js";
+import { tr } from "./i18n.js";
+import { assertNotEmpty, friendlyZipOpenError } from "./filetype.js";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const PARTS = /^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/;
+
+/** เปิดไฟล์ .docx เป็น JSZip พร้อมแปลง error ให้อ่านรู้เรื่อง — คืน zip หรือ throw ข้อความที่ทำต่อได้ */
+async function openDocxZip(file, JSZipLib) {
+  assertNotEmpty(file);
+  let buf, zip;
+  try {
+    buf = await file.arrayBuffer();
+    zip = await JSZipLib.loadAsync(buf);
+  } catch (e) {
+    throw friendlyZipOpenError(e, file, buf);
+  }
+  if (!zip.file("word/document.xml"))
+    throw new Error(tr(`${file.name} — เนื้อในไม่ใช่ไฟล์ Word (.docx) ที่ถูกต้อง · ตรวจไฟล์ต้นทางแล้วลองใหม่`,
+      `${file.name} — the content inside isn't a valid Word (.docx) file · check the source and try again`));
+  return zip;
+}
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -76,7 +94,7 @@ function replaceInParagraph(p, rules) {
 /** นับจำนวนที่จะถูกแทน โดยไม่แก้ไฟล์ (ใช้ทำพรีวิวก่อนลงมือ) */
 export async function countMatches(file, rules) {
   const [JSZipLib] = await loadLibs("jszip");
-  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+  const zip = await openDocxZip(file, JSZipLib);
   const counts = rules.map(() => 0);
   for (const name of Object.keys(zip.files)) {
     if (!PARTS.test(name)) continue;
@@ -96,7 +114,7 @@ export async function countMatches(file, rules) {
 /** แทนที่จริง คืน { blob, total } */
 export async function replaceInDocx(file, rules) {
   const [JSZipLib] = await loadLibs("jszip");
-  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+  const zip = await openDocxZip(file, JSZipLib);
   const out = new JSZipLib();
   let total = 0;
 

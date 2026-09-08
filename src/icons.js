@@ -47,6 +47,8 @@ export const ICONS = {
   "thai-encoding":`<path d="${DOC}"/><path d="M8 11.4h3.4M8 14.4h6M8 17.4h4"/><circle cx="17.6"cy="16.4"r="4"/><path d="M15.9 16.4l1.2 1.2 2.3-2.4"/>`,
   "thai-date":    `<rect x="3"y="5"width="18"height="16"rx="2.2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M7.5 14.5h3.5M9.5 13.2v3.2"/><path d="M13.5 17.5h3.5M15.5 13.2v3.2"opacity="0"/><path d="M13.4 14.5h3.6"/><path d="M14.2 16.6l2 2"opacity="0"/>`,
   "thai-id":      `<rect x="2.5"y="5"width="19"height="14"rx="2.2"/><circle cx="8.2"cy="10.6"r="2.2"/><path d="M4.8 15.8c.5-1.7 1.9-2.6 3.4-2.6s2.9.9 3.4 2.6"/><path d="M14.5 9.5h4.5M14.5 12.5h4.5M14.5 15.5h2.8"/>`,
+  "thai-name":    `<path d="${DOC}"/><circle cx="14.5" cy="13.2" r="2.4"/><path d="M10.6 20.4a4 4 0 0 1 7.8 0"/>`,
+  "thai-address": `<path d="${DOC}"/><path d="M14.5 20.6s3.6-3.5 3.6-6.2a3.6 3.6 0 1 0-7.2 0c0 2.7 3.6 6.2 3.6 6.2Z"/><circle cx="14.5" cy="14.3" r="1.3"/>`,
   "thai-number":  `<path d="${DOC}"/><path d="M11.6 9.8v10.4"/><path d="M9.8 11.6h3.4a2 2 0 0 1 0 4h-3.4zM9.8 15.6h3.8a2 2 0 0 1 0 4H9.8z"/>`,
 };
 

@@ -1,5 +1,9 @@
 import sys, pathlib
 from playwright.sync_api import sync_playwright
+import os
+# รับ FK_BASE เหมือนไฟล์เทสอื่น เพื่อยิงใส่เว็บจริง/พอร์ตอื่นได้
+BASE = os.environ.get("FK_BASE", "http://localhost:8899")
+
 S = pathlib.Path("/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/fx")
 P,F=0,[]
 def ck(n,g,w,contains=False):
@@ -10,7 +14,7 @@ def ck(n,g,w,contains=False):
     print(f"  {'✅' if ok else '❌'} {n}")
 with sync_playwright() as p:
     b=p.chromium.launch(); pg=b.new_page(viewport={"width":1280,"height":950})
-    pg.goto("http://localhost:8899/#/image-convert", wait_until="networkidle")
+    pg.goto(f"{BASE}/#/image-convert", wait_until="networkidle")
     pg.wait_for_selector(".dz")
     pg.locator("input[type=file]").set_input_files(
         [str(S/"รูปดี1.png"), str(S/"รูปเสีย.png"), str(S/"รูปดี2.png")])

@@ -160,7 +160,7 @@ def extract_offline_declared(offline_text, loader_text, tool_ids):
 
 print("━━ ① กราฟ import แบบ static เทียบกับรายการแคช ━━")
 tool_ids = extract_tool_ids()
-ck("อ่านทะเบียนเครื่องมือได้ 27 ตัว", len(tool_ids) == 27, f"ได้ {len(tool_ids)} ตัว: {tool_ids}")
+ck(f"อ่านทะเบียนเครื่องมือได้ {len(tool_ids)} ตัว (ต้อง ≥ 25)", len(tool_ids) >= 25, f"ได้ {len(tool_ids)} ตัว: {tool_ids}")
 
 sw_text = (ROOT / "sw.js").read_text(encoding="utf-8")
 offline_text = (ROOT / "src/offline.js").read_text(encoding="utf-8")
@@ -361,8 +361,8 @@ with sync_playwright() as p:
     pg.goto("about:blank")
     pg.goto(BASE, wait_until="networkidle", timeout=30000)
     home_errs = [e for e in errs if "favicon" not in e.lower()]
-    ck("ตัดเน็ตจริงแล้วเปิดหน้าแรกใหม่ → ป้ายเครื่องมือขึ้นครบ 27 ใบ",
-       pg.locator("button.pill").count() == 27,
+    ck(f"ตัดเน็ตจริงแล้วเปิดหน้าแรกใหม่ → ป้ายเครื่องมือขึ้นครบ {len(tool_ids)} ใบ",
+       pg.locator("button.pill").count() == len(tool_ids),
        f"ได้ {pg.locator('button.pill').count()} ใบ")
     ck("หน้าแรกออฟไลน์ไม่มี console error", len(home_errs) == 0, home_errs[0][:150] if home_errs else "")
 

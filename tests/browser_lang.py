@@ -12,6 +12,18 @@
 import os, re, sys
 from playwright.sync_api import sync_playwright
 
+# จำนวนเครื่องมืออ่านจากทะเบียนจริง ไม่ฮาร์ดโค้ด — เพิ่มเครื่องมือแล้วเทสไม่แดงเอง
+def _tool_count():
+    import subprocess, json, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    out = subprocess.run(["node", "--input-type=module", "-e",
+        'import {TOOLS} from "./src/registry.js"; console.log(TOOLS.length)'],
+        cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
+    return int(out)
+
+N_TOOLS = _tool_count()
+
+
 BASE = os.environ.get("FK_BASE", "http://localhost:8899")
 THAI = re.compile(r"[฀-๿]")
 P, F = 0, []
@@ -40,15 +52,25 @@ ALLOW = {
     # คำนำหน้าเงื่อนไขตรงข้ามฝั่งไทย — โปรแกรมใช้จริง (src/docxmerge.js negName)
     # เอกสารอังกฤษต้องบอกความจริงว่าเทมเพลตไทยใช้คำนี้ ไม่ใช่ "not"
     "ไม่",
+    # แยกที่อยู่ไทย: คำนำหน้าที่โปรแกรมอ่านได้จริงจากไฟล์ผู้ใช้ (src/tools/thai-address.js)
+    # คนใช้ภาษาอังกฤษที่ได้ไฟล์ที่อยู่ไทยมา ต้องรู้ว่าเขียนแบบไหนถึงจะอ่านออก
+    "ต./ตำบล/แขวง", "อ./อำเภอ/เขต", "จ./จังหวัด", "กรุงเทพฯ/กทม.", "ต./อ./จ.",
+    # ตัวอย่างชื่อในคำอธิบายเครื่องมือแยกชื่อ (แสดงว่าเครื่องมือทำอะไรได้ชัดกว่าคำอธิบาย)
+    "นางสาวสมหญิง ใจดี", "ณ อยุธยา",
     # ฿ คือสัญลักษณ์สกุลเงิน (U+0E3F) บังเอิญอยู่ในบล็อกอักษรไทย — ไม่ใช่ตัวหนังสือ
     "฿",
 }
 
-TOOLS = ["pdf-pages","pdf-merge","pdf-split","pdf-compress","pdf-sign","pdf-watermark","pdf-ocr",
-         "pdf-to-images","pdf-to-text","pdf-to-word","pdf-to-excel","word-to-pdf","excel-to-pdf",
-         "images-to-pdf","image-convert","image-resize","word-join","word-replace","word-clean",
-         "word-mailmerge","powerpoint-to-word","powerpoint-to-pdf","excel-csv",
-         "thai-encoding","thai-date","thai-id","thai-number"]
+# รายชื่อเครื่องมืออ่านจากทะเบียนจริง — เพิ่มเครื่องมือแล้วเทสตามเองอัตโนมัติ
+def _tool_ids():
+    import subprocess, json, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    out = subprocess.run(["node", "--input-type=module", "-e",
+        'import {TOOLS} from "./src/registry.js"; console.log(JSON.stringify(TOOLS.map(t=>t.id)))'],
+        cwd=str(root), capture_output=True, text=True, check=True).stdout
+    return json.loads(out)
+
+TOOLS = _tool_ids()
 
 # ดึงเฉพาะ "ตัวอักษรที่ตามนุษย์มองเห็น" — ข้าม script/style และของที่ถูกซ่อน
 VISIBLE_TEXT = """() => {
@@ -121,8 +143,8 @@ def main():
         left = thai_leftovers(pg.evaluate(VISIBLE_TEXT))
         ck(f"หน้าแรก ไม่มีไทยตกค้าง", not left, "\n      เจอ: " + " | ".join(left[:8]))
 
-        ck("ชื่อเครื่องมือบนหน้าแรกเป็นอังกฤษครบ 27",
-           len([t for t in pg.locator(".pill").all_inner_texts() if not THAI.search(t)]) == 27)
+        ck(f"ชื่อเครื่องมือบนหน้าแรกเป็นอังกฤษครบ {N_TOOLS}",
+           len([t for t in pg.locator(".pill").all_inner_texts() if not THAI.search(t)]) == N_TOOLS)
 
         for tid in TOOLS:
             pg.goto(f"{BASE}#/{tid}", wait_until="networkidle"); pg.wait_for_timeout(650)
@@ -147,7 +169,7 @@ def main():
             # เครื่องมือแบบแผงทำงานใช้ h2 ไม่ใช่ h1 — ดูทั้งกล่องแทนการเจาะ selector เดียว
             if pg.locator("#tool").count() and THAI.search(pg.locator("#tool").inner_text()):
                 opened += 1
-        ck(f"เปิดครบ 27 เครื่องมือและหัวเรื่องยังเป็นไทย (ได้ {opened})", opened == 27)
+        ck(f"เปิดครบ {N_TOOLS} เครื่องมือและหัวเรื่องยังเป็นไทย (ได้ {opened})", opened == N_TOOLS)
         ck("โหมดไทยไม่มี error ใน console", not errs, "\n      " + " | ".join(errs[:4]))
         ctx.close()
         b.close()

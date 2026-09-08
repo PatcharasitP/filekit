@@ -153,6 +153,38 @@ export function resultRow(name, blob, extra) {
   ]);
 }
 
+/**
+ * ไฟล์ตัวอย่างสำหรับปุ่ม "ลองด้วยไฟล์ตัวอย่าง" ใต้กล่องลากวาง — คีย์ตรงกับ kind ของ detectType()
+ * แต่ละรายการ: [path ใน samples/, ป้ายไทย, ป้ายอังกฤษ] · เนื้อหาทั้งหมดเป็นข้อมูลสมมติ ไม่ใช่ของจริง
+ * ‼️ ลำดับใน SAMPLE_KIND_PRIORITY ใช้ตัดสินว่าเครื่องมือที่รับหลายชนิด (เช่น pdf-ocr รับ pdf+image)
+ *    จะโหลดตัวอย่างชนิดไหนก่อน
+ */
+const SAMPLE_KIND_PRIORITY = ["pdf", "docx", "xlsx", "pptx", "image", "csv"];
+const SAMPLE_FILES = {
+  pdf: [
+    ["samples/ตัวอย่าง-รายงานประจำเดือน.pdf", "รายงานยอดขายตัวอย่าง (PDF)", "Sample sales report (PDF)"],
+    ["samples/ตัวอย่าง-ใบปะหน้าเอกสาร.pdf", "ใบปะหน้าเอกสารตัวอย่าง (PDF)", "Sample cover sheet (PDF)"],
+  ],
+  docx: [
+    ["samples/ตัวอย่าง-ใบเสนอราคา.docx", "ใบเสนอราคาตัวอย่าง (Word)", "Sample quotation (Word)"],
+    ["samples/ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx", "หนังสือแจ้งผลตัวอย่าง (Word)", "Sample notice letter (Word)"],
+  ],
+  xlsx: [
+    ["samples/ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx", "ข้อมูลใบเสนอราคาตัวอย่าง (Excel)", "Sample quotation data (Excel)"],
+    ["samples/ตัวอย่าง-ข้อมูลพนักงาน.xlsx", "ข้อมูลพนักงานตัวอย่าง (Excel)", "Sample employee data (Excel)"],
+  ],
+  pptx: [
+    ["samples/ตัวอย่าง-นำเสนอบริษัท.pptx", "งานนำเสนอตัวอย่าง (PowerPoint)", "Sample presentation (PowerPoint)"],
+  ],
+  image: [
+    ["samples/ตัวอย่าง-รูปภาพ-1.jpg", "รูปภาพตัวอย่าง 1 (JPG)", "Sample image 1 (JPG)"],
+    ["samples/ตัวอย่าง-รูปภาพ-2.png", "รูปภาพตัวอย่าง 2 (PNG)", "Sample image 2 (PNG)"],
+  ],
+  csv: [
+    ["samples/ตัวอย่าง-รายชื่อสินค้า.csv", "รายชื่อสินค้าตัวอย่าง (CSV)", "Sample product list (CSV)"],
+  ],
+};
+
 /** ── กล่องลากวางไฟล์ ───────────────────────────────────────────────────── */
 export function dropzone(opts = {}) {
   const {
@@ -296,7 +328,42 @@ export function dropzone(opts = {}) {
 
   const count = el("div", { class: "dz-count" });
   const warn = el("div", {});
-  const container = el("div", {}, [zone, warn, count, list]);
+
+  // ‼️ ปุ่ม "ลองด้วยไฟล์ตัวอย่าง" — โผล่เฉพาะเมื่อ opts.expect บอกชนิดไฟล์ไว้ชัดเจน
+  //    โหลดจริงเฉพาะตอนกด (fetch ใน onclick) ไม่โหลดตอนเปิดหน้า จึงไม่ถ่วงหน้าแรก
+  const sampleKind = expect && SAMPLE_KIND_PRIORITY.find((k) => expect.includes(k) && SAMPLE_FILES[k]);
+  let sampleBox = null;
+  if (sampleKind) {
+    const entries = SAMPLE_FILES[sampleKind].slice(0, multiple ? 2 : 1);
+    const sampleErr = el("small", { class: "dz-sample-err", style: { display: "block", marginTop: "6px", color: "var(--err)" } });
+    const sampleBtn = button(tr("ลองด้วยไฟล์ตัวอย่าง", "Try a sample file"), {
+      ghost: true,
+      onclick: async () => {
+        sampleBtn.disabled = true;
+        sampleBtn.textContent = tr("กำลังโหลด…", "Loading…");
+        sampleErr.textContent = "";
+        try {
+          const loaded = [];
+          for (const [path, , ] of entries) {
+            const res = await fetch(path);
+            if (!res.ok) throw new Error("fetch failed: " + path);
+            const blob = await res.blob();
+            loaded.push(new File([blob], path.split("/").pop(), { type: blob.type }));
+          }
+          add(loaded);
+        } catch (e) {
+          // ออฟไลน์/ไฟล์หาย/ถูกบล็อก — บอกสั้น ๆ ไม่ให้หน้าเครื่องมือพัง
+          sampleErr.textContent = tr("โหลดไฟล์ตัวอย่างไม่สำเร็จ ลองใหม่อีกครั้ง", "Couldn't load the sample file — please try again.");
+        } finally {
+          sampleBtn.disabled = false;
+          sampleBtn.textContent = tr("ลองด้วยไฟล์ตัวอย่าง", "Try a sample file");
+        }
+      },
+    });
+    sampleBox = el("div", { class: "dz-sample", style: { marginTop: "10px" } }, [sampleBtn, sampleErr]);
+  }
+
+  const container = el("div", {}, [zone, sampleBox, warn, count, list]);
   return { container, get files() { return files; },
            clear() { files = []; warn.innerHTML = ""; render(); onChange(files); } };
 }

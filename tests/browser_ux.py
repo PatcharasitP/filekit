@@ -1,5 +1,26 @@
 import sys, pathlib
 from playwright.sync_api import sync_playwright
+
+# จำนวนเครื่องมืออ่านจากทะเบียนจริง ไม่ฮาร์ดโค้ด — เพิ่มเครื่องมือแล้วเทสไม่แดงเอง
+def _tool_count():
+    import subprocess, json, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    out = subprocess.run(["node", "--input-type=module", "-e",
+        'import {TOOLS} from "./src/registry.js"; console.log(TOOLS.length)'],
+        cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
+    return int(out)
+
+N_TOOLS = _tool_count()
+
+# จำนวนเครื่องมือในหมวดหนึ่ง ๆ — อ่านจากทะเบียนเช่นกัน
+def _group_count(gid):
+    import subprocess, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    out = subprocess.run(["node", "--input-type=module", "-e",
+        f'import {{TOOLS}} from "./src/registry.js"; console.log(TOOLS.filter(t=>t.group==="{gid}").length)'],
+        cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
+    return int(out)
+
 BASE = __import__("os").environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
 P, F = 0, []
 def ck(n, got, want, contains=False):
@@ -47,18 +68,19 @@ with sync_playwright() as p:
     pg.goto(BASE, wait_until="networkidle")
 
     print("\n━━ ① โครงหน้าแรก ━━")
-    ck("ป้ายเครื่องมือครบ 27 ใบ", pg.locator("button.pill").count(), 27)
+    ck(f"ป้ายเครื่องมือครบ {N_TOOLS} ใบ", pg.locator("button.pill").count(), N_TOOLS)
     ck("มีแถบหมวด 9 ปุ่ม (ทั้งหมด + 8 หมวด)", pg.locator(".cat").count(), 9)
-    ck("ปุ่ม 'ทั้งหมด' บอกจำนวนถูก", pg.locator(".cat").first.inner_text().replace("\n","").replace(" ",""), "ทั้งหมด27")
+    ck("ปุ่ม 'ทั้งหมด' บอกจำนวนถูก", pg.locator(".cat").first.inner_text().replace("\n","").replace(" ",""), f"ทั้งหมด{N_TOOLS}")
     ck("มีลิงก์ข้ามไปเนื้อหา (skip link)", pg.locator("a.skip").count(), 1)
-    ck("แถบสถิติโชว์จำนวนเครื่องมือจริง", pg.locator("#fact-n").inner_text(), "27")
+    ck("แถบสถิติโชว์จำนวนเครื่องมือจริง", pg.locator("#fact-n").inner_text(), str(N_TOOLS))
 
     print("\n━━ ② กรองตามหมวด ━━")
     pg.locator(".cat", has_text="งานไทย").click(); pg.wait_for_timeout(250)
-    ck("กดหมวดงานไทย → เหลือ 4 ใบ", pg.locator("button.pill, button.card").count(), 4)
-    ck("ปุ่มหมวดขึ้นสถานะถูกเลือก", pg.locator('.cat[aria-pressed="true"]').inner_text().replace("\n","").replace(" ",""), "งานไทย4")
+    _thai_n = _group_count("thai")
+    ck(f"กดหมวดงานไทย → เหลือ {_thai_n} ใบ", pg.locator("button.pill, button.card").count(), _thai_n)
+    ck("ปุ่มหมวดขึ้นสถานะถูกเลือก", pg.locator('.cat[aria-pressed="true"]').inner_text().replace("\n","").replace(" ",""), f"งานไทย{_thai_n}")
     pg.locator(".cat", has_text="งานไทย").click(); pg.wait_for_timeout(250)
-    ck("กดซ้ำ → กลับมาครบ 27", pg.locator("button.pill, button.card").count(), 27)
+    ck(f"กดซ้ำ → กลับมาครบ {N_TOOLS}", pg.locator("button.pill, button.card").count(), N_TOOLS)
 
     print("\n━━ ③ ค้นหา ━━")
     q = pg.locator("#q")
@@ -74,7 +96,7 @@ with sync_playwright() as p:
     q.fill("zzzxyq"); pg.wait_for_timeout(300)
     ck("ไม่เจอ → ขึ้นข้อความช่วยเหลือ", pg.locator(".empty b").inner_text(), "ไม่พบเครื่องมือ", contains=True)
     pg.locator(".empty button").click(); pg.wait_for_timeout(250)
-    ck("กดปุ่มล้างในหน้าไม่เจอ → กลับมาครบ", pg.locator("button.pill, button.card").count(), 27)
+    ck("กดปุ่มล้างในหน้าไม่เจอ → กลับมาครบ", pg.locator("button.pill, button.card").count(), N_TOOLS)
 
     print("\n━━ ④ คีย์บอร์ด ━━")
     pg.locator("body").click(position={"x":5,"y":400})
@@ -107,7 +129,7 @@ with sync_playwright() as p:
     # แถว "เพิ่งใช้ล่าสุด" ที่เคยอยู่เฉพาะมุมมองละเอียด ย้ายมาเป็นแถวป้ายกลมบนสุดแล้ว
     ck("ไม่มีปุ่มสลับมุมมองแล้ว", pg.locator("#density").count(), 0)
     ck("มีปุ่มเปลี่ยนภาษาแทน", pg.locator("#lang").count(), 1)
-    ck("เครื่องมือทุกตัวแสดงเป็นป้ายกลม", pg.locator(".pill").count(), 27)
+    ck(f"เครื่องมือทุกตัวแสดงเป็นป้ายกลม", pg.locator(".pill").count(), N_TOOLS)
     ck("ไม่มีการ์ดแบบเก่าเหลืออยู่", pg.locator("button.card").count(), 0)
 
     # ‼️ ไอคอนทุกตัวต้องถูก "ลากเส้น" ไม่ใช่ "ระบายทึบ"
@@ -124,7 +146,7 @@ with sync_playwright() as p:
       return bad;
     }"""
     ck("ไอคอนทุกตัววาดเป็นเส้น ไม่ใช่ก้อนทึบ", pg.evaluate(ICON_STROKE), [])
-    ck("มีไอคอนครบทุกป้าย", pg.locator(".pill .ico-svg").count(), 27)
+    ck("มีไอคอนครบทุกป้าย", pg.locator(".pill .ico-svg").count(), N_TOOLS)
 
     print("\n━━ ⑥ ความคมชัดสี (WCAG AA ต้อง ≥ 4.5) ━━")
     for scheme, label in [("dark","โหมดมืด"), ("light","โหมดสว่าง")]:

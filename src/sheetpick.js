@@ -72,6 +72,10 @@ export const cellText = (v) =>
  *   options(refresh) -> { node, read() }   ตัวเลือกเฉพาะเครื่องมือ
  *   convert(value, opts) -> null (ข้ามเพราะว่าง) | {ok:true, value} | {ok:false, reason}
  *   outName(opts, srcName) -> ชื่อคอลัมน์ผลลัพธ์
+ *
+ *   ‼️ รองรับผลหลายคอลัมน์: ถ้า outName คืน "อาร์เรย์ของชื่อ" แทนสตริงเดี่ยว
+ *      convert ต้องคืน value เป็นอาร์เรย์ความยาวเท่ากัน (เช่น แยกที่อยู่เป็น 4 ช่อง)
+ *      โหมด "เขียนทับ" จะถูกปิดอัตโนมัติ เพราะเขียนทับ 1 ช่องด้วย 4 ค่าไม่ได้
  *   suffix -> ต่อท้ายชื่อไฟล์ที่ดาวน์โหลด
  * }
  */
@@ -181,13 +185,24 @@ export function columnTool(tool, cfg) {
       const t = el("table", { class: "xt" }, [
         el("thead", {}, [el("tr", {}, [
           el("th", {}, tr("แถว", "Row")), el("th", {}, table.header[c] + tr(" (เดิม)", " (original)")),
-          el("th", {}, "→"), el("th", {}, cfg.outName(o, table.header[c])),
+          el("th", {}, "→"),
+      ...(Array.isArray(cfg.outName(o, table.header[c]))
+          ? cfg.outName(o, table.header[c]).map((n) => el("th", {}, n))
+          : [el("th", {}, cfg.outName(o, table.header[c]))]),
         ])]),
         el("tbody", {}, rows.map(([i, res]) => el("tr", { class: res.ok ? "" : "bad" }, [
           el("td", { class: "num" }, String(i + 2)),
           el("td", { class: "old" }, cellText(table.rows[i][c])),
           el("td", { class: "arrow" }, res.ok ? "→" : "✕"),
-          el("td", { class: "new" }, res.ok ? String(res.value) : (res.reason || tr("อ่านไม่ออก", "Could not read"))),
+          ...(() => {
+            const names = cfg.outName(o, table.header[c]);
+            const n = Array.isArray(names) ? names.length : 1;
+            if (!res.ok) return [el("td", { class: "new", colspan: n > 1 ? String(n) : null },
+                                    res.reason || tr("อ่านไม่ออก", "Could not read"))];
+            const vals = Array.isArray(res.value) ? res.value : [res.value];
+            return Array.from({ length: n }, (_, k) =>
+              el("td", { class: "new" }, vals[k] == null ? "" : String(vals[k])));
+          })(),
         ]))),
       ]);
       preview.appendChild(t);
@@ -203,20 +218,27 @@ export function columnTool(tool, cfg) {
     const { out, stat, o, c } = computeAll();
     const srcName = table.header[c];
     const outCol = cfg.outName(o, srcName);
+    const multi = Array.isArray(outCol);          // ผลลัพธ์หลายคอลัมน์
+    const names = multi ? outCol : [outCol];
     const header = table.header.slice();
-    let target = c;
-    if (modeSel.value === "add") { target = c + 1; header.splice(target, 0, outCol); }
-    else header[c] = outCol;
+    const overwrite = !multi && modeSel.value === "replace";   // หลายคอลัมน์เขียนทับไม่ได้
+    const target = c + 1;
+    if (overwrite) header[c] = names[0];
+    else header.splice(target, 0, ...names);
 
     const rows = table.rows.map((r, i) => {
       const res = out[i];
-      const v = res.skip ? null
+      const raw = res.skip ? null
         : res.ok ? res.value
         : cfg.writeFail ? (res.value ?? res.reason ?? "")
         : cellText(r[c]);
+      // ค่าเดี่ยวที่ตกลงมาในโหมดหลายคอลัมน์ (เช่นแถวว่าง/อ่านไม่ออก) ให้ลงช่องแรก ที่เหลือว่าง
+      const cells = multi
+        ? (Array.isArray(raw) ? names.map((_, k) => raw[k] ?? null) : [raw, ...names.slice(1).map(() => null)])
+        : [raw];
       const nr = r.slice();
-      if (modeSel.value === "add") nr.splice(target, 0, v);
-      else nr[c] = v;
+      if (overwrite) nr[c] = cells[0];
+      else nr.splice(target, 0, ...cells);
       return nr;
     });
     await yieldToBrowser();

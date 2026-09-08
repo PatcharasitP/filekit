@@ -1,6 +1,18 @@
 import re, sys, pathlib
 from playwright.sync_api import sync_playwright
 
+# จำนวนเครื่องมืออ่านจากทะเบียนจริง ไม่ฮาร์ดโค้ด — เพิ่มเครื่องมือแล้วเทสไม่แดงเอง
+def _tool_count():
+    import subprocess, json, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    out = subprocess.run(["node", "--input-type=module", "-e",
+        'import {TOOLS} from "./src/registry.js"; console.log(TOOLS.length)'],
+        cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
+    return int(out)
+
+N_TOOLS = _tool_count()
+
+
 BASE = __import__("os").environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
 FX = pathlib.Path("/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/fx")
 OUT = FX / "downloads"; OUT.mkdir(exist_ok=True)
@@ -22,7 +34,7 @@ with sync_playwright() as p:
     # ── ① หน้าแรก ──────────────────────────────────────────────
     print("\n━━ ① หน้าแรกเห็นเครื่องมือใหม่ ━━")
     pg.goto(BASE, wait_until="networkidle")
-    ck("จำนวนเครื่องมือทั้งหมด", pg.locator("button.pill, button.card").count(), 27)
+    ck("จำนวนเครื่องมือทั้งหมด", pg.locator("button.pill, button.card").count(), N_TOOLS)
     ck("มีหมวด 'งานเอกสารไทย'", pg.get_by_text("งานเอกสารไทย", exact=True).count() >= 1, True)
     for tid in ["thai-encoding","thai-date","thai-id","thai-number"]:
         ck(f"มีเครื่องมือ {tid}", pg.locator(f'button.pill[data-id="{tid}"], button.card[data-id="{tid}"]').count(), 1)

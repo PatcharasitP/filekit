@@ -7,9 +7,26 @@
 // ข้อมูลรั่วที่สุด ย่อมไม่ควรถูกอัปโหลดขึ้นเว็บใครเพื่อ "ล้างข้อมูล"
 import { loadLibs } from "./loader.js";
 import { tr } from "./i18n.js";
+import { assertNotEmpty, friendlyZipOpenError } from "./filetype.js";
 
 const RELS = "word/_rels/document.xml.rels";
 const CT = "[Content_Types].xml";
+
+/** เปิดไฟล์ .docx เป็น JSZip พร้อมแปลง error ให้อ่านรู้เรื่อง — คืน zip หรือ throw ข้อความที่ทำต่อได้ */
+async function openDocxZip(file, JSZipLib) {
+  assertNotEmpty(file);
+  let buf, zip;
+  try {
+    buf = await file.arrayBuffer();
+    zip = await JSZipLib.loadAsync(buf);
+  } catch (e) {
+    throw friendlyZipOpenError(e, file, buf);
+  }
+  if (!zip.file("word/document.xml"))
+    throw new Error(tr(`${file.name} — เนื้อในไม่ใช่ไฟล์ Word (.docx) ที่ถูกต้อง · ตรวจไฟล์ต้นทางแล้วลองใหม่`,
+      `${file.name} — the content inside isn't a valid Word (.docx) file · check the source and try again`));
+  return zip;
+}
 
 /** ไฟล์ส่วนที่เก็บคอมเมนต์ (Word แยกไว้หลายไฟล์ตามเวอร์ชัน) */
 const COMMENT_PARTS = /^word\/comments(Extended|Ids|Extensible)?\.xml$/;
@@ -19,7 +36,7 @@ const countAll = (s, re) => (s.match(re) || []).length;
 /** อ่านว่าไฟล์นี้มีร่องรอยอะไรติดมาบ้าง (ไม่แก้ไขไฟล์) */
 export async function inspect(file) {
   const [JSZipLib] = await loadLibs("jszip");
-  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+  const zip = await openDocxZip(file, JSZipLib);
   const names = Object.keys(zip.files);
   const doc = zip.file("word/document.xml") ? await zip.file("word/document.xml").async("string") : "";
 
@@ -95,7 +112,7 @@ const stripRsid = (xml) => xml.replace(/\s+w:rsid[A-Za-z]*="[^"]*"/g, "");
 export async function clean(file, options = {}) {
   const { comments = true, trackChanges = true, metadata = true, rsid = true } = options;
   const [JSZipLib] = await loadLibs("jszip");
-  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+  const zip = await openDocxZip(file, JSZipLib);
   const removed = [];
 
   const names = Object.keys(zip.files);

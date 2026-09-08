@@ -11,6 +11,7 @@
 
 import { loadLibs } from "./loader.js";
 import { tr } from "./i18n.js";
+import { assertNotEmpty, friendlyZipOpenError } from "./filetype.js";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -24,15 +25,30 @@ const PAGE_BREAK =
  * options: pageBreak = แทรกการขึ้นหน้าใหม่ระหว่างไฟล์
  * คืน { blob, parts } — parts บอกว่าดึงเนื้อหาจากไฟล์ไหนมากี่ย่อหน้า
  */
+/** เปิดไฟล์ .docx เป็น JSZip พร้อมแปลง error ให้อ่านรู้เรื่อง — คืน zip หรือ throw ข้อความที่ทำต่อได้ */
+async function openDocxZip(file, JSZipLib) {
+  assertNotEmpty(file);
+  let buf, zip;
+  try {
+    buf = await file.arrayBuffer();
+    zip = await JSZipLib.loadAsync(buf);
+  } catch (e) {
+    throw friendlyZipOpenError(e, file, buf);
+  }
+  return zip;
+}
+
 export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
   if (files.length < 2) throw new Error(tr("ต้องเลือกอย่างน้อย 2 ไฟล์จึงจะรวมได้", "Choose at least 2 files to combine them"));
   const [JSZipLib] = await loadLibs("jszip");
 
-  const base = await JSZipLib.loadAsync(await files[0].arrayBuffer());
-  const baseDocXml = await base.file("word/document.xml").async("string");
+  const base = await openDocxZip(files[0], JSZipLib);
+  const baseDocFile = base.file("word/document.xml");
+  if (!baseDocFile) throw new Error(tr(`${files[0].name} — เนื้อในไม่ใช่ไฟล์ Word (.docx) ที่ถูกต้อง · ตรวจไฟล์ต้นทางแล้วลองใหม่`, `${files[0].name} — the content inside isn't a valid Word (.docx) file · check the source and try again`));
+  const baseDocXml = await baseDocFile.async("string");
   const baseDoc = new DOMParser().parseFromString(baseDocXml, "application/xml");
   const body = baseDoc.getElementsByTagNameNS(W, "body")[0];
-  if (!body) throw new Error(tr(`เปิดไฟล์ “${files[0].name}” ไม่ได้ — อาจไม่ใช่ .docx ที่ถูกต้อง`, `Could not open "${files[0].name}" — it may not be a valid .docx`));
+  if (!body) throw new Error(tr(`${files[0].name} — เปิดไม่ได้ อาจไม่ใช่ .docx ที่ถูกต้อง · ตรวจไฟล์ต้นทางแล้วลองใหม่`, `${files[0].name} — could not open, it may not be a valid .docx · check the source and try again`));
 
   const baseRelsXml = base.file("word/_rels/document.xml.rels")
     ? await base.file("word/_rels/document.xml.rels").async("string")

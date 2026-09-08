@@ -517,6 +517,12 @@
      ส่วนแผงรายการ (ซ้าย) จำกัดความสูงได้ เพราะรายการยาวได้ไม่จำกัด */
   .ws-right .ws-scroll{max-height:none}
   .ws-left .ws-scroll{max-height:340px}
+
+  /* ‼️ จอแคบ: ปิด scroll ซ้อนของแผง ให้ทั้งหน้าเลื่อนเป็นชิ้นเดียว
+     เดิมแผงตั้งค่ามีแถบเลื่อนของตัวเองอยู่ในหน้าที่เลื่อนได้อีกที นิ้วเลื่อนแล้วเดาไม่ถูกว่าอะไรจะขยับ
+     และทำให้ปุ่มลอยล่างจอทำงานไม่ได้ เพราะ sticky เกาะกับกล่องที่เลื่อนใกล้สุด (แผงใน) ไม่ใช่จอ */
+  .ws-panel{overflow:visible}
+  .ws-scroll,.ws-left .ws-scroll,.ws-right .ws-scroll{overflow:visible; max-height:none}
 }
 
 /* ‼️ ช่องกรอก/ดรอปดาวน์ต้อง 'ดูกรอกได้' ก่อนผู้ใช้จะรู้ว่ากดได้
@@ -538,3 +544,29 @@ select,
 .btn,.btn.ghost{min-height:36px}
 .icon-btn{width:36px;height:36px}
 .chip{min-height:36px}
+
+/* ══ มือถือ: ปุ่มหลักต้องอยู่ในมือเสมอ ══
+   วัดจริงบนจอ 390×844: ปุ่มลงมือทำอยู่ลึก **1.3–2.5 หน้าจอ** ทุกเครื่องมือ
+   (pdf-sign 1.76 · image-resize 1.75 · บางตัวหาไม่เจอเพราะหน้ายาว 2.5 หน้าจอตั้งแต่ยังไม่ใส่ไฟล์)
+   ผู้ใช้ต้องเลื่อนผ่านกล่องลากไฟล์ + พรีวิว + ตัวเลือกทั้งหมดกว่าจะถึงปุ่ม
+   Squoosh แก้ด้วยแถบปุ่มลอยติดล่างจอตลอดเวลา — ทำแบบเดียวกันด้วย CSS ล้วน 0 ไบต์ JS
+
+   ‼️ ใช้ position:sticky ไม่ใช่ fixed — sticky เกาะอยู่ในสายการไหลของหน้า
+      จึงไม่ทับเนื้อหาอื่นและไม่ต้องเผื่อ padding ท้ายหน้า
+   ‼️ เฉพาะจอแคบ จอใหญ่ปล่อยไว้เหมือนเดิม (ปุ่มอยู่ในสายตาอยู่แล้ว) */
+@media (max-width:720px){
+  .actions{
+    position:sticky; bottom:0; z-index:6;
+    margin-inline:calc(var(--sp4) * -1);
+    padding:var(--sp3) var(--sp4) calc(var(--sp3) + env(safe-area-inset-bottom,0px));
+    background:color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border-top:1px solid var(--line-soft);
+  }
+  .actions .btn{flex:1 1 auto; min-width:0}
+
+  /* กล่องลากไฟล์เตี้ยลงตอนยังไม่มีไฟล์ — เดิมกินครึ่งจอแรก ดันพรีวิวลงไปที่ 707-761px
+     บนจอสูง 844px แปลว่าแทบไม่เห็นพรีวิวเลยจนกว่าจะเลื่อน ทั้งที่พรีวิวคือสิ่งที่อยากเห็นที่สุด */
+  .dz{padding:var(--sp5) var(--sp4)}
+  .dz-safe{margin-top:var(--sp3)}
+}

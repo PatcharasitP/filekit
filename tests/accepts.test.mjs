@@ -45,5 +45,28 @@ for (const f of toolFiles.sort()) {
   }
 }
 
+/* ‼️ ตัวเลขจำนวนเครื่องมือที่เขียนค้างไว้ในหน้า HTML
+   เพิ่มเครื่องมือจาก 27 เป็น 29 แล้วลืมแก้ในหน้า → ผู้ใช้เห็น "27" แวบหนึ่งก่อน JS แก้เป็น 29
+   และ meta ตอนแชร์ลิงก์ (og:description / JSON-LD) ยังโฆษณาเลขเก่าค้างอยู่
+   (พี่ปอนด์เห็นเองตอน Ctrl+Shift+R 08/09/2026) */
+const html = readFileSync(join(ROOT, "index.html"), "utf8");
+// ‼️ นับจากไฟล์เครื่องมือจริง ไม่ใช่ regex id: ในทะเบียน — ทะเบียนมี id ของ "หมวด" ปนอยู่ด้วย
+//    (เขียนครั้งแรกด้วย regex แล้วได้ 37 = 29 เครื่องมือ + 8 หมวด → เทสฟ้องผิดจุด)
+const toolCount = toolFiles.length;
+ck(toolCount > 0, `นับเครื่องมือได้ (${toolCount} ตัว — ประชากรต้องไม่เป็นศูนย์)`);
+
+const factN = html.match(/id="fact-n"[^>]*>(\d+)</);
+ck(!!factN && +factN[1] === toolCount,
+   `ตัวเลขบนฉากเปิด (id="fact-n") ต้องเท่ากับจำนวนเครื่องมือจริง (หน้าเขียน ${factN ? factN[1] : "ไม่เจอ"} · จริง ${toolCount})`);
+
+for (const [what, re] of [
+  ["og:description", /property="og:description"[^>]*content="(\d+)/],
+  ["og:image:alt", /property="og:image:alt"[^>]*content="[^"]*?(\d+) เครื่องมือ/],
+  ["JSON-LD description", /"description":"(\d+) เครื่องมือ/],
+]) {
+  const m = html.match(re);
+  ck(!!m && +m[1] === toolCount, `${what} ต้องบอกจำนวนเครื่องมือให้ตรง (หน้าเขียน ${m ? m[1] : "ไม่เจอ"} · จริง ${toolCount})`);
+}
+
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);
 process.exit(fail.length ? 1 : 0);

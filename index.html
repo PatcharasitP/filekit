@@ -16,12 +16,12 @@
 <meta property="og:site_name" content="FileKit">
 <meta property="og:locale" content="th_TH">
 <meta property="og:title" content="FileKit — เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน">
-<meta property="og:description" content="27 เครื่องมือ แปลง รวม แยก บีบอัด PDF · Word · Excel · รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
+<meta property="og:description" content="29 เครื่องมือ แปลง รวม แยก บีบอัด PDF · Word · Excel · รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
 <meta property="og:url" content="https://patcharasitp.github.io/filekit/">
 <meta property="og:image" content="https://patcharasitp.github.io/filekit/assets/social/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="FileKit — 27 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
+<meta property="og:image:alt" content="FileKit — 29 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Cpath%20fill%3D%22%234a5bd1%22%20fill-rule%3D%22evenodd%22%20d%3D%22M14%206L30%206L38%2014L38%2042L14%2042Z%20M20%2022A4%204%200%201%200%2028%2022A4%204%200%201%200%2020%2022Z%20M22%2025L26%2025L24.5%2034L23.5%2034Z%22/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
@@ -41,7 +41,7 @@
  "applicationCategory":"UtilitiesApplication","operatingSystem":"Any web browser",
  "inLanguage":["th-TH","en"],"isAccessibleForFree":true,
  "browserRequirements":"ต้องเปิดใช้งาน JavaScript",
- "description":"27 เครื่องมือแปลง รวม แยก บีบอัด PDF · Word · Excel · PowerPoint · รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
+ "description":"29 เครื่องมือแปลง รวม แยก บีบอัด PDF · Word · Excel · PowerPoint · รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"THB"},
  "featureList":["รวมไฟล์ PDF","แยกไฟล์ PDF","บีบอัดไฟล์ PDF","จัดการหน้า PDF","เซ็นชื่อบน PDF","ใส่ลายน้ำ PDF","OCR อ่านข้อความจากสแกน","PDF เป็น Word","PDF เป็น Excel","PDF เป็นรูปภาพ","PDF เป็นข้อความ","Word เป็น PDF","Excel เป็น PDF","PowerPoint เป็น PDF","PowerPoint เป็น Word","รูปภาพเป็น PDF","ย่อและบีบอัดรูปภาพ","แปลงชนิดไฟล์รูป","รวมไฟล์ Word","ค้นหาและแทนที่ทั้งชุด","ตรวจเอกสารก่อนส่ง","จดหมายเวียน Word กับ Excel","สลับ Excel กับ CSV","ซ่อมไฟล์ไทยเพี้ยน","สลับปี พ.ศ. กับ ค.ศ.","ตรวจเลขบัตรประชาชน","ตัวเลขเป็นบาทถ้วน"]}
 ]}
@@ -523,6 +523,10 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .ob-progress .fill{height:100%;width:0;border-radius:99px;background:var(--btn-bg);transition:width .2s}
 
 footer{position:relative; padding:18px; text-align:center; color:var(--text-mute); font-size:12.5px}
+/* ลิงก์ท้ายหน้า — สีเดียวกับข้อความรอบข้าง ขีดเส้นใต้จาง ๆ ให้รู้ว่ากดได้โดยไม่ตะโกน */
+footer a{color:inherit; text-decoration:underline; text-decoration-color:var(--line);
+  text-underline-offset:3px; border-radius:4px}
+footer a:hover{color:var(--text); text-decoration-color:currentColor}
 footer::before{content:""; position:absolute; inset-inline:0; top:0; height:1px; background:var(--line);
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
           mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
@@ -566,7 +570,7 @@ body.tool #home{display:none}
             <div class="hits" id="hits" role="status" aria-live="polite"></div>
           </div>
           <div class="facts">
-            <div class="fact"><b id="fact-n">27</b><span data-en="tools">เครื่องมือ</span></div>
+            <div class="fact"><b id="fact-n">29</b><span data-en="tools">เครื่องมือ</span></div>
             <div class="fact"><b>0</b><span data-en="files uploaded">ไฟล์ที่ถูกอัปโหลด</span></div>
             <div class="fact"><b>฿0</b><span data-en="free, no ads">ฟรี ไม่มีโฆษณา</span></div>
           </div>
@@ -593,7 +597,7 @@ body.tool #home{display:none}
   <section id="tool" aria-live="polite"></section>
 </main>
 
-<footer data-en="FileKit&nbsp;&nbsp; everything runs on your device">FileKit&nbsp;&nbsp; ทุกอย่างทำงานในเครื่องคุณ</footer>
+<footer>FileKit &nbsp;<a href="https://github.com/PatcharasitP/filekit" target="_blank" rel="noopener" data-en="Source code on GitHub">โค้ดทั้งหมดเปิดดูได้บน GitHub</a></footer>
 
 <!-- แปลข้อความที่เขียนตายใน HTML ให้เสร็จก่อนวาดจอ — app.js เป็น module จึงถูกเลื่อนไปท้ายสุด
      ถ้ารอมัน ผู้ใช้ภาษาอังกฤษจะเห็นภาษาไทยแวบหนึ่งก่อน (ตรรกะเดียวกับ applyStatic ใน src/i18n.js) -->

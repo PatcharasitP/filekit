@@ -89,9 +89,15 @@
   opacity:0;transition:opacity .16s ease;background:color-mix(in srgb,var(--brand) 16%,transparent);
   backdrop-filter:blur(2px)}
 .dropveil.on{opacity:1}
-.dropveil-in{padding:18px 28px;border-radius:999px;font-weight:800;font-size:16px;line-height:1.5;
+.dropveil.on .dropveil-in{transform:scale(1)}
+.dropveil .dropveil-in{transform:scale(.92)}
+/* ‼️ ผ้าคลุมถูกสร้างและติดคลาส .on ในเฟรมเดียวกันตอนลากครั้งแรก — transition ธรรมดาไม่ทัน
+   จะเด้งเต็มร้อยทันที @starting-style บอก browser ว่า "ค่าเริ่มต้นตอนเพิ่งเกิด" คืออะไร
+   (caniuse 08/09/2026 = 91.92% · เบราว์เซอร์เก่ากว่านั้นแค่ไม่มี fade เฉย ๆ ไม่พัง) */
+@starting-style{ .dropveil.on{opacity:0} .dropveil.on .dropveil-in{transform:scale(.92)} }
+.dropveil-in{transition:transform .18s var(--ease-spring,cubic-bezier(.2,1.6,.4,1));padding:18px 28px;border-radius:999px;font-weight:800;font-size:16px;line-height:1.5;
   background:var(--btn-bg);color:var(--btn-fg);box-shadow:0 18px 40px -12px rgba(0,0,0,.5)}
-@media (prefers-reduced-motion: reduce){ .dropveil{transition:none} }
+@media (prefers-reduced-motion: reduce){ .dropveil,.dropveil-in{transition:none} .dropveil .dropveil-in{transform:none} }
 
 .files{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .file-row{

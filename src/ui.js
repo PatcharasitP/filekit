@@ -244,6 +244,20 @@ function emitFileState(file, state) {
   for (const w of stateWatchers) { if (w.dead()) stateWatchers.delete(w); else w.fn(file, state); }
 }
 
+/* ── ลากไฟล์ลงตรงไหนของหน้าก็ได้ + วางจากคลิปบอร์ด ─────────────────────
+ * เว็บเครื่องมือรุ่นใหม่ไม่บังคับให้เล็งกล่องเล็ก ๆ อีกแล้ว — ลากเข้าหน้าจอที่ไหนก็รับ
+ * และแคปหน้าจอแล้วกด Ctrl+V ได้เลยโดยไม่ต้องเซฟไฟล์ก่อน
+ * ผ้าคลุมมีชิ้นเดียวทั้งเว็บ (ทีละหน้ามีกล่องเดียวอยู่แล้ว) สร้างตอนถูกใช้ครั้งแรกเท่านั้น */
+let dropVeil = null;
+function showVeil(on, label) {
+  if (!dropVeil) {
+    dropVeil = el("div", { class: "dropveil", "aria-hidden": "true" }, [el("div", { class: "dropveil-in" })]);
+    document.body.appendChild(dropVeil);
+  }
+  dropVeil.firstChild.textContent = label || "";
+  dropVeil.classList.toggle("on", !!on);
+}
+
 /** ── กล่องลากวางไฟล์ ───────────────────────────────────────────────────── */
 export function dropzone(opts = {}) {
   const {
@@ -276,11 +290,44 @@ export function dropzone(opts = {}) {
     el("div", { class: "dz-ico", "aria-hidden": "true" }, [uiIcon("upload", "dz-svg")]),
     el("div", { class: "dz-main" }, tr("ลากไฟล์มาวางที่นี่", "Drop your files here")),
     chooseBtn,
-    el("div", { class: "dz-hint" }, hint),
+    el("div", { class: "dz-hint" }, expect && expect.includes("image")
+      ? hint + tr(" · วางจากคลิปบอร์ดได้ (Ctrl+V)", " · or paste from clipboard (Ctrl+V)") : hint),
     // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
     el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device — nothing is uploaded")]),
     input,
   ]);
+
+  /* ‼️ กล่องถูกสร้างใหม่ทุกครั้งที่เปลี่ยนเครื่องมือ — listener ที่ผูกไว้ที่ document
+     ต้องถอดตัวเองเมื่อกล่องหลุดจากหน้าแล้ว ไม่งั้นกล่องเก่าจะแย่งรับไฟล์ของกล่องใหม่ */
+  let dragDepth = 0;
+  const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+  const pageHandlers = {
+    dragenter: (e) => { if (!hasFiles(e)) return; dragDepth++; showVeil(true, tr("ปล่อยไฟล์ได้เลย", "Drop your files")); },
+    dragover:  (e) => { if (hasFiles(e)) e.preventDefault(); },
+    dragleave: () => { if (--dragDepth <= 0) { dragDepth = 0; showVeil(false); } },
+    drop: (e) => {
+      dragDepth = 0; showVeil(false);
+      const f = [...(e.dataTransfer?.files || [])];
+      if (!f.length) return;
+      e.preventDefault();
+      add(f);
+    },
+    paste: (e) => {
+      const f = [...(e.clipboardData?.files || [])];
+      if (!f.length) return;                 // วางข้อความธรรมดา — ปล่อยผ่านไปตามปกติ
+      e.preventDefault();
+      add(f);
+    },
+  };
+  const onPage = (e) => {
+    if (!zone.isConnected) {                 // เปลี่ยนเครื่องมือไปแล้ว — เก็บกวาดตัวเอง
+      for (const t of Object.keys(pageHandlers)) document.removeEventListener(t, onPage);
+      showVeil(false);
+      return;
+    }
+    pageHandlers[e.type](e);
+  };
+  for (const t of Object.keys(pageHandlers)) document.addEventListener(t, onPage);
 
   zone.addEventListener("click", () => input.click());
   zone.addEventListener("keydown", (e) => {
@@ -291,8 +338,10 @@ export function dropzone(opts = {}) {
   ["dragleave", "dragend"].forEach((t) =>
     zone.addEventListener(t, () => zone.classList.remove("over")));
   zone.addEventListener("drop", (e) => {
+    e.stopPropagation();                     // ตัวรับของทั้งหน้าอยู่ชั้น capture — กันนับซ้ำสองใบ
     e.preventDefault();
     zone.classList.remove("over");
+    dragDepth = 0; showVeil(false);
     add([...(e.dataTransfer?.files || [])]);
   });
 

@@ -83,6 +83,16 @@
 .dz-btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;filter:grayscale(.65)}
 @media (prefers-reduced-motion: reduce){ .dz-btn{transition:filter var(--t-btn,.1s) ease} .dz-btn:hover{transform:none} }
 
+/* ผ้าคลุมตอนลากไฟล์เข้ามาในหน้า — บอกว่า "ปล่อยตรงไหนก็ได้" ไม่ต้องเล็งกล่อง
+   ‼️ pointer-events:none เด็ดขาด ไม่งั้นตัวมันเองจะไปกิน dragleave/drop ของหน้า */
+.dropveil{position:fixed;inset:0;z-index:60;display:grid;place-items:center;pointer-events:none;
+  opacity:0;transition:opacity .16s ease;background:color-mix(in srgb,var(--brand) 16%,transparent);
+  backdrop-filter:blur(2px)}
+.dropveil.on{opacity:1}
+.dropveil-in{padding:18px 28px;border-radius:999px;font-weight:800;font-size:16px;line-height:1.5;
+  background:var(--btn-bg);color:var(--btn-fg);box-shadow:0 18px 40px -12px rgba(0,0,0,.5)}
+@media (prefers-reduced-motion: reduce){ .dropveil{transition:none} }
+
 .files{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .file-row{
   display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-sm);
@@ -623,7 +633,10 @@ select,
       จึงไม่ทับเนื้อหาอื่นและไม่ต้องเผื่อ padding ท้ายหน้า
    ‼️ เฉพาะจอแคบ จอใหญ่ปล่อยไว้เหมือนเดิม (ปุ่มอยู่ในสายตาอยู่แล้ว) */
 @media (max-width:720px){
-  .actions{
+  /* ‼️ ลอยเฉพาะตอนมีไฟล์ในมือแล้ว (มี .file-row อยู่ในแผงเดียวกัน) — หลักเดียวกับ .ws-footer
+     ตอนยังไม่เลือกไฟล์ ปุ่มยังกดไม่ได้อยู่แล้ว แต่แถบลอยไปบังป้ายช่องกรอกใต้กล่องลากไฟล์
+     (tests/browser_layout.py จับได้ที่ pdf-ocr: ป้าย "ความละเอียดในการอ่าน" ถูก .actions ทับ) */
+  .panel:has(.file-row) .actions{
     position:sticky; bottom:0; z-index:6;
     margin-inline:calc(var(--sp4) * -1);
     padding:var(--sp3) var(--sp4) calc(var(--sp3) + env(safe-area-inset-bottom,0px));

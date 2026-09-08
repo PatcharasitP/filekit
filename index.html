@@ -129,7 +129,7 @@
   --sh3:0 8px 16px rgba(20,26,60,.08), 0 16px 32px rgba(20,26,60,.09);
 }
 @media (prefers-reduced-motion: reduce){ :root{ --t-micro:0ms; --t-panel:0ms;
-  --ease-spring:linear } .pill{transition:none} }
+  --ease-spring:linear } .pill,.cats{transition:none} }
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
@@ -388,6 +388,12 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .drop-what{display:flex;flex-direction:column;gap:1px;min-width:0}
 .drop-what b{color:#fff;font-size:14.5px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .drop-what span{color:var(--stage-dim);font-size:12px;line-height:1.5}
+/* ‼️ ปุ่มนี้คือทางออก ไม่ใช่ทางหลัก — .btn-soft ปกติเป็นพื้นขาวทึบ พอวางบนแผงมืด
+   กลายเป็นของที่สว่างที่สุดในจอ แย่งสายตาจากป้ายเครื่องมือที่เป็นเป้าหมายจริง */
+.drop-head .btn-soft{background:transparent;color:var(--stage-dim);min-height:34px;
+  padding:6px 15px;font-size:13px;border-color:color-mix(in srgb,#fff 34%,transparent)}
+.drop-head .btn-soft:hover{background:color-mix(in srgb,#fff 12%,transparent);color:#fff;
+  border-color:color-mix(in srgb,#fff 55%,transparent)}
 .pills{display:flex;flex-wrap:wrap;gap:11px}
 .pill{
   display:inline-flex;align-items:center;gap:10px;flex:none;cursor:pointer;text-align:start;
@@ -469,7 +475,13 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   .badges{gap:6px}
   .badge{font-size:11px;padding:4px 10px}
   
-  .cats{position:sticky; top:57px; z-index:15; background:var(--bg); margin-inline:calc(clamp(14px,4vw,32px) * -1); padding-inline:clamp(14px,4vw,32px)}
+  /* ‼️ บนมือถือแถบชื่อ+แถบหมวดลอยรวมกัน 113px = 13% ของจอ และป้ายเครื่องมือที่เลื่อน
+     ลอดใต้มันถูกตัดกลางตัวอักษรพอดี ดูเหมือนจอค้างมากกว่าตั้งใจ
+     → เลื่อนลง = แถบหมวดหลบขึ้นไปซ่อนหลังแถบชื่อ (z ต่ำกว่า) · เลื่อนขึ้น = กลับมาทันที
+     เป็นท่ามาตรฐานของแอปมือถือ ได้พื้นที่คืนโดยไม่เสียปุ่มกรอง */
+  .cats{position:sticky; top:57px; z-index:15; background:var(--bg); margin-inline:calc(clamp(14px,4vw,32px) * -1); padding-inline:clamp(14px,4vw,32px);
+    transition:transform .2s var(--ease-snap,ease), opacity .2s var(--ease-snap,ease)}
+  :root[data-hidecats] .cats{transform:translateY(-100%); opacity:0; pointer-events:none}
 }
 
 /* แถบเตรียมใช้งานออฟไลน์ */

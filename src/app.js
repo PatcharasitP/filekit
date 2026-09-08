@@ -5,7 +5,7 @@
 import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
-import { el, $, showVeil } from "./dom.js";
+import { el, $, showVeil, filesFromClipboard } from "./dom.js";
 import { toolIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic } from "./i18n.js";
 
@@ -160,7 +160,7 @@ document.addEventListener("drop", (e) => {
 });
 document.addEventListener("paste", (e) => {
   if (!onHomeNow()) return;
-  const f = [...(e.clipboardData?.files || [])];
+  const f = filesFromClipboard(e);
   if (!f.length) return;             // วางข้อความธรรมดา (เช่นในช่องค้นหา) ปล่อยผ่านตามปกติ
   e.preventDefault();
   takeHomeFiles(f);
@@ -345,10 +345,18 @@ langBtn.addEventListener("click", () => setLang(IS_EN ? "th" : "en"));
 {
   const root = document.documentElement;
   let ticking = false;
+  // จำตำแหน่งเดิมไว้ดูทิศทาง — แถบหมวดบนมือถือหลบเมื่อเลื่อนลง กลับมาเมื่อเลื่อนขึ้น
+  let lastY = 0;
+  const HIDE_AFTER = 220;               // ยังไม่หลบจนกว่าจะพ้นฉากเปิดไปแล้ว
   const sync = () => {
     ticking = false;
-    if (window.scrollY > 8) root.dataset.scrolled = "";
+    const y = window.scrollY;
+    if (y > 8) root.dataset.scrolled = "";
     else root.removeAttribute("data-scrolled");
+
+    if (y > HIDE_AFTER && y > lastY + 6) root.dataset.hidecats = "";
+    else if (y < lastY - 6 || y <= HIDE_AFTER) root.removeAttribute("data-hidecats");
+    lastY = y;
   };
   addEventListener("scroll", () => {
     if (!ticking) { ticking = true; requestAnimationFrame(sync); }

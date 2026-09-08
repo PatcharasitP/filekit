@@ -34,3 +34,34 @@ export function showVeil(on, label) {
   if (label) dropVeil.firstChild.textContent = label;
   dropVeil.classList.toggle("on", !!on);
 }
+
+/* ── อ่านไฟล์จากคลิปบอร์ด ────────────────────────────────────────────────
+ * ‼️ ภาพที่แคปด้วย Win+Shift+S / Print Screen มาถึงเบราว์เซอร์เป็น "รูปดิบ" ไม่ใช่ไฟล์
+ *    บางเบราว์เซอร์จึงไม่ใส่ไว้ใน clipboardData.files เลย (ว่างเปล่า) แต่ไปอยู่ใน items แทน
+ *    อ่านแค่ .files อย่างเดียว = วางแล้วเงียบ ไม่มีอะไรเกิดขึ้น (พี่ปอนด์เจอกับตัว 08/09/2026)
+ * อ่านทั้งสองทาง แล้วตัดไฟล์ซ้ำออกด้วยชื่อ+ขนาด · รูปที่ไม่มีชื่อจะตั้งชื่อให้เองตามเวลา */
+export function filesFromClipboard(e) {
+  const out = [];
+  const seen = new Set();
+  const push = (f) => {
+    if (!f || !f.size) return;
+    const key = `${f.name}|${f.size}|${f.type}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(f.name ? f : renameBlank(f));
+  };
+  for (const f of e.clipboardData?.files || []) push(f);
+  for (const it of e.clipboardData?.items || []) {
+    if (it.kind === "file") push(it.getAsFile());
+  }
+  return out;
+}
+
+/** รูปที่วางมาจากคลิปบอร์ดมักไม่มีชื่อไฟล์ — ตั้งให้เองจะได้ดาวน์โหลดผลลัพธ์แล้วอ่านออก */
+function renameBlank(f) {
+  const ext = (f.type.split("/")[1] || "png").replace("jpeg", "jpg");
+  const d = new Date();
+  const two = (n) => String(n).padStart(2, "0");
+  const name = `วางจากคลิปบอร์ด-${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}${two(d.getSeconds())}.${ext}`;
+  try { return new File([f], name, { type: f.type }); } catch { return f; }
+}

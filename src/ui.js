@@ -1,5 +1,5 @@
 import { detectType, wrongTypeMessage } from "./filetype.js";
-import { $, $$, el, showVeil } from "./dom.js";
+import { $, $$, el, showVeil, filesFromClipboard } from "./dom.js";
 import { byId } from "./registry.js";
 import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
 import { tr } from "./i18n.js";
@@ -312,7 +312,7 @@ export function dropzone(opts = {}) {
       claim(e, f);
     },
     paste: (e) => {
-      const f = [...(e.clipboardData?.files || [])];
+      const f = filesFromClipboard(e);
       if (!f.length) return;                 // วางข้อความธรรมดา — ปล่อยผ่านไปตามปกติ
       e.preventDefault();
       claim(e, f);

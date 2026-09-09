@@ -13,6 +13,12 @@
 //     เข้าด้วยกัน + ออกเลข w:id ใหม่ให้ไม่ชนกัน (คนละเรื่องกับ r:id ของ rIdJoinNNN ที่จัดการอยู่แล้ว
 //     เพราะ w:footnoteReference ใช้ attribute w:id คนละ namespace กับ r:id — ถ้าไม่ remap จุดนี้
 //     ทุกไฟล์ที่เริ่มนับ footnote id ที่ 1/2 เหมือนกัน จะชนกันเงียบ ๆ แล้ว Word เอาไปแสดงเนื้อหาไฟล์แรกซ้ำ)
+//  5. numbering.xml (นิยามรูปแบบรายการมีเลข/หัวข้อย่อย) ก็ "มีเนื้อหาที่ต้องรวมจริง" เหมือน footnotes
+//     แต่ (09/09/2026) เดิมถูกจัดกลุ่มปนกับ styles/settings ว่าใช้ของไฟล์แรกพอ ทำให้ไฟล์ที่ 2 ขึ้นไป
+//     ที่ตั้งใจใช้รูปแบบอื่น (เช่น ก. ข. ค. แทน 1. 2. 3.) ถูกบังคับให้ใช้รูปแบบของไฟล์แรกเงียบ ๆ
+//     ต่างจาก footnotes/endnotes/comments ตรงที่ numbering ซ้อนสองชั้น: เนื้อหาอ้าง w:numId (ฉลาก
+//     ที่ใช้จริง) → w:numId ชี้ไปที่ w:abstractNumId (นิยามรูปแบบแต่ละระดับ) อีกที ต้องออกเลขใหม่
+//     ให้ทั้งสองชั้นแล้วเชื่อมให้ตรงกัน จึงจัดการแยกจาก MERGE_PARTS (ดู NUMBERING_PART ด้านล่าง)
 
 import { loadLibs } from "./loader.js";
 import { tr } from "./i18n.js";
@@ -41,6 +47,16 @@ const MERGE_PARTS = [
     refs: ["commentReference", "commentRangeStart", "commentRangeEnd"],
     ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml" },
 ];
+
+/* numbering.xml: spec เดียวกับ MERGE_PARTS (part/relType/ct) ใช้ตอนเขียนไฟล์ผลลัพธ์ท้ายสุดได้เหมือนกัน
+ * (ดู allMergedParts ใกล้ท้ายไฟล์) แต่ตัวออกเลขใหม่/remap เนื้อหาแยกเป็นฟังก์ชันของตัวเอง เพราะโครง
+ * เป็นสองชั้น (abstractNum → num) ไม่ใช่ item ชั้นเดียวที่มี w:id แบบ footnote/endnote/comment */
+const NUMBERING_PART = "word/numbering.xml";
+const NUMBERING_SPEC = {
+  part: NUMBERING_PART,
+  relType: "numbering",
+  ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+};
 
 const PAGE_BREAK =
   '<w:p xmlns:w="' + W + '"><w:r><w:br w:type="page"/></w:r></w:p>';
@@ -97,6 +113,25 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
       }
     }
     merged.push({ spec, doc, maxId, isNew: false, written: false });
+  }
+
+  // สถานะของ numbering.xml เริ่มจากของไฟล์ฐาน เหมือน merged ข้างบน แต่ต้องคุมเลข "สองชั้น" แยกกัน:
+  // maxAbstractId (นิยามรูปแบบ) เริ่มนับที่ 0 ได้ปกติ ส่วน maxNumId (ฉลากที่เนื้อหาอ้างถึง) ห้ามออกเลข 0
+  // เพราะ w:numId="0" เป็นค่าสงวนของ OOXML แปลว่า "ปิดการใส่เลข/หัวข้อย่อย" ไม่ใช่ id ของรายการจริง
+  const numbering = { spec: NUMBERING_SPEC, doc: null, isNew: false, written: false, maxAbstractId: -1, maxNumId: 0 };
+  {
+    const f = base.file(NUMBERING_PART);
+    if (f) numbering.doc = new DOMParser().parseFromString(await f.async("string"), "application/xml");
+    if (numbering.doc) {
+      for (const an of numbering.doc.getElementsByTagNameNS(W, "abstractNum")) {
+        const id = parseInt(an.getAttributeNS(W, "abstractNumId"), 10);
+        if (!Number.isNaN(id) && id > numbering.maxAbstractId) numbering.maxAbstractId = id;
+      }
+      for (const n of numbering.doc.getElementsByTagNameNS(W, "num")) {
+        const id = parseInt(n.getAttributeNS(W, "numId"), 10);
+        if (!Number.isNaN(id) && id > numbering.maxNumId) numbering.maxNumId = id;
+      }
+    }
   }
 
   const extraFiles = {};          // ไฟล์สื่อที่ต้องเพิ่มเข้าแพ็กเกจ
@@ -187,6 +222,66 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
       }
     }
 
+    // merge numbering.xml ของไฟล์นี้เข้ากับของฐาน: ออกเลขใหม่ทั้ง abstractNumId (นิยามรูปแบบ)
+    // และ numId (ฉลากที่เนื้อหาอ้างถึง) แล้วแก้ w:num ให้ชี้ไปยัง abstractNumId ใหม่ให้ตรงกัน
+    // (numIdMap ใช้ remap w:numPr/w:numId ในเนื้อหาต่อด้านล่าง ผ่าน remapNumIds)
+    const numIdMap = new Map();      // numId เดิมของไฟล์นี้ → numId ใหม่หลัง merge
+    const srcNumFile = zip.file(NUMBERING_PART);
+    if (srcNumFile) {
+      const srcNumDoc = new DOMParser().parseFromString(await srcNumFile.async("string"), "application/xml");
+      if (!numbering.doc) {
+        // ไฟล์ฐานไม่มี numbering.xml มาก่อน สร้างใหม่ + ผูก relationship (content-type เติมตอนประกอบ zip)
+        numbering.doc = new DOMParser().parseFromString(
+          `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="${W}"></w:numbering>`,
+          "application/xml",
+        );
+        const relEl = baseRels.createElementNS(RELS_NS, "Relationship");
+        relEl.setAttribute("Id", `rIdJoin${relSeq++}`);
+        relEl.setAttribute("Type", `${R}/numbering`);
+        relEl.setAttribute("Target", "numbering.xml");
+        relsRoot.appendChild(relEl);
+        numbering.isNew = true;
+      }
+      const root = numbering.doc.documentElement;
+      // schema ของ CT_Numbering บังคับลำดับ abstractNum* มาก่อน num* เสมอ ต้องแทรก abstractNum
+      // ใหม่ไว้ก่อน <w:num> ตัวแรกที่มีอยู่ (ถ้ามี) ไม่ใช่ต่อท้ายรูตเฉย ๆ ไม่งั้นไฟล์เปิดไม่ขึ้น
+      const firstNum = [...root.children].find((c) => c.namespaceURI === W && c.localName === "num");
+
+      const abstractIdMap = new Map();   // abstractNumId เดิมของไฟล์นี้ → ใหม่
+      for (const an of [...srcNumDoc.getElementsByTagNameNS(W, "abstractNum")]) {
+        numbering.maxAbstractId += 1;
+        const newId = String(numbering.maxAbstractId);
+        abstractIdMap.set(an.getAttributeNS(W, "abstractNumId"), newId);
+        const imported = numbering.doc.importNode(an, true);
+        for (const attr of [...imported.attributes]) {
+          if (attr.namespaceURI === W && attr.localName === "abstractNumId") attr.value = newId;
+        }
+        if (firstNum) root.insertBefore(imported, firstNum);
+        else root.appendChild(imported);
+      }
+      for (const n of [...srcNumDoc.getElementsByTagNameNS(W, "num")]) {
+        const oldId = n.getAttributeNS(W, "numId");
+        numbering.maxNumId += 1;
+        const newId = String(numbering.maxNumId);
+        numIdMap.set(oldId, newId);
+        const imported = numbering.doc.importNode(n, true);
+        for (const attr of [...imported.attributes]) {
+          if (attr.namespaceURI === W && attr.localName === "numId") attr.value = newId;
+        }
+        // <w:num> ชี้ไปยังนิยามรูปแบบผ่าน <w:abstractNumId w:val="..."/> ลูกของมันเอง (คนละที่กับ
+        // attribute w:numId ข้างบน) ต้องแก้ให้ชี้ตาม abstractIdMap ของไฟล์นี้ ไม่งั้นจะชี้ผิดไฟล์
+        const abstractRef = imported.getElementsByTagNameNS(W, "abstractNumId")[0];
+        if (abstractRef) {
+          for (const attr of [...abstractRef.attributes]) {
+            if (attr.namespaceURI === W && attr.localName === "val" && abstractIdMap.has(attr.value)) {
+              attr.value = abstractIdMap.get(attr.value);
+            }
+          }
+        }
+        root.appendChild(imported);
+      }
+    }
+
     if (pageBreak) {
       const br = new DOMParser().parseFromString(PAGE_BREAK, "application/xml").documentElement;
       body.appendChild(baseDoc.importNode(br, true));
@@ -199,6 +294,7 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
       const node = baseDoc.importNode(child, true);
       remapRelIds(node, map);
       remapMergedIds(node, merged, idMaps);
+      remapNumIds(node, numIdMap);
       body.appendChild(node);
       if (child.nodeType === 1 && child.localName === "p") added++;
     }
@@ -209,6 +305,10 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
   const sect = [...body.childNodes].find((n) => n.nodeType === 1 && n.localName === "sectPr");
   if (sect) body.appendChild(sect);
 
+  // numbering ใช้ spec shape เดียวกับ merged (part/relType/ct) จึงเขียนไฟล์ผลลัพธ์ผ่านลูปเดียวกันได้เลย
+  // ไม่ต้องเปิดทางแยกซ้ำซ้อน (ตัว remap เนื้อหา/ออกเลขใหม่เท่านั้นที่แยก เพราะโครงสองชั้นคนละแบบ)
+  const allMergedParts = [...merged, numbering];
+
   const out = new JSZipLib();
   const ser = (d) => new XMLSerializer().serializeToString(d);
   for (const name of Object.keys(base.files)) {
@@ -216,9 +316,9 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
     if (entry.dir) continue;
     if (name === "word/document.xml") { out.file(name, ser(baseDoc)); continue; }
     if (name === "word/_rels/document.xml.rels") { out.file(name, ser(baseRels)); continue; }
-    const hit = merged.find((m) => m.spec.part === name && m.doc);
+    const hit = allMergedParts.find((m) => m.spec.part === name && m.doc);
     if (hit) { out.file(name, ser(hit.doc)); hit.written = true; continue; }
-    const fresh = merged.filter((m) => m.isNew);
+    const fresh = allMergedParts.filter((m) => m.isNew);
     if (name === "[Content_Types].xml" && fresh.length) {
       let ct = await entry.async("string");
       for (const m of fresh) {
@@ -232,7 +332,7 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
   }
   // part ที่ไฟล์ฐานไม่มีมาก่อนแต่ไฟล์อื่นเติมเข้ามา ต้องเขียนเพิ่มเอง
   // (ลูปข้างบนไล่จากรายชื่อไฟล์ของฐาน จะไม่มีทางเจอชื่อนี้เพื่อ trigger เงื่อนไขด้านบน)
-  for (const m of merged) if (m.doc && !m.written) out.file(m.spec.part, ser(m.doc));
+  for (const m of allMergedParts) if (m.doc && !m.written) out.file(m.spec.part, ser(m.doc));
   for (const [name, data] of Object.entries(extraFiles)) out.file(name, data);
 
   const blob = await out.generateAsync({
@@ -280,6 +380,27 @@ function remapMergedIds(node, merged, idMaps) {
       for (const attr of [...n.attributes]) {
         if (attr.namespaceURI === W && attr.localName === "id" && map.has(attr.value)) {
           attr.value = map.get(attr.value);
+        }
+      }
+    }
+    for (const c of n.childNodes) walk(c);
+  };
+  walk(node);
+}
+
+/** เปลี่ยน w:numId ในเนื้อหา (ภายใน <w:numPr><w:numId w:val="N"/></w:numPr>) ให้ชี้ไปที่ <w:num>
+ *  ที่ออกเลขใหม่ให้ตอน merge numbering.xml (คนละเรื่องกับ remapMergedIds: ที่นั่น w:id ของแต่ละ item
+ *  ชี้ตรงถึงเนื้อหา ส่วนนี้ w:numId ชี้ไปที่ <w:num w:numId="N"> ซึ่งชี้ต่อไปยัง abstractNum อีกที
+ *  จึงต้อง remap แค่ชั้นเดียวคือ numId ในเนื้อหา ส่วน abstractNumId ถูกจัดการไปแล้วตอนสร้าง <w:num> ใหม่)
+ *  ‼️ w:numId w:val="0" เป็นค่าสงวนแปลว่า "ปิดการใส่เลข/หัวข้อย่อย" ไม่ใช่การอ้างอิงจริง ต้องปล่อยผ่าน
+ *  ไม่ remap ไม่งั้นจะไปสร้างการอ้างอิงที่ไม่มีอยู่จริงในไฟล์ต้นทาง */
+function remapNumIds(node, numIdMap) {
+  if (!numIdMap.size) return;
+  const walk = (n) => {
+    if (n.nodeType === 1 && n.namespaceURI === W && n.localName === "numId") {
+      for (const attr of [...n.attributes]) {
+        if (attr.namespaceURI === W && attr.localName === "val" && attr.value !== "0" && numIdMap.has(attr.value)) {
+          attr.value = numIdMap.get(attr.value);
         }
       }
     }

@@ -34,6 +34,11 @@
 #      mammoth ไม่ส่งส่วนนี้มาให้เลย เดิมจึงหายทั้งหมดเงียบ ๆ ตอนแปลงเป็น PDF
 #      และเลขหน้าใน Word เป็น field ถ้าไม่แทนค่าจะได้เลข 1 ซ้ำทุกหน้า
 #
+#   ⑩ รูปแบบรายการมีเลข (numbering.xml) ตอนรวมไฟล์ Word
+#      ทุกไฟล์เริ่มนับ w:numId ใหม่ที่ 1 เหมือนกัน ถ้าไม่ออกเลขใหม่ตอนรวม ไฟล์หลังจะถูกบังคับ
+#      ให้ใช้รูปแบบของไฟล์แรก (เช่นตั้งใจเป็น ก. ข. ค. แต่กลายเป็น 1. 2. 3.) โดยข้อความไม่หาย
+#      จึงไม่มีอะไรฟ้อง ตัวนิยามซ้อนสองชั้น numId ชี้ไป abstractNumId ต้องออกเลขใหม่ทั้งคู่
+#
 # ‼️ หน้าเว็บมี Content-Security-Policy ที่ไม่มี unsafe-eval — wait_for_function
 #    ต้องส่งสตริงที่เป็นฟังก์ชันลูกศรเท่านั้น (มีเทสจับกฎนี้ใน accepts.test.mjs)
 #
@@ -339,6 +344,45 @@ def make_docx_with_header_footer():
     return p
 
 
+def make_docx_numbered(tag, fmt):
+    """.docx ที่มีรายการมีเลข ใช้ w:numId=1 เหมือนกันทุกไฟล์ (แบบที่ Word ทำจริง)
+    แต่รูปแบบต่างกัน เพื่อบังคับให้นิยามชนกันตอนรวมไฟล์"""
+    body = "".join(
+        '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>'
+        f'<w:r><w:t>ข้อ {i} ของ {tag}</w:t></w:r></w:p>' for i in (1, 2))
+    doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+           f'<w:document xmlns:w="{W_NS}" xmlns:r="{R_NS}"><w:body>{body}'
+           '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr></w:body></w:document>')
+    num = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+           f'<w:numbering xmlns:w="{W_NS}">'
+           '<w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/>'
+           f'<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="{fmt}"/>'
+           '<w:lvlText w:val="%1."/></w:lvl></w:abstractNum>'
+           '<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>')
+    over = ('<Override PartName="/word/{0}.xml" ContentType="application/vnd.openxmlformats-'
+            'officedocument.wordprocessingml.{0}+xml"/>')
+    ct = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          '<Default Extension="xml" ContentType="application/xml"/>'
+          '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-'
+          'officedocument.wordprocessingml.document.main+xml"/>' + over.format("numbering") + '</Types>')
+    rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            f'<Relationship Id="rId1" Type="{R_NS}/officeDocument" Target="word/document.xml"/></Relationships>')
+    drels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+             f'<Relationship Id="rId9" Type="{R_NS}/numbering" Target="numbering.xml"/></Relationships>')
+    path = TMP / f"รายการ-{tag}.docx"
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", ct)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("word/document.xml", doc)
+        z.writestr("word/_rels/document.xml.rels", drels)
+        z.writestr("word/numbering.xml", num)
+    return path
+
+
 def press(pg, pattern):
     """กดปุ่มที่มองเห็นจริงด้วย evaluate — ระหว่างที่เครื่องมือทำงานหนัก .click() ของ Playwright
     จะรอจนงานเสร็จก่อนค่อยกด ทำให้ทดสอบผิดเคสโดยไม่รู้ตัว (บทเรียน 09/09/2026)"""
@@ -369,6 +413,7 @@ def main():
     deck = make_pptx_with_table_and_chart()
     tbox = make_docx_with_textbox()
     hf_doc = make_docx_with_header_footer()
+    num_docs = [make_docx_numbered("AAA", "decimal"), make_docx_numbered("BBB", "thaiLetters")]
     text_pdf = make_text_pdf(False)
     compact_pdf = make_text_pdf(True)
 
@@ -681,6 +726,36 @@ def main():
                [i + 1 for i, t in enumerate(per_page) if f"หน้า {i + 1}" not in t], [])
             ck("หัวกระดาษอยู่เหนือเนื้อหา ไม่ทับบรรทัดแรก",
                top3[0].startswith("เอกสารลับ") and "ย่อหน้าที่ 1" in top3[1], True)
+
+            # ── ⑩ รวมไฟล์ Word ที่รูปแบบรายการมีเลขชนกัน ────────────────────────────
+            print("\n── ⑩ รูปแบบรายการมีเลขตอนรวมไฟล์ ──")
+            pg.goto(f"{base}/#/word-join", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files([str(x) for x in num_docs])
+            pg.wait_for_timeout(1500)
+            press(pg, "รวมไฟล์|รวมเป็น")
+            pg.wait_for_selector(".result", timeout=60000)
+            pg.wait_for_timeout(1200)
+            with pg.expect_download(timeout=30000) as info:
+                pg.locator(".result button").last.click()
+            out12 = DL / "numbered.docx"
+            info.value.save_as(str(out12))
+            with zipfile.ZipFile(out12) as z:
+                names = z.namelist()
+                nbody = z.read("word/document.xml").decode()
+                ndef = z.read("word/numbering.xml").decode() if "word/numbering.xml" in names else ""
+            fmts = re.findall(r'<w:numFmt w:val="([^"]+)"', ndef)
+            defined = re.findall(r'<w:num w:numId="(\d+)"', ndef)
+            used = {}
+            for m in re.finditer(r'<w:numId w:val="(\d+)"/></w:numPr></w:pPr>'
+                                 r'<w:r><w:t>ข้อ \d+ ของ (\w+)</w:t>', nbody):
+                used.setdefault(m.group(2), set()).add(m.group(1))
+            ck("เก็บรูปแบบรายการของทั้ง 2 ไฟล์ไว้ ไม่บังคับใช้ของไฟล์แรก",
+               sorted(set(fmts)), ["decimal", "thaiLetters"])
+            ck("สองไฟล์อ้างคนละหมายเลขรายการ ไม่ชนกัน",
+               sorted(used.get("AAA", set()) & used.get("BBB", set())), [])
+            ck("ทุกหมายเลขรายการที่เนื้อหาอ้างถึง มีนิยามรองรับจริง",
+               [x for v in used.values() for x in v if x not in defined], [])
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

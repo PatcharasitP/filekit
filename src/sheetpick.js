@@ -25,17 +25,67 @@ export async function readWorkbook(file) {
   return { wb: XLSX.read(d.text, { type: "string", cellDates: true }), encNote };
 }
 
-/** ชีท → { header:[...], rows:[[...]] } โดยเติมช่องที่ขาดให้ทุกแถวยาวเท่ากัน */
+/* ‼️ ตารางจริงจำนวนมากใช้หัวตาราง 2 ชั้น แถวบนผสานช่องเป็นชื่อหมวด แถวล่างเป็นชื่อคอลัมน์ย่อย
+ * ช่องที่ถูกผสานจะมีค่าเฉพาะช่องซ้ายสุด ที่เหลือเป็นค่าว่าง หัวตารางจึงกลายเป็น "คอลัมน์ 2"
+ * "คอลัมน์ 4" ซึ่งผู้ใช้อ่านไม่ออกว่าคอลัมน์ไหนคืออะไร แล้วเลือกคอลัมน์ผิดได้ง่าย
+ * (ยิงจริง 09/09/2026 กับไฟล์หัว 2 ชั้น ตัวเลือกคอลัมน์อ่านไม่รู้เรื่องครึ่งหนึ่ง)
+ *
+ * รวมสองแถวเป็นชื่อเดียวเฉพาะเมื่อเข้าเงื่อนไขครบ กันกินแถวข้อมูลแถวแรกไปเป็นหัวตาราง:
+ *   1. แถวบนมีช่องว่างจริง และแถวล่างเติมช่องว่างเหล่านั้นได้ครบทุกช่อง
+ *   2. แถวล่างหน้าตาเป็นหัวตาราง คือเป็นข้อความล้วน ไม่มีตัวเลขหรือวันที่ปน
+ *   3. ต้องมีแถวข้อมูลเหลืออย่างน้อย 1 แถวหลังตัดหัวออก
+ * และถ้าแถวบนมีค่าอยู่ช่องเดียว แปลว่าเป็น "แถวชื่อเรื่อง" ไม่ใช่ชื่อหมวด ให้ใช้แถวล่างเป็นหัวอย่างเดียว */
 export function sheetToTable(ws) {
   const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, blankrows: false });
   if (!aoa.length) return { header: [], rows: [] };
   const width = Math.max(...aoa.map((r) => r.length));
+  const cell = (r, i) => {
+    const v = r ? r[i] : null;
+    return v == null || String(v).trim() === "" ? "" : String(v).trim();
+  };
+  const filledCount = (r) => {
+    let n = 0;
+    for (let i = 0; i < width; i++) if (cell(r, i)) n++;
+    return n;
+  };
+  const textOnly = (r) => {
+    for (let i = 0; i < width; i++) {
+      const v = r ? r[i] : null;
+      if (v == null || String(v).trim() === "") continue;
+      if (typeof v === "number" || v instanceof Date) return false;
+      if (/^-?[\d,]+(\.\d+)?%?$/.test(String(v).trim())) return false;
+    }
+    return filledCount(r) > 0;
+  };
+
+  let headRows = 1;
+  let useGroupRow = false;
+  if (aoa.length > 2) {
+    const blanks = [];
+    for (let i = 0; i < width; i++) if (!cell(aoa[0], i)) blanks.push(i);
+    const covered = blanks.filter((i) => cell(aoa[1], i)).length;
+    if (blanks.length && covered === blanks.length && textOnly(aoa[1])) {
+      headRows = 2;
+      useGroupRow = filledCount(aoa[0]) > 1;   // ช่องเดียว = แถวชื่อเรื่อง ไม่ใช่ชื่อหมวด
+    }
+  }
+
   const header = [];
   for (let i = 0; i < width; i++) {
-    const h = aoa[0][i];
-    header.push(h == null || String(h).trim() === "" ? tr(`คอลัมน์ ${i + 1}`, `Column ${i + 1}`) : String(h).trim());
+    let top = useGroupRow ? cell(aoa[0], i) : "";
+    if (useGroupRow && !top) {
+      // ช่องที่ถูกผสานมีค่าเฉพาะช่องซ้ายสุด ต้องลากชื่อหมวดมาจากช่องซ้ายที่ใกล้ที่สุด
+      for (let j = i - 1; j >= 0; j--) {
+        const v = cell(aoa[0], j);
+        if (v) { top = v; break; }
+      }
+    }
+    const sub = headRows === 2 ? cell(aoa[1], i) : cell(aoa[0], i);
+    const name = [top, sub].filter(Boolean).join(" ");
+    header.push(name || tr(`คอลัมน์ ${i + 1}`, `Column ${i + 1}`));
   }
-  const rows = aoa.slice(1).map((r) => {
+
+  const rows = aoa.slice(headRows).map((r) => {
     const c = r.slice(0, width);
     while (c.length < width) c.push(null);
     return c;

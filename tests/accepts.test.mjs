@@ -78,13 +78,19 @@ for (const [what, re] of [
    regex จับคู่ผิดคู่ ทำให้จุดกลางไปตกอยู่ "นอกคู่ที่จับได้" แล้วรอดสายตาไปเฉย ๆ
    จึงเปลี่ยนมาเดินอ่านทีละตัวอักษรและจำสถานะจริง (อยู่ในสตริง/คอมเมนต์/ข้างนอก)
    ซึ่งรองรับ template ซ้อนชั้นได้ถูกต้อง — บทเรียน "พิสูจน์เครื่องมือตรวจก่อนเชื่อผล" */
+const prevOf = (txt, i) => { let k = i - 1; while (k >= 0 && /\s/.test(txt[k])) k--; return k >= 0 ? txt[k] : ""; };
+
 function middotsInStrings(txt) {
   const hits = [];
   let line = 1, mode = "code", quote = "", depth = 0;
   const stack = [];                       // ชั้นของ template ที่ซ้อนกันผ่าน ${...}
+  let prev = "";                          // อักขระที่มีความหมายตัวก่อนหน้า ใช้แยก regex ออกจากการหาร
   for (let i = 0; i < txt.length; i++) {
     const c = txt[i], n = txt[i + 1];
     if (c === "\n") line++;
+    if (mode === "code" && !/\s/.test(c) && !(c === "/" && (n === "/" || n === "*"))) {
+      if (i > 0) prev = prevOf(txt, i);
+    }
     if (mode === "line") { if (c === "\n") mode = "code"; continue; }
     if (mode === "block") { if (c === "*" && n === "/") { mode = "code"; i++; } continue; }
     if (mode === "str") {
@@ -97,6 +103,23 @@ function middotsInStrings(txt) {
     // mode === "code"
     if (c === "/" && n === "/") { mode = "line"; i++; continue; }
     if (c === "/" && n === "*") { mode = "block"; i++; continue; }
+    /* ‼️ ต้องข้าม regex literal ให้เป็น ไม่งั้นเครื่องตรวจตัวนี้เชื่อไม่ได้ทั้งไฟล์
+       ของจริงที่ทำพัง: .replace(/"/g, '""') ใน src/pqm.js — เครื่องหมายคำพูดข้างใน regex
+       ถูกนับเป็น "เปิดสตริง" สถานะจึงสลับผิดตั้งแต่จุดนั้นไปจนจบไฟล์ ผลคือทั้งฟ้องคอมเมนต์
+       ที่ไม่ผิด และ (อันตรายกว่า) ปล่อยจุดกลางในสตริงจริงที่อยู่หลังจุดนั้นผ่านไปได้
+       แยก regex จากเครื่องหมายหารด้วยตัวอักษรที่มีความหมายตัวก่อนหน้า ซึ่งพอสำหรับโค้ดชุดนี้ */
+    if (c === "/" && !"})]".includes(prev) && !/[\w$]/.test(prev)) {
+      let j = i + 1, cls = false;
+      for (; j < txt.length; j++) {
+        const r = txt[j];
+        if (r === "\\") { j++; continue; }
+        if (r === "\n") break;                 // ขึ้นบรรทัดใหม่แปลว่าไม่ใช่ regex จริง
+        if (r === "[") cls = true;
+        else if (r === "]") cls = false;
+        else if (r === "/" && !cls) { for (let k = 0; k < (j - i); k++) if (txt[i + k] === "\n") line++; i = j; break; }
+      }
+      if (i === j) continue;                    // ข้ามทั้งก้อน regex แล้ว
+    }
     if (c === '"' || c === "'" || c === "`") { mode = "str"; quote = c; continue; }
     if (stack.length) {
       if (c === "{") depth++;
@@ -116,6 +139,16 @@ for (const f of [...toolFiles.map((n) => join("src/tools", n)),
 {
   const bait = 'const a = `x ${n} y${k ? ` \u00b7 z ${k}` : ""}`;  // \u00b7 ในคอมเมนต์ต้องไม่โดนจับ\nconst b = "ปกติ";';
   ck(middotsInStrings(bait).length === 1, "เครื่องตรวจจุดกลางจับ template ซ้อนชั้นได้ และไม่จับจุดกลางในคอมเมนต์");
+}
+/* ‼️ กับดักของจริงที่เคยทำให้เครื่องตรวจตัวนี้ตาบอดทั้งไฟล์ (เจอ 09/09/2026 ใน src/pqm.js)
+   regex ที่มีเครื่องหมายคำพูดอยู่ข้างใน ถ้าเครื่องตรวจไม่รู้จัก regex จะนับว่าเป็นการเปิดสตริง
+   สถานะสลับผิดตั้งแต่จุดนั้น แล้วจุดกลางในสตริงจริงที่อยู่ถัดไปจะรอดสายตาไปเงียบ ๆ */
+{
+  const bait = 'const f = (s) => String(s).replace(/"/g, \'""\').replace(/\'/g, "");\n'
+             + 'const msg = "เสร็จ \u00b7 ข้าม 2 ไฟล์";\n'
+             + '/* \u00b7 ในคอมเมนต์ต้องไม่โดนจับ */';
+  const hit = middotsInStrings(bait);
+  ck(hit.length === 1 && hit[0] === 2, "เครื่องตรวจยังจับจุดกลางในสตริงที่อยู่หลัง regex ที่มีเครื่องหมายคำพูดได้");
 }
 const htmlBody = html.slice(html.indexOf("<body"));
 const htmlMiddot = (htmlBody.match(/>[^<]*\u00b7[^<]*</g) || []).map((x) => "index.html " + x.slice(0, 46));

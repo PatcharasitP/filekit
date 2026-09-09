@@ -8,14 +8,14 @@
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// โหลดโมดูลโดยตัด import ของ i18n ออก (เทสนี้ไม่ต้องการคำแปล ใช้ตัวแทนง่าย ๆ พอ)
-const src = readFileSync(join(ROOT, "src/pqm.js"), "utf8")
-  .replace(/^import .*$/m, "const tr = (th) => th;");
-const mod = await import("data:text/javascript;base64," + Buffer.from(src).toString("base64"));
+// ‼️ โหลดไฟล์จริงตรง ๆ ไม่ใช่ผ่าน data: URL แล้วตัด import ทิ้ง
+// ตัวสร้างโค้ดต้องใช้ตัวอ่านวันที่ตัวเดียวกับตัวเดาชนิด (src/thai.js) ถ้าเทสตัด import ออก
+// เทสจะผ่านทั้งที่ของจริงพัง (เคยพลาดมาแล้ว: วันที่ที่เป็นข้อความกลายเป็น null ทั้งคอลัมน์)
+const mod = await import(pathToFileURL(join(ROOT, "src/pqm.js")).href);
 const { escapeMText, quoteName, mLiteral, buildTableCode, wrapAsQuery, PQ_TYPES } = mod;
 
 let pass = 0;
@@ -74,6 +74,21 @@ ck("เวลาจากข้อความ", mLiteral("09:15", "time"), "#ti
 ck("ช่วงเวลาแบบมีวัน", mLiteral("2.05:30:00", "duration"), "#duration(2,5,30,0)");
 ck("ช่วงเวลาแบบไม่มีวัน", mLiteral("05:30:00", "duration"), "#duration(0,5,30,0)");
 ck("วันที่ที่แปลงไม่ได้ต้องเป็น null ไม่ใช่ค่ามั่ว", mLiteral("ไม่ทราบ", "date"), "null");
+
+/* ‼️ วันที่ที่มาเป็น "ข้อความ" คือกรณีปกติของงานไทย (ไฟล์ที่ export มาจากระบบส่วนใหญ่เป็นข้อความ)
+ * ตัวเดาชนิดอ่านออกและประกาศว่าเป็น date อยู่แล้ว ตัวสร้างโค้ดจึงต้องอ่านออกด้วย
+ * ไม่งั้นได้ตารางที่หัวบอกว่า date แต่ค่าว่างทั้งคอลัมน์ = ข้อมูลหายเงียบ ๆ
+ * (วัดจริง 09/09/2026 บนเว็บจริง: ทั้ง 4 รูปแบบข้างล่างคืน null หมด) */
+console.log("\n━━ ⑤ วันที่ที่มาเป็นข้อความ (ต้องไม่หายเงียบ) ━━");
+ck("วันที่ไทยเต็ม พ.ศ.", mLiteral("1 ตุลาคม 2569", "date"), "#date(2026,10,1)");
+ck("วันที่ไทยย่อ ปี 2 หลัก", mLiteral("15 พ.ย. 69", "date"), "#date(2026,11,15)");
+ck("วัน/เดือน/ปี พ.ศ.", mLiteral("01/10/2569", "date"), "#date(2026,10,1)");
+ck("รูปแบบสากล ค.ศ.", mLiteral("2026-10-01", "date"), "#date(2026,10,1)");
+ck("เลขวันที่ของ Excel", mLiteral(46296, "date"), "#date(2026,10,1)");
+ck("เลขไทยในวันที่", mLiteral("๑๕ ม.ค. ๒๕๖๙", "date"), "#date(2026,1,15)");
+ck("วันที่และเวลาที่เป็นข้อความ", mLiteral("2026-10-01 13:45", "datetime"), "#datetime(2026,10,1,13,45,0)");
+ck("มีแค่ปี สร้างวันที่ไม่ได้ ต้องเป็น null", mLiteral("2569", "date"), "null");
+ck("ข้อความมั่ว ๆ ยังต้องเป็น null", mLiteral("ไม่ระบุ", "date"), "null");
 
 console.log("\n━━ ④ ประกอบเป็นตารางเต็ม ━━");
 {

@@ -6,6 +6,7 @@
 // สรุปที่ใช้ตัดสินใจ: .claude/research/2026-09-09-filekit-tool-depth.md
 
 import { tr } from "./i18n.js";
+import { parseAnyDate, toCE } from "./thai.js";
 
 /* ชนิดข้อมูลที่รองรับ เรียงตามลำดับที่จะโชว์ในเมนูให้ผู้ใช้เลือก
  * mType   คือสิ่งที่เขียนใน type table [...]
@@ -59,13 +60,33 @@ const numOrNull = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+/* ‼️ วันที่ในไฟล์จริงมาเป็น "ข้อความ" เป็นส่วนใหญ่ (ระบบไทยส่วนมาก export ออกมาแบบนั้น)
+ * ตัวเดาชนิดใน pqtypes.js ตัดสินว่าคอลัมน์เป็นวันที่ด้วย parseAnyDate ซึ่งอ่านวันที่ไทยและ
+ * พ.ศ. ออก · ถ้าตรงนี้รับแค่ Date object จะได้ตารางที่หัวประกาศ = date แต่ค่าเป็น null
+ * ทุกแถว คือข้อมูลหายเงียบ ๆ (วัดจริง 09/09/2026 บนเว็บจริง: "1 ตุลาคม 2569", "01/10/2569"
+ * และแม้แต่ "2026-10-01" หายทั้งคอลัมน์) จึงต้องใช้ตัวอ่านตัวเดียวกันทั้งสองฝั่ง */
+const TIME_IN_TEXT = /(\d{1,2}):(\d{2})(?::(\d{2}))?/;
+
 const parts = (v) => {
-  const d = v instanceof Date ? v : null;
-  if (!d || Number.isNaN(d.getTime())) return null;
-  return {
-    y: d.getFullYear(), mo: d.getMonth() + 1, d: d.getDate(),
-    h: d.getHours(), mi: d.getMinutes(), s: d.getSeconds(),
-  };
+  if (v instanceof Date) {
+    if (Number.isNaN(v.getTime())) return null;
+    return { y: v.getFullYear(), mo: v.getMonth() + 1, d: v.getDate(),
+             h: v.getHours(), mi: v.getMinutes(), s: v.getSeconds() };
+  }
+  if (typeof v !== "string" && typeof v !== "number") return null;
+
+  let t = null, forDate = v;
+  if (typeof v === "string") {
+    // แยกส่วนเวลาออกก่อน เพราะตัวอ่านวันที่รับเฉพาะส่วนวันที่ล้วน
+    t = v.match(TIME_IN_TEXT);
+    forDate = (t ? v.replace(TIME_IN_TEXT, " ") : v).replace(/\s+/g, " ").trim();
+    if (!forDate) return null;
+  }
+  const p = parseAnyDate(forDate);
+  // มีแค่ปี หรือมีแค่เดือนกับปี ประกอบเป็นวันที่ไม่ได้ ต้องคืน null ไม่ใช่เดาวันที่ 1 ให้
+  if (!p || p.m == null || p.d == null) return null;
+  return { y: toCE(p.y), mo: p.m, d: p.d,
+           h: t ? +t[1] : 0, mi: t ? +t[2] : 0, s: t && t[3] ? +t[3] : 0 };
 };
 
 /** แปลงค่าหนึ่งช่องเป็น literal ของภาษา M ตามชนิดที่ผู้ใช้เลือก

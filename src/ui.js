@@ -29,6 +29,26 @@ export function download(blob, filename) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
+  announceResult(blob, filename); // ผลลัพธ์นี้พร้อมพาไปเครื่องมือถัดไปแล้ว — ดู "ผลลัพธ์ล่าสุด" ด้านล่าง
+}
+
+/**
+ * ปุ่มดาวน์โหลดไฟล์ผลลัพธ์ 1 ไฟล์ — ใช้แทนการเขียน button(... onclick: () => download(...)) เองทุกที่
+ * ‼️ เหตุผลที่ต้องมี: แถว "ทำอะไรต่อดี" ท้ายหน้าจะพาไฟล์ผลลัพธ์ไปเครื่องมือถัดไปให้ ก็ต่อเมื่อมีคน
+ *    ประกาศว่า "ผลลัพธ์ล่าสุดคือไฟล์นี้" ซึ่งเดิมประกาศตอน download() ทำงานเท่านั้น = ผู้ใช้ต้อง
+ *    กดดาวน์โหลดลงเครื่องก่อน ป้าย "พาไฟล์ไปด้วย" ถึงจะโผล่ ทั้งที่จุดประสงค์ของแถวนั้นคือ
+ *    "ทำต่อโดยไม่ต้องดาวน์โหลด" พอดี (วัดจริงจาก tests/browser_chain.py: กดการ์ดแล้วไฟล์ไม่ตามไป)
+ *    ตัวนี้ประกาศให้ตั้งแต่ตอนสร้างปุ่ม คือตอนที่ผลลัพธ์เกิดขึ้นจริง
+ * ป้ายบนปุ่มยังเป็น "ดาวน์โหลด" เหมือนเดิม ส่วน aria-label บอกชื่อไฟล์ให้โปรแกรมอ่านหน้าจอ
+ */
+export function downloadButton(blob, filename, opts = {}) {
+  announceResult(blob, filename);
+  return button(opts.text ?? tr("ดาวน์โหลด", "Download"), {
+    icon: "download",
+    label: tr(`ดาวน์โหลด ${filename}`, `Download ${filename}`),
+    onclick: () => download(blob, filename),
+    ...opts.btn,
+  });
 }
 
 /** โครงหน้าเครื่องมือ: หัวเรื่อง + กล่องเนื้อหา */
@@ -55,16 +75,41 @@ export function toolShell(tool) {
 export function nextSteps(tool) {
   const list = (tool.next || []).map(byId).filter(Boolean);
   if (!list.length) return null;
+  ensureResultLifecycle();
   const accent = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
-  return el("nav", { class: "next-steps", "aria-label": tr("เครื่องมือที่มักใช้ต่อ", "Tools people use next") }, [
+
+  const cards = list.map((t) => {
+    // ป้ายเล็ก ๆ บอกว่ากดแล้วไฟล์ผลลัพธ์ล่าสุดจะตามไปด้วย — ซ่อนไว้ก่อน โผล่เฉพาะตอนมีผลลัพธ์
+    // ที่ชนิดตรงกับเครื่องมือปลายทางนี้จริง ๆ (เดิม hidden ในตอนสร้าง ค่อยเปิดทีหลังด้วย sync())
+    const carryTag = el("span", { class: "next-carry", hidden: true }, [
+      uiIcon("download", "ico-svg"),
+      tr("พาไฟล์ไปด้วย", "Brings your file"),
+    ]);
+    const a = el("a", {
+      class: "next-card", href: "#/" + t.id, style: `--ac:${accent(t)}`,
+      onclick: () => {
+        const carried = resultFilesFor(t);
+        if (carried) stashFiles(carried); // ไฟล์ตามไปเฉพาะตอนชนิดเข้ากันได้จริง — การ์ดอื่นทำงานปกติ
+      },
+    }, [
+      el("span", { class: "next-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
+      el("span", { class: "next-label" }, [el("span", { class: "next-title" }, t.title), carryTag]),
+    ]);
+    return { t, a, carryTag };
+  });
+
+  function sync() {
+    for (const { t, carryTag } of cards) carryTag.hidden = !resultFilesFor(t);
+  }
+  sync();
+
+  const nav = el("nav", { class: "next-steps", "aria-label": tr("เครื่องมือที่มักใช้ต่อ", "Tools people use next") }, [
     el("h2", {}, tr("ทำอะไรต่อดี", "What next?")),
-    el("div", { class: "next-row" }, list.map((t) =>
-      el("a", { class: "next-card", href: "#/" + t.id, style: `--ac:${accent(t)}` }, [
-        el("span", { class: "next-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
-        el("span", {}, t.title),
-      ])
-    )),
+    el("div", { class: "next-row" }, cards.map((c) => c.a)),
   ]);
+  // อัปเดตป้ายทันทีที่มีผลลัพธ์ใหม่ (ผู้ใช้กดดาวน์โหลดหลังจากแถวนี้วาดไปแล้ว) — ถอดตัวเองเมื่อแถวนี้หลุดจากหน้า
+  resultWatchers.add({ dead: () => !nav.isConnected, fn: sync });
+  return nav;
 }
 
 /** แถบสถานะ + แถบความคืบหน้า (ใช้คู่กันเสมอ) */
@@ -73,6 +118,7 @@ export function statusBar() {
   const fill = el("div", { class: "fill" });
   // ‼️ งานที่ใช้เวลานานต้องยกเลิกได้ ไม่งั้นลากมา 50 ไฟล์แล้วกดผิดต้องรอจนจบหรือปิดแท็บทิ้ง
   let cancelled = false;
+  let busy = false;                 // อยู่ระหว่าง begin() ถึง end() — เครื่องมือใช้เช็คว่าห้ามล้างผลกลางคัน
   // ‼️ Nielsen Norman: งานที่เสร็จใน <1 วิ ไม่ควรมีแถบความคืบหน้าเลย (กระพริบแว้บ ยิ่งดูช้า)
   //    จึงหน่วงการ "โชว์" แถบไว้จนกว่าจะผ่านไป ≥800ms — ค่า % ยังอัปเดตข้างในตลอด
   //    เผื่องานที่ยาวเกินคาดพอถึงจุดที่โชว์แถบจะได้ไม่กระโดดจาก 0 ทันที
@@ -87,8 +133,9 @@ export function statusBar() {
     node,
     get cancelled() { return cancelled; },
     /** เรียกก่อนเริ่มงานใหม่ทุกครั้ง — เปิดปุ่มหยุดและล้างธงเดิม */
-    begin: () => { cancelled = false; startedAt = performance.now(); stop.hidden = false; stop.disabled = false; stop.textContent = tr("หยุด", "Stop"); },
-    end: () => { stop.hidden = true; },
+    get busy() { return busy; },
+    begin: () => { cancelled = false; busy = true; startedAt = performance.now(); stop.hidden = false; stop.disabled = false; stop.textContent = tr("หยุด", "Stop"); },
+    end: () => { busy = false; stop.hidden = true; },
     info: (t) => { msg.className = "status show info"; msg.textContent = t; label = t; },
     ok: (t) => { msg.className = "status show ok"; msg.textContent = t; },
     err: (t) => { msg.className = "status show err"; msg.textContent = t; },
@@ -240,6 +287,44 @@ const stateWatchers = new Set();
  * (เช็คทีหลังใน microtask — ตอนนั้นตัวรับแบบ sync ของทุกใบทำงานจบแล้ว) */
 const claimedEvents = new WeakSet();
 
+/* ── คืนหน่วยความจำตอนเครื่องมือถูกถอดออกจากแคช ──────────────────────────
+ * ‼️ เดิมเปิดเครื่องมือ 20 ตัวติดกัน = กล่องลากไฟล์ 20 ใบยังค้างอยู่ในหน่วยความจำทั้งหมด
+ *    พร้อม objectURL ของภาพย่อทุกใบ (ไม่เคยถูก revoke) และตัวรับ event ระดับ document
+ *    ที่เก็บกวาดตัวเองแบบ "รอมีเหตุการณ์มาก่อนถึงจะถอด" — วัดได้ +20 ตัวต่อ 20 ครั้ง
+ *    (จับได้จาก tests/browser_leak.py) · หน้าเว็บที่เปิดค้างทั้งวันจึงบวมขึ้นเรื่อย ๆ
+ * แก้โดยให้ทุกกล่องฝากวิธีเก็บของตัวเองไว้ แล้ว app.js เรียก disposeTree() ตอนถอดแคช */
+const zoneDisposers = new Set();
+function forZonesIn(node, fn) {
+  if (!node) return 0;
+  let n = 0;
+  for (const d of [...zoneDisposers]) {
+    if (node === d.zone || node.contains(d.zone)) { fn(d); n++; }
+  }
+  return n;
+}
+/** เครื่องมือถูกซ่อนไปแล้วแต่ยังอยู่ในแคช — คืนหน่วยความจำของภาพย่อทันที
+ *  แต่เก็บรายชื่อไฟล์ไว้ กลับเข้ามาแล้วงานยังอยู่ครบ (ภาพย่อวาดใหม่ให้เอง เร็วอยู่แล้ว) */
+export function sleepTree(node) { return forZonesIn(node, (d) => d.sleep()); }
+/** กลับเข้ามาที่เครื่องมือเดิมที่แคชไว้ — วาดภาพย่อกลับมา */
+export function wakeTree(node) { return forZonesIn(node, (d) => d.wake()); }
+/** ถอดออกจากแคชถาวร — คืนทุกอย่างรวมทั้งตัวรับ event ระดับ document */
+export function disposeTree(node) {
+  return forZonesIn(node, (d) => { zoneDisposers.delete(d); d.dispose(); });
+}
+/** เครื่องมือนี้ยังมีไฟล์ที่ผู้ใช้เลือกไว้ค้างอยู่ไหม — ใช้ตัดสินว่า "ห้ามถอดออกจากแคช"
+ *  ผู้ใช้ที่ลากไฟล์ 30 ใบใส่ไว้แล้วแวะไปเครื่องมืออื่น ต้องกลับมาเจอของเดิมครบเสมอ */
+export function treeHasFiles(node) {
+  let any = false;
+  forZonesIn(node, (d) => { if (d.hasFiles()) any = true; });
+  return any;
+}
+/** ให้เครื่องมือที่ถือ objectURL ของตัวเอง (เช่นแกลเลอรีภาพย่อของ image-resize)
+ *  ฝากวิธีคืนหน่วยความจำไว้ที่เดียวกัน — เรียกครั้งเดียวตอน mount ก็พอ
+ *  `node` = element ไหนก็ได้ที่อยู่ในต้นไม้ของเครื่องมือนั้น (ปกติใช้ตัว wrap) */
+export function registerCleanup(node, { sleep = () => {}, wake = () => {}, dispose = sleep, hasFiles = () => false } = {}) {
+  zoneDisposers.add({ zone: node, sleep, wake, dispose, hasFiles });
+}
+
 /* ── ส่งไฟล์ข้ามหน้า ────────────────────────────────────────────────────
  * หน้าแรกรับไฟล์ที่ลาก/วางเข้ามาแล้วเสนอเครื่องมือให้เลือก — พอกดเลือก ไฟล์ต้องตามไปด้วย
  * ไม่ใช่ให้ผู้ใช้เลือกไฟล์ใหม่อีกรอบ · ฝากไว้ตรงนี้แล้วกล่องของเครื่องมือปลายทางมาหยิบเอง
@@ -249,6 +334,49 @@ export function stashFiles(files) { stashed = files && files.length ? [...files]
 export function hasStashedFiles() { return !!stashed; }
 function emitFileState(file, state) {
   for (const w of stateWatchers) { if (w.dead()) stateWatchers.delete(w); else w.fn(file, state); }
+}
+
+/* ── ผลลัพธ์ล่าสุดของเครื่องมือที่กำลังเปิดอยู่ ─────────────────────────────
+ * ปัญหาเดิม: รวม PDF เสร็จ → กด "ทำอะไรต่อดี" ไปบีบอัดต่อ → ไฟล์ไม่ตามไป ต้องโหลด
+ * ลงเครื่องแล้วลากกลับเข้าเว็บเอง · แก้โดยดักที่ download() ซึ่งทุกเครื่องมือ (29 ตัว)
+ * เรียกอยู่แล้วตอนสร้างไฟล์ผลลัพธ์ — ไม่ต้องแก้ src/tools/** สักไฟล์
+ * ‼️ ผูกกับเครื่องมือที่กำลังเปิดอยู่เท่านั้น: ล้างทิ้งทันทีที่ #tool เปลี่ยนเนื้อหา
+ *    (สลับเครื่องมือ/กลับหน้าแรก) ไม่งั้นไฟล์เก่าจากงานก่อนหน้าจะหลุดไปโผล่เป็น
+ *    "พาไฟล์ไปด้วย" ในเครื่องมืออื่นที่ไม่เกี่ยวข้องกันเลย (เข้าทาง search/ป้ายหน้าแรก)
+ * เก็บได้ผลลัพธ์เดียว (คำสั่งดาวน์โหลดล่าสุดชนะ) — พอสำหรับ 29 เครื่องมือซึ่งส่วนใหญ่
+ * มีผลลัพธ์เดียวต่อรอบ ตัวที่ดาวน์โหลดทีละไฟล์หลายไฟล์ (เช่นซ่อมไฟล์ไทยเพี้ยนหลายไฟล์
+ * โดยไม่กดรวม-zip) จะพาไปแค่ไฟล์ล่าสุดที่กด ไม่ใช่ทุกไฟล์ — ยอมรับได้ ดีกว่าไม่พาไปเลย
+ */
+let resultFiles = null;
+const resultWatchers = new Set();
+function notifyResultWatchers() {
+  for (const w of resultWatchers) { if (w.dead()) resultWatchers.delete(w); else w.fn(); }
+}
+export function setResultFiles(files) {
+  resultFiles = files && files.length ? [...files] : null;
+  notifyResultWatchers();
+}
+function announceResult(blob, filename) {
+  try { setResultFiles([new File([blob], filename, { type: blob.type })]); }
+  catch { /* เบราว์เซอร์เก่ามาก ๆ ที่ไม่รองรับ File ตรง ๆ — ไม่ใช่จุดคอขวด ปล่อยผ่านเงียบ ๆ */ }
+}
+/** ไฟล์ผลลัพธ์ล่าสุดที่ "เครื่องมือปลายทาง t" รับได้ — ใช้ตัดสินว่าการ์ดนี้พาไฟล์ไปได้ไหม */
+function resultFilesFor(t) {
+  if (!resultFiles || !t.accepts) return null;
+  const picked = resultFiles.filter((f) => t.accepts.includes(detectType(f)));
+  return picked.length ? picked : null;
+}
+/** ล้างผลลัพธ์ที่ค้างอยู่ทุกครั้งที่เนื้อหาใน #tool ถูกเปลี่ยน (สลับเครื่องมือ/กลับหน้าแรก)
+ *  ตั้งค่าครั้งเดียวทั้งหน้าเว็บ — เรียกซ้ำได้ปลอดภัย (มีธงกันซ้ำ) */
+let resultLifecycleReady = false;
+function ensureResultLifecycle() {
+  if (resultLifecycleReady) return;
+  const host = document.getElementById("tool");
+  if (!host) return; // ยังไม่มี #tool ในหน้า (ไม่ควรเกิด แต่กันพังไว้)
+  resultLifecycleReady = true;
+  new MutationObserver((muts) => {
+    if (muts.some((m) => m.removedNodes.length)) setResultFiles(null);
+  }).observe(host, { childList: true });
 }
 
 /* ── ลากไฟล์ลงตรงไหนของหน้าก็ได้ + วางจากคลิปบอร์ด ─────────────────────
@@ -334,14 +462,31 @@ export function dropzone(opts = {}) {
   }
 
   const onPage = (e) => {
-    if (!zone.isConnected) {                 // เปลี่ยนเครื่องมือไปแล้ว — เก็บกวาดตัวเอง
-      for (const t of Object.keys(pageHandlers)) document.removeEventListener(t, onPage);
+    if (!zone.isConnected) {                 // ซ่อนอยู่ (ยังอยู่ในแคช) — ไม่รับงาน แต่ยังไม่ถอดทิ้ง
       showVeil(false);
       return;
     }
     pageHandlers[e.type](e);
   };
   for (const t of Object.keys(pageHandlers)) document.addEventListener(t, onPage);
+
+  /* ‼️ ภาพย่อกินหน่วยความจำจริง (objectURL 1 ตัวต่อรูป ไม่เคยถูกคืนจนกว่าจะปิดแท็บ)
+   * เดิมเปิดเครื่องมือทิ้งไว้พร้อมรูป 30 ใบแล้วสลับไปตัวอื่น = รูปทั้ง 30 ยังกินแรมอยู่
+   * (วัดจาก tests/browser_leak.py) · คืนตอนหลับ แล้ววาดใหม่ตอนตื่น — ไฟล์ยังอยู่ครบ */
+  function releaseThumbs() {
+    for (const u of thumbUrls.values()) URL.revokeObjectURL(u);
+    thumbUrls.clear(); thumbCache.clear();
+  }
+  zoneDisposers.add({
+    zone,
+    hasFiles: () => files.length > 0,
+    sleep: releaseThumbs,
+    wake() { if (files.length) render(); },
+    dispose() {
+      for (const t of Object.keys(pageHandlers)) document.removeEventListener(t, onPage);
+      releaseThumbs(); states.clear(); files = [];
+    },
+  });
 
   zone.addEventListener("click", () => input.click());
   zone.addEventListener("keydown", (e) => {
@@ -378,6 +523,15 @@ export function dropzone(opts = {}) {
       if (!usable.length) return;
     }
 
+    /* ‼️ เลือกไฟล์เดิมซ้ำ (กดเลือกอีกรอบ ลากซ้ำ วางซ้ำ) เดิมได้แถวซ้ำกันเป๊ะ 2 แถว
+     * แล้วผลลัพธ์ก็ออกมาซ้ำ 2 ชุดชื่อเดียวกัน คนใช้โปรแกรมอ่านหน้าจอแยกไม่ออกเลยว่าปุ่มไหนของใคร
+     * (จับได้จาก tests/browser_a11y.py) · เทียบด้วยชื่อ+ขนาด+เวลาแก้ไขล่าสุด แบบเดียวกับหน้าแรก */
+    const key = (f) => `${f.name}|${f.size}|${f.lastModified}`;
+    if (multiple) {
+      const have = new Set(files.map(key));
+      usable = usable.filter((f) => !have.has(key(f)) && (have.add(key(f)), true));
+      if (!usable.length) return;              // ไฟล์เดิมทั้งหมด ไม่มีอะไรให้เพิ่ม
+    }
     if (!multiple) files.forEach(revokeThumb); // โหมดไฟล์เดียว — ไฟล์เก่าถูกแทนที่ ต้องคืนหน่วยความจำก่อน
     files = multiple ? files.concat(usable) : usable.slice(0, 1);
     render();
@@ -479,16 +633,38 @@ export function dropzone(opts = {}) {
     if (kind !== "image" && kind !== "pdf") {
       return el("span", { class: "thumb generic", "aria-hidden": "true" });
     }
-    return el("button", {
+    const btn = el("button", {
       class: "thumb generic", type: "button",
       title: tr("กดเพื่อดูรูปใหญ่", "Click to view larger"),
       "aria-label": tr(`ดู ${f.name} ขนาดใหญ่`, `View ${f.name} larger`),
       onclick: async (e) => {
         e.stopPropagation();
+        /* ‼️ ตัวดูไฟล์เปิด PDF ได้ก็ต่อเมื่อ pdf.js โหลดอยู่แล้ว — แต่เครื่องมืออย่าง
+         * รวม PDF / ใส่ลายน้ำ ใช้แค่ pdf-lib ไม่ได้ดึง pdf.js มาเลย ผลคือกดภาพย่อของ
+         * ไฟล์ PDF แล้ว "เงียบสนิท ไม่มีอะไรเกิดขึ้น ไม่มี error" ให้งงเล่น
+         * (จับได้จาก tests/browser_crossbrowser.py เกิดเหมือนกันทั้ง Chrome และ Firefox)
+         * กดแล้วคือแสดงเจตนาจะดูแล้ว ดึงตัวอ่านมาให้ตอนนั้นเลยดีกว่าเงียบใส่ */
+        if (kind === "pdf" && !window.pdfjsLib) {
+          btn.classList.add("loading");
+          btn.disabled = true;
+          try {
+            const { loadLibs } = await import("./loader.js");
+            await loadLibs("pdfjs");
+          } catch {
+            btn.classList.remove("loading");
+            btn.disabled = false;
+            return;                  // เปิดไม่ได้จริง ๆ (เน็ตหลุด) — ปล่อยให้ภาพย่อเป็นไอคอนเหมือนเดิม
+          }
+          btn.classList.remove("loading");
+          btn.disabled = false;
+          revokeThumb(f);            // มีตัวอ่านแล้ว วาดภาพย่อหน้าแรกจริงแทนไอคอนได้
+          render();
+        }
         const m = await import("./preview.js");
         m.viewFile(f, files);        // ส่งทั้งชุดไปด้วย จะได้เลื่อนดูใบอื่นต่อได้เลย
       },
     });
+    return btn;
   }
 
   function render() {
@@ -629,15 +805,20 @@ export const stripExt = (n) => (n.lastIndexOf(".") > 0 ? n.slice(0, n.lastIndexO
  * คืนรายการไฟล์ที่ข้ามไปพร้อมเหตุผล เพื่อเอาไปบอกผู้ใช้ให้ตรงจุด
  */
 export async function eachFile(files, st, fn) {
+  /* ‼️ ทำงานบน "สำเนา" ของรายการเสมอ — ผู้ใช้ลบไฟล์กลางลิสต์ระหว่างที่ยังทำงานอยู่ได้
+   * (กดถังขยะในกล่องลากไฟล์) ซึ่งไปตัด array ตัวเดียวกับที่ลูปนี้กำลังวนอยู่พอดี
+   * ผลคือดัชนีเลื่อน ทำงานข้ามไฟล์ แล้วงานทั้งชุดเงียบหายไปทั้งที่ทำไปแล้วครึ่งทาง
+   * (จับได้จาก tests/browser_stress.py ⑤) */
+  const list = [...files];
   const failed = [];
   st?.begin?.();
   let stopped = 0;
-  for (let i = 0; i < files.length; i++) {
-    if (st?.cancelled) { stopped = files.length - i; break; }
-    emitFileState(files[i], "working");
-    try { await fn(files[i], i); emitFileState(files[i], "done"); }
-    catch (e) { emitFileState(files[i], "error"); failed.push({ name: files[i].name, why: (e && e.message) || String(e) }); }
-    st?.progress?.(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
+  for (let i = 0; i < list.length; i++) {
+    if (st?.cancelled) { stopped = list.length - i; break; }
+    emitFileState(list[i], "working");
+    try { await fn(list[i], i); emitFileState(list[i], "done"); }
+    catch (e) { emitFileState(list[i], "error"); failed.push({ name: list[i].name, why: (e && e.message) || String(e) }); }
+    st?.progress?.(((i + 1) / list.length) * 100, `(${i + 1}/${list.length})`);
     await yieldToBrowser();
   }
   st?.end?.();

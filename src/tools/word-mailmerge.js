@@ -48,7 +48,11 @@ export function mount(tool) {
   let step3, step4, wait3, wait4;
 
   // ขั้นที่ยังทำอะไรไม่ได้ต้องบอกให้รู้ว่ารออะไรอยู่ ไม่ใช่โชว์หัวข้อลอย ๆ แล้วปล่อยให้เดา
-  const goRow = el("div", { class: "actions", "data-locked": "1" }, [go]);
+  // ‼️ แถบลงมือทำต้องรวม "ปุ่ม + สถานะ" ไว้ก้อนเดียวและเป็นลูกคนสุดท้ายของแผง
+  //    position:sticky ลอยได้แค่ภายในกรอบพ่อ และหยุดลอยเมื่อของที่อยู่ "ใต้มันในแผง" ไล่มาถึง
+  //    เดิมมี st.node กับ results ต่อท้ายอีก 537px ปุ่มจึงหลุดจอช่วงท้ายหน้า
+  //    (วัดจริงบนจอ 390x844: เลื่อนถึง 90% ปุ่มอยู่ที่ top=-271px) หลักเดียวกับ .ws-footer
+  const goRow = el("div", { class: "actions", "data-locked": "1" }, [go, st.node]);
 
   function syncLocks() {
     const on3 = mapBox.childElementCount > 0;
@@ -63,15 +67,15 @@ export function mount(tool) {
 
   body.append(
     el("div", { class: "mm-step" }, [el("span", { class: "mm-num" }, "1"),
-      el("div", {}, [el("h3", {}, tr("เลือกเทมเพลต Word", "Choose a Word template")), tplZone.container, fieldsBox])]),
+      el("div", {}, [el("h2", {}, tr("เลือกเทมเพลต Word", "Choose a Word template")), tplZone.container, fieldsBox])]),
     el("div", { class: "mm-step" }, [el("span", { class: "mm-num" }, "2"),
-      el("div", {}, [el("h3", {}, tr("เลือกไฟล์ข้อมูล", "Choose a data file")), dataZone.container])]),
+      el("div", {}, [el("h2", {}, tr("เลือกไฟล์ข้อมูล", "Choose a data file")), dataZone.container])]),
     step3 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "3"),
-      el("div", {}, [el("h3", {}, tr("จับคู่ข้อมูลกับตัวยึด", "Match data to placeholders")),
+      el("div", {}, [el("h2", {}, tr("จับคู่ข้อมูลกับตัวยึด", "Match data to placeholders")),
         wait3 = el("div", { class: "step-wait" }, tr("รอไฟล์จากขั้นที่ 1-2 — จับคู่คอลัมน์ให้อัตโนมัติ", "Waiting for files from steps 1–2 — columns match automatically")),
         mapBox])]),
     step4 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "4"),
-      el("div", {}, [el("h3", {}, tr("ตรวจดูก่อนสร้าง", "Preview before generating")),
+      el("div", {}, [el("h2", {}, tr("ตรวจดูก่อนสร้าง", "Preview before generating")),
         wait4 = el("div", { class: "step-wait" }, tr("จะโชว์ตัวอย่างแถวแรกเมื่อจับคู่ข้อมูลเสร็จ", "Preview shows once the data is matched")),
         previewBox,
         el("div", { class: "row" }, [
@@ -83,8 +87,7 @@ export function mount(tool) {
     //    position:sticky ลอยได้แค่ในกรอบของพ่อตัวเอง — ตอนอยู่ในขั้นที่ 4 มันลอยไม่พ้นขั้นนั้น
     //    บนมือถือจึงต้องเลื่อนลงไป 3,575px ถึงจะกดได้ (วัดจริงจาก tests/browser_mobile.py)
     //    ย้ายออกมาแล้วแถบลอยติดขอบล่างจอตามกฎ .panel:has(.file-row) .actions
-    goRow,
-    st.node, results);
+    results, goRow);
 
   // ให้ลองใช้ได้ทันทีโดยไม่ต้องเตรียมไฟล์เอง — คนส่วนใหญ่ติดตรงไม่รู้ว่าเทมเพลตหน้าตายังไง
   // ‼️ พอมีไฟล์ครบทั้งสองขั้นแล้วกล่องนี้หมดหน้าที่ — ซ่อนทิ้ง (สูง 247px คั่นระหว่างปุ่มกับท้ายหน้า)

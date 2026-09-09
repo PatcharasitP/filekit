@@ -113,7 +113,7 @@ export function mount(tool) {
       st.progress(null);
       if (!made.length) throw new Error(tr("ล้างไม่สำเร็จสักไฟล์", "Could not clean any file"));
       if (failed.length) results.appendChild(failedBox(failed));
-      st.ok(tr(`ล้างเสร็จ ${made.length} ไฟล์${failed.length ? ` · ข้าม ${failed.length}` : ""}`,
+      st.ok(tr(`ล้างเสร็จ ${made.length} ไฟล์${failed.length ? `, ข้าม ${failed.length}` : ""}`,
         `Done — cleaned ${made.length} files${failed.length ? `, skipped ${failed.length}` : ""}`));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [

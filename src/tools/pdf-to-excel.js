@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, field, select, download,
+import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser } from "../ui.js";
 import { pageLines, guessColumns, rowToCells } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
@@ -59,7 +59,7 @@ export function mount(tool) {
       results.innerHTML = "";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr("ควรตรวจทาน (OCR)", "OCR — please review"))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
     } catch (e) {
       st.progress(null); st.err(tr("อ่านด้วย OCR ไม่สำเร็จ: ", "OCR reading failed: ") + e.message);
@@ -133,7 +133,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".xlsx";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
     } catch (e) {
       st.progress(null);

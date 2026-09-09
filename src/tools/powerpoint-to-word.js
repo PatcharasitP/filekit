@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, field, select, download,
+import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser } from "../ui.js";
 import { readPptx } from "../pptx.js";
 import { tr } from "../i18n.js";
@@ -96,7 +96,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".docx";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์`, `${slides.length} slides`))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
       await yieldToBrowser();
     } catch (e) {

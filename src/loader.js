@@ -75,11 +75,42 @@ export const localLibFiles = () => {
 
 const inflight = new Map(); // ชื่อ -> Promise — กันโหลดซ้ำเมื่อหลายเครื่องมือขอพร้อมกัน
 
+/* ── ลายนิ้วมือของไฟล์ไลบรารีบน CDN (Subresource Integrity) ───────────────
+ * ปกติทุกตัวโหลดจาก vendor/ ในโดเมนเดียวกันอยู่แล้ว CDN เป็นแค่ตาข่ายรองรับ
+ * แต่ถ้าวันหนึ่งตกไปใช้ CDN แล้ว CDN นั้นถูกแฮ็ก = โค้ดแปลกปลอมรันบนหน้าเว็บผู้ใช้
+ * ซึ่งอ่านไฟล์ที่กำลังประมวลผลอยู่ในหน่วยความจำได้ทันที เป็นทางเดียวที่คำสัญญา
+ * "ไฟล์ไม่ออกจากเครื่องคุณ" จะถูกทำลายได้จริง · ใส่ลายนิ้วมือไว้ เบราว์เซอร์จะปฏิเสธ
+ * ไฟล์ที่ไบต์ไม่ตรงเป๊ะให้เอง (คำนวณจากไฟล์จริงบน CDN 09/09/2026)
+ * ‼️ เปลี่ยนเลขเวอร์ชันใน REG เมื่อไร ต้องคำนวณลายนิ้วมือใหม่ด้วยเสมอ ไม่งั้นตาข่ายรองรับพัง:
+ *    curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A */
+const SRI = {
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js":
+    "sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e",
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js":
+    "sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI",
+  "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js":
+    "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw",
+  "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js":
+    "sha384-4xaIisuLEy2lo2HkB2C4rEf7v8jbTb2kuogX6TkuEt9feTWKBSFSOzsqNNbV+sKh",
+  "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js":
+    "sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG",
+  "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js":
+    "sha384-/cXAMbzovUIKbBERjPmR3SnPTh8siWr5lsvFYj1Uq4XP0yaJUZJmsh0YXyGv5P0y",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js":
+    "sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js":
+    "sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3",
+  "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js":
+    "sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F",
+};
+
 function injectScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
     s.src = src;
     s.async = true;
+    const hash = SRI[src];
+    if (hash) { s.integrity = hash; s.crossOrigin = "anonymous"; }
     s.onload = () => resolve(src);
     s.onerror = () => reject(new Error(tr("โหลดไม่สำเร็จ: ", "Failed to load: ") + src));
     document.head.appendChild(s);

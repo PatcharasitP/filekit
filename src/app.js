@@ -190,6 +190,9 @@ function renderDropped(stageH) {
 
 document.addEventListener("dragenter", (e) => {
   if (!onHomeNow() || !dragHasFiles(e)) return;
+  // ผ้าคลุมจอตอนลากไฟล์ กับภาพย่อของไฟล์ที่วางลงหน้าแรก ใช้สไตล์จาก tool.css
+  // ต้องดึงมาตั้งแต่ตอนเริ่มลาก ไม่ใช่รอตอนวางเสร็จ ไม่งั้นแว้บเป็นของไม่มีสไตล์
+  loadToolCss();
   homeDragDepth++;
   showVeil(true, tr("ปล่อยไฟล์เพื่อดูว่าทำอะไรได้บ้าง", "Drop a file to see what you can do"));
 });
@@ -211,6 +214,7 @@ document.addEventListener("paste", (e) => {
   const f = filesFromClipboard(e);
   if (!f.length) return;             // วางข้อความธรรมดา (เช่นในช่องค้นหา) ปล่อยผ่านตามปกติ
   e.preventDefault();
+  loadToolCss();                     // ภาพย่อของไฟล์ที่วางไว้ใช้สไตล์จาก tool.css
   takeHomeFiles(f);
 });
 
@@ -245,6 +249,7 @@ const prefetched = new Set();
 function prefetch(t) {
   if (!t || prefetched.has(t.id)) return;
   prefetched.add(t.id);
+  loadToolCss();                         // สไตล์หน้าเครื่องมือ ดึงพร้อมโค้ดตั้งแต่ตอนเล็งการ์ด
   import(`./tools/${t.id}.js`).catch(() => prefetched.delete(t.id));
   warmLibs(t.libs);
 }
@@ -252,9 +257,42 @@ function prefetch(t) {
 /* ── เราเตอร์ ── */
 const mounted = new Map();              // เก็บ DOM ของเครื่องมือที่เคยเปิด กลับมาแล้วสถานะยังอยู่
 const mounting = new Map();             // เครื่องมือที่กำลังโหลดอยู่ — กันสร้างซ้อนตอนถูกเรียกพร้อมกัน
-const swap = (fn) =>
-  document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches
-    ? document.startViewTransition(fn) : fn();
+
+/* ‼️ แคชนี้เคยไม่มีเพดาน — เปิดครบ 29 ตัวคือถือ DOM ไว้ 29 ก้อนตลอดอายุแท็บ พร้อม
+ *    objectURL ของภาพย่อทุกใบที่ไม่เคยถูกคืน (วัดจาก tests/browser_leak.py)
+ *    ตัวที่ถูกถอดออกไปจะ mount ใหม่ตอนกดกลับเข้าไป เร็วอยู่แล้วเพราะโค้ดอยู่ในแคชเบราว์เซอร์
+ * ‼️ แต่ "เครื่องมือที่ยังมีไฟล์ของผู้ใช้ค้างอยู่" ห้ามถอดเด็ดขาด — คนที่ลากไฟล์ 30 ใบใส่ไว้
+ *    แล้วแวะไปดูเครื่องมืออื่น ต้องกลับมาเจอของเดิมครบเสมอ ไม่ใช่ต้องลากใหม่ทั้งชุด */
+const MAX_CACHED = 6;
+/* พักเครื่องมือที่กำลังจะถูกซ่อน — คืนหน่วยความจำภาพย่อทันที (ไฟล์ยังอยู่ครบ)
+ * เรียกก่อนล้าง #tool ทุกครั้ง · ui.js โหลดแล้วแน่นอนถ้ามีเครื่องมือเปิดอยู่ ถ้ายังไม่มีก็ไม่มีอะไรให้พัก */
+function sleepCurrent() {
+  const showing = toolBox.firstElementChild;
+  if (!showing || !mounted.size) return;
+  import("./ui.js").then((m) => m.sleepTree(showing)).catch(() => {});
+}
+async function trimMounted(keepId) {
+  if (mounted.size <= MAX_CACHED) return;
+  const { disposeTree, treeHasFiles } = await import("./ui.js");   // โหลดอยู่แล้วแน่นอน (เครื่องมือทุกตัวใช้)
+  for (const id of [...mounted.keys()]) {
+    if (mounted.size <= MAX_CACHED) break;
+    if (id === keepId) continue;
+    const node = mounted.get(id);
+    if (treeHasFiles(node)) continue;              // ยังมีงานค้างอยู่ในนั้น ปล่อยไว้
+    disposeTree(node);
+    mounted.delete(id);
+  }
+}
+/* ‼️ สลับหน้าเร็ว ๆ (กดรัว/hash เปลี่ยนติด ๆ กัน) ทำให้ transition ที่ค้างอยู่ถูกสั่งข้าม
+ * แล้ว ready ของมัน reject ด้วย "Transition was skipped" โดยไม่มีใครรับ → โผล่เป็น
+ * page error ในคอนโซลรัว ๆ (จับได้จาก tests/browser_stress.py ⑥ — 20 ครั้งรวดได้ 5 error)
+ * ต้องดักให้ครบทั้ง 3 promise ไม่ใช่แค่ finished (ตัวที่ reject จริงคือ ready) */
+const hush = (pr) => { pr && typeof pr.catch === "function" && pr.catch(() => {}); };
+const swap = (fn) => {
+  if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return fn();
+  const t = document.startViewTransition(fn);
+  hush(t.ready); hush(t.finished); hush(t.updateCallbackDone);
+};
 
 async function go(id, push = true) {
   const tool = byId(id);
@@ -265,9 +303,16 @@ async function go(id, push = true) {
   swap(() => {
     document.body.classList.add("tool");
     document.title = `${tool.title} — FileKit`;
+    sleepCurrent();
     toolBox.innerHTML = "";
     const cached = mounted.get(id);
-    if (cached) { toolBox.appendChild(cached); return; }
+    // ย้ายไปท้ายคิว = "เพิ่งใช้ล่าสุด" ตัวที่ไม่ได้แตะนานสุดจึงถูกถอดออกก่อนตอนแคชเต็ม
+    if (cached) {
+      mounted.delete(id); mounted.set(id, cached);
+      toolBox.appendChild(cached);
+      import("./ui.js").then((m) => m.wakeTree(cached)).catch(() => {});   // วาดภาพย่อกลับมา
+      return;
+    }
     toolBox.appendChild(el("div", { class: "loading" }, [
       el("div", { class: "spinner" }), el("div", {}, tr("กำลังเตรียมเครื่องมือ…", "Preparing the tool…")),
     ]));
@@ -284,7 +329,8 @@ async function go(id, push = true) {
     let job = mounting.get(id);
     if (!job) {
       // โหลดโค้ดเครื่องมือกับไลบรารีขนานกัน ไม่ต่อคิวกัน
-      job = Promise.all([import(`./tools/${id}.js`), loadLibs(...tool.libs)])
+      // ‼️ ต้องรอ tool.css จริง ๆ ไม่ใช่แค่สั่งโหลด ไม่งั้นเครื่องมือโผล่มาแบบไม่มีสไตล์แว้บหนึ่ง
+      job = Promise.all([import(`./tools/${id}.js`), loadLibs(...tool.libs), loadToolCss()])
         .then(([mod]) => { const node = mod.mount(tool); mounted.set(id, node); return node; });
       mounting.set(id, job);
       job.catch(() => {}).finally(() => mounting.delete(id));
@@ -292,6 +338,7 @@ async function go(id, push = true) {
     const node = await job;
     toolBox.innerHTML = "";
     toolBox.appendChild(node);
+    await trimMounted(id);
   } catch (err) {
     console.error(err);
     toolBox.innerHTML = "";
@@ -308,6 +355,7 @@ function goHome(push = true) {
     document.body.classList.remove("tool");
     document.title = tr("FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์",
                         "FileKit — file tools that run in your browser");
+    sleepCurrent();
     toolBox.innerHTML = "";
     renderHome(search.value);            // อัปเดตแถว "เพิ่งใช้"ให้ทันที
   });
@@ -315,8 +363,12 @@ function goHome(push = true) {
 }
 
 function route() {
-  const id = location.hash.replace(/^#\/?/, "");
-  if (id && byId(id)) go(id, false); else goHome(false);
+  const id = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
+  if (id && byId(id)) return go(id, false);
+  // ลิงก์เก่า/พิมพ์ผิด → กลับหน้าแรกแล้วเก็บกวาด hash ที่ไม่มีความหมายทิ้งด้วย
+  // (replaceState ไม่เพิ่มประวัติ ปุ่มย้อนกลับจึงไม่ติดกับดักวนที่ hash เสีย)
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  goHome(false);
 }
 
 /* ── ค้นหา ── */
@@ -428,7 +480,11 @@ document.addEventListener("keydown", (e) => {
     if (document.body.classList.contains("tool")) goHome();
     search.focus(); search.select();
   }
-  if (e.key === "Escape" && document.body.classList.contains("tool") && !typing) goHome();
+  /* ‼️ Esc ตอนเปิดดูรูปเต็มจออยู่ = เดิมปิดกล่องแล้ว "เด้งออกจากเครื่องมือกลับหน้าแรก" พร้อมกัน
+   *    ไฟล์ที่เลือกไว้หายหมด ต้องลากเข้ามาใหม่ทั้งชุด (วัดจริงแล้ว: แถวไฟล์เหลือ 0)
+   *    กล่อง <dialog> กิน Esc ของตัวเองอยู่แล้ว ตรงนี้แค่ต้องไม่ทำงานซ้อนตอนมีกล่องเปิดอยู่ */
+  if (e.key === "Escape" && document.body.classList.contains("tool") && !typing
+      && !document.querySelector("dialog[open]")) goHome();
 });
 
 // ป้ายปุ่มลัดต้องตรงกับเครื่องที่ใช้จริง — Mac ใช้ ⌘ ไม่ใช่ Ctrl
@@ -444,7 +500,11 @@ renderCats();
   if (q0) { search.value = q0; searchBox.classList.add("has"); }
   renderHome(q0);
 }
-route();
+/* ‼️ ตอนโหลดหน้าแรก (hash ว่าง) route() จะเรียก goHome() ซึ่ง renderHome() ซ้ำอีกรอบ
+ *    = วาดรายการเครื่องมือ 2 ครั้งติดกันทุกครั้งที่เปิดเว็บ เนื้อหาโป่งสองที ดัน footer หลุดจอ
+ *    วัดจริงได้ CLS 0.174 (เพดานที่ยอมรับกันคือ 0.05) ทั้งที่รอบที่สองได้ผลเหมือนเดิมเป๊ะ
+ *    (จับได้จาก tests/browser_perfbudget.py ด้วย MutationObserver นับการแทนที่ #tools) */
+if (location.hash.replace(/^#\/?/, "")) route();
 
 // เอียงปึกกระดาษในฉากเปิดตามเมาส์เล็กน้อย ให้รู้สึกเป็น 3 มิติจริงไม่ใช่ภาพนิ่ง
 // ‼️ เปิดเฉพาะเครื่องที่มีเมาส์จริง — บนจอสัมผัส pointermove จะยิงตอนเลื่อนหน้า ทำให้กระตุก
@@ -471,21 +531,85 @@ route();
 }
 
 
-// สไตล์ส่วนที่เหลือ (หน้าเครื่องมือ) โหลดแบบไม่บล็อกการวาดหน้าแรก
-document.head.appendChild(el("link", { rel: "stylesheet", href: "assets/css/tool.css" }));
+/* สไตล์ของ "หน้าเครื่องมือ" (64 KB) — เดิมโหลดทันทีตั้งแต่หน้าแรกทุกครั้ง ทั้งที่คนที่แวะมาดู
+ * เฉย ๆ ไม่เคยเปิดเครื่องมือเลยก็ต้องจ่ายค่านี้ฟรี ๆ (ใหญ่กว่า CSS ของหน้าแรกทั้งก้อนอีก)
+ * ‼️ ต้องมาถึงก่อนเครื่องมือถูกวาดเสมอ ไม่งั้นหน้าเครื่องมือจะแว้บเป็นหน้าเปล่าก่อนสไตล์มา
+ *    จึงดึงตอนผู้ใช้ "แสดงเจตนา" (ชี้เมาส์/แตะป้ายเครื่องมือ) แบบเดียวกับที่ prefetch โค้ดเครื่องมือ
+ *    และรออย่างแท้จริงก่อนวาด ด้วย onload ของ <link> */
+/* ‼️ เก็บ promise ไว้บนตัวฟังก์ชันเอง ไม่ใช่ตัวแปร let ข้างนอก — go() ถูกเรียกได้ตั้งแต่
+ *    ตอน route() บรรทัดบน ๆ ซึ่งยังมาไม่ถึงบรรทัดนี้ ถ้าใช้ let จะพังด้วย ReferenceError
+ *    (temporal dead zone) เฉพาะตอนเปิดเว็บด้วยลิงก์เครื่องมือตรง ๆ ซึ่งเป็นทางที่คนแชร์ลิงก์กันใช้ */
+function loadToolCss() {
+  if (loadToolCss.p) return loadToolCss.p;
+  loadToolCss.p = new Promise((resolve) => {
+    const link = el("link", { rel: "stylesheet", href: "assets/css/tool.css" });
+    link.addEventListener("load", resolve, { once: true });
+    link.addEventListener("error", resolve, { once: true });   // โหลดไม่ได้ก็ต้องไม่ค้างหน้า
+    document.head.appendChild(link);
+  });
+  return loadToolCss.p;
+}
+// เปิดเว็บมาที่ลิงก์เครื่องมือตรง ๆ = ต้องใช้ทันที ไม่ต้องรอเจตนา
+// (นอกจากนี้ดึงตอนผู้ใช้เล็งป้ายเครื่องมือ หรือเริ่มลาก/วางไฟล์ลงหน้าแรก ดูจุดเรียกด้านบน)
+if (location.hash.replace(/^#\/?/, "")) loadToolCss();
 
-// แถบ "เตรียมใช้งานออฟไลน์" — ดึงเข้ามาตอนเบราว์เซอร์ว่าง ไม่แย่งเวลาวาดหน้าแรก
+/* แถบ "เตรียมใช้งานออฟไลน์" ท้ายหน้าแรก — ดึงเข้ามาตอนเบราว์เซอร์ว่าง ไม่แย่งเวลาวาดหน้าแรก
+ * ‼️ แถบนี้ใช้สไตล์ร่วมจาก tool.css (ปุ่ม แถบความคืบหน้า) — วัดจริงแล้วถ้าไม่มี tool.css
+ *    มันสูงขึ้น 300px และหน้าจะกระตุกทันทีที่สไตล์ตามมาทีหลัง จึงต้องรอสไตล์ให้มาถึงก่อน
+ *    แล้วค่อยใส่แถบลงหน้า = ไม่มีจังหวะที่ผู้ใช้เห็นของยังไม่แต่งตัว และ CLS ยังเป็น 0 */
 {
   const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 600));
 
   idle(() => {
-    import("./offline.js")
-      .then((m) => document.querySelector("footer")?.before(m.offlineBar()))
+    Promise.all([import("./offline.js"), loadToolCss()])
+      .then(([m]) => document.querySelector("footer")?.before(m.offlineBar()))
       .catch(() => {});
   });
 }
 
 // Service worker: ทำให้เปิดซ้ำเร็วและใช้งานออฟไลน์ได้
+/* ── แจ้งเมื่อมีเวอร์ชันใหม่ ────────────────────────────────────────────────
+ * ‼️ อาการที่เจ้าของเว็บเจอเอง: ปล่อยของใหม่แล้วกด Ctrl+Shift+R ก็ยังเห็นของเก่าค้าง
+ *    ต้นเหตุไม่ใช่แคชพัง — service worker ตัวเก่ายังเป็นคนเสิร์ฟหน้านั้นอยู่ ตัวใหม่เพิ่ง
+ *    ติดตั้งเสร็จและรอคิวอยู่เบื้องหลัง กว่าจะได้คุมจริงคือการโหลดรอบถัดไป
+ *    (พิสูจน์ด้วยค่าจริงใน tests/browser_swupdate.py: hard reload ครั้งแรกเห็นของใหม่แว้บหนึ่ง
+ *     เพราะเบราว์เซอร์ข้าม service worker ไปดึงจากเน็ตตรง ๆ แล้ว reload ถัดมาย้อนกลับไปของเก่า)
+ * เดิมไม่มีอะไรบอกผู้ใช้เลยสักอย่าง จึงดูเหมือนเว็บพัง · แก้ด้วยการบอกให้รู้ตัวแล้วให้กดเอง
+ * ‼️ ห้ามรีโหลดให้อัตโนมัติ — ผู้ใช้อาจมีไฟล์ค้างอยู่ในเครื่องมือ รีโหลดเองคือทำงานเขาหาย */
+function updateBar() {
+  if ($("#updbar")) return;
+  const bar = el("div", { class: "upd-bar", id: "updbar", role: "status" }, [
+    el("span", { class: "upd-dot", "aria-hidden": "true" }),
+    el("span", {}, tr("มีเวอร์ชันใหม่พร้อมใช้แล้ว", "A new version is ready")),
+    el("button", { class: "upd-go", type: "button",
+      onclick: () => location.reload() }, tr("รีเฟรชเลย", "Refresh now")),
+    el("button", { class: "upd-x", type: "button",
+      "aria-label": tr("ปิดข้อความนี้", "Dismiss"),
+      onclick: () => bar.remove() }, "✕"),
+  ]);
+  document.body.appendChild(bar);
+}
+
 if ("serviceWorker"in navigator && location.protocol.startsWith("http")) {
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  addEventListener("load", async () => {
+    let reg;
+    try { reg = await navigator.serviceWorker.register("sw.js"); } catch { return; }
+    // ‼️ เบราว์เซอร์/โหมดที่ปิด service worker ไว้ (โหมดส่วนตัวบางตัว, องค์กรที่ล็อกไว้)
+    //    register() ไม่ throw แต่คืนค่าว่างมาเฉย ๆ — เดิมพังต่อทันทีเป็น TypeError หลุดคอนโซล
+    if (!reg || typeof reg.addEventListener !== "function") return;
+    reg.addEventListener("updatefound", () => {
+      const sw = reg.installing;
+      // ไม่มี controller = ติดตั้งครั้งแรกของเครื่องนี้ ไม่ใช่การอัปเดต ไม่ต้องรบกวน
+      if (!sw || !navigator.serviceWorker.controller) return;
+      sw.addEventListener("statechange", () => { if (sw.state === "installed") updateBar(); });
+    });
+    // กลับมาที่แท็บนี้อีกครั้งหลังทิ้งไว้นาน ค่อยถามหาของใหม่ที (ไม่ยิงถี่ ๆ ให้เปลืองเน็ต)
+    let lastCheck = Date.now();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastCheck < 10 * 60 * 1000) return;
+      lastCheck = Date.now();
+      reg.update().catch(() => {});
+    });
+  });
 }

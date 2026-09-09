@@ -64,7 +64,8 @@ export function mount(tool) {
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),
           el("small", {}, `${fmtBytes(m.from)} → ${fmtBytes(m.blob.size)}`)]),
-        button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
+        // ปุ่มไอคอนล้วนหลายปุ่มเรียงกัน — ต้องบอกชื่อไฟล์ ไม่งั้นโปรแกรมอ่านหน้าจอได้ยิน "ดาวน์โหลด" ซ้ำทุกปุ่ม
+        button("", { icon: "download", label: tr(`ดาวน์โหลด ${m.name}`, `Download ${m.name}`),  onclick: () => download(m.blob, m.name) }),
       ])));
       if (made.length > 1) results.prepend(el("div", { class: "actions" }, [
         button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {

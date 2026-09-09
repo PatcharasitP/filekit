@@ -1,7 +1,7 @@
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { hasTextLayer } from "../ocr.js";
 import { workspace } from "../workspace.js";
-import { el, statusBar, button, field, select, download, dropzone,
+import { el, statusBar, button, field, select, downloadButton, dropzone,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 import { tr } from "../i18n.js";
 
@@ -352,14 +352,23 @@ export function mount(tool) {
                  "Already well compressed — try \"Strong\" or keep it."))
         );
       } else {
+        /* ‼️ เครื่องมือนี้บีบอัดด้วยการ "วาดทุกหน้าใหม่เป็นภาพ" ซึ่งทำให้ชั้นข้อความหายไปทั้งไฟล์
+         * ค้นหาคำในไฟล์ไม่ได้ ลากคลุมคัดลอกไม่ได้ อ่านด้วยโปรแกรมอ่านหน้าจอไม่ได้อีกต่อไป
+         * เดิมบอกเรื่องนี้เฉพาะตอน "ไม่เล็กลง" เท่านั้น พอมันเล็กลงจริงก็เงียบไปเลย
+         * ทั้งที่นั่นแหละคือตอนที่ผู้ใช้เสียของไปโดยไม่รู้ตัว (จับได้จาก tests/browser_chain.py
+         *  โซ่ Word → PDF → รวม → บีบอัด แล้วข้อความไทยหายเกลี้ยงตอนจบ) */
+        const note = hadText
+          ? tr(" (ไฟล์นี้เคยค้นหาข้อความได้ หลังบีบอัดจะกลายเป็นภาพ ค้นหาหรือคัดลอกข้อความไม่ได้แล้ว ถ้าต้องใช้ข้อความ ให้เก็บไฟล์เดิมไว้ด้วย)",
+               " (this file had searchable text; compressing turns every page into an image, so text can no longer be searched or copied. Keep the original if you need the text.)")
+          : "";
         st.ok(tr(`เล็กลง ${Math.round(diff * 100)}%, ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`,
-                 `Reduced by ${Math.round(diff * 100)}%, ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`));
+                 `Reduced by ${Math.round(diff * 100)}%, ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`) + note);
       }
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, tr(`${fmtBytes(file.size)} → ${fmtBytes(blob.size)}, ระดับ${levelDefs()[level.value].label}`,
                               `${fmtBytes(file.size)} → ${fmtBytes(blob.size)}, ${levelDefs()[level.value].label} level`))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download", onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
     } catch (e) {
       st.progress(null);

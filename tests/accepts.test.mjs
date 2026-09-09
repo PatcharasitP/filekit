@@ -6,6 +6,7 @@
  *
  * ตรวจแบบอ่านไฟล์ตรง ๆ ไม่ import — ทะเบียนพึ่ง localStorage ของเบราว์เซอร์อยู่ */
 import { readFileSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -72,24 +73,111 @@ for (const [what, re] of [
    เจ้าของเว็บบอกซ้ำ 3 ครั้งแล้วยังหลุดกลับมาทุกรอบ — กฎที่ไม่มีเครื่องบังคับก็ลืมเสมอ
    (บทเรียนเดียวกับ W41: สิ่งที่กันได้จริงคือเครื่องจับ ไม่ใช่ความตั้งใจ)
    ตรวจเฉพาะ "ข้อความในเครื่องหมายคำพูด" — คอมเมนต์ในโค้ดใช้ได้ตามสบาย */
-const MIDDOT_STR = /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
+/* ‼️ รุ่นแรกจับด้วย regex "ข้อความในเครื่องหมายคำพูด" ทีละบรรทัด — พลาดของจริงมาแล้ว
+   `ล้างเสร็จ ${n} ไฟล์${k ? ` · ข้าม ${k}` : ""}` (word-clean.js) มี backtick ซ้อนใน ${...}
+   regex จับคู่ผิดคู่ ทำให้จุดกลางไปตกอยู่ "นอกคู่ที่จับได้" แล้วรอดสายตาไปเฉย ๆ
+   จึงเปลี่ยนมาเดินอ่านทีละตัวอักษรและจำสถานะจริง (อยู่ในสตริง/คอมเมนต์/ข้างนอก)
+   ซึ่งรองรับ template ซ้อนชั้นได้ถูกต้อง — บทเรียน "พิสูจน์เครื่องมือตรวจก่อนเชื่อผล" */
+function middotsInStrings(txt) {
+  const hits = [];
+  let line = 1, mode = "code", quote = "", depth = 0;
+  const stack = [];                       // ชั้นของ template ที่ซ้อนกันผ่าน ${...}
+  for (let i = 0; i < txt.length; i++) {
+    const c = txt[i], n = txt[i + 1];
+    if (c === "\n") line++;
+    if (mode === "line") { if (c === "\n") mode = "code"; continue; }
+    if (mode === "block") { if (c === "*" && n === "/") { mode = "code"; i++; } continue; }
+    if (mode === "str") {
+      if (c === "\\") { i++; continue; }
+      if (c === quote) { mode = "code"; continue; }
+      if (quote === "`" && c === "$" && n === "{") { stack.push({ quote, depth }); mode = "code"; depth = 1; i++; continue; }
+      if (c === "\u00b7") hits.push(line);
+      continue;
+    }
+    // mode === "code"
+    if (c === "/" && n === "/") { mode = "line"; i++; continue; }
+    if (c === "/" && n === "*") { mode = "block"; i++; continue; }
+    if (c === '"' || c === "'" || c === "`") { mode = "str"; quote = c; continue; }
+    if (stack.length) {
+      if (c === "{") depth++;
+      else if (c === "}" && --depth === 0) { const top = stack.pop(); quote = top.quote; depth = top.depth; mode = "str"; }
+    }
+  }
+  return hits;
+}
 const middotHits = [];
 for (const f of [...toolFiles.map((n) => join("src/tools", n)),
                  ...readdirSync(join(ROOT, "src")).filter((n) => n.endsWith(".js")).map((n) => join("src", n))]) {
   const txt = readFileSync(join(ROOT, f), "utf8");
-  txt.split("\n").forEach((ln, i) => {
-    const t = ln.trimStart();
-    if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) return;
-    for (const m of ln.match(MIDDOT_STR) || []) {
-      if (m.includes("\u00b7")) middotHits.push(`${f}:${i + 1} ${m.slice(0, 46)}`);
-    }
-  });
+  const lines = txt.split("\n");
+  for (const ln of middotsInStrings(txt)) middotHits.push(`${f}:${ln} ${lines[ln - 1].trim().slice(0, 46)}`);
+}
+/* พิสูจน์ว่าเครื่องตรวจจับของจริงได้ ไม่ใช่ผ่านเพราะมองไม่เห็น (ประชากรต้อง > 0) */
+{
+  const bait = 'const a = `x ${n} y${k ? ` \u00b7 z ${k}` : ""}`;  // \u00b7 ในคอมเมนต์ต้องไม่โดนจับ\nconst b = "ปกติ";';
+  ck(middotsInStrings(bait).length === 1, "เครื่องตรวจจุดกลางจับ template ซ้อนชั้นได้ และไม่จับจุดกลางในคอมเมนต์");
 }
 const htmlBody = html.slice(html.indexOf("<body"));
 const htmlMiddot = (htmlBody.match(/>[^<]*\u00b7[^<]*</g) || []).map((x) => "index.html " + x.slice(0, 46));
 ck(middotHits.length + htmlMiddot.length === 0,
    `ห้ามมีจุดกลาง (·) ในข้อความที่ผู้ใช้เห็น (พบ ${middotHits.length + htmlMiddot.length})` +
    (middotHits.length + htmlMiddot.length ? "\n      " + [...middotHits, ...htmlMiddot].slice(0, 6).join("\n      ") : ""));
+
+/* ‼️ กำแพงความปลอดภัย 2 ชั้นที่ "พังเงียบ" ได้ง่ายมากถ้าไม่มีเครื่องจับ
+   ① SRI: ลายนิ้วมือไฟล์ไลบรารีบน CDN ใน src/loader.js — ถ้าใครขยับเลขเวอร์ชันแล้วลืมคำนวณใหม่
+      ตาข่ายรองรับ (ตอน vendor/ พัง) จะโหลดไม่ได้เลย และจะรู้ตัวก็ต่อเมื่อผู้ใช้เจอของจริง
+   ② CSP: หน้าเว็บมีสคริปต์สั้น ๆ ฝังอยู่ 2 ก้อน (ตั้งธีม/ภาษาก่อนวาดจอ) ที่ต้องมี sha256 อยู่ใน
+      Content-Security-Policy — แก้สคริปต์นั้นแม้แต่ตัวอักษรเดียวโดยไม่อัปเดตค่า = หน้าเว็บพังทั้งหน้า
+   ทั้งสองข้อคำนวณเองแล้วเทียบ ไม่ใช่จำค่าไว้ในเทส (ค่าที่จำไว้เฉย ๆ ก็ลืมอัปเดตได้เหมือนกัน) */
+{
+  const loader = readFileSync(join(ROOT, "src/loader.js"), "utf8");
+  const cdnUrls = [...loader.matchAll(/cdn:\s*"([^"]+)"/g)].map((m) => m[1]);
+  const sriBlock = loader.slice(loader.indexOf("const SRI = {"), loader.indexOf("function injectScript"));
+  ck(cdnUrls.length > 0, `หา CDN ใน loader.js เจอ (${cdnUrls.length} ตัว — ประชากรต้องไม่เป็นศูนย์)`);
+  const missing = cdnUrls.filter((u) => !sriBlock.includes(`"${u}"`));
+  ck(missing.length === 0,
+     `ทุกไลบรารีที่ตกไปโหลดจาก CDN ต้องมีลายนิ้วมือ SRI กำกับ (ขาด ${missing.length})` +
+     (missing.length ? "\n      " + missing.slice(0, 3).join("\n      ") : ""));
+
+  const hosts = [...new Set(cdnUrls.map((u) => new URL(u).origin))];
+  const csp = (html.match(/http-equiv="Content-Security-Policy"[^>]*content="([\s\S]*?)"/) || [])[1] || "";
+  ck(!!csp, "หน้าเว็บประกาศ Content-Security-Policy ไว้");
+  const hostMissing = hosts.filter((h) => !csp.includes(h));
+  ck(hostMissing.length === 0,
+     `โดเมน CDN ทุกตัวต้องอยู่ใน CSP ด้วย ไม่งั้นตาข่ายรองรับถูกบล็อกเอง (ขาด ${hostMissing.join(", ") || "ไม่มี"})`);
+
+  const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)(?![^>]*application\/ld\+json)[^>]*>([\s\S]*?)<\/script>/g)]
+    .map((m) => m[1]);
+  ck(inline.length > 0, `หาสคริปต์ฝังในหน้าเจอ (${inline.length} ก้อน — ประชากรต้องไม่เป็นศูนย์)`);
+  const hashMissing = inline
+    .map((body) => "sha256-" + createHash("sha256").update(body, "utf8").digest("base64"))
+    .filter((h) => !csp.includes(h));
+  ck(hashMissing.length === 0,
+     `สคริปต์ฝังในหน้าทุกก้อนต้องมี sha256 อยู่ใน CSP (ขาด ${hashMissing.length})` +
+     (hashMissing.length ? "\n      ค่าที่ควรใส่: " + hashMissing.join(" ") : ""));
+}
+
+/* ‼️ CSP ของหน้าเว็บไม่มี 'unsafe-eval' (โดยเจตนา) — Playwright จะไปใช้ eval() ในหน้าเว็บ
+   ทันทีที่ wait_for_function ได้รับ "นิพจน์เปล่า" แทน "ฟังก์ชันลูกศร" ผลคือเทสตายทั้งไฟล์
+   ด้วย EvalError ซึ่งอ่านแล้วดูเหมือนเว็บพัง ทั้งที่เว็บปกติ (เจอจริง 09/09/2026)
+   กันไว้ด้วยเครื่องตรวจ เพราะกฎที่ต้องจำจะลืมตอนเขียนเทสใหม่แน่นอน */
+{
+  const pyFiles = readdirSync(join(ROOT, "tests")).filter((n) => n.endsWith(".py"));
+  const bare = [];
+  for (const f of pyFiles) {
+    const txt = readFileSync(join(ROOT, "tests", f), "utf8");
+    // จับอาร์กิวเมนต์ตัวแรกที่เป็นสตริง หลัง wait_for_function( (รองรับขึ้นบรรทัดใหม่และ f-string)
+    for (const m of txt.matchAll(/wait_for_function\(\s*(?:#[^\n]*\n\s*)*f?["']([^"']{0,40})/g)) {
+      const head = m[1].trimStart();
+      if (!head.startsWith("() =>") && !head.startsWith("()=>") && !/^\([\w\s,]*\)\s*=>/.test(head))
+        bare.push(`${f}: ${m[1].slice(0, 30)}`);
+    }
+  }
+  ck(pyFiles.length > 0, `หาไฟล์เทสเบราว์เซอร์เจอ (${pyFiles.length} ไฟล์ — ประชากรต้องไม่เป็นศูนย์)`);
+  ck(bare.length === 0,
+     `wait_for_function ทุกจุดต้องส่งฟังก์ชันลูกศร ไม่ใช่นิพจน์เปล่า (CSP บล็อก eval) พบผิด ${bare.length}` +
+     (bare.length ? "\n      " + bare.slice(0, 5).join("\n      ") : ""));
+}
 
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);
 process.exit(fail.length ? 1 : 0);

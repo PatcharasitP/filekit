@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, field, select, download,
+import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser } from "../ui.js";
 import { pageLines, lineText } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
@@ -55,7 +55,7 @@ export function mount(tool) {
     results.innerHTML = "";
     results.appendChild(el("div", { class: "result" }, [
       el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${blocks.length} หน้า`, `${blocks.length} pages`))]),
-      button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+      downloadButton(blob, name),
     ]));
   }
 

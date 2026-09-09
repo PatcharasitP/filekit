@@ -1,5 +1,5 @@
 import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
-import { el, dropzone, statusBar, button, field, select, download,
+import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, segmented } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr } from "../i18n.js";
@@ -251,7 +251,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + tr("-ลายน้ำ.pdf", "-watermarked.pdf");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages.length} หน้า`, `${pages.length} pages`))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download", onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
     } catch (e) {
       st.progress(null);

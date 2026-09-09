@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, field, select, download,
+import { el, dropzone, toolShell, statusBar, button, field, select, download, downloadButton,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 import { smartDecode } from "../thai.js";
 import { tr } from "../i18n.js";
@@ -49,7 +49,7 @@ export function mount(tool) {
         made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
           el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-          button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
+          button("", { icon: "download", label: tr(`ดาวน์โหลด ${m.name}`, `Download ${m.name}`),  onclick: () => download(m.blob, m.name) }),
         ])));
         if (made.length > 1) results.prepend(el("div", { class: "actions" }, [
           button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {
@@ -84,7 +84,7 @@ export function mount(tool) {
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
-          button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+          downloadButton(blob, name),
         ]));
       }
     } catch (e) {

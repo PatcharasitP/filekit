@@ -317,7 +317,7 @@
 .step-wait{font-size:13px;color:var(--text-mute);border:1px dashed var(--line);
   border-radius:var(--r-sm);padding:11px 14px;background:var(--bg-soft)}
 .mm-step > div{flex:1;min-width:0}
-.mm-step h3{font-size:15px;margin:0 0 10px}
+.mm-step h2{font-size:15px;margin:0 0 10px}
 .mm-num{
   flex:none;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;
   background:var(--btn-bg);color:var(--btn-fg);font-size:13px;font-weight:700;margin-top:1px;
@@ -522,6 +522,16 @@
 .next-ico .ico-svg{width:16px;height:16px}
 @media (max-width:520px){ .next-card{flex:1 1 100%;justify-content:flex-start} }
 
+/* ป้าย "พาไฟล์ไปด้วย" — โผล่เฉพาะตอนไฟล์ผลลัพธ์ล่าสุดเข้ากับเครื่องมือปลายทางนี้ (ดู nextSteps() ใน ui.js)
+   ‼️ ต้องเขียน [hidden] ทับ display เองเสมอ — สไตล์ display ที่เราตั้งไว้จะชนะกฎ [hidden] เริ่มต้นของ
+   เบราว์เซอร์ (author สไตล์แรงกว่า user-agent เสมอไม่ว่า specificity เท่าไหร่) ถ้าไม่กันไว้ตรงนี้ */
+.next-label{display:flex;flex-direction:column;gap:2px;align-items:flex-start;min-width:0}
+.next-title{overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.next-carry{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;
+  color:var(--ac);line-height:1.2}
+.next-carry[hidden]{display:none}
+.next-carry .ico-svg{width:11px;height:11px;stroke-width:2.2}
+
 /* ── ปุ่มหยุดระหว่างประมวลผล ── */
 .prog-row{display:flex;align-items:center;gap:10px}
 .prog-row .progress{flex:1}
@@ -707,7 +717,9 @@ select,
 .pv::backdrop{background:rgba(6,8,13,.92)}
 .pv-stage{min-height:70dvh;display:grid;place-items:center;padding:56px 16px 8px;
   overflow:auto;max-height:88dvh;touch-action:pinch-zoom;overscroll-behavior:contain}
-.pv-stage img,.pv-stage canvas{cursor:zoom-in;-webkit-user-drag:none;user-select:none}
+/* ‼️ ไม่กันการลาก — ต้องลากรูปออกไปแท็บ/โฟลเดอร์อื่นได้ (ความสามารถที่เบราว์เซอร์ให้มา)
+   เคอร์เซอร์เป็นลูกศรปกติเพื่อสื่อว่า "ลากได้" ไม่ใช่ "กดเพื่อซูม" */
+.pv-stage img,.pv-stage canvas{cursor:grab}
 /* ‼️ ตอนซูมอยู่ เคอร์เซอร์ "มือจับ" ต้องอยู่บนตัวรูป — ที่ที่นิ้ว/เมาส์จะลากจริง
    เดิมใส่ไว้ที่พื้นที่ว่างรอบรูป แล้วบนรูปกลับเป็นแว่นขยาย = ใส่ผิดที่
    (พี่ปอนด์ทักเอง "อยากได้มือแบบจับป้ายไปขวาได้ด้วย") */
@@ -735,4 +747,14 @@ button.thumb::after{content:"";position:absolute;inset-block-end:2px;inset-inlin
   box-shadow:0 0 0 99px rgba(10,13,20,.72) inset}
 button.thumb:hover::after{box-shadow:0 0 0 99px var(--brand) inset}
 button.thumb:hover{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}
+/* กดภาพย่อ PDF บนเครื่องมือที่ยังไม่มีตัวอ่าน = ต้องดึงมาก่อน (ดู thumbBox ใน ui.js)
+   ระหว่างนั้นต้องเห็นว่า "กดติดแล้ว กำลังทำอยู่" ไม่ใช่เงียบจนคนคิดว่าปุ่มเสีย */
+button.thumb.loading{cursor:progress;opacity:.65}
+button.thumb.loading::before{
+  content:"";position:absolute;inset:0;margin:auto;width:16px;height:16px;border-radius:50%;
+  border:2px solid color-mix(in srgb,var(--brand) 30%,transparent);border-block-start-color:var(--brand);
+  animation:thumbSpin .7s linear infinite;
+}
+@keyframes thumbSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){button.thumb.loading::before{animation-duration:2.4s}}
 button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}

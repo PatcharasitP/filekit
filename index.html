@@ -3,7 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์</title>
+<!-- ‼️ กำแพงชั้นสอง (Content Security Policy) — บอกเบราว์เซอร์ตรง ๆ ว่าหน้านี้อนุญาตให้โหลดของ
+     จากที่ไหนได้บ้าง ถ้าวันหนึ่งมีช่องโหว่ที่ทำให้โค้ดแปลกปลอมหลุดเข้ามา มันก็ยังส่งไฟล์ของผู้ใช้
+     ออกไปไหนไม่ได้ (connect-src ล็อกไว้) และแทรกสคริปต์จากโดเมนอื่นไม่ได้
+     ‼️ โดเมนที่อนุญาตต้องตรงกับ CDN ใน src/loader.js เท่านั้น เพิ่ม CDN ใหม่ต้องมาแก้ตรงนี้ด้วย
+     ‼️ ค่า sha256 สองตัวคือสคริปต์สั้น ๆ ในไฟล์นี้ที่ต้องรันก่อนวาดจอ (ตั้งธีมกับภาษา ไม่งั้นหน้าแว้บ)
+        แก้สคริปต์นั้นเมื่อไร ค่านี้ต้องคำนวณใหม่ทันที ไม่งั้นหน้าเว็บพังทั้งหน้า
+        มีเทสจับให้แล้วที่ tests/accepts.test.mjs (คำนวณเองแล้วเทียบ ไม่ต้องจำ)
+     ‼️ style-src ต้องมี unsafe-inline เพราะ CSS ของหน้าแรกฝังอยู่ในไฟล์นี้ (ตั้งใจ เพื่อความเร็ว)
+     ‼️ blob: กับ wasm-unsafe-eval จำเป็นสำหรับตัวอ่านข้อความจากสแกน (Tesseract ใช้ worker + WASM) -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'wasm-unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'sha256-Cc0W0CwhZzN7hIDklSuJ+Qs16/OVIJT4eHeIM2+c1js=' 'sha256-+WV7M4JC5RBwOo7oWvLiLqllHEOz4BRSD1jtfIUdJHE=';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob:;
+  font-src 'self' data:;
+  media-src 'self' blob:;
+  connect-src 'self' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
+  worker-src 'self' blob:;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'none'">
+<!-- ‼️ ชื่อหน้าต้องแปลด้วย data-en เหมือน element อื่น ๆ ไม่ใช่ให้ JS ตั้งตอนวาดหน้าแรก
+     (เคยตั้งใน goHome() แล้วพอเลิกเรียก goHome() ตอนบูตหน้าแรก ชื่อหน้าก็ค้างเป็นไทยในโหมดอังกฤษ) -->
+<title data-en="FileKit — file tools that run in your browser">FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์</title>
 <meta name="description" content="แปลง รวม แยก บีบอัด PDF Excel Word รูปภาพ ทำงานในเครื่องคุณเอง ไฟล์ไม่ถูกอัปโหลดไปไหน ใช้ได้แม้ออฟไลน์">
 <meta name="theme-color" content="#0f1220" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
@@ -152,9 +175,23 @@ button{font-family:inherit}
    (วัดจริงจาก tests/browser_a11y.py) จึงแยกตัวแปรไว้ตั้งค่าต่างกันได้ทั้งสองธีม */
 :focus-visible{outline:2.5px solid var(--focus); outline-offset:2px; border-radius:6px}
 
+/* ‼️ กันหน้ากระตุกตอนโหลด (CLS) — แถบหมวดกับรายการเครื่องมือถูกวาดด้วย JS
+   ตอนเบราว์เซอร์วาดจอแรกทั้งสองช่องยังว่างเปล่า พอ JS เติมของ เนื้อหาก็โป่งขึ้นทีเดียว
+   ดันท้ายหน้ากับ footer กระโดด (วัดจริงได้ CLS 0.21 เพดานที่ยอมรับกันคือ 0.05)
+   จองที่ไว้ล่วงหน้าด้วย :empty ซึ่งเลิกจับทันทีที่ JS เติมของเข้าไปแล้ว
+   จึงไม่เหลือช่องว่างค้างตอนกรองหมวดให้เหลือไม่กี่ตัว (ค่าจาก measurement จริงทุกความกว้าง) */
+#cats:empty{min-height:56px}
+#tools:empty{min-height:949px}
+@media (max-width:1023px){ #tools:empty{min-height:1067px} }
+@media (max-width:767px){ #tools:empty{min-height:1196px} }
+
 .skip{position:absolute; left:-9999px; top:8px; z-index:99;
   background:var(--btn-bg); color:var(--btn-fg); padding:10px 18px; border-radius:999px; font-weight:700; text-decoration:none}
 .skip:focus{left:12px}
+/* ‼️ ลิงก์นี้พาไปที่รายการเครื่องมือของหน้าแรก ซึ่งถูกซ่อนตอนเปิดเครื่องมืออยู่
+   หน้าเครื่องมือมีจุด Tab ก่อนถึงเนื้อหาแค่ไม่กี่จุดอยู่แล้ว จึงไม่ต้องมีทางลัด
+   ถ้าปล่อยไว้ = กดแล้วโฟกัสหายเข้าไปในของที่มองไม่เห็น */
+body.tool .skip{display:none}
 
 /* ---------- แถบบน ---------- */
 .top{
@@ -564,6 +601,32 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   font-size:13px;color:var(--text-dim);
 }
 .offline-bar strong{color:var(--text);font-weight:700}
+
+/* แถบ "มีเวอร์ชันใหม่" — ลอยล่างกลางจอ ไม่บังปุ่มลงมือทำ กดปิดได้ ไม่รีโหลดเอง */
+.upd-bar{
+  position:fixed;inset-block-end:max(16px,env(safe-area-inset-bottom));inset-inline:0;
+  margin-inline:auto;width:max-content;max-width:calc(100% - 28px);z-index:60;
+  display:flex;align-items:center;gap:10px;padding:10px 12px 10px 14px;
+  background:var(--card);border:1px solid var(--line);border-radius:99px;
+  box-shadow:0 8px 30px rgba(0,0,0,.18);font-size:13.5px;color:var(--text);
+  animation:updIn .28s cubic-bezier(.2,.8,.3,1) both;
+}
+/* ‼️ หน้าเครื่องมือมีแถบปุ่มลงมือทำเกาะอยู่ล่างจอ (.ws-footer sticky) — แถบนี้ต้องลอยเหนือขึ้นมา
+   ไม่งั้นบังปุ่มที่ผู้ใช้กำลังจะกด ซึ่งแย่กว่าไม่แจ้งเลย */
+body.tool .upd-bar{inset-block-end:max(86px,calc(env(safe-area-inset-bottom) + 80px))}
+@keyframes updIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.upd-bar{animation:none}}
+.upd-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.upd-go{
+  min-height:36px;padding:0 14px;border-radius:99px;border:0;cursor:pointer;
+  background:var(--btn-bg);color:var(--btn-fg);font:inherit;font-weight:700;font-size:13px;
+}
+.upd-go:hover{filter:brightness(1.06)}
+.upd-x{
+  min-width:36px;min-height:36px;border-radius:50%;border:0;background:none;cursor:pointer;
+  color:var(--text-mute);font-size:14px;line-height:1;
+}
+.upd-x:hover{color:var(--text);background:var(--bg-soft)}
 .ob-detail{color:var(--text-mute)}
 .ob-ready{color:var(--ok);font-weight:600}
 .ob-fail{color:var(--err);font-weight:600}
@@ -590,7 +653,7 @@ body.tool #home{display:none}
 </style>
 </head>
 <body>
-<a class="skip" href="#main" data-en="Skip to main content">ข้ามไปที่เนื้อหาหลัก</a>
+<a class="skip" href="#tools" data-en="Skip to tools">ข้ามไปที่เครื่องมือ</a>
 
 <header class="top">
   <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก" data-en-al="Back to home">
@@ -645,7 +708,7 @@ body.tool #home{display:none}
     <nav class="cats" id="cats" aria-label="กรองตามหมวด" data-en-al="Filter by category"></nav>
     <div class="stage" id="stage">
       <div class="stage-h" id="stageh"></div>
-      <div id="tools"></div>
+      <div id="tools" tabindex="-1"></div>
       <div class="stage-f" data-en="No sign-up&nbsp;&nbsp; No ads&nbsp;&nbsp; Free, unlimited">ไม่ต้องสมัคร&nbsp;&nbsp; ไม่มีโฆษณา&nbsp;&nbsp; ใช้ฟรีไม่จำกัด</div>
     </div>
   </section>

@@ -217,29 +217,30 @@ def xlsx_headers(path):
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# ① เครื่องมือ "อัปโหลด → กดปุ่มอังกฤษตรงตัว → รอผล" — 19 ตัว
-#    (ปุ่ม EN ยืนยันตรงจาก src/tools/*.js: button(tr("ไทย","EN")) — ไม่เดา)
+# ① เครื่องมือ "อัปโหลด → กดปุ่ม → รอผล" — 19 ตัว
+#    (ปุ่ม EN/TH ยืนยันตรงจาก src/tools/*.js: button(tr("ไทย","EN")) — ไม่เดา ใช้ได้ทั้ง 2 ภาษา
+#    เพราะ do_tool_action ถูกเรียกทั้งใน context อังกฤษ (forward) และไทย (reverse §⑦))
 # ─────────────────────────────────────────────────────────────────────────
 SIMPLE = {
-    "pdf-pages":    (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Save"),
-    "pdf-merge":    (["ตัวอย่าง-รายงานประจำเดือน.pdf", "ตัวอย่าง-ใบปะหน้าเอกสาร.pdf"], "Merge"),
-    "pdf-split":    (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Split file"),
-    "pdf-compress": (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Compress file"),
-    "pdf-watermark":(["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Add watermark"),
-    "pdf-to-images":(["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Convert to images"),
-    "pdf-to-text":  (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Extract text"),
-    "pdf-to-word":  (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Convert to Word"),
-    "pdf-to-excel": (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Convert to Excel"),
-    "word-to-pdf":  (["ตัวอย่าง-ใบเสนอราคา.docx"], "Convert to PDF"),
-    "excel-to-pdf": (["ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx"], "Convert to PDF"),
-    "images-to-pdf":(["ตัวอย่าง-รูปภาพ-1.jpg", "ตัวอย่าง-รูปภาพ-2.png"], "Create PDF"),
-    "image-convert":(["ตัวอย่าง-รูปภาพ-2.png"], "Convert files"),
-    "image-resize": (["ตัวอย่าง-รูปภาพ-1.jpg"], "Resize and compress"),
-    "word-join":    (["ตัวอย่าง-ใบเสนอราคา.docx", "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx"], "Merge files"),
-    "word-clean":   (["ตัวอย่าง-ใบเสนอราคา.docx"], "Clean"),
-    "powerpoint-to-word": (["ตัวอย่าง-นำเสนอบริษัท.pptx"], "Convert to Word"),
-    "powerpoint-to-pdf":  (["ตัวอย่าง-นำเสนอบริษัท.pptx"], "Create PDF"),
-    "excel-csv":    (["ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx"], "Convert file"),
+    "pdf-pages":    (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Save", "บันทึก"),
+    "pdf-merge":    (["ตัวอย่าง-รายงานประจำเดือน.pdf", "ตัวอย่าง-ใบปะหน้าเอกสาร.pdf"], "Merge", "รวมไฟล์"),
+    "pdf-split":    (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Split file", "แยกไฟล์"),
+    "pdf-compress": (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Compress file", "บีบอัดไฟล์"),
+    "pdf-watermark":(["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Add watermark", "ใส่ลายน้ำ"),
+    "pdf-to-images":(["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Convert to images", "แปลงเป็นรูป"),
+    "pdf-to-text":  (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Extract text", "ดึงข้อความ"),
+    "pdf-to-word":  (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Convert to Word", "แปลงเป็น Word"),
+    "pdf-to-excel": (["ตัวอย่าง-รายงานประจำเดือน.pdf"], "Convert to Excel", "แปลงเป็น Excel"),
+    "word-to-pdf":  (["ตัวอย่าง-ใบเสนอราคา.docx"], "Convert to PDF", "แปลงเป็น PDF"),
+    "excel-to-pdf": (["ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx"], "Convert to PDF", "แปลงเป็น PDF"),
+    "images-to-pdf":(["ตัวอย่าง-รูปภาพ-1.jpg", "ตัวอย่าง-รูปภาพ-2.png"], "Create PDF", "สร้างไฟล์ PDF"),
+    "image-convert":(["ตัวอย่าง-รูปภาพ-2.png"], "Convert files", "แปลงไฟล์"),
+    "image-resize": (["ตัวอย่าง-รูปภาพ-1.jpg"], "Resize and compress", "ย่อและบีบอัด"),
+    "word-join":    (["ตัวอย่าง-ใบเสนอราคา.docx", "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx"], "Merge files", "รวมไฟล์"),
+    "word-clean":   (["ตัวอย่าง-ใบเสนอราคา.docx"], "Clean", "ล้าง"),
+    "powerpoint-to-word": (["ตัวอย่าง-นำเสนอบริษัท.pptx"], "Convert to Word", "แปลงเป็น Word"),
+    "powerpoint-to-pdf":  (["ตัวอย่าง-นำเสนอบริษัท.pptx"], "Create PDF", "สร้างไฟล์ PDF"),
+    "excel-csv":    (["ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx"], "Convert file", "แปลงไฟล์"),
 }
 
 # ② เครื่องมือแบบ sheetpick — อัปโหลดแล้วประมวลผลอัตโนมัติ (ไม่มีปุ่ม "แปลง") แล้วกดดาวน์โหลด
@@ -250,6 +251,7 @@ SHEETPICK = {
     "thai-number": ["ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx"],
     # thai-address ใช้ไฟล์ชั่วคราว (สร้างตอนรัน) — ใส่ path เต็มตอนเรียกจริง
 }
+SHEETPICK_DL_TEXT = {"en": "Download as Excel", "th": "ดาวน์โหลดเป็น Excel"}
 
 
 def run_simple(pg, tool_id, files_rel):
@@ -260,52 +262,52 @@ def run_simple(pg, tool_id, files_rel):
     return file_paths
 
 
-def click_go(pg, text_en, timeout=25_000):
-    pg.get_by_role("button", name=text_en, exact=True).click()
+def click_go(pg, text, timeout=25_000):
+    pg.get_by_role("button", name=text, exact=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=timeout)
     pg.wait_for_timeout(450)
 
 
-def run_sheetpick(pg, tool_id, file_path, download_text_en=None, extra_wait=0):
+def run_sheetpick(pg, tool_id, file_path, download_text=None, extra_wait=0):
     goto(pg, tool_id)
     pg.set_input_files("input[type=file]", str(file_path), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".stats .stat", timeout=20_000)
     if extra_wait:
         pg.wait_for_timeout(extra_wait)
-    if download_text_en:
+    if download_text:
         with pg.expect_download():
-            pg.get_by_role("button", name=download_text_en, exact=True).click()
+            pg.get_by_role("button", name=download_text, exact=True).click()
         pg.wait_for_timeout(300)
 
 
 # ── word-mailmerge: 2 dropzone (เทมเพลต + ข้อมูล) ───────────────────────────
-def run_mailmerge(pg, click_en="Generate all documents"):
+def run_mailmerge(pg, click_text):
     goto(pg, "word-mailmerge")
     inputs = pg.locator("input[type=file]")
     inputs.nth(0).set_input_files(str(SAMPLES / "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx"), timeout=SIF_TIMEOUT)
     pg.wait_for_timeout(700)
     inputs.nth(1).set_input_files(str(SAMPLES / "ตัวอย่าง-ข้อมูลพนักงาน.xlsx"), timeout=SIF_TIMEOUT)
     pg.wait_for_timeout(1200)
-    pg.get_by_role("button", name=click_en, exact=True).click()
+    pg.get_by_role("button", name=click_text, exact=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=25_000)
     pg.wait_for_timeout(500)
 
 
 # ── word-replace: ต้องกรอกคู่ค้นหา–แทนที่ก่อนกด ─────────────────────────────
-def run_word_replace(pg, click_en="Replace"):
+def run_word_replace(pg, click_text):
     goto(pg, "word-replace")
     pg.set_input_files("input[type=file]", str(SAMPLES / "ตัวอย่าง-ใบเสนอราคา.docx"), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     row = pg.locator(".rep-row").first
     row.locator("input").nth(0).fill("บริษัท")
     row.locator("input").nth(1).fill("Company Ltd.")
-    pg.get_by_role("button", name=click_en, exact=True).click()
+    pg.get_by_role("button", name=click_text, exact=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
     pg.wait_for_timeout(400)
 
 
 # ── pdf-sign: อัปโหลด PDF + รูปลายเซ็น → คลิกวางบนหน้า → บันทึก ─────────────
-def run_pdf_sign(pg, click_en="Save signed PDF"):
+def run_pdf_sign(pg, click_text):
     goto(pg, "pdf-sign")
     inputs = pg.locator("input[type=file]")
     inputs.nth(0).set_input_files(str(SAMPLES / "ตัวอย่าง-รายงานประจำเดือน.pdf"), timeout=SIF_TIMEOUT)
@@ -317,29 +319,41 @@ def run_pdf_sign(pg, click_en="Save signed PDF"):
     # คลิกกลางหน้าเพื่อวางลายเซ็น
     pg.locator(".sign-stage").click(position={"x": 200, "y": 200})
     pg.wait_for_timeout(300)
-    pg.get_by_role("button", name=click_en, exact=True).click()
+    pg.get_by_role("button", name=click_text, exact=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
     pg.wait_for_timeout(400)
 
 
-# ── thai-encoding: อัปโหลด → การ์ดขึ้นอัตโนมัติ → กด "Save as UTF-8" ────────
-def run_thai_encoding(pg, click_en="Save as UTF-8"):
+# ── thai-encoding: อัปโหลด → การ์ดขึ้นอัตโนมัติ → กด "Save as UTF-8"/"บันทึกเป็น UTF-8" ──
+def run_thai_encoding(pg, click_text):
     goto(pg, "thai-encoding")
     pg.set_input_files("input[type=file]", str(SAMPLES / "ตัวอย่าง-ไทยเพี้ยน-แบบ TIS620.csv"), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".enc-card", timeout=15_000)
     with pg.expect_download():
-        pg.get_by_role("button", name=click_en, exact=True).click()
+        pg.get_by_role("button", name=click_text, exact=True).click()
     pg.wait_for_timeout(400)
 
 
+# ‼️ ปุ่ม/ข้อความยึด 2 ภาษา สำหรับ custom-runner (ต้องคู่กับ src/tools/*.js บรรทัดจริง —
+#    ตรวจแล้วจากโค้ด ไม่ใช่เดา) — dict คีย์ "en"/"th"
+CUSTOM_BTN = {
+    "word-mailmerge": {"en": "Generate all documents", "th": "สร้างเอกสารทั้งชุด"},
+    "word-replace":   {"en": "Replace", "th": "แทนที่"},
+    "pdf-sign":       {"en": "Save signed PDF", "th": "บันทึกไฟล์เซ็นแล้ว"},
+    "thai-encoding":  {"en": "Save as UTF-8", "th": "บันทึกเป็น UTF-8"},
+}
+
+
 # ─────────────────────────────────────────────────────────────────────────
-# runner กลาง: ทำ action ของเครื่องมือหนึ่งตัว (ใน context ภาษาอะไรก็ได้ — ผู้เรียกกำหนด)
+# runner กลาง: ทำ action ของเครื่องมือหนึ่งตัว ต้องรู้ "lang" ปัจจุบันของ context
+# เพื่อกดปุ่มด้วยข้อความภาษาที่ตรงกับที่หน้าจอกำลังโชว์อยู่จริง (en หรือ th)
 # คืน (texts, extra_allow_thai_stems)
 # ─────────────────────────────────────────────────────────────────────────
-def do_tool_action(pg, tool_id, address_xlsx_path):
+def do_tool_action(pg, tool_id, address_xlsx_path, lang="en"):
     extra_allow = set()
     if tool_id in SIMPLE:
-        files_rel, btn = SIMPLE[tool_id]
+        files_rel, btn_en, btn_th = SIMPLE[tool_id]
+        btn = btn_en if lang == "en" else btn_th
         paths = run_simple(pg, tool_id, files_rel)
         extra_allow |= stems(paths)
         if tool_id == "pdf-split":
@@ -354,24 +368,23 @@ def do_tool_action(pg, tool_id, address_xlsx_path):
         file_rel = SHEETPICK[tool_id][0]
         path = SAMPLES / file_rel
         extra_allow |= stems([path]) | xlsx_headers(path)
-        dl_text = "Download as Excel"
         extra_wait = 800 if tool_id == "thai-address" else 0
-        run_sheetpick(pg, tool_id, path, download_text_en=dl_text, extra_wait=extra_wait)
+        run_sheetpick(pg, tool_id, path, download_text=SHEETPICK_DL_TEXT[lang], extra_wait=extra_wait)
     elif tool_id == "thai-address":
         extra_allow |= stems([address_xlsx_path]) | xlsx_headers(address_xlsx_path)
-        run_sheetpick(pg, "thai-address", address_xlsx_path, download_text_en="Download as Excel", extra_wait=900)
+        run_sheetpick(pg, "thai-address", address_xlsx_path, download_text=SHEETPICK_DL_TEXT[lang], extra_wait=900)
     elif tool_id == "word-mailmerge":
         extra_allow |= stems([SAMPLES / "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx", SAMPLES / "ตัวอย่าง-ข้อมูลพนักงาน.xlsx"])
-        run_mailmerge(pg)
+        run_mailmerge(pg, CUSTOM_BTN["word-mailmerge"][lang])
     elif tool_id == "word-replace":
         extra_allow |= stems([SAMPLES / "ตัวอย่าง-ใบเสนอราคา.docx"])
-        run_word_replace(pg)
+        run_word_replace(pg, CUSTOM_BTN["word-replace"][lang])
     elif tool_id == "pdf-sign":
         extra_allow |= stems([SAMPLES / "ตัวอย่าง-รายงานประจำเดือน.pdf", SAMPLES / "ตัวอย่าง-รูปภาพ-1.jpg"])
-        run_pdf_sign(pg)
+        run_pdf_sign(pg, CUSTOM_BTN["pdf-sign"][lang])
     elif tool_id == "thai-encoding":
         extra_allow |= stems([SAMPLES / "ตัวอย่าง-ไทยเพี้ยน-แบบ TIS620.csv"])
-        run_thai_encoding(pg)
+        run_thai_encoding(pg, CUSTOM_BTN["thai-encoding"][lang])
     else:
         raise AssertionError(f"ไม่มี config การทดสอบสำหรับ {tool_id}")
 
@@ -553,7 +566,7 @@ def run_full_suite(round_no, broken_files, address_xlsx):
         pg = ctx.new_page()
         for tool_id in sorted(ACTIONABLE):
             try:
-                texts, extra_allow = do_tool_action(pg, tool_id, address_xlsx)
+                texts, extra_allow = do_tool_action(pg, tool_id, address_xlsx, lang="en")
                 bad = thai_leftovers(texts, extra_allow=extra_allow)
                 if bad:
                     findings.append(("thai-leftover-after-action", tool_id, bad[:10]))
@@ -636,7 +649,7 @@ def run_full_suite(round_no, broken_files, address_xlsx):
         pg = ctx.new_page()
         for tool_id in REVERSE_SAMPLE:
             try:
-                texts, extra_allow = do_tool_action(pg, tool_id, address_xlsx)
+                texts, extra_allow = do_tool_action(pg, tool_id, address_xlsx, lang="th")
                 leaks = english_leak(texts, extra_allow=extra_allow)
                 if leaks:
                     findings.append(("english-leak-th-mode", tool_id, leaks[:10]))

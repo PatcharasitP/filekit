@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, field, select, download,
+import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser } from "../ui.js";
 import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
 import { smartDecode } from "../thai.js";
@@ -81,7 +81,7 @@ export function mount(tool) {
       const outName = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, tr(`${doc.getNumberOfPages()} หน้า`, `${doc.getNumberOfPages()} pages`))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, outName) }),
+        downloadButton(blob, outName),
       ]));
     } catch (e) {
       st.progress(null);

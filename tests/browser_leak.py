@@ -452,6 +452,16 @@ def main():
             section("   โดยไม่ยิง drag/paste event เลย ตามสภาพจริงที่คนคลิกเปลี่ยนเครื่องมือเฉย ๆ")
             # ══════════════════════════════════════════════════════════════
             DRAG_TYPES = ["dragenter", "dragover", "dragleave", "drop", "paste"]
+            # ‼️ เพดานที่ถูกต้องอ่านจากซอร์สจริง (src/app.js MAX_CACHED) ไม่ hardcode ในเทส
+            #    แคชเครื่องมือเก็บได้ไม่เกิน MAX_CACHED ตัว และเครื่องมือที่ยังอยู่ในแคชต้องเก็บ
+            #    listener ไว้จริง ๆ (ผู้ใช้กดกลับเข้าไปแล้วต้องลากไฟล์ใส่ได้ทันที)
+            #    ดังนั้น "โต 0" ถูกต้องเฉพาะตอนแคชเต็มอยู่ก่อนแล้ว — เกณฑ์ที่จริงคือ
+            #    "ไม่โตตามจำนวนเครื่องมือที่เปิดผ่าน" = โตได้ไม่เกินเพดานแคช
+            import re as _re
+            _app = (ROOT / "src/app.js").read_text(encoding="utf-8")
+            _m = _re.search(r"const MAX_CACHED\s*=\s*(\d+)", _app)
+            MAX_CACHED_SRC = int(_m.group(1)) if _m else 0
+            ck_true(f"อ่านเพดานแคชจาก src/app.js ได้ (MAX_CACHED = {MAX_CACHED_SRC})", MAX_CACHED_SRC > 0)
             # 19 เครื่องมือที่มี dropzone จริงและยังไม่เคยเปิดในเทสรอบนี้เลย (กันไม่ให้ปนกับ scenario 1-5
             # ที่เปิด image-convert/image-resize/images-to-pdf/pdf-pages/pdf-merge ไปแล้ว — เครื่องมือที่
             # เคย mount แล้วจะถูกดึงจากแคช mounted ไม่สร้าง listener ใหม่ ทำให้วัด "รั่วจากการสลับ" ไม่ตรง)
@@ -488,13 +498,14 @@ def main():
             print(f"  listener document ก่อน: {before6}")
             print(f"  listener document หลัง: {after6}")
             growth = {t: after6[t] - before6[t] for t in DRAG_TYPES}
-            print(f"  ผลต่าง (ต้องเป็น 0 ถ้าเก็บกวาดตัวเองทันทีตอนสลับ): {growth}")
+            print(f"  ผลต่าง (ต้องไม่โตตามจำนวนเครื่องมือที่เปิดผ่าน): {growth}")
 
             leaked_types = {t: g for t, g in growth.items() if g > 0}
             ok6 = ck_true(
-                f"สลับ 20 เครื่องมือโดยไม่มี drag/paste เลย → listener บน document ต้อง 'ไม่' ค้างเพิ่ม (คาดหวังกันเอง = 0)",
-                all(g == 0 for g in growth.values()),
-                f"ที่จริงเพิ่มขึ้น: {leaked_types}",
+                f"สลับ 20 เครื่องมือโดยไม่มี drag/paste เลย → listener บน document ไม่โตตามจำนวนเครื่องมือ "
+                f"(โตได้ไม่เกินเพดานแคช {MAX_CACHED_SRC} ตัว ไม่ใช่ 1 ตัวต่อ 1 เครื่องมือ)",
+                all(g <= MAX_CACHED_SRC for g in growth.values()),
+                f"ที่จริงเพิ่มขึ้น: {leaked_types} (เพดาน {MAX_CACHED_SRC})",
             )
             if not ok6:
                 worst_type = max(growth, key=growth.get)
@@ -512,17 +523,27 @@ def main():
             #    ดังนั้นหลัง self-heal ที่ "ถูกต้อง" จะเหลือ 2 ตัวเสมอ (1 permanent ของหน้าแรก + 1 ของเครื่องมือ
             #    ที่กำลังเปิดอยู่ตอนนี้) ไม่ใช่ 0 หรือ 1 — ตรวจสอบจาก baseline ก่อนเข้าลูป (before6 == 6 ตอนรันจริง
             #    = 5 เครื่องมือที่เคยเปิดใน scenario 1-5 + 1 permanent พอดี)
+            # ‼️ เพดานที่ถูกต้องเปลี่ยนไปแล้ว (แก้ 09/09/2026): แคชเครื่องมือ (src/app.js mounted Map)
+            #    มีเพดาน MAX_CACHED ตัว และ "ถอดตัวที่ไม่ได้แตะนานสุดทิ้งทันทีตอนสลับ" ไม่ใช่รอ event
+            #    มาปลุกให้เก็บกวาดแบบเดิม · เครื่องมือที่ยังอยู่ในแคชต้องเก็บ listener ไว้จริง ๆ เพราะ
+            #    ผู้ใช้กดกลับเข้าไปแล้วต้องลากไฟล์ใส่ได้ทันที · เพดานจึงเป็นค่าคงที่เล็ก ๆ ที่ไม่โต
+            #    ตามจำนวนเครื่องมือที่เปิดผ่าน (ข้อพิสูจน์จริงคือ "ผลต่าง = 0" ด้านบน)
+            #    บางเครื่องมือมีกล่องลากไฟล์ 2 ใบ (word-mailmerge) จึงเผื่อ 2 ใบต่อตัว
+            MAX_CACHED = 6          # ต้องตรงกับ MAX_CACHED ใน src/app.js
+            CEILING = 1 + MAX_CACHED * 2   # 1 ตัวถาวรของหน้าแรก + กล่องของเครื่องมือที่ยังแคชอยู่
             fire_type = DRAG_TYPES[0]
             page.evaluate("(t) => document.dispatchEvent(new Event(t))", fire_type)
             page.wait_for_timeout(150)
             after_heal = listen_snapshot(page, "document", DRAG_TYPES)
             print(f"  listener document หลังยิง 1 เหตุการณ์ '{fire_type}' สังเคราะห์: {after_heal}")
-            self_heals = all(after_heal[t] == 2 for t in DRAG_TYPES)  # 1 permanent (app.js) + 1 เครื่องมือปัจจุบัน
+            bounded = all(after_heal[t] <= CEILING for t in DRAG_TYPES)
+            grew_with_visits = any(after_heal[t] >= len(TOOLS_20) // 2 for t in DRAG_TYPES)
             ck_true(
-                f"ยิง '{fire_type}' 1 ครั้งบน document (จำลองการลาก/วางไฟล์ทั่วไป) → listener ที่ค้างสะสมทั้ง 20 "
-                f"ถูกล้างในทีเดียว (เหลือแค่ 2 = ตัวถาวรของหน้าแรก + ของเครื่องมือปัจจุบัน)",
-                self_heals,
-                f"หลังยิง: {after_heal}",
+                f"เปิดเครื่องมือผ่าน {len(TOOLS_20)} ตัวแล้ว listener บน document ยังอยู่ในเพดานคงที่ "
+                f"(ไม่เกิน {CEILING} = ตัวถาวรของหน้าแรก + เฉพาะเครื่องมือที่ยังอยู่ในแคช {MAX_CACHED} ตัว) "
+                "ไม่โตตามจำนวนเครื่องมือที่เปิดผ่าน",
+                bounded and not grew_with_visits,
+                f"หลังยิง: {after_heal} (เพดาน {CEILING})",
             )
 
             print(f"  DOM บนเครื่องมือ '{TOOLS_20[0]}' รอบแรก (index 0) = {snap_first} · "
@@ -582,13 +603,13 @@ def main():
                     heap_growth_pass2 < heap_growth6 * 0.35,
                     f"รอบสอง Δ{heap_growth_pass2:+,} เทียบรอบแรก Δ{heap_growth6:+,}",
                 )
-                leak("กลาง",
-                     "mounted Map ไม่เคยปล่อย DOM+closure ของเครื่องมือที่เคยเปิด แม้เลิกใช้แล้ว (heap ค้างตลอด session)",
-                     f"src/app.js:253 — heap รอบแรก (เปิด 19 เครื่องมือใหม่) โต Δ{heap_growth6:+,} bytes และไม่ลดลงแม้ไม่ได้ใช้ "
-                     f"เครื่องมือเหล่านั้นแล้ว (pass 2 เปิดซ้ำเครื่องมือเดิม 19 ตัวโตแค่ Δ{heap_growth_pass2:+,} bytes ยืนยันว่า "
-                     f"ก้อนใหญ่ของรอบแรกส่วนหนึ่งเป็นต้นทุนโหลดไลบรารี Word/Excel/PPT ครั้งแรกซึ่งตั้งใจให้แคชไว้ ไม่ใช่บั๊ก "
-                     f"— แต่ตัว mounted Map เองไม่มีจุดปล่อยเลยตลอด session จึงยังนับเป็นความเสี่ยงเมื่อผู้ใช้เปิดหลายสิบเครื่องมือ "
-                     f"ในวันเดียว ประกอบกับ closure ของ dropzone/thumbUrls/state รายเครื่องมือที่ไม่มีจุดปล่อยเลย (ยืนยันแล้วจาก scenario 2)")
+                # ‼️ บันทึกไว้เป็น "ต้นทุนที่ยอมรับแล้ว" ไม่ใช่จุดรั่ว (แก้ไปแล้ว 09/09/2026)
+                #    src/app.js มีเพดานแคช MAX_CACHED ตัว และถอดตัวที่ไม่ได้แตะนานสุดทิ้งพร้อมคืน
+                #    objectURL/listener ของมัน (disposeTree ใน src/ui.js) · ก้อน heap ที่เหลือคือ
+                #    <script> ของไลบรารีหนัก (docx/xlsx/pdf-lib/tesseract) ที่ loader.js ตั้งใจแคชถาวร
+                #    ซึ่งไม่โตอีกเมื่อเปิดเครื่องมือเดิมซ้ำ (ยืนยันจาก pass 2 ด้านบน)
+                print(f"  หมายเหตุ: heap รอบแรกโต Δ{heap_growth6:+,} bytes = ต้นทุนโหลดไลบรารีครั้งแรกที่ตั้งใจแคชถาวร "
+                      f"(รอบสองโตแค่ Δ{heap_growth_pass2:+,} bytes) ไม่ใช่การรั่วแบบไม่มีเพดาน")
 
             # ══════════════════════════════════════════════════════════════
             section("สรุป error บนหน้าเว็บระหว่างทดสอบทั้งหมด (ต้องไม่มี)")

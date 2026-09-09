@@ -1,5 +1,5 @@
 import { el, dropzone, statusBar, button, field, select, download,
-         stripExt, fmtBytes, eachFile, failedBox } from "../ui.js";
+         stripExt, fmtBytes, eachFile, failedBox, registerCleanup } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr } from "../i18n.js";
@@ -265,11 +265,21 @@ export function mount(tool) {
   }
 
   function onFilesChanged() {
-    st.clear();
-    resultsByFile.clear();
-    lastMade = [];
-    hideEl(zipBtn, true);
-    failedNote.innerHTML = "";
+    /* ‼️ เดิมทุกครั้งที่รายชื่อไฟล์ขยับ (เพิ่ม/ลบ/สลับลำดับ) จะล้างผลลัพธ์ทิ้งทั้งชุด
+     * ลบรูปเดียวออกจาก 20 รูปที่ย่อเสร็จแล้ว = ปุ่มดาวน์โหลดหายหมดทั้ง 19 ใบที่เหลือ
+     * ต้องกดทำใหม่ทั้งชุด และถ้าลบระหว่างงานยังไม่จบ หน้าจอจะว่างเปล่าถาวรไม่มีอะไรบอกเลย
+     * (จับได้จาก tests/browser_stress.py ⑤)
+     * แก้เป็น "ทิ้งเฉพาะผลของไฟล์ที่ถูกเอาออกจริง" ผลของไฟล์ที่ยังอยู่เก็บไว้ให้ดาวน์โหลดได้ต่อ */
+    if (!st.busy) {
+      const keep = new Set(dz.files);
+      for (const f of [...resultsByFile.keys()]) if (!keep.has(f)) resultsByFile.delete(f);
+      lastMade = dz.files.map((f) => resultsByFile.get(f)).filter(Boolean);
+      hideEl(zipBtn, lastMade.length <= 1);
+      hideEl(oneBtn, lastMade.length !== 1);
+      if (!lastMade.length) { st.clear(); failedNote.innerHTML = ""; }
+      else st.info(tr("รายชื่อไฟล์เปลี่ยนแล้ว กดย่อและบีบอัดอีกครั้งเพื่ออัปเดตผลลัพธ์ทั้งชุด",
+                      "The file list changed. Run it again to update every result."));
+    }
     pruneThumbs(dz.files);
     if (activeIndex >= dz.files.length) activeIndex = Math.max(0, dz.files.length - 1);
     renderGallery();
@@ -395,6 +405,18 @@ export function mount(tool) {
       st.err(tr("ประมวลผลไม่สำเร็จ: ", "Could not process: ") + e.message);
     } finally { go.disabled = false; ws.setBusy(false); }
   }
+
+  /* ‼️ แกลเลอรีนี้ถือ objectURL ของตัวเอง 1 ตัวต่อรูป (กล่องลากไฟล์ตั้ง thumbs:false ไว้
+   * เพราะมีภาพย่อของตัวเองแล้ว) — สลับไปเครื่องมืออื่นทั้งที่ยังมีรูป 30 ใบค้าง = แรมยังถูกจับไว้ครบ
+   * (วัดจาก tests/browser_leak.py) · คืนตอนหลับ แล้ววาดใหม่ตอนกลับเข้ามา ไฟล์ยังอยู่ครบเหมือนเดิม */
+  registerCleanup(ws.wrap, {
+    sleep() {
+      for (const u of thumbUrls.values()) URL.revokeObjectURL(u);
+      thumbUrls.clear();
+      if (afterUrl) { URL.revokeObjectURL(afterUrl); afterUrl = null; }
+    },
+    wake() { if (dz.files.length) { renderGallery(); schedulePreview(0); } },
+  });
 
   syncSize();
   return ws.wrap;

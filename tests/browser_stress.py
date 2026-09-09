@@ -9,6 +9,11 @@ from PIL import Image
 import fitz  # pymupdf
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
+# ‼️ wait_for_function ต้องส่ง "สตริงที่เป็นฟังก์ชันลูกศร" เท่านั้น (`() => ...`)
+#    ถ้าส่งเป็นนิพจน์เปล่า ๆ Playwright จะไปใช้ eval() ในหน้าเว็บ ซึ่ง Content-Security-Policy
+#    ของ FileKit บล็อกไว้ (ไม่มี 'unsafe-eval' โดยเจตนา) → เทสตายทั้งไฟล์ด้วย EvalError
+#    ‼️ ห้ามแก้ด้วยการเปิด 'unsafe-eval' ใน CSP เพราะนั่นคือการถอดกำแพงเพื่อให้เทสผ่าน
+
 BASE = os.environ.get("FK_BASE", "http://localhost:8921")
 
 P, F = 0, []
@@ -110,7 +115,7 @@ def case1_many_files(b):
         btn.click()
         try:
             pg.wait_for_function(
-                f"document.querySelector('.status')?.textContent?.includes('{done_contains}')", timeout=25000)
+                f"() => document.querySelector('.status')?.textContent?.includes('{done_contains}')", timeout=25000)
             elapsed = time.time() - t0
             ck_true(f"[{tool}] ทำ 60 ไฟล์เสร็จไม่ค้าง (ใช้เวลา {elapsed:.2f}s)", True)
         except PWTimeout:
@@ -147,8 +152,8 @@ def case2_big_files(b):
         pg.locator("button.btn", has_text=btn_text).first.click()
         try:
             pg.wait_for_function(
-                f"(() => {{ const t=document.querySelector('.status')?.textContent||''; "
-                f"return t.includes('{done_contains}') || t.includes('ไม่สำเร็จ'); }})()", timeout=budget_ms)
+                f"() => {{ const t=document.querySelector('.status')?.textContent||''; "
+                f"return t.includes('{done_contains}') || t.includes('ไม่สำเร็จ'); }}", timeout=budget_ms)
             elapsed = time.time() - t0
             ck_true(f"[{tool}] รูป 4000×4000 (~10MB) ไม่ค้างเกิน {budget_ms/1000:.0f}s (ใช้เวลา {elapsed:.2f}s)", True)
         except PWTimeout:
@@ -354,13 +359,16 @@ def case5_rapid_actions(b):
     pg.locator("button.btn", has_text="ย่อและบีบอัด").first.click()
     pg.wait_for_timeout(400)  # ให้เริ่มประมวลผลไปแล้วบางไฟล์
     mid_status = pg.locator(".status").inner_text()
-    pg.locator(".file-row .icon-btn.danger").nth(10).click()  # ลบไฟล์กลางลิสต์ระหว่างกำลังทำ
+    # ‼️ ต้องยิง click ตรง ๆ ผ่าน DOM — .click() ของ Playwright รอให้ element "นิ่ง" ก่อน
+    #    ซึ่งระหว่างประมวลผลหนัก main thread ไม่ว่าง มันจึงไปกดเอาตอนงานจบไปแล้ว
+    #    กลายเป็นทดสอบคนละเคสกับที่ตั้งใจโดยไม่รู้ตัว (พิสูจน์ด้วย console log จริง 09/09/2026)
+    pg.evaluate("() => document.querySelectorAll('.file-row .icon-btn.danger')[10].click()")
     pg.wait_for_timeout(8000)
     final_status = pg.locator(".status").inner_text()
     done_icons = pg.locator(".rz-item .icon-btn").count()
     ok = ck_true(
         "ลบไฟล์กลางคัน → งานที่เหลือต้องทำต่อจนจบและบอกผลให้เห็น (ไม่ใช่เงียบหายไปเฉย ๆ)",
-        final_status.strip() != "" and (("เสร็จ" in final_status) or ("ไม่สำเร็จ" in final_status)),
+        final_status.strip() != "" and (("เสร็จ" in final_status) or ("ไม่สำเร็จ" in final_status)) and done_icons > 0,
         f"ระหว่างทำ status={mid_status!r} → หลังลบไฟล์รอ 8s แล้ว status={final_status!r}, ไฟล์ที่มีผลลัพธ์ = {done_icons}")
     if not ok:
         bug("รุนแรง — เงียบหาย/เสียข้อมูลผลลัพธ์ที่ทำเสร็จแล้ว",
@@ -450,9 +458,12 @@ def case4b_corrupt_png_hang(b):
         hung = True
     if not hung:
         try:
+            # ‼️ ห้ามรอ "คำเฉพาะ" ของข้อความสำเร็จ/ล้มเหลว — พอข้อความเปลี่ยนไปนิดเดียว
+            #    เทสจะรายงานว่า "ค้าง" ทั้งที่งานจบไปแล้วใน 0.1 วินาที (เจอจริง 09/09/2026)
+            #    เงื่อนไข "จบงาน" ที่แท้จริงคือ มีข้อความขึ้นแล้ว และไม่ใช่ข้อความ "กำลังทำอยู่"
             pg.wait_for_function(
-                "(() => { const t=document.querySelector('.status')?.textContent||''; "
-                "return t.includes('เรียบร้อย') || t.includes('ไม่สำเร็จ'); })()",
+                "() => { const t=(document.querySelector('.status')?.textContent||'').trim(); "
+                "return t.length > 0 && !t.includes('กำลัง'); }",
                 timeout=max(1000, HANG_BUDGET_MS - (time.time() - t0) * 1000))
         except PWTimeout:
             hung = True

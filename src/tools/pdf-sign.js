@@ -1,4 +1,4 @@
-import { el, statusBar, button, dropzone, download, stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+import { el, statusBar, button, dropzone, downloadButton, stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 import { uiIcon } from "../icons.js";
 import { workspace } from "../workspace.js";
 import { openPdf, passwordBox, loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
@@ -330,7 +330,7 @@ export function mount(tool) {
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name)]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download", onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
     } catch (e) {
       st.err(tr("บันทึกไม่ได้: ", "Couldn't save: ") + e.message);

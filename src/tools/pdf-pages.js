@@ -1,5 +1,5 @@
 import { loadPdfLib, ENCRYPTED_WARNING, openPdf, passwordBox } from "../pdfopen.js";
-import { el, dropzone, statusBar, button, field, download, stripExt, parsePages, yieldToBrowser } from "../ui.js";
+import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr } from "../i18n.js";
@@ -145,9 +145,18 @@ export function mount(tool) {
           style: { transform: `rotate(${it.rotate}deg)` } }),
         el("span", { class: "num" }, String(i + 1)),
         el("div", { class: "tools" }, [
-          el("button", { type: "button", title: tr("หมุนซ้าย", "Rotate left"), onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 270) % 360; render(); } }, [uiIcon("rotateL", "pg-ico")]),
-          el("button", { type: "button", title: tr("หมุนขวา", "Rotate right"), onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, [uiIcon("rotateR", "pg-ico")]),
-          el("button", { type: "button", title: it.dropped ? tr("เอากลับ", "Restore") : tr("ลบหน้านี้", "Remove this page"), onclick: (e) => { e.stopPropagation(); it.dropped = !it.dropped; render(); } }, [uiIcon(it.dropped ? "undo" : "trash", "pg-ico")]),
+          el("button", { type: "button",
+            title: tr(`หมุนซ้าย (หน้า ${i + 1})`, `Rotate left (page ${i + 1})`),
+            "aria-label": tr(`หมุนหน้า ${i + 1} ไปทางซ้าย`, `Rotate page ${i + 1} left`),
+            onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 270) % 360; render(); } }, [uiIcon("rotateL", "pg-ico")]),
+          el("button", { type: "button",
+            title: tr(`หมุนขวา (หน้า ${i + 1})`, `Rotate right (page ${i + 1})`),
+            "aria-label": tr(`หมุนหน้า ${i + 1} ไปทางขวา`, `Rotate page ${i + 1} right`),
+            onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, [uiIcon("rotateR", "pg-ico")]),
+          el("button", { type: "button",
+            title: it.dropped ? tr(`เอากลับ (หน้า ${i + 1})`, `Restore page ${i + 1}`) : tr(`ลบหน้านี้ (หน้า ${i + 1})`, `Remove page ${i + 1}`),
+            "aria-label": it.dropped ? tr(`เอาหน้า ${i + 1} กลับ`, `Restore page ${i + 1}`) : tr(`ลบหน้า ${i + 1}`, `Delete page ${i + 1}`),
+            onclick: (e) => { e.stopPropagation(); it.dropped = !it.dropped; render(); } }, [uiIcon(it.dropped ? "undo" : "trash", "pg-ico")]),
         ]),
       ]);
       pagesGrid.appendChild(card);
@@ -249,7 +258,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${keep.length} หน้า`, `${keep.length} pages`))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
     } catch (e) {
       st.err(tr("บันทึกไม่ได้: ", "Couldn't save: ") + e.message);

@@ -1,5 +1,5 @@
-import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, yieldToBrowser, segmented } from "../ui.js";
+import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
+         stripExt, segmented, eachFile, failedBox } from "../ui.js";
 import { tr } from "../i18n.js";
 
 const PAGE_SIZES = { auto: null, a4: [595.28, 841.89], letter: [612, 792] };
@@ -29,12 +29,44 @@ export function mount(tool) {
     ]),
     el("div", { class: "actions" }, [go]), st.node, results);
 
+  /* ‼️ PNG ที่ถูกตัดกลางสตรีมทำให้ pdf-lib ค้างไม่จบ (>100 วินาที หน้าเว็บแข็งทั้งแท็บ
+   * กดปุ่มหยุดก็ไม่ได้เพราะ main thread ตาย — จับได้จาก tests/browser_stress.py ④)
+   * เบราว์เซอร์ถอดรหัสไฟล์แบบนี้ "ผ่าน" (วาดเท่าที่มีข้อมูล) จึงเช็คด้วย createImageBitmap ไม่ได้
+   * ต้องเดินดูโครงสร้างก้อนข้อมูล (chunk) เองว่าครบถึง IEND ไหม — เร็วมาก อ่านแค่หัวก้อน
+   * ไฟล์ที่ไม่ครบจะถูกส่งไปวาดผ่าน canvas แทน (ได้เท่าที่ภาพมีจริง ดีกว่าค้างทั้งหน้า) */
+  function pngComplete(bytes) {
+    const SIG = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (bytes.length < 12) return false;
+    for (let i = 0; i < 8; i++) if (bytes[i] !== SIG[i]) return false;
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let p = 8;
+    while (p + 12 <= bytes.length) {
+      const len = dv.getUint32(p);
+      const type = String.fromCharCode(bytes[p + 4], bytes[p + 5], bytes[p + 6], bytes[p + 7]);
+      const next = p + 12 + len;
+      if (len > bytes.length || next > bytes.length) return false;   // ก้อนสุดท้ายขาดกลางทาง
+      if (type === "IEND") return true;
+      p = next;
+    }
+    return false;
+  }
+
   // แปลงรูปเป็น JPEG/PNG ที่ pdf-lib ฝังได้ — WEBP ต้องวาดผ่าน canvas ก่อน
   async function toEmbeddable(file) {
-    if (/jpe?g$/i.test(file.type) || /png$/i.test(file.type)) {
-      return { bytes: new Uint8Array(await file.arrayBuffer()), kind: file.type.includes("png") ? "png" : "jpg" };
+    const isPng = /png$/i.test(file.type);
+    const raw = (/jpe?g$/i.test(file.type) || isPng) ? new Uint8Array(await file.arrayBuffer()) : null;
+    if (raw && !(isPng && !pngComplete(raw))) {
+      /* ทางนี้ส่งไบต์ดิบเข้า pdf-lib ตรง ๆ (เร็วสุด ไม่เสียคุณภาพ) — โครงสร้างผ่านแล้ว
+       * เหลือแค่กันไฟล์ที่หัวถูกแต่เนื้อในเป็นขยะจริง ๆ ให้เบราว์เซอร์ลองถอดรหัสดูก่อน */
+      let probe;
+      try { probe = await createImageBitmap(file); }
+      catch { throw new Error(tr("ไฟล์รูปเสียหาย เปิดไม่ได้", "This image file is damaged")); }
+      probe.close?.();
+      return { bytes: raw, kind: isPng ? "png" : "jpg" };
     }
-    const bmp = await createImageBitmap(file);
+    let bmp;
+    try { bmp = await createImageBitmap(file); }
+    catch { throw new Error(tr("ไฟล์รูปเสียหาย เปิดไม่ได้", "This image file is damaged")); }
     const canvas = document.createElement("canvas");
     canvas.width = bmp.width; canvas.height = bmp.height;
     canvas.getContext("2d").drawImage(bmp, 0, 0);
@@ -54,8 +86,12 @@ export function mount(tool) {
       const doc = await PDFDocument.create();
       const m = Math.max(0, +margin.value || 0);
 
-      for (let i = 0; i < files.length; i++) {
-        const { bytes, kind } = await toEmbeddable(files[i]);
+      // ‼️ เดิมใช้ for ธรรมดา — ไฟล์เสียใบเดียวทำให้ทั้งชุดพัง ("สร้าง PDF ไม่สำเร็จ: undefined")
+      //    และไม่มีปุ่มหยุดให้กดเลยระหว่างงานหนัก · eachFile() แก้ทั้งสองอย่างในตัว
+      //    (ข้ามไฟล์เสียแล้วทำต่อ + มีปุ่มหยุด + บอกท้ายว่าข้ามใบไหนเพราะอะไร)
+      let pages = 0;
+      const failed = await eachFile(files, st, async (f) => {
+        const { bytes, kind } = await toEmbeddable(f);
         const img = kind === "png" ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
 
         let pw, ph;
@@ -71,18 +107,25 @@ export function mount(tool) {
         const w = img.width * scale, h = img.height * scale;
         page.drawImage(img, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
 
-        st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
-        await yieldToBrowser();
-      }
+        pages++;
+      });
 
+      if (!pages) {
+        // ไม่ได้สักหน้า — ต้องบอกด้วยว่าแต่ละไฟล์ติดตรงไหน ไม่ใช่บอกลอย ๆ ว่าใช้ไม่ได้
+        st.progress(null);
+        st.err(tr("สร้าง PDF ไม่สำเร็จ: ไม่มีรูปที่เปิดได้เลย", "Could not create PDF: no image could be opened"));
+        const box = failedBox(failed); if (box) results.appendChild(box);
+        return;
+      }
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(tr(`สร้าง PDF ${files.length} หน้าเรียบร้อย`, `Done — created a ${files.length}-page PDF`));
+      st.ok(tr(`สร้าง PDF ${pages} หน้าเรียบร้อย`, `Done — created a ${pages}-page PDF`));
       const name = stripExt(files[0].name) + tr("-รูปภาพ.pdf", "-images.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${files.length} หน้า`, `${files.length} pages`))]),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages} หน้า`, `${pages} pages`))]),
+        downloadButton(blob, name),
       ]));
+      const fb = failedBox(failed); if (fb) results.appendChild(fb);   // บอกว่าข้ามใบไหนเพราะอะไร
     } catch (e) {
       st.progress(null);
       st.err(tr("สร้าง PDF ไม่สำเร็จ: ", "Could not create PDF: ") + e.message);

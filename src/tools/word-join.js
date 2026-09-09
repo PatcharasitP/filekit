@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, field, select, download,
+import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, fmtBytes } from "../ui.js";
 import { joinDocx } from "../docxjoin.js";
 import { tr } from "../i18n.js";
@@ -50,7 +50,7 @@ export function mount(tool) {
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, parts.map((p) => tr(`${p.name} (${p.paragraphs} ย่อหน้า)`, `${p.name} (${p.paragraphs} paragraphs)`)).join(", "))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
-        button(tr("ดาวน์โหลด", "Download"), { icon: "download",  onclick: () => download(blob, name) }),
+        downloadButton(blob, name),
       ]));
     } catch (e) {
       st.progress(null);

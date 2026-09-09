@@ -516,7 +516,9 @@ def check_title_and_switch(pg):
     goto(pg, "pdf-merge")
     title2 = pg.evaluate("document.title")
     results.append(("pdf-merge document.title เป็นอังกฤษ ไม่มีไทย", not THAI.search(title2), f" (ได้ {title2!r})"))
-    results.append(("pdf-merge document.title ลงท้าย '— FileKit'", title2.endswith("— FileKit"), f" (ได้ {title2!r})"))
+    # ‼️ ชื่อหน้าใช้ขีดสั้นคั่น ไม่ใช่ขีดยาว ตามกฎข้อความบนหน้าจอของโปรเจกต์
+    #    (ห้ามใช้ขีดยาวเป็นตัวคั่นในข้อความที่ผู้ใช้เห็น) เทสเดิมยังคาดหวังขีดยาวอยู่
+    results.append(("pdf-merge document.title ลงท้าย '- FileKit'", title2.endswith("- FileKit"), f" (ได้ {title2!r})"))
 
     # ── สลับภาษาหลังมีผลลัพธ์ค้างอยู่: ทำ pdf-merge จนเสร็จ (โหมดอังกฤษ) แล้วกด TH ──
     src = [str(SAMPLES / "ตัวอย่าง-รายงานประจำเดือน.pdf"), str(SAMPLES / "ตัวอย่าง-ใบปะหน้าเอกสาร.pdf")]

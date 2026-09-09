@@ -15,13 +15,17 @@ import { PQ_TYPES, buildTableCode, wrapAsQuery } from "../pqm.js";
 import { tr } from "../i18n.js";
 
 const STYLE = `
+/* ‼️ ตารางคอลัมน์กว้างเกินจอมือถือได้ง่ายมาก ต้องให้มันเลื่อนในกล่องของตัวเอง
+   ไม่ใช่ปล่อยให้ทั้งหน้าเลื่อนแนวนอน ซึ่งทำให้ทุกอย่างบนหน้าขยับตามจนใช้งานยาก */
+.pq-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pq-cols{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
 .pq-cols th{text-align:left;font-weight:700;padding:7px 8px;border-bottom:1.5px solid var(--line);white-space:nowrap}
 .pq-cols td{padding:5px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
 .pq-cols tr[hidden]{display:none}
 .pq-name{font-weight:600;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pq-sample{color:var(--text-mute);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pq-cols select{width:100%;max-width:220px}
+/* ‼️ ปุ่มกดบนมือถือต้องสูงอย่างน้อย 36px ไม่งั้นนิ้วกดพลาด (มีเทสจับ) */
+.pq-cols select{width:100%;min-width:150px;max-width:220px;min-height:36px}
 .pq-flag{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:700;
   padding:1px 7px;border-radius:99px;vertical-align:middle;
   color:var(--warn);border:1px solid var(--warn);background:var(--bg-soft)}
@@ -72,7 +76,7 @@ export function mount(tool) {
   const codeBox = el("pre", { class: "pq-code", hidden: true });
   const copyBtn = button(tr("คัดลอกโค้ด", "Copy code"), { icon: "copy", onclick: copyCode });
   const saveBtn = button(tr("บันทึกเป็นไฟล์", "Save as file"), { ghost: true, icon: "download", onclick: saveCode });
-  const actions = el("div", { class: "actions", hidden: true }, [copyBtn, saveBtn]);
+  const actions = el("div", { class: "actions", hidden: true }, [copyBtn, saveBtn, acceptAll]);
 
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp",
@@ -85,10 +89,15 @@ export function mount(tool) {
     onChange: () => load(),
   });
 
+  /* ‼️ แถวปุ่มลงมือทำต้องเป็นลูกตัวสุดท้ายของแผง ไม่งั้นบนมือถือมันจะหลุดจอ
+     กฎ sticky ของเว็บนี้ตรึงแถบปุ่มไว้ที่ก้นจอได้เฉพาะตอนที่ "ตำแหน่งจริง" ของมันอยู่ใต้ขอบจอ
+     ถ้ามีเนื้อหาต่อท้ายอีกยาว ๆ (กล่องโค้ด แผงสอน) แถบจะหลุดตรึงแล้วเลื่อนหายไปกับหน้า
+     (จับได้จาก tests/browser_mobile.py ข้อ ②) จึงยกแผงสอนออกไปไว้นอกแผง เป็นบล็อกของตัวเอง */
   body.append(styleEl, dz.container,
     el("div", { class: "row" }, [sheetField, field(tr("จำนวนแถวที่ใส่", "Rows to include"), rowsSel),
                                  field(tr("รูปแบบผลลัพธ์", "Output shape"), shapeSel)]),
-    summary, colsBox, actions, codeBox, st.node, teachPanel());
+    summary, colsBox, codeBox, st.node, actions);
+  wrap.insertBefore(teachPanel(), wrap.lastElementChild);
   sheetField.hidden = true;
 
   sheetSel.onchange = () => { pickSheet(+sheetSel.value); };
@@ -190,15 +199,15 @@ export function mount(tool) {
 
     colsBox.innerHTML = "";
     colsBox.append(
-      el("div", { class: "row" }, [onlyWarnRow, el("div", { class: "actions" }, [acceptAll])]),
-      el("table", { class: "pq-cols" }, [
+      el("div", { class: "row" }, [onlyWarnRow]),
+      el("div", { class: "pq-scroll" }, [el("table", { class: "pq-cols" }, [
         el("thead", {}, [el("tr", {}, [
           el("th", {}, tr("คอลัมน์", "Column")),
           el("th", {}, tr("ชนิดข้อมูลใน Power Query", "Power Query type")),
           el("th", {}, tr("ตัวอย่างค่า", "Sample values")),
         ])]),
         el("tbody", {}, rows),
-      ]),
+      ])]),
     );
     applyFilter();
   }

@@ -23,7 +23,7 @@ const assetList = () => [
   "src/i18n.js", "src/preview.js", "src/offline.js", "src/ui.js", "src/filetype.js",
   "vendor/easy-template-x.esm.js", "src/pdfopen.js", "src/ocr.js",
   "src/pdftext.js", "src/pptx.js", "src/thaifont.js", "assets/css/tool.css",
-  "src/thai.js", "src/sheetpick.js", "src/xlsxutil.js", "src/search.js", "src/icons.js", "src/workspace.js", "src/docxmerge.js", "src/docxjoin.js",
+  "src/thai.js", "src/sheetpick.js", "src/xlsxutil.js", "src/pqm.js", "src/pqtypes.js", "src/search.js", "src/icons.js", "src/workspace.js", "src/docxmerge.js", "src/docxjoin.js",
   "src/docxreplace.js", "src/docxclean.js", "src/signpad.js",
 ];
 

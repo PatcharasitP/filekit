@@ -20,6 +20,23 @@ import { fileKindIcon } from "./icons.js";
 //    ทุกพิกเซล จึงให้ wrapper ใหม่ทั้งหมด display:contents เป็นค่าเริ่มต้น (ไม่กินเลย์เอาต์)
 const STYLE_ID = "pv-gallery-style";
 const STYLE = `
+  /* แผงดูเนื้อไฟล์ Excel/Word — อ่านได้จริงบนมือถือด้วย จึงให้เลื่อนในกล่องตัวเอง
+     ‼️ ต้องกำหนดสีเองให้ครบคู่ ห้ามพึ่ง --text ของหน้า เพราะกล่องนี้ลอยอยู่บนฉากมืดของ
+     ตัวดูไฟล์ ซึ่ง --text ตรงนั้นเป็นสีอ่อน วางบนพื้นกระดาษขาวแล้วจางจนอ่านไม่ออก
+     (เห็นกับตาตอนทดสอบจริง 09/09/2026) ยึดพื้นขาวตัวอักษรเข้มเหมือนกระดาษ ทั้งสองธีม
+     เหมือนที่หน้า PDF ในตัวดูไฟล์เดียวกันนี้ก็เป็นพื้นขาวอยู่แล้ว */
+  .pv-doc{ max-width:min(1000px,92vw); max-height:78vh; overflow:auto;
+    background:#fff; color:#1b2029;
+    padding:14px 16px; border-radius:12px; text-align:left; line-height:1.6; }
+  .pv-doc p{ margin:0 0 8px; }
+  .pv-doc h3{ margin:12px 0 6px; font-size:1.05rem; }
+  .pv-doc-list{ margin:0 0 8px 18px; }
+  .pv-doc-note{ color:#5b6472; font-size:12.5px; margin:6px 0; }
+  .pv-doc-load{ color:#e8eaee; padding:24px; }
+  .pv-sheet{ border-collapse:collapse; font-size:13px; color:#1b2029; }
+  .pv-sheet th,.pv-sheet td{ border:1px solid #dcdfe4; padding:4px 8px; text-align:left;
+    white-space:nowrap; max-width:280px; overflow:hidden; text-overflow:ellipsis; }
+  .pv-sheet th{ background:#eef0f4; font-weight:700; position:sticky; top:0; }
   .pv-scene{ display:contents; }
   .pv.pv-gallery .pv-scene{
     display:block; position:fixed; inset:0; z-index:1;
@@ -94,9 +111,77 @@ function injectStyle() {
 let box = null;      // <dialog> ตัวเดียวใช้ซ้ำทั้งเว็บ
 let url = null;      // objectURL ของรูปที่กำลังเปิดอยู่กลางจอ (การ์ดหลัก) — ต้องคืนหน่วยความจำตอนปิด/สลับ
 
-/** ไฟล์ชนิดนี้เปิดดูได้ไหม (รูปเปิดได้เสมอ · PDF เปิดได้เมื่อ pdf.js โหลดอยู่แล้ว) */
-export const canView = (file) =>
-  detectType(file) === "image" || (detectType(file) === "pdf" && !!window.pdfjsLib);
+/* ‼️ 09/09/2026 พี่ปอนด์ทักเอง: "ไฟล์ควรคลิกดูข้อมูลข้างในได้ไหม" — เดิมดูได้แค่รูปกับ PDF
+ * ส่วน Excel/Word คลิกแล้วเงียบ ทั้งที่เป็นชนิดที่คนใช้เยอะสุดในงานเอกสาร และการ "หยิบผิดไฟล์"
+ * เกิดบ่อยกว่ารูปด้วยซ้ำ เพราะชื่อไฟล์คล้ายกันหมด (รายงาน-final-2.xlsx)
+ * ตัวอ่านของสองชนิดนี้ (xlsx, mammoth) โหลดตอนกดดูเท่านั้น หน้าแรกจึงไม่หนักขึ้นเลย */
+const DOC_KINDS = new Set(["xlsx", "csv", "docx"]);
+
+/** ไฟล์ชนิดนี้เปิดดูได้ไหม (รูปเปิดได้เสมอ · PDF เปิดได้เมื่อ pdf.js โหลดอยู่แล้ว
+ *  · Excel/CSV/Word เปิดได้เสมอ เพราะดึงตัวอ่านมาให้ตอนกด) */
+export const canView = (file) => {
+  const k = detectType(file);
+  return k === "image" || (k === "pdf" && !!window.pdfjsLib) || DOC_KINDS.has(k);
+};
+
+const MAX_ROWS = 200, MAX_COLS = 40;        // พอให้ "รู้ว่าใช่ไฟล์นี้" โดยไม่ค้างกับไฟล์แสนแถว
+
+/** ตารางจาก Excel หรือ CSV — อ่านชีทแรกที่ไม่ได้ซ่อนไว้ */
+async function renderSheet(file, d, expectedIdx) {
+  const { loadLibs } = await import("./loader.js");
+  await loadLibs("xlsx");
+  const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()),
+    { type: "array", cellDates: true, raw: false, codepage: 65001 });
+  // ‼️ ชีทที่ผู้ใช้ซ่อนไว้ต้องไม่โผล่ในตัวดูไฟล์เหมือนกัน (กฎเดียวกับ excel-to-pdf/excel-csv)
+  const visible = wb.SheetNames.filter((n, i) => (wb.Workbook?.Sheets?.[i]?.Hidden || 0) === 0);
+  const name = visible[0] || wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, blankrows: false, defval: "" });
+  if (!(d.open && expectedIdx === idx)) return;
+  const head = rows[0] || [];
+  const body = rows.slice(1, MAX_ROWS + 1);
+  const table = el("table", { class: "pv-sheet" }, [
+    el("thead", {}, [el("tr", {}, head.slice(0, MAX_COLS).map((c) => el("th", {}, String(c ?? ""))))]),
+    el("tbody", {}, body.map((r) => el("tr", {},
+      Array.from({ length: Math.min(head.length || r.length, MAX_COLS) },
+        (_, i) => el("td", {}, String(r[i] ?? "")))))),
+  ]);
+  const more = rows.length > MAX_ROWS + 1
+    ? el("div", { class: "pv-doc-note" },
+        tr(`แสดง ${MAX_ROWS} แถวแรกจากทั้งหมด ${rows.length - 1} แถว`,
+           `Showing the first ${MAX_ROWS} of ${rows.length - 1} rows`)) : null;
+  const sheets = wb.SheetNames.length > 1
+    ? el("div", { class: "pv-doc-note" },
+        tr(`ชีทที่แสดง: ${name} (ไฟล์นี้มี ${wb.SheetNames.length} ชีท)`,
+           `Showing sheet: ${name} (this file has ${wb.SheetNames.length} sheets)`)) : null;
+  d._stage.appendChild(el("div", { class: "pv-doc" }, [sheets, table, more]));
+}
+
+/** เนื้อความจากไฟล์ Word — เก็บเฉพาะโครงที่จำเป็น (หัวข้อ ย่อหน้า รายการ ตาราง)
+ *  ‼️ ประกอบ DOM เองทีละชิ้นจากข้อความล้วน ไม่ยัด innerHTML ที่ได้จากไฟล์ของผู้ใช้ */
+async function renderDoc(file, d, expectedIdx) {
+  const { loadLibs } = await import("./loader.js");
+  await loadLibs("mammoth");
+  const { value } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  if (!(d.open && expectedIdx === idx)) return;
+  const dom = new DOMParser().parseFromString(value, "text/html");
+  const out = [];
+  for (const node of dom.body.children) {
+    const tag = node.tagName.toLowerCase();
+    const text = (node.textContent || "").trim();
+    if (tag === "table") {
+      out.push(el("table", { class: "pv-sheet" },
+        [...node.rows].slice(0, MAX_ROWS).map((r) => el("tr", {},
+          [...r.cells].slice(0, MAX_COLS).map((c) => el("td", {}, (c.textContent || "").trim()))))));
+    } else if (tag === "ul" || tag === "ol") {
+      out.push(el("ul", { class: "pv-doc-list" },
+        [...node.children].map((li) => el("li", {}, (li.textContent || "").trim()))));
+    } else if (text) {
+      out.push(el(/^h[1-6]$/.test(tag) ? "h3" : "p", {}, text));
+    }
+  }
+  d._stage.appendChild(el("div", { class: "pv-doc" },
+    out.length ? out : [el("p", {}, tr("ไฟล์นี้ไม่มีข้อความให้แสดง", "This file has no text to show"))]));
+}
 
 /* ── ซูม (ของเดิม ไม่แตะตรรกะ) ───────────────────────────────────────────
  * แคปหน้าจอมาแล้วต้องซูมอ่านตัวหนังสือเล็ก ๆ ได้ ไม่งั้นดูได้แค่ "ใช่ใบนี้ไหม"
@@ -263,10 +348,27 @@ async function loadIntoStage(file, expectedIdx) {
   if (url) { URL.revokeObjectURL(url); url = null; }
   updateCaption();
 
-  if (detectType(file) === "image") {
+  const kind = detectType(file);
+  if (kind === "image") {
     url = URL.createObjectURL(file);
     media = el("img", { src: url, alt: file.name || "" });
     d._stage.appendChild(media);
+    return;
+  }
+  if (DOC_KINDS.has(kind)) {
+    d._stage.appendChild(el("div", { class: "pv-doc-load" }, tr("กำลังเปิดไฟล์…", "Opening…")));
+    try {
+      const render = kind === "docx" ? renderDoc : renderSheet;
+      d._stage.innerHTML = "";
+      await render(file, d, expectedIdx);
+    } catch (e) {
+      console.error(e);
+      if (d.open && expectedIdx === idx) {
+        d._stage.innerHTML = "";
+        d._stage.appendChild(el("div", { class: "pv-err" },
+          tr("เปิดดูไฟล์นี้ไม่ได้ อาจเสียหายหรือถูกล็อกไว้", "Could not open this file, it may be damaged or locked")));
+      }
+    }
     return;
   }
   // PDF: วาดหน้าแรกใหญ่ ๆ พอให้อ่านออกว่าใช่ฉบับที่ต้องการไหม

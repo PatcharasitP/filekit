@@ -3,6 +3,27 @@ import { $, $$, el, showVeil, filesFromClipboard } from "./dom.js";
 import { byId } from "./registry.js";
 import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
 import { tr } from "./i18n.js";
+
+/* ‼️ 09/09/2026 พี่ปอนด์ทักเอง: "ไฟล์ควรคลิกดูข้อมูลข้างในได้ไหม" — เดิมกดดูได้เฉพาะ
+ * ภาพย่อของรูป ส่วนแถวไฟล์ Excel/Word กดไม่ได้เลย ทั้งที่คนหยิบผิดไฟล์บ่อยกว่ารูปด้วยซ้ำ
+ * (ชื่อไฟล์คล้ายกันหมด) จึงทำชื่อไฟล์ให้กดดูเนื้อข้างในได้ทุกชนิดที่ตัวดูไฟล์รองรับ
+ * ‼️ ไม่เปิดแท็บใหม่ เพราะเบราว์เซอร์มือถือบล็อกหน้าต่างใหม่บ่อย และการพาไฟล์ข้ามแท็บ
+ * ต้องส่งข้อมูลออกไปนอกหน้าเดิม ซึ่งขัดกับหลักของเว็บนี้ที่ไฟล์อยู่ในหน้าเดียวตลอด */
+const OPENABLE = new Set(["image", "pdf", "xlsx", "csv", "docx"]);
+const openable = (f) => OPENABLE.has(detectType(f));
+
+const ROW_STYLE_ID = "fk-frow-style";
+function ensureRowStyle() {
+  if (document.getElementById(ROW_STYLE_ID)) return;
+  const st = document.createElement("style");
+  st.id = ROW_STYLE_ID;
+  // ปุ่มต้องหน้าตาเหมือนข้อความเดิมเป๊ะ ต่างแค่บอกว่ากดได้ (ห้ามแก้ assets/css/tool.css)
+  st.textContent = `.file-row .f-open{ background:none; border:0; padding:0; margin:0; font:inherit;
+    color:inherit; text-align:left; cursor:pointer; min-width:0; }
+  .file-row .f-open:hover .f-name{ text-decoration:underline; }
+  .file-row .f-open:focus-visible{ outline:2px solid var(--accent,#3b6cf6); outline-offset:3px; border-radius:6px; }`;
+  document.head.appendChild(st);
+}
 export { $, $$, el } from "./dom.js";
 
 export function fmtBytes(b) {
@@ -672,6 +693,7 @@ export function dropzone(opts = {}) {
     //    พอมีไฟล์ในมือ คำเชิญ "ลากไฟล์มาวางที่นี่" กับปุ่มลองไฟล์ตัวอย่างหมดหน้าที่แล้ว
     //    ยุบเหลือแถบเตี้ย "เพิ่มไฟล์" — ผลลัพธ์กับปุ่มลงมือจะเลื่อนขึ้นมาอยู่ในสายตาแทน
     container.classList.toggle("has-files", files.length > 0);
+    ensureRowStyle();
     list.innerHTML = "";
     files.forEach((f, i) => {
       // ‼️ การลากวางแบบ HTML5 ใช้ไม่ได้เลยบนมือถือและกับคนที่ใช้คีย์บอร์ดอย่างเดียว
@@ -682,7 +704,14 @@ export function dropzone(opts = {}) {
         "data-state": states.get(f) || "pending" }, [
         reorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
         thumbs ? thumbBox(f) : null,
-        el("span", { class: "f-meta" }, [
+        openable(f) ? el("button", { class: "f-meta f-open", type: "button",
+            title: tr("กดเพื่อดูข้อมูลในไฟล์", "Click to see what's inside"),
+            "aria-label": tr(`ดูข้อมูลใน ${f.name}`, `View contents of ${f.name}`),
+            onclick: async (e) => { e.stopPropagation();
+              const m = await import("./preview.js"); m.viewFile(f, files); } }, [
+          el("span", { class: "f-name" }, f.name),
+          el("span", { class: "f-size" }, fmtBytes(f.size)),
+        ]) : el("span", { class: "f-meta" }, [
           el("span", { class: "f-name" }, f.name),
           el("span", { class: "f-size" }, fmtBytes(f.size)),
         ]),

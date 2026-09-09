@@ -24,6 +24,21 @@ def ck(name, got, want):
 def active(pg):
     return pg.evaluate("() => (document.activeElement||{}).className || '(ไม่มี)'")
 
+def make_docs():
+    """สร้าง .xlsx (มีชีทซ่อน) และ .docx ไว้ทดสอบการเปิดดูเนื้อไฟล์"""
+    import openpyxl, docx
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "ข้อมูล"
+    ws.append(["ชื่อคอลัมน์แรก", "คอลัมน์สอง"])
+    ws.append(["ค่าทดสอบหนึ่ง", "0812345678"])          # เลขศูนย์นำหน้าต้องไม่หาย
+    hid = wb.create_sheet("ชีทที่ซ่อนไว้"); hid.append(["ข้อมูลลับ-ห้ามโผล่", 1]); hid.sheet_state = "hidden"
+    wb.save(TMP / "ตารางทดสอบ.xlsx")
+    d = docx.Document(); d.add_heading("หัวข้อในไฟล์เวิร์ด", level=1)
+    d.add_paragraph("ย่อหน้าทดสอบการเปิดดูเนื้อไฟล์")
+    t = d.add_table(rows=1, cols=2); t.cell(0,0).text = "ช่องซ้ายในตาราง"; t.cell(0,1).text = "ช่องขวา"
+    d.save(TMP / "เอกสารทดสอบ.docx")
+    return str(TMP / "ตารางทดสอบ.xlsx"), str(TMP / "เอกสารทดสอบ.docx")
+
+
 def make_images():
     for i, color in enumerate([(200, 60, 60), (60, 120, 200)], 1):
         Image.new("RGB", (400, 300), color).save(TMP / f"รูปทดสอบ{i}.png")
@@ -71,6 +86,50 @@ def main():
         pg.wait_for_timeout(600)
         ck("Esc บนหน้าเครื่องมือ (ไม่มีกล่องเปิด) พากลับหน้าแรก",
            pg.evaluate("() => document.body.classList.contains('tool')"), False)
+
+        # ── เปิดดูเนื้อไฟล์ Excel และ Word จากแถวไฟล์ (พี่ปอนด์ขอเอง 09/09/2026) ──
+        # ‼️ เดิมกดดูได้แค่รูปกับ PDF ส่วน Excel/Word กดแล้วเงียบสนิท
+        xlsx_path, docx_path = make_docs()
+
+        pg.goto("about:blank")
+        pg.goto(f"{BASE}/#/excel-csv", wait_until="networkidle")
+        pg.wait_for_selector(".dz")
+        pg.locator("input[type=file]").set_input_files([xlsx_path])
+        pg.wait_for_timeout(600)
+        ck("แถวไฟล์ Excel กดดูได้", pg.locator(".file-row .f-open").count(), 1)
+        pg.locator(".file-row .f-open").first.click()
+        pg.wait_for_selector(".pv-sheet", timeout=15000)
+        sheet_text = pg.locator(".pv-doc").inner_text()
+        ck("เห็นหัวคอลัมน์จริงในตาราง", "ชื่อคอลัมน์แรก" in sheet_text, True)
+        ck("เลขศูนย์นำหน้าไม่หายในตัวดูไฟล์", "0812345678" in sheet_text, True)
+        # ชีทที่ผู้ใช้ซ่อนไว้ต้องไม่โผล่ในตัวดูไฟล์เหมือนกัน (กฎเดียวกับเครื่องมือแปลงไฟล์)
+        ck("ชีทที่ซ่อนไว้ไม่โผล่ในตัวดูไฟล์", "ข้อมูลลับ-ห้ามโผล่" in sheet_text, False)
+        # ‼️ ตัวหนังสือต้องอ่านออกจริง เคยพลาดมาแล้ว: กล่องพื้นขาวแต่ตัวอักษรรับสีอ่อนจากฉากมืด
+        colors = pg.evaluate("""() => { const td = document.querySelector('.pv-sheet td');
+            return { fg: getComputedStyle(td).color,
+                     bg: getComputedStyle(document.querySelector('.pv-doc')).backgroundColor }; }""")
+        def lum(rgb):
+            v = [int(x) / 255 for x in rgb[rgb.index("(") + 1:rgb.index(")")].split(",")[:3]]
+            v = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in v]
+            return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+        l1, l2 = sorted([lum(colors["fg"]), lum(colors["bg"])], reverse=True)
+        ratio = (l1 + 0.05) / (l2 + 0.05)
+        ck(f"ตัวอักษรในตารางอ่านออกจริง คอนทราสต์ {ratio:.1f}:1 (ต้อง >= 4.5)", ratio >= 4.5, True)
+        pg.keyboard.press("Escape")
+        pg.wait_for_timeout(400)
+        ck("ปิดแผงแล้วไฟล์ยังอยู่ครบ", pg.locator(".file-row").count(), 1)
+
+        pg.goto("about:blank")
+        pg.goto(f"{BASE}/#/word-to-pdf", wait_until="networkidle")
+        pg.wait_for_selector(".dz")
+        pg.locator("input[type=file]").set_input_files([docx_path])
+        pg.wait_for_timeout(600)
+        pg.locator(".file-row .f-open").first.click()
+        pg.wait_for_selector(".pv-doc", timeout=15000)
+        doc_text = pg.locator(".pv-doc").inner_text()
+        ck("เห็นหัวข้อในไฟล์ Word", "หัวข้อในไฟล์เวิร์ด" in doc_text, True)
+        ck("เห็นย่อหน้าในไฟล์ Word", "ย่อหน้าทดสอบการเปิดดูเนื้อไฟล์" in doc_text, True)
+        ck("เห็นเนื้อในตารางของไฟล์ Word", "ช่องซ้ายในตาราง" in doc_text, True)
 
         ck("ไม่มี page error ตลอดทั้งชุด", errs, [])
         b.close()

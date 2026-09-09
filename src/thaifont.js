@@ -36,6 +36,123 @@ function fetchFont(path) {
   return cache.get(path);
 }
 
+/* ── วรรณยุกต์ที่ต้องซ้อนบนสระบน ──────────────────────────────────────────────
+ * jsPDF ไม่ทำ mark positioning ของ OpenType เลย (หา GPOS/GSUB/mkmk ในตัวบันเดิล
+ * ไม่เจอสักคำ) · สระบนกับวรรณยุกต์ต่างก็มีความกว้าง 0 และถูกออกแบบให้ลอยอยู่เหนือ
+ * พยัญชนะที่ความสูงเดียวกัน จึงถูกวาดทับกันสนิทเมื่อต้องอยู่ด้วยกัน
+ * วัดจริง 09/09/2026 (word-to-pdf ไฟล์ .docx ไทย): "ที่นี่ พี่ชาย" ออกมาเป็น
+ * "ทีนี พีชาย" ไม้เอกจมหายไปในสระอี · "เสื้อ หนึ่ง ผึ้ง" กลายเป็นก้อนดำอ่านไม่ออก
+ *
+ * แก้ด้วยตัวดำเนินการ Ts (text rise) ของ PDF เอง ยกเฉพาะรูปวรรณยุกต์ขึ้นไปวาง
+ * เหนือสระ · ‼️ ต้องเป็น Ts ห้ามใช้วิธีวาดวรรณยุกต์ที่พิกัด y ใหม่ เพราะ Ts ยัง
+ * นับเป็นบรรทัดและลำดับเดิม ข้อความจึงค้นหา/คัดลอกได้ครบ (วัดจริง: วิธีวาดที่ y
+ * ใหม่ทำให้ค้นคำว่า "ที่นี่" ในไฟล์ผลลัพธ์ไม่เจอ และวรรณยุกต์ไปกองท้ายหน้า)
+ *
+ * ระยะยกมาจากการวัดตำแหน่งที่เบราว์เซอร์วางจริงทีละคู่ (เบราว์เซอร์ทำ shaping
+ * เต็มรูปแบบ ถือเป็นคำตอบที่ถูก) ไม่ใช่อ่านจากตาราง mkmk ตรง ๆ เพราะฟอนต์มี GSUB
+ * สลับไปใช้รูปวรรณยุกต์สำหรับซ้อนโดยเฉพาะ ค่าจากตารางดิบจึงสูงเกินจริง ~80/1000 em
+ * สคริปต์วัดซ้ำได้ที่ tests/calibrate_thai_marks.py (รันใหม่เมื่อเปลี่ยนฟอนต์) */
+const UPPER_VOWELS = "ัิีึื็ํ";
+const TONE_MARKS = "่้๊๋์";
+/* สระอำ (ำ) เป็นอักขระเต็มที่มีนิคหิตอยู่ในตัว วรรณยุกต์จึงเขียนไว้ "ก่อน" มัน
+ * และไปทับวงกลมของ ำ พอดี (วัดจริง: "ค่ำ" เหลือแต่วงกลม ไม้เอกจมหายไป)
+ * ระยะยกที่วัดได้เท่ากับกรณีนิคหิตเดี่ยว จึงใช้ตารางช่อง "ํ" ร่วมกัน */
+const SARA_AM = "ำ";
+const HAS_STACKED_MARK = /[ัิีึื็ํ][่้๊๋์]|[่้๊๋์][ัิีึื็ํำ]/;
+
+// [เลื่อนแนวนอน, ยกขึ้น] หน่วย 1/1000 em — วัดจากเบราว์เซอร์ ดูหัวข้อด้านบน
+const MARK_LIFT = {
+  normal: {
+    "ั": { "่": [-12, 276], "้": [14, 272], "๊": [74, 270], "๋": [0, 281], "์": [-9, 250] },
+    "ิ": { "่": [-6, 264], "้": [20, 260], "๊": [72, 258], "๋": [-6, 251], "์": [-1, 260] },
+    "ี": { "่": [-6, 308], "้": [20, 305], "๊": [72, 302], "๋": [-6, 291], "์": [-1, 305] },
+    "ึ": { "่": [-14, 302], "้": [12, 300], "๊": [65, 298], "๋": [-14, 298], "์": [-9, 300] },
+    "ื": { "่": [-64, 308], "้": [-38, 305], "๊": [15, 302], "๋": [-64, 291], "์": [-59, 305] },
+    "็": { "่": [-162, 385], "้": [-136, 382], "๊": [-100, 380], "๋": [-164, 390], "์": [-159, 382] },
+    "ํ": { "่": [-21, 238], "้": [6, 249], "๊": [86, 250], "๋": [-21, 241], "์": [-16, 250] },
+  },
+  bold: {
+    "ั": { "่": [-19, 294], "้": [5, 290], "๊": [60, 285], "๋": [9, 298], "์": [-18, 258] },
+    "ิ": { "่": [1, 291], "้": [24, 288], "๊": [69, 282], "๋": [2, 295], "์": [2, 286] },
+    "ี": { "่": [66, 324], "้": [41, 320], "๊": [86, 315], "๋": [20, 328], "์": [22, 319] },
+    "ึ": { "่": [4, 336], "้": [26, 332], "๊": [71, 328], "๋": [5, 345], "์": [8, 331] },
+    "ื": { "่": [-15, 324], "้": [-31, 320], "๊": [14, 315], "๋": [-52, 328], "์": [-52, 319] },
+    "็": { "่": [-159, 402], "้": [-135, 400], "๊": [-116, 395], "๋": [-158, 408], "์": [-161, 401] },
+    "ํ": { "่": [-11, 252], "้": [12, 270], "๊": [88, 271], "๋": [-10, 258], "์": [-8, 271] },
+  },
+};
+
+function liftFor(style, vowel, tone) {
+  const byVowel = MARK_LIFT[style] || MARK_LIFT.normal;
+  const pair = byVowel[vowel];
+  return (pair && pair[tone]) || null;
+}
+
+/** วาดข้อความหนึ่งบรรทัด โดยยกวรรณยุกต์ที่ซ้อนบนสระบนขึ้นไปวางให้ถูกที่ */
+function drawStackedLine(doc, text, x, y, opts, orig) {
+  const sf = doc.internal.scaleFactor || 1;
+  const size = doc.getFontSize();
+  const style = doc.getFont().fontStyle === "bold" ? "bold" : "normal";
+  const unit = size / 1000 / sf;                    // 1 หน่วยฟอนต์ = กี่หน่วยเอกสาร
+  const align = opts && opts.align;
+  // jsPDF จัดชิดขวา/กึ่งกลางให้เอง แต่เราต้องรู้ขอบซ้ายจริงเพื่อวางวรรณยุกต์ทีละตัว
+  let penX = x;
+  if (align === "center") penX = x - doc.getTextWidth(text) / 2;
+  else if (align === "right") penX = x - doc.getTextWidth(text);
+  const rest = Object.assign({}, opts || {});
+  delete rest.align;
+
+  let chunk = "";
+  const flush = () => {
+    if (!chunk) return;
+    orig.call(doc, chunk, penX, y, rest);
+    penX += doc.getTextWidth(chunk);
+    chunk = "";
+  };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    let vowel = null;
+    if (TONE_MARKS.includes(ch)) {
+      // รองรับทั้งลำดับปกติ (สระแล้ววรรณยุกต์) และลำดับกลับที่พบในไฟล์จริงบางฉบับ
+      if (UPPER_VOWELS.includes(text[i - 1])) vowel = text[i - 1];
+      else if (UPPER_VOWELS.includes(text[i + 1])) vowel = text[i + 1];
+      else if (text[i + 1] === SARA_AM) vowel = "ํ";
+    }
+    const lift = vowel ? liftFor(style, vowel, ch) : null;
+    if (!lift) { chunk += ch; continue; }
+    flush();
+    doc.internal.write((lift[1] * size / 1000).toFixed(2) + " Ts");
+    orig.call(doc, ch, penX + lift[0] * unit, y, rest);
+    doc.internal.write("0 Ts");
+  }
+  flush();
+  return doc;
+}
+
+/** ครอบ doc.text ของเอกสารนี้ให้จัดวรรณยุกต์ซ้อนเองทุกครั้ง
+ *  ‼️ ครอบที่ doc.text จุดเดียวแทนการไล่แก้ทีละเครื่องมือ เพราะ autoTable
+ *  (excel-to-pdf) วาดข้อความในเซลล์ผ่าน doc.text ของตัวเองที่เราแตะไม่ถึง */
+function patchThaiText(doc) {
+  if (doc.__thaiMarkPatched) return;
+  doc.__thaiMarkPatched = true;
+  const orig = doc.text;
+  doc.text = function (text, x, y, opts) {
+    // กรณีที่เราคำนวณตำแหน่งเองไม่ได้ ปล่อยให้ของเดิมทำงานตามปกติ (ไม่แย่ลงกว่าเดิม)
+    if (opts && (opts.angle != null || opts.maxWidth != null || opts.rotationDirection != null)) {
+      return orig.apply(this, arguments);
+    }
+    if (Array.isArray(text)) {
+      if (!text.some((t) => HAS_STACKED_MARK.test(String(t)))) return orig.apply(this, arguments);
+      const lh = doc.getLineHeight() / (doc.internal.scaleFactor || 1);
+      text.forEach((line, i) => { doc.text(String(line), x, y + i * lh, opts); });
+      return doc;
+    }
+    const s = String(text == null ? "" : text);
+    if (!HAS_STACKED_MARK.test(s)) return orig.apply(this, arguments);
+    return drawStackedLine(doc, s, x, y, opts, orig);
+  };
+}
+
 /** ฝังฟอนต์ไทยลงเอกสาร jsPDF แล้วตั้งเป็นฟอนต์ปัจจุบัน */
 export async function useThaiFont(doc, style = "normal") {
   const specs = style === "both" ? ["normal", "bold"] : [style];
@@ -45,6 +162,7 @@ export async function useThaiFont(doc, style = "normal") {
     doc.addFont(vfs, THAI_FONT, s);
   }
   doc.setFont(THAI_FONT, specs[0]);
+  patchThaiText(doc);
   return THAI_FONT;
 }
 

@@ -30,6 +30,10 @@
 #      ตัวอ้างอิงของไฟล์หลังจะไปชี้เนื้อของไฟล์แรก = เนื้อหาสลับกันโดยไม่มีอะไรฟ้อง
 #      และเนื้อของไฟล์หลังหายไปเลย (คอมเมนต์หายสนิท เชิงอรรถไปนอนเป็นไฟล์กำพร้าใน word/media/)
 #
+#   ⑨ หัวกระดาษ/ท้ายกระดาษของ Word (มักมีเลขที่หนังสือกับชั้นความลับ)
+#      mammoth ไม่ส่งส่วนนี้มาให้เลย เดิมจึงหายทั้งหมดเงียบ ๆ ตอนแปลงเป็น PDF
+#      และเลขหน้าใน Word เป็น field ถ้าไม่แทนค่าจะได้เลข 1 ซ้ำทุกหน้า
+#
 # ‼️ หน้าเว็บมี Content-Security-Policy ที่ไม่มี unsafe-eval — wait_for_function
 #    ต้องส่งสตริงที่เป็นฟังก์ชันลูกศรเท่านั้น (มีเทสจับกฎนี้ใน accepts.test.mjs)
 #
@@ -309,6 +313,32 @@ def make_docx_with_textbox():
     return path
 
 
+def make_docx_with_header_footer():
+    """.docx ที่มีหัวกระดาษ และท้ายกระดาษที่ใส่เลขหน้าอัตโนมัติ (field PAGE)
+    แบบเดียวกับหนังสือราชการไทยที่ใส่เลขที่หนังสือไว้บนหัวทุกหน้า"""
+    from docx import Document
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    d = Document()
+    sec = d.sections[0]
+    sec.header.paragraphs[0].text = "เอกสารลับ เลขที่ กค 0123/2569"
+    fp = sec.footer.paragraphs[0]
+    fp.text = "ฝ่ายบัญชี หน้า "
+    fld = OxmlElement("w:fldSimple")
+    fld.set(qn("w:instr"), " PAGE ")
+    r = OxmlElement("w:r")
+    t = OxmlElement("w:t")
+    t.text = "1"
+    r.append(t)
+    fld.append(r)
+    fp._p.append(fld)
+    for i in range(60):
+        d.add_paragraph(f"ย่อหน้าที่ {i + 1} เนื้อความทดสอบภาษาไทยยาวพอให้เอกสารขึ้นหลายหน้า")
+    p = TMP / "มีหัวท้าย.docx"
+    d.save(p)
+    return p
+
+
 def press(pg, pattern):
     """กดปุ่มที่มองเห็นจริงด้วย evaluate — ระหว่างที่เครื่องมือทำงานหนัก .click() ของ Playwright
     จะรอจนงานเสร็จก่อนค่อยกด ทำให้ทดสอบผิดเคสโดยไม่รู้ตัว (บทเรียน 09/09/2026)"""
@@ -338,6 +368,7 @@ def main():
     note_docs = [make_docx_with_notes("AAA"), make_docx_with_notes("BBB")]
     deck = make_pptx_with_table_and_chart()
     tbox = make_docx_with_textbox()
+    hf_doc = make_docx_with_header_footer()
     text_pdf = make_text_pdf(False)
     compact_pdf = make_text_pdf(True)
 
@@ -618,6 +649,38 @@ def main():
                     xml = z.read("word/document.xml").decode()
                 ck("ข้อความในกล่องข้อความไม่ถูกลบทิ้ง", "หมายเหตุในกล่อง" in xml, True)
                 ck("ข้อความนอกกล่องไม่ถูกลบทิ้ง", "ยอดรวมทั้งสิ้น" in xml, True)
+
+            # ── ⑨ หัวกระดาษ/ท้ายกระดาษของ Word ต้องติดไปทุกหน้า ──────────────────────
+            print("\n── ⑨ หัวกระดาษและท้ายกระดาษ ──")
+            pg.goto(f"{base}/#/word-to-pdf", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files(str(hf_doc))
+            pg.wait_for_timeout(1200)
+            press(pg, "แปลง|สร้าง")
+            pg.wait_for_selector(".result", timeout=60000)
+            with pg.expect_download(timeout=30000) as info:
+                pg.locator(".result button").last.click()
+            out11 = DL / "headfoot.pdf"
+            info.value.save_as(str(out11))
+            doc = fitz.open(out11)
+            pages = doc.page_count
+            per_page = [doc[i].get_text() for i in range(pages)]
+            top3 = []
+            d0 = doc[0].get_text("dict")
+            rows = sorted((ln["bbox"][1], "".join(sp["text"] for sp in ln["spans"]))
+                          for blk in d0["blocks"] for ln in blk.get("lines", []))
+            top3 = [t for _, t in rows[:2]]
+            doc.close()
+            ck("เอกสารทดสอบยาวหลายหน้าจริง (ประชากรต้องไม่เป็นศูนย์)", pages >= 2, True)
+            ck("หัวกระดาษติดไปครบทุกหน้า",
+               [i + 1 for i, t in enumerate(per_page) if "เอกสารลับ" not in t], [])
+            ck("ท้ายกระดาษติดไปครบทุกหน้า",
+               [i + 1 for i, t in enumerate(per_page) if "ฝ่ายบัญชี" not in t], [])
+            # ‼️ เลขหน้าเป็น field ของ Word ถ้าไม่แทนค่าจะได้เลข 1 ซ้ำทุกหน้า
+            ck("เลขหน้าอัตโนมัติเดินตามหน้าจริง ไม่ใช่เลขเดิมซ้ำ",
+               [i + 1 for i, t in enumerate(per_page) if f"หน้า {i + 1}" not in t], [])
+            ck("หัวกระดาษอยู่เหนือเนื้อหา ไม่ทับบรรทัดแรก",
+               top3[0].startswith("เอกสารลับ") and "ย่อหน้าที่ 1" in top3[1], True)
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

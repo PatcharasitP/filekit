@@ -30,6 +30,10 @@ export function mount(tool) {
   body.appendChild(el("div", { class: "note" },
     tr("ฝังฟอนต์ไทยอัตโนมัติ คงหัวข้อ/ย่อหน้า/ตัวหนา, ไม่คงตาราง รูปภาพ และการจัดหน้าซับซ้อน",
        "Thai font embedded automatically, keeps headings/paragraphs/bold, tables, images, and complex layouts aren't kept")));
+  // แยกเป็นอีกก้อนเพราะข้อความบนหน้าจอก้อนเดียวห้ามยาวเกิน 100 ตัวอักษร (มีเทสจับ)
+  body.appendChild(el("div", { class: "note" },
+    tr("หัวกระดาษและท้ายกระดาษถูกคัดลอกไปทุกหน้า รวมทั้งเลขหน้าอัตโนมัติ",
+       "Headers and footers are carried onto every page, including automatic page numbers")));
 
   /* แปลง HTML ที่ mammoth ให้มา เป็นบล็อกข้อความ
    * ‼️ เก็บเป็น "ช่วงข้อความพร้อมสไตล์" (runs) ไม่ใช่สตริงเดียว เพราะ textContent ทิ้ง
@@ -167,9 +171,116 @@ export function mount(tool) {
     return lines;
   }
 
+  /* ‼️ mammoth ไม่ส่งหัวกระดาษกับท้ายกระดาษมาให้เลย (มันแปลงเฉพาะ body)
+   * ของพวกนี้มักมีข้อมูลสำคัญที่สุดในเอกสารราชการไทย เช่น เลขที่หนังสือ ชั้นความลับ ชื่อหน่วยงาน
+   * เดิมจึงหายไปทั้งหมดแบบไม่มีอะไรฟ้อง (ยิงจริง 09/09/2026: หัว "เอกสารลับ เลขที่ กค 0123/2569"
+   * กับท้าย "ฝ่ายบัญชี บริษัทตัวอย่างจำกัด" หายเกลี้ยงทั้ง 3 หน้า)
+   * แก้โดยอ่าน part เองจาก zip แล้ววาดเองทุกหน้า
+   * ‼️ ต้องตามลิงก์ผ่าน sectPr และ _rels ไม่ใช่หยิบ header1.xml มาดื้อ ๆ เพราะไฟล์เดียวมีได้หลายหัว
+   *    (default / หน้าแรก / หน้าคู่) การหยิบผิดตัวจะได้หัวของหน้าแรกไปแปะทุกหน้า */
+  const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+  const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const PAGE_TOKEN = "PAGE";   // ที่วางเลขหน้า แทนค่าตอนวาดจริงทีละหน้า
+
+  function partText(doc) {
+    const lines = [];
+    for (const p of doc.getElementsByTagNameNS(W_NS, "p")) {
+      let s = "";
+      // เดินตามลำดับจริงในย่อหน้า เพื่อให้เลขหน้าอยู่ตรงตำแหน่งที่ผู้ใช้วางไว้
+      const walk = (n) => {
+        for (const c of n.childNodes) {
+          if (c.nodeType !== 1) continue;
+          if (c.namespaceURI === W_NS && c.localName === "t") { s += c.textContent; continue; }
+          if (c.namespaceURI === W_NS && c.localName === "instrText") {
+            if (/\bPAGE\b/i.test(c.textContent) && !/NUMPAGES/i.test(c.textContent)) s += PAGE_TOKEN;
+            continue;
+          }
+          if (c.namespaceURI === W_NS && c.localName === "fldSimple") {
+            const instr = c.getAttributeNS(W_NS, "instr") || "";
+            if (/\bPAGE\b/i.test(instr) && !/NUMPAGES/i.test(instr)) { s += PAGE_TOKEN; continue; }
+          }
+          walk(c);
+        }
+      };
+      walk(p);
+      const t = s.replace(/\s+/g, " ").trim();
+      if (t) lines.push(t);
+    }
+    return lines.join("  ");
+  }
+
+  /** อ่านหัว/ท้ายกระดาษของ section แรกจากไฟล์ .docx โดยตรง คืน { header, footer } เป็นข้อความ */
+  async function readHeaderFooter(file) {
+    try {
+      const [JSZipLib] = await loadLibs("jszip");
+      const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+      const docFile = zip.file("word/document.xml");
+      const relsFile = zip.file("word/_rels/document.xml.rels");
+      if (!docFile || !relsFile) return { header: "", footer: "" };
+      const parser = new DOMParser();
+      const main = parser.parseFromString(await docFile.async("string"), "application/xml");
+      const rels = parser.parseFromString(await relsFile.async("string"), "application/xml");
+
+      const targetOf = (id) => {
+        for (const r of rels.getElementsByTagName("Relationship")) {
+          if (r.getAttribute("Id") === id) return "word/" + (r.getAttribute("Target") || "").replace(/^\.\//, "");
+        }
+        return null;
+      };
+      const pick = (kind) => {
+        const sect = main.getElementsByTagNameNS(W_NS, "sectPr")[0];
+        if (!sect) return null;
+        const refs = [...sect.getElementsByTagNameNS(W_NS, kind + "Reference")];
+        // เอา default ก่อน ถ้าไม่มีค่อยใช้ตัวแรกที่เจอ (บางไฟล์ตั้งไว้เฉพาะหน้าแรก)
+        const ref = refs.find((r) => (r.getAttributeNS(W_NS, "type") || "") === "default") || refs[0];
+        const id = ref && ref.getAttributeNS(R_NS, "id");
+        return id ? targetOf(id) : null;
+      };
+      const read = async (kind) => {
+        const path = pick(kind);
+        const f = path && zip.file(path);
+        if (!f) return "";
+        return partText(parser.parseFromString(await f.async("string"), "application/xml"));
+      };
+      return { header: await read("header"), footer: await read("footer") };
+    } catch {
+      return { header: "", footer: "" };   // อ่านไม่ได้ก็แค่ไม่มีหัวท้าย ไม่ควรทำให้ทั้งไฟล์แปลงไม่ผ่าน
+    }
+  }
+
+  // หัว/ท้ายกระดาษต้องอยู่บรรทัดเดียว ยาวเกินก็ตัดท้ายแทนที่จะดันเนื้อหาเลื่อน
+  function fitOneLine(doc, text, maxWidth) {
+    if (doc.getTextWidth(text) <= maxWidth) return text;
+    let cut = text;
+    while (cut.length > 1 && doc.getTextWidth(cut + "…") > maxWidth) cut = cut.slice(0, -1);
+    return cut + "…";
+  }
+
+  /** วาดหัว/ท้ายกระดาษลงทุกหน้า หลังจัดเนื้อหาเสร็จแล้ว */
+  function stampHeaderFooter(doc, headFoot, W, H, M) {
+    const { header, footer } = headFoot;
+    if (!header && !footer) return;
+    const total = doc.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setFont(THAI_FONT, "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(110);
+      const put = (raw, y) => {
+        const text = raw.split(PAGE_TOKEN).join(String(i));
+        if (!text) return;
+        doc.text(fitOneLine(doc, text, W - M * 2), W / 2, y, { align: "center" });
+      };
+      put(header, M * 0.62);
+      put(footer, H - M * 0.45);
+      doc.setTextColor(0);
+    }
+  }
+
   /** แปลงหนึ่งไฟล์ คืน { blob, pages, warnings } */
   async function convertOne(file) {
       const { value: html, messages } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      const headFoot = await readHeaderFooter(file);
       const blocks = htmlToBlocks(html);
       if (!blocks.length) throw new Error(tr("ไม่พบเนื้อหาข้อความในไฟล์นี้", "No text content was found in this file"));
 
@@ -211,6 +322,8 @@ export function mount(tool) {
 
         if (i % 40 === 0) { st.progress((i / blocks.length) * 100); await yieldToBrowser(); }
       }
+
+      stampHeaderFooter(doc, headFoot, W, H, M);
 
       return {
         blob: doc.output("blob"),

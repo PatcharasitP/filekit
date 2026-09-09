@@ -101,7 +101,18 @@ export function detectColumnZones(rows, pageWidth) {
   const maxItemW = pageWidth * COL_MAX_ITEM_WIDTH_FRAC;
   const allItems = [];
   rows.forEach((row) => {
-    colNonEmptyItems(row).forEach((it) => { if (it.w <= maxItemW) allItems.push(it); });
+    const items = colNonEmptyItems(row).filter((it) => it.w <= maxItemW);
+    /* ‼️ แถวที่เหลือ item เดียว (หัวเรื่อง/บรรทัดโดด ๆ) ต้องไม่ถูกใช้เป็นหลักฐานตั้งโซน
+     * หลักฐานที่แท้จริงของ "จัดหน้าหลายคอลัมน์" คือแถวที่มีเนื้อความคนละคอลัมน์อยู่ "พร้อมกัน"
+     * ที่ความสูงเดียวกัน ถ้าปล่อยให้แถว 1 item เข้าไปด้วย หัวเรื่องที่ x เริ่มใกล้คอลัมน์ซ้าย
+     * (ในระยะ COL_BUCKET_TOL) จะถูกยำรวมเข้าบักเก็ตเดียวกับคอลัมน์ซ้าย แล้วเพราะหัวเรื่องกว้าง
+     * กว่าบรรทัดคอลัมน์จริงทุกบรรทัด จะไปเป็น "ความกว้างสุด" ปลอม ทำให้บรรทัดคอลัมน์ซ้ายของจริง
+     * ทุกบรรทัดดูเหมือนไหลไม่เต็มโซน (ยิงจริง 09/09/2026 กับไฟล์ที่มีบรรทัดชื่อเรื่องเหนือ 2 คอลัมน์:
+     * หัวเรื่องกว้าง 233pt เข้าบักเก็ตเดียวกับคอลัมน์ซ้าย x=55 เพราะ x หัวเรื่อง=60 ห่างแค่ 5pt
+     * ทำให้ fullCount/rights.length เหลือ 1/7=14% ต่ำกว่าเกณฑ์ 50% จน detectColumnZones คืน null
+     * ทั้งที่เป็น 2 คอลัมน์แท้ ๆ) แถวโดดยังถูกจัดเข้าคอลัมน์ตามปกติตอนอ่านจริงใน columnAwareLines
+     * (ผ่าน colZoneIndexOf บน bounds ที่ตั้งไว้แล้ว) แค่ไม่นับเป็นหลักฐานตอนตรวจจับเท่านั้น */
+    if (items.length >= 2) allItems.push(...items);
   });
   if (allItems.length < COL_MIN_ROWS_PER_ZONE * 2) return null;
 

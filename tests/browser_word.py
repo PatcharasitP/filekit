@@ -78,6 +78,26 @@ def make_pdf(path, texts, size=(1000, 400), thai=False):
     doc.close()
 
 
+def make_two_column_pdf(path, heading, left_lines, right_lines):
+    """PDF A4 จัด 2 คอลัมน์ (ซ้าย x=55, ขวา x=310) มีบรรทัดหัวเรื่องเหนือ 2 คอลัมน์ด้วย
+    (บั๊กจริง 09/09/2026: หัวเรื่องที่ x เริ่มใกล้คอลัมน์ซ้าย — ภายใน COL_BUCKET_TOL — ทำให้
+    detectColumnZones() เข้าใจผิดว่าคอลัมน์ซ้ายไม่ไหลเต็มโซน แล้วคืน null ทั้งที่เป็น 2 คอลัมน์จริง)"""
+    doc = fitz.open()
+    pg = doc.new_page(width=595, height=842)
+    pg.insert_font(fontname="thaifont", fontfile=THAI_FONT)
+    pg.insert_text((60, 66), heading, fontname="thaifont", fontsize=20)
+    y = 121
+    for t in left_lines:
+        pg.insert_text((55, y), t, fontname="thaifont", fontsize=15)
+        y += 26
+    y = 121
+    for t in right_lines:
+        pg.insert_text((310, y), t, fontname="thaifont", fontsize=15)
+        y += 26
+    doc.save(str(path))
+    doc.close()
+
+
 def make_docx(path, paragraphs, heading=None):
     """docx ธรรมดา: [หัวข้อ] + ย่อหน้าตามลำดับ — คืนรายการข้อความที่ควรอ่านเจอ"""
     d = docx.Document()
@@ -403,11 +423,49 @@ def test_pdf_to_word(pg):
     ck(tool, "ไม่มีอักขระ replacement char ปนมา", "มี U+FFFD ในผลลัพธ์ไหม", "�" in text, False)
 
 
+def test_pdf_to_word_columns(pg):
+    """PDF สองคอลัมน์ (มีหัวเรื่องเหนือ 2 คอลัมน์) ต้องอ่านคอลัมน์ซ้ายจบก่อนแล้วค่อยขวา
+    ไม่ใช่ยำซ้าย+ขวาต่อกันเป็นบรรทัดเดียวแบบ row-major (บั๊กจริง 09/09/2026)"""
+    tool = "pdf-to-word (2 คอลัมน์)"
+    heading = "ประกาศจัดหน้าสองคอลัมน์ สำหรับทดสอบ"
+    numerals = ["หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก"]   # ‼️ ต้องเป็น list ห้ามวน for ทับสตริงไทยตรง ๆ (จะได้ตัวอักษรทีละตัวแทนคำ)
+    # ‼️ ต้องสั้นพอไม่ให้ fitz.insert_text() ตัดท้ายทิ้งเงียบ ๆ ตอนคอลัมน์ขวา (x=310) เหลือที่แค่ ~285pt
+    left = [f"ซ้ายบรรทัดที่{n}ยาวใกล้เคียงกันทุกบรรทัด" for n in numerals]
+    right = [f"ขวาบรรทัดที่{n}ยาวใกล้เคียงกันทุกบรรทัด" for n in numerals]
+    src = FIX / "p2w_2col_test.pdf"
+    make_two_column_pdf(src, heading, left, right)
+
+    pg.goto("about:blank"); pg.goto(f"{BASE}/#/pdf-to-word", wait_until="networkidle")
+    pg.wait_for_selector(".dz")
+    pg.locator(".dz input[type=file]").set_input_files(str(src))
+    pg.wait_for_timeout(300)
+    pg.locator("button.btn", has_text="แปลงเป็น Word").click()
+    wait_status(pg, "แปลงสำเร็จ")
+    out = DL / "p2w-2col-out.docx"
+    dl_click(pg, pg.locator(".results .result button"), out)
+
+    text = read_docx_text(out.read_bytes())
+    for i, t in enumerate(left):
+        ck(tool, "เนื้อหาคอลัมน์ซ้ายครบ", f"คอลัมน์ซ้ายบรรทัดที่{i+1} อยู่ในผลลัพธ์ ไม่ถูกยำรวมกับขวา", t in text, True)
+    for i, t in enumerate(right):
+        ck(tool, "เนื้อหาคอลัมน์ขวาครบ", f"คอลัมน์ขวาบรรทัดที่{i+1} อยู่ในผลลัพธ์ ไม่ถูกยำรวมกับซ้าย", t in text, True)
+
+    # ‼️ ใจกลางของบั๊ก: ก่อนแก้ ซ้าย+ขวาบรรทัดเดียวกันถูกต่อกันเป็นสตริงเดียว (row-major)
+    #    หลังแก้ ต้องอ่านคอลัมน์ซ้ายทั้ง 6 บรรทัดจบก่อน แล้วค่อยขึ้นคอลัมน์ขวา (column-major)
+    last_left_pos = text.find(left[-1])
+    first_right_pos = text.find(right[0])
+    ck(tool, "ลำดับการอ่าน column-major", "คอลัมน์ซ้ายบรรทัดสุดท้ายอยู่ก่อนคอลัมน์ขวาบรรทัดแรก",
+       last_left_pos != -1 and first_right_pos != -1 and last_left_pos < first_right_pos, True)
+    # กันเคสที่แก้แบบขี้เกียจแล้วดันไปต่อบรรทัดในสตริงเดียวกัน (แถวเดียวกัน) แทนที่จะแยกย่อหน้า/บรรทัด
+    ck(tool, "ไม่ใช่ row-major", "ซ้ายบรรทัดแรก+ขวาบรรทัดแรก ไม่ถูกต่อกันในสตริงเดียว",
+       (left[0] + " " + right[0]) in text or (left[0] + right[0]) in text, False)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 
 TESTS = [
     test_word_join, test_word_replace, test_word_clean,
-    test_word_mailmerge, test_word_to_pdf, test_pdf_to_word,
+    test_word_mailmerge, test_word_to_pdf, test_pdf_to_word, test_pdf_to_word_columns,
 ]
 
 

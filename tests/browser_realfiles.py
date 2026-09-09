@@ -48,6 +48,10 @@
 #      ไทยก่อนปี 2463 ใช้ +06:42:04 ซึ่งไม่ลงตัวเป็นนาที ทุกวันที่จึงคลาดไป 4 วินาที
 #      กลายเป็น 23:59:56 ของวันก่อนหน้า แล้วแสดงผลเป็นวันผิดไป 1 วันทั้งไฟล์
 #
+#   ⑬ วางลายเซ็นบน PDF ที่หน้าถูกหมุนไว้
+#      ผู้ใช้คลิกบนภาพที่หมุนตาม /Rotate มาแล้ว แต่พิกัดในไฟล์ไม่ได้หมุนตาม
+#      ถ้าเอาสัดส่วนที่คลิกไปใช้ตรง ๆ ลายเซ็นไปโผล่คนละมุม บางองศาหลุดออกนอกหน้าไปเลย
+#
 # ‼️ หน้าเว็บมี Content-Security-Policy ที่ไม่มี unsafe-eval — wait_for_function
 #    ต้องส่งสตริงที่เป็นฟังก์ชันลูกศรเท่านั้น (มีเทสจับกฎนี้ใน accepts.test.mjs)
 #
@@ -68,7 +72,7 @@ import zipfile
 import fitz
 import openpyxl
 from docx import Document
-from PIL import Image
+from PIL import Image, ImageDraw
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -419,6 +423,17 @@ def make_date_xlsx():
     return p
 
 
+def make_signature_png():
+    """รูปลายเซ็นโปร่งใส ใช้อัปโหลดแทนการจำลองการวาดด้วยเมาส์ ซึ่งเชื่อถือได้กว่า"""
+    im = Image.new("RGBA", (300, 120), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(im)
+    dr.line([(10, 90), (60, 20), (110, 95), (160, 25), (220, 90), (285, 35)],
+            fill=(10, 30, 160, 255), width=7)
+    p = TMP / "ลายเซ็น.png"
+    im.save(p)
+    return p
+
+
 def press(pg, pattern):
     """กดปุ่มที่มองเห็นจริงด้วย evaluate — ระหว่างที่เครื่องมือทำงานหนัก .click() ของ Playwright
     จะรอจนงานเสร็จก่อนค่อยกด ทำให้ทดสอบผิดเคสโดยไม่รู้ตัว (บทเรียน 09/09/2026)"""
@@ -452,6 +467,7 @@ def main():
     num_docs = [make_docx_numbered("AAA", "decimal"), make_docx_numbered("BBB", "thaiLetters")]
     locked = make_owner_locked_pdf()
     date_xlsx = make_date_xlsx()
+    sig_png = make_signature_png()
     text_pdf = make_text_pdf(False)
     compact_pdf = make_text_pdf(True)
 
@@ -826,6 +842,55 @@ def main():
             #    ถ้าไม่ดึงกลับเข้าเส้นนาที ทุกวันที่ในไฟล์จะเลื่อนไป 1 วันโดยไม่มีอะไรฟ้อง
             ck("วันที่ตรงกับที่อยู่ในไฟล์ทุกแถว",
                [w for w in ("01/09/2026", "31/01/2026", "25/12/2026") if w not in olds], [])
+
+            # ── ⑬ ลายเซ็นบนหน้าที่หมุนไว้ ต้องไปอยู่ตรงที่คลิก ─────────────────────────
+            print("\n── ⑬ วางลายเซ็นบนหน้าที่หมุนไว้ ──")
+            pg.goto("about:blank")
+            pg.goto(f"{base}/#/pdf-sign", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files(str(rotated))
+            pg.wait_for_timeout(4000)
+            inputs = pg.locator("input[type=file]")
+            for k in range(inputs.count()):
+                if "image" in (inputs.nth(k).get_attribute("accept") or ""):
+                    inputs.nth(k).set_input_files(str(sig_png))
+                    break
+            pg.wait_for_timeout(1500)
+            pg.evaluate("() => { const im = document.querySelector('.sign-saved img'); if (im) im.click(); }")
+            pg.wait_for_timeout(600)
+            for n in range(1, 5):
+                pg.evaluate("(n) => { const b = [...document.querySelectorAll('button')]"
+                            ".find((b) => b.offsetParent && b.textContent.trim() === 'หน้า ' + n);"
+                            " if (b) b.click(); }", n)
+                pg.wait_for_timeout(1100)
+                r = pg.locator(".sign-stage").first.bounding_box()
+                # คลิกมุมบนซ้ายเหมือนกันทุกหน้า ตามที่ตาเห็น
+                pg.mouse.click(r["x"] + r["width"] * 0.15, r["y"] + r["height"] * 0.15)
+                pg.wait_for_timeout(400)
+            press(pg, "บันทึกไฟล์เซ็น")
+            pg.wait_for_selector(".result button", timeout=40000)
+            with pg.expect_download(timeout=30000) as info:
+                pg.locator(".result button").last.click()
+            out13 = DL / "signed.pdf"
+            info.value.save_as(str(out13))
+            doc = fitz.open(out13)
+            spots = []
+            for i in range(doc.page_count):
+                page = doc[i]
+                imgs = page.get_image_info()
+                if not imgs:
+                    spots.append((page.rotation, "ไม่พบลายเซ็น"))
+                    continue
+                # ‼️ พิกัดของรูปคืนมาแบบไม่คิด rotation ต้องคูณ rotation_matrix เองก่อนวัด
+                vb = fitz.Rect(imgs[-1]["bbox"]) * page.rotation_matrix
+                fx = ((vb.x0 + vb.x1) / 2) / page.rect.width
+                fy = ((vb.y0 + vb.y1) / 2) / page.rect.height
+                spots.append((page.rotation, "บนซ้าย" if (fx < 0.45 and fy < 0.45) else f"({fx:.2f},{fy:.2f})"))
+            doc.close()
+            ck("ครบทั้ง 4 องศาที่หมุน (ประชากรต้องไม่เป็นศูนย์)",
+               sorted(r for r, _ in spots), [0, 90, 180, 270])
+            ck("ลายเซ็นไปอยู่มุมบนซ้ายทุกหน้า ไม่ว่าหน้าจะหมุนกี่องศา",
+               [(r, w) for r, w in spots if w != "บนซ้าย"], [])
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

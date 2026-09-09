@@ -305,6 +305,7 @@ export function mount(tool) {
     results.innerHTML = "";
     st.info(tr("กำลังบันทึก…", "Saving…"));
     try {
+      const { degrees } = PDFLib;
       const { doc, encrypted } = await loadPdfLib(file);
       const pages = doc.getPages();
       const cache = new Map();
@@ -315,10 +316,29 @@ export function mount(tool) {
         if (!cache.has(p.dataUrl)) cache.set(p.dataUrl, await doc.embedPng(p.dataUrl));
         const png = cache.get(p.dataUrl);
         const { width: pw, height: ph } = page.getSize();
-        const w = pw * p.rw;
+
+        /* ‼️ ผู้ใช้คลิกบนภาพหน้ากระดาษ "ตามที่ตาเห็น" ซึ่งหมุนตาม /Rotate มาแล้ว
+           แต่พิกัดจริงในไฟล์ PDF ไม่ได้หมุนตาม ถ้าเอาสัดส่วนที่คลิกไปใช้ตรง ๆ
+           ลายเซ็นจะไปโผล่คนละมุม และบางองศาหลุดออกนอกหน้าไปเลยจนมองไม่เห็น
+           (ยิงจริง 09/09/2026: คลิกมุมบนซ้ายเหมือนกันทุกหน้า หน้าที่หมุน 90 ไปโผล่บนขวา
+            หมุน 180 ไปล่างขวา หมุน 270 ไปล่างซ้าย มีแค่หน้าที่ไม่หมุนที่ถูก)
+           แก้แบบเดียวกับเลขหน้า คือคิดในพิกัดที่ตาเห็นก่อน แล้วแปลงกลับ
+           พร้อมหมุนตัวลายเซ็นชดเชยให้ตั้งตรงตามหน้า */
+        const rot = ((page.getRotation().angle % 360) + 360) % 360;
+        const swap = rot === 90 || rot === 270;
+        const vw = swap ? ph : pw;
+        const vh = swap ? pw : ph;
+        const toPage = (vx, vy) =>
+          rot === 90 ? { x: pw - vy, y: vx }
+          : rot === 180 ? { x: pw - vx, y: ph - vy }
+          : rot === 270 ? { x: vy, y: ph - vx }
+          : { x: vx, y: vy };
+
+        const w = vw * p.rw;
         const h = w * (png.height / png.width);
         // หน้าจอวัด y จากขอบบน แต่ PDF วัดจากขอบล่าง จึงต้องกลับด้านและหักความสูงของภาพ
-        page.drawImage(png, { x: pw * p.rx, y: ph - ph * p.ry - h, width: w, height: h });
+        const spot = toPage(vw * p.rx, vh - vh * p.ry - h);
+        page.drawImage(png, { ...spot, width: w, height: h, rotate: degrees(rot) });
         await yieldToBrowser();
       }
 

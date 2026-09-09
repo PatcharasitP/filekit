@@ -1,9 +1,10 @@
-# เครื่องมือใหม่ 4 ตัว (09/09/2026) — ตรวจ "เนื้อในไฟล์ผลลัพธ์" จริง ไม่ใช่แค่ว่ากดแล้วไม่ error
+# เครื่องมือใหม่ 5 ตัว (09/09/2026) — ตรวจ "เนื้อในไฟล์ผลลัพธ์" จริง ไม่ใช่แค่ว่ากดแล้วไม่ error
 #
 #   · excel-split       แยกไฟล์ Excel ตามค่าในคอลัมน์
 #   · excel-merge       รวมหลายไฟล์ Excel เป็นไฟล์เดียว
 #   · pdf-page-numbers  ใส่เลขหน้าลง PDF (มีเลขไทย และข้ามหน้าปกได้)
 #   · pdf-to-longimage  ต่อทุกหน้าเป็นภาพยาวแผ่นเดียว
+#   · pdf-remove-blank  ลบหน้าว่างจากไฟล์สแกนสองหน้า
 #
 # ‼️ เคสที่สำคัญที่สุดของเทสนี้: "รวมไฟล์ที่คอลัมน์สลับลำดับ"
 #    เครื่องมือรวมไฟล์ทั่วไปต่อแถวตามตำแหน่งคอลัมน์ ข้อมูลจึงเลื่อนช่องกันเงียบ ๆ
@@ -16,6 +17,7 @@
 import os
 import sys
 import pathlib
+import random
 import shutil
 import tempfile
 import zipfile
@@ -80,7 +82,26 @@ def make_fixtures():
     pdf = TMP / "เอกสาร5หน้า.pdf"
     doc.save(pdf)
     doc.close()
-    return main, other, pdf
+
+    # ‼️ หน้าว่างจากสแกนจริงไม่ใช่สีขาวบริสุทธิ์ ตัวอย่างจึงใส่จุดรบกวนกับแถบเงาริมขอบไว้ด้วย
+    #    (แถบริมขอบคือเงาจากฝาเครื่องสแกน ซึ่งเครื่องมือต้องไม่นับเป็นเนื้อหา)
+    random.seed(7)
+    scan = fitz.open()
+    for i in range(8):
+        page = scan.new_page(width=595, height=842)
+        if i % 2 == 0:
+            page.insert_text((60, 90), f"content page {i + 1}", fontsize=22)
+            for k in range(6):
+                page.insert_text((60, 140 + k * 26), "x" * 60, fontsize=11)
+        else:
+            for _ in range(30):
+                page.draw_circle((random.uniform(40, 555), random.uniform(40, 800)), 0.6,
+                                 color=(0.72, 0.72, 0.72), fill=(0.72, 0.72, 0.72))
+            page.draw_rect(fitz.Rect(0, 0, 10, 842), color=(0.25, 0.25, 0.25), fill=(0.25, 0.25, 0.25))
+    scanned = TMP / "สแกนสองหน้า.pdf"
+    scan.save(scanned)
+    scan.close()
+    return main, other, pdf, scanned
 
 
 def dl_click(pg, locator, path):
@@ -250,6 +271,42 @@ def case_long_image(pg, pdf):
     print("  (เคสแบ่งภาพอัตโนมัติทดสอบไม่ได้ที่นี่ เพราะต้องใช้ไฟล์หลายสิบหน้า)")
 
 
+def case_remove_blank(pg, scanned):
+    print("\n── ลบหน้าว่างจากไฟล์สแกนสองหน้า ──")
+    open_tool(pg, "pdf-remove-blank")
+    pg.locator(".dz input[type=file]").set_input_files(str(scanned))
+    pg.wait_for_timeout(7000)
+
+    tags = [pg.locator(".rb-tag").nth(i).inner_text() for i in range(pg.locator(".rb-tag").count())]
+    ck("‼️ หน้าคี่เก็บไว้ หน้าคู่ตัดออก ครบทั้ง 8 หน้า", tags, ["เก็บไว้", "ตัดออก"] * 4)
+    ck_true("สรุปบอกว่าเก็บ 4 ตัด 4",
+            "เก็บไว้ 4 หน้า" in pg.locator(".stats").inner_text()
+            and "ตัดออก 4 หน้า" in pg.locator(".stats").inner_text(),
+            pg.locator(".stats").inner_text().replace("\n", " | "))
+    # ‼️ แถบเงาริมขอบกับจุดรบกวนต้องไม่ถูกนับเป็นเนื้อหา ไม่งั้นไม่มีหน้าไหนถูกตัดเลย
+    inks = [pg.locator(".rb-ink").nth(i).inner_text() for i in range(pg.locator(".rb-ink").count())]
+    ck_true("หน้าว่างที่มีจุดรบกวนกับแถบเงาริมขอบ ยังวัดได้ว่าไม่มีหมึก",
+            all(inks[i] == "0.00%" for i in (1, 3, 5, 7)), str(inks))
+
+    pg.locator("button.btn", has_text="บันทึกไฟล์").first.click()
+    pg.wait_for_timeout(2500)
+    out = dl_click(pg, pg.locator(".result button").first, DL / "noblank.pdf")
+    doc = fitz.open(out)
+    ck("ไฟล์ที่ได้เหลือ 4 หน้า", doc.page_count, 4)
+    ck_true("หน้าที่เหลือคือหน้าคี่เดิม เนื้อหาครบ ไม่สลับลำดับ",
+            [doc[i].get_text().strip().split("\n")[0] for i in range(4)]
+            == [f"content page {n}" for n in (1, 3, 5, 7)],
+            str([doc[i].get_text().strip().split("\n")[0] for i in range(4)]))
+    doc.close()
+
+    # ‼️ เครื่องเดาผิดได้ ผู้ใช้ต้องกดสลับเองได้ทุกหน้าเสมอ
+    pg.locator(".pg").first.click()
+    pg.wait_for_timeout(600)
+    ck_true("กดที่หน้าแล้วสลับเก็บหรือตัดเองได้",
+            "เก็บไว้ 3 หน้า" in pg.locator(".stats").inner_text(),
+            pg.locator(".stats").inner_text().replace("\n", " | "))
+
+
 def main():
     fixtures = make_fixtures()
     with sync_playwright() as p:
@@ -265,6 +322,7 @@ def main():
         case_merge(pg, fixtures[0], fixtures[1])
         case_page_numbers(pg, fixtures[2])
         case_long_image(pg, fixtures[2])
+        case_remove_blank(pg, fixtures[3])
 
         print("\n── ไม่มี error หลุดออกมา ──")
         ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

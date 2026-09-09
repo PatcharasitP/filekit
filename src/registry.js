@@ -54,6 +54,11 @@ export const TOOLS = [
     accepts:["pdf"],
     libs:["pdflib"], keys:"page number เลขหน้า เลขไทย หน้า numbering ปกสารบัญ รายงาน", next:["pdf-merge","pdf-compress"] },
 
+  { id:"pdf-remove-blank", group:"pdf", icon:"🧹", title:"ลบหน้าว่างจากไฟล์สแกน",
+    desc:"สแกนสองหน้าแล้วได้หน้าเปล่าคั่นทุกใบ ตรวจให้เองทีละหน้า กดสลับเก็บหรือลบเองได้",
+    accepts:["pdf"],
+    libs:["pdfjs","pdflib"], keys:"blank ว่าง เปล่า สแกน scan ลบหน้า สองหน้า duplex หน้าคู่", next:["pdf-compress","pdf-ocr"] },
+
   { id:"pdf-ocr",     group:"pdf", icon:"🔍", title:"OCR อ่านข้อความจากสแกน",
     desc:"อ่านตัวอักษรไทย-อังกฤษจาก PDF สแกน ได้เป็นข้อความหรือ PDF ที่ค้นหาได้",
     accepts:["pdf","image"],
@@ -214,6 +219,7 @@ const EN_TOOLS = {
   "pdf-sign":         ["Sign a PDF", "Draw a signature or upload an image, then drag it onto the page. Saved for reuse"],
   "pdf-watermark":    ["Watermark a PDF", "Stamp text on every page. Choose the position, colour and opacity"],
   "pdf-page-numbers": ["Add page numbers to a PDF", "Number every page. Pick the position and format, use Thai numerals, and skip the cover"],
+  "pdf-remove-blank": ["Remove blank pages from a scan", "Duplex scans leave a blank page between every sheet. Each page is checked for you, and you can keep or drop any of them yourself"],
   "pdf-ocr":          ["OCR (read text from scans)", "Read Thai and English text out of scanned PDFs as plain text or a searchable PDF"],
   "pdf-to-images":    ["PDF → images", "Turn every page into PNG or JPG at the resolution you choose"],
   "pdf-to-longimage": ["PDF to one long image", "Stack every page into a single tall image, ready to send in a chat with no download step"],

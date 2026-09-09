@@ -13,6 +13,8 @@ export const ICONS = {
   "pdf-compress": `<path d="M9.6 4v5.6H4"/><path d="M14.4 4v5.6H20"/><path d="M9.6 20v-5.6H4"/><path d="M14.4 20v-5.6H20"/><path d="M3.8 3.8l4.4 4.4M20.2 3.8l-4.4 4.4M3.8 20.2l4.4-4.4M20.2 20.2l-4.4-4.4"/>`,
   "pdf-sign":     `<path d="M3 19.5c3.2 0 3-9.5 6.2-9.5s2.8 6 6 6 3-3 5.8-3"/><path d="M15.6 3.6l4.8 4.8L12 16.8l-5 1.2 1.2-5z"/>`,
   // หน้ากระดาษที่มีป้ายเลขอยู่ขอบล่าง (จุดที่เลขหน้าจะไปอยู่จริง)
+  // กระดาษเปล่าถูกดึงออกจากปึก (แผ่นที่ถูกตัดมีกากบาท)
+  "pdf-remove-blank": `<rect x="2.5"y="3.5"width="9"height="12"rx="1.5"/><path d="M5 7.5h4M5 10.5h3"/><rect x="12.5"y="8.5"width="9"height="12"rx="1.5"stroke-dasharray="2.6 2"/><path d="M15.4 13.1l3.2 3.2M18.6 13.1l-3.2 3.2"/>`,
   "pdf-page-numbers": `<path d="${DOC}"/><path d="M8.4 11h7M8.4 14h4.4"/><circle cx="12"cy="17.6"r="1.9"/>`,
   "pdf-watermark":`<path d="${DOC}"/><path d="M8.4 16.6c0-2.4 3.4-5.6 3.4-5.6s3.4 3.2 3.4 5.6a3.4 3.4 0 0 1-6.8 0z"/>`,
   "pdf-ocr":      `<path d="M7 3h7l4 4v4"/><path d="M14 3v4h4"/><path d="M5 5v14a2 2 0 0 0 2 2h4.5"/><path d="M8.5 10.5h5M8.5 13.5h3"/><circle cx="16.8"cy="16.8"r="3.4"/><path d="M19.3 19.3L21.5 21.5"/>`,

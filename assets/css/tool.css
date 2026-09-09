@@ -30,7 +30,7 @@
   padding:clamp(var(--sp4),3vw,var(--sp5));box-shadow:var(--shadow), var(--ring-top);
 }
 .panel + .panel{margin-top:var(--sp4)}
-.note{font-size:12.5px;color:var(--text-mute);margin-top:10px;line-height:1.6}
+.note{font-size:13px;color:var(--text-dim);margin-top:10px;line-height:1.65}
 /* คำเตือนที่ต้องอ่านจริง ๆ (เช่น ข้ามชีทที่ซ่อนไว้) — ต่างจาก .note เฉย ๆ ที่เป็นข้อมูลประกอบ
    ใส่สีทึบไว้ก่อนหนึ่งชั้น เผื่อเบราว์เซอร์ที่ยังไม่รู้จัก color-mix จะได้ไม่กลายเป็นใสสนิท */
 .note.warn{
@@ -775,3 +775,64 @@ button.thumb.loading::before{
 @keyframes thumbSpin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){button.thumb.loading::before{animation-duration:2.4s}}
 button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
+
+
+/* ── จังหวะของหน้าเครื่องมือ (ปรับ 10/09/2026 ตามที่พี่ปอนด์ขอให้หน้าใช้งานสวยขึ้น) ──────
+   ‼️ ปัญหาที่เห็นจากการดูหน้าจริงหลายหน้า: ทุกอย่างมีน้ำหนักเท่ากันหมด ทั้งกล่องไฟล์
+   ช่องตั้งค่า ปุ่มลงมือ และผลลัพธ์ ตาจึงไม่รู้ว่าต้องมองอะไรก่อน และปุ่มที่ผู้ใช้ตั้งใจ
+   มากดกลับเล็กเท่าปุ่มรอง · แก้ด้วยลำดับสายตา ไม่ใช่เพิ่มสี: แยกขั้นด้วยเส้นบางกับระยะ
+   แล้วให้ปุ่มหลักมีน้ำหนักมากกว่าปุ่มรองอย่างเห็นได้ชัด */
+.panel > .actions{
+  margin-top:var(--sp5);
+  padding-top:var(--sp4);
+  border-top:1px solid var(--line-soft);
+}
+/* ปุ่มลงมือหลักของหน้า (ตัวแรกในแถว ที่ไม่ใช่ปุ่มรอง) — ใหญ่ขึ้นและมีน้ำหนักกว่าเดิม */
+.panel > .actions > .btn:not(.ghost):first-child{
+  padding:13px 30px;
+  font-size:15px;
+  min-width:172px;
+}
+@media (max-width:720px){
+  .panel > .actions > .btn:not(.ghost):first-child{ min-width:0; width:100%; }
+}
+
+/* ── ผลลัพธ์คือสิ่งที่ผู้ใช้มาเอา ต้องเด่นกว่ากล่องอื่นในหน้า ─────────────────────────
+   เดิมแถวผลลัพธ์ใช้พื้น bg-soft เหมือนแถวไฟล์นำเข้า ทำให้ "ของที่ได้" กับ "ของที่ใส่"
+   หน้าตาเหมือนกัน · ยกพื้นเป็นสีการ์ดพร้อมเงาเบา ๆ และทำปุ่มดาวน์โหลดให้เป็นปุ่มหลักจริง */
+.result{
+  background:var(--card);
+  /* เงาบาง ๆ ที่ยกการ์ดผลลัพธ์ให้ลอยกว่าแถวไฟล์นำเข้า · ผสมกับสีพื้นของธีมเอง
+     จึงไม่ต้องเขียนค่าแยกสองธีม (ในธีมมืดเงาจะเข้มขึ้นเองตามพื้น) */
+  box-shadow:0 3px 10px color-mix(in srgb,var(--bg) 55%,transparent);
+  padding:12px 16px;
+}
+.result .btn{
+  padding:9px 18px;
+  font-size:13px;
+  box-shadow:0 4px 12px color-mix(in srgb,var(--ac,var(--brand)) 30%,transparent);
+}
+.results{gap:10px}
+
+/* ── หัวเครื่องมือ กระชับลงบนจอใหญ่ ────────────────────────────────────────────────
+   เดิมสูงเท่ากันทุกจอ ทำให้บนเดสก์ท็อปกินพื้นที่เหนือเนื้อหาจริงมากเกินจำเป็น
+   (บนมือถือคงเดิม เพราะที่นั่นมันทำหน้าที่เป็นหัวเรื่องของทั้งหน้าจริง ๆ) */
+@media (min-width:900px){
+  .tool-head{ padding:20px 26px; margin-bottom:var(--sp4); }
+  .tool-head h1{ font-size:clamp(20px,2.1vw,24px); }
+}
+
+/* ‼️ ปุ่มดาวน์โหลดในรายการผลลัพธ์เคยมีแต่ไอคอนใน 8 เครื่องมือ (ไม่มีข้อความเลย) ขณะที่
+   เครื่องมืออื่นมีคำว่า "ดาวน์โหลด" ครบ — ผู้ใช้ต้องเดาว่าปุ่มลูกศรลงคืออะไร และมันคือ
+   ปุ่มที่สำคัญที่สุดในหน้า (สิ่งที่เขามาเอา) · ตอนนี้ทุกที่มีข้อความเหมือนกัน
+   บนจอแคบซ่อนเฉพาะข้อความ (ไอคอนยังอยู่ + aria-label ยังบอกโปรแกรมอ่านหน้าจอ) */
+@media (max-width:560px){
+  .result .btn.has-ico span{ position:absolute; width:1px; height:1px; overflow:hidden;
+    clip-path:inset(50%); white-space:nowrap; }
+  .result .btn.has-ico{ gap:0; padding-inline:12px; }
+}
+
+/* ระยะหายใจรอบผลลัพธ์ — เดิมแถบสถานะ ผลลัพธ์ และโน้ตอธิบาย ชิดกันจนอ่านเป็นก้อนเดียว
+   ทั้งที่เป็นคนละเรื่อง (บอกผล / ของที่ได้ / ข้อควรรู้) */
+.results{ margin-top:14px }
+.results + .note{ margin-top:16px }

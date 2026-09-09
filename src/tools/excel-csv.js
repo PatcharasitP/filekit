@@ -65,7 +65,7 @@ export function mount(tool) {
         made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
           el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-          button("", { icon: "download", label: tr(`ดาวน์โหลด ${m.name}`, `Download ${m.name}`),  onclick: () => download(m.blob, m.name) }),
+          button(tr("ดาวน์โหลด", "Download"), { icon: "download", label: tr(`ดาวน์โหลด ${m.name}`, `Download ${m.name}`),  onclick: () => download(m.blob, m.name) }),
         ])));
         if (made.length > 1) results.prepend(el("div", { class: "actions" }, [
           button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {

@@ -332,7 +332,7 @@ export function mount(tool) {
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.count} หน้า`, `${m.count} pages`))]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
-        button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"), onclick: () => download(m.blob, m.name) }),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download", label: tr("ดาวน์โหลด", "Download"), onclick: () => download(m.blob, m.name) }),
       ])));
 
       if (made.length > 1) {

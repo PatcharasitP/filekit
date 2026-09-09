@@ -129,7 +129,7 @@ export function mount(tool) {
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),
           el("small", {}, `${fmtBytes(m.from)} → ${fmtBytes(m.blob.size)}`)]),
-        button("", { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
+        button(tr("ดาวน์โหลด", "Download"), { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
       ])));
     } catch (e) {
       st.progress(null);

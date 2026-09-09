@@ -202,7 +202,7 @@ export function mount(tool) {
     ws.setBusy(true);
     st.info(tr("กำลังใส่เลขหน้า…", "Adding page numbers…"));
     try {
-      const { StandardFonts, rgb } = PDFLib;
+      const { StandardFonts, rgb, degrees } = PDFLib;
       const { doc } = await loadPdfLib(file);
       const size = +sizeSel.value;
       const pages = doc.getPages();
@@ -224,24 +224,39 @@ export function mount(tool) {
         const spot = SPOTS[posSel.value];
         const text = label(start + (i - (from - 1)), last);
 
+        /* ‼️ หน้าที่ถูกหมุนไว้ (/Rotate 90, 180, 270 — เจอบ่อยกับไฟล์สแกน) มีพิกัดจริง
+           ในกระดาษคนละแกนกับที่ "ตาเห็น" · ถ้าวางเลขหน้าด้วยพิกัดดิบ เลขจะไปโผล่ขอบซ้าย
+           ขอบขวา หรือหัวกระดาษแทนที่จะเป็นขอบล่าง แถมตัวเลขเองก็ตะแคงตามหน้าไปด้วย
+           (ยิงจริง 09/09/2026 กับไฟล์ที่หมุนสลับ 0/90/270/180) จึงต้องคิดตำแหน่งใน
+           "พิกัดตามที่ตาเห็น" ก่อน แล้วแปลงกลับเป็นพิกัดจริง พร้อมหมุนตัวเลขชดเชยให้ตั้งตรง */
+        const rot = ((page.getRotation().angle % 360) + 360) % 360;
+        const swap = rot === 90 || rot === 270;
+        const vw = swap ? ph : pw;
+        const vh = swap ? pw : ph;
+        const toPage = (vx, vy) =>
+          rot === 90 ? { x: pw - vy, y: vx }
+          : rot === 180 ? { x: pw - vx, y: ph - vy }
+          : rot === 270 ? { x: vy, y: ph - vx }
+          : { x: vx, y: vy };
+
         if (useImage) {
           if (!pngCache.has(text)) {
             const { dataUrl, w, h } = textToPng(text, size);
             pngCache.set(text, { png: await doc.embedPng(dataUrl), w, h });
           }
           const { png, w, h } = pngCache.get(text);
-          const x = spot.h === "left" ? MARGIN_PT
-                  : spot.h === "right" ? pw - MARGIN_PT - w
-                  : (pw - w) / 2;
-          const y = spot.v === "bottom" ? MARGIN_PT : ph - MARGIN_PT - h;
-          page.drawImage(png, { x, y, width: w, height: h });
+          const vx = spot.h === "left" ? MARGIN_PT
+                   : spot.h === "right" ? vw - MARGIN_PT - w
+                   : (vw - w) / 2;
+          const vy = spot.v === "bottom" ? MARGIN_PT : vh - MARGIN_PT - h;
+          page.drawImage(png, { ...toPage(vx, vy), width: w, height: h, rotate: degrees(rot) });
         } else {
           const w = font.widthOfTextAtSize(text, size);
-          const x = spot.h === "left" ? MARGIN_PT
-                  : spot.h === "right" ? pw - MARGIN_PT - w
-                  : (pw - w) / 2;
-          const y = spot.v === "bottom" ? MARGIN_PT : ph - MARGIN_PT - size;
-          page.drawText(text, { x, y, size, font, color: rgb(0, 0, 0) });
+          const vx = spot.h === "left" ? MARGIN_PT
+                   : spot.h === "right" ? vw - MARGIN_PT - w
+                   : (vw - w) / 2;
+          const vy = spot.v === "bottom" ? MARGIN_PT : vh - MARGIN_PT - size;
+          page.drawText(text, { ...toPage(vx, vy), size, font, color: rgb(0, 0, 0), rotate: degrees(rot) });
         }
         st.progress(((i - from + 2) / numbered) * 100, `(${i - from + 2}/${numbered})`);
         await yieldToBrowser();

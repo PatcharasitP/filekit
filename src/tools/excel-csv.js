@@ -1,6 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download, downloadButton,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 import { smartDecode } from "../thai.js";
+import { splitSheetsByVisibility } from "../xlsxutil.js";
 import { tr } from "../i18n.js";
 
 export function mount(tool) {
@@ -13,8 +14,11 @@ export function mount(tool) {
     accept: ".xlsx,.xls,.csv",
     hint: tr("Excel→CSV: 1 ไฟล์, CSV→Excel: หลายไฟล์", "Excel→CSV: 1 file, CSV→Excel: multiple"),
     expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV file"),
-    onChange: () => { st.clear(); results.innerHTML = ""; },
+    onChange: () => { st.clear(); results.innerHTML = ""; includeHidden = false; },
   });
+
+  // ค่าตั้งต้นคือ "ไม่แตะชีทที่ซ่อนไว้" · ผู้ใช้กดขอเองได้ทีหลังเมื่อเห็นว่ามีชีทซ่อนอยู่จริง
+  let includeHidden = false;
 
   const go = button(tr("แปลงไฟล์", "Convert file"), { onclick: run });
   body.append(el("div", { class: "row" }, [field(tr("ทิศทางการแปลง", "Conversion direction"), dirSel)]), dz.container,
@@ -34,18 +38,30 @@ export function mount(tool) {
         const f = files[0];
         const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
         const base = stripExt(f.name);
+        // ‼️ ชีทที่ผู้ใช้ซ่อนไว้ = ของที่ตั้งใจไม่ให้คนอื่นเห็น ห้ามส่งออกให้เองโดยไม่ถาม
+        const { visible, hidden } = splitSheetsByVisibility(wb);
+        const picked = includeHidden ? [...visible, ...hidden] : visible;
+        if (!picked.length && hidden.length)
+          throw new Error(tr("ไฟล์นี้มีแต่ชีทที่ซ่อนไว้ กดปุ่มด้านล่างถ้าต้องการแปลงชีทที่ซ่อน",
+                             "This file only has hidden sheets. Use the button below if you want them converted"));
         const made = [];
-        for (const name of wb.SheetNames) {
+        for (const name of picked) {
           const csv = XLSX.utils.sheet_to_csv(wb.Sheets[name]);
           if (!csv.trim()) continue;
           made.push({
-            name: `${base}${wb.SheetNames.length > 1 ? "-" + name : ""}.csv`,
+            name: `${base}${picked.length > 1 ? "-" + name : ""}.csv`,
             blob: new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }),
           });
           await yieldToBrowser();
         }
         if (!made.length) throw new Error(tr("ไม่พบข้อมูลในไฟล์นี้", "No data was found in this file"));
         st.ok(tr(`แยกได้ ${made.length} ไฟล์ CSV`, `Done, ${made.length} CSV files`));
+        if (hidden.length && !includeHidden) results.appendChild(el("div", { class: "note warn" }, [
+          el("div", {}, tr(`ข้ามชีทที่ซ่อนไว้ในไฟล์ ${hidden.length} ชีท (${hidden.join(", ")}) เพราะมักเป็นข้อมูลที่ตั้งใจไม่ให้เผยแพร่`,
+                           `Skipped ${hidden.length} hidden sheet(s) (${hidden.join(", ")}) because they are usually meant to stay private`)),
+          button(tr("แปลงชีทที่ซ่อนด้วย", "Include the hidden sheets too"),
+                 { onclick: () => { includeHidden = true; run(); } }),
+        ]));
         made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
           el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

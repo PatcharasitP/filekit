@@ -1,7 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, segmented } from "../ui.js";
 import { readPptx } from "../pptx.js";
-import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
+import { useThaiFont, warmThaiFont, THAI_FONT, splitThaiTextToSize } from "../thaifont.js";
 import { tr } from "../i18n.js";
 
 // สัดส่วนหน้าสไลด์ (หน่วย pt) — 16:9 คือค่าเริ่มต้นของ PowerPoint ยุคปัจจุบัน
@@ -69,7 +69,7 @@ export function mount(tool) {
         doc.setFontSize(30);
         doc.setTextColor(...fg);
         const title = s.title || tr(`สไลด์ ${s.no}`, `Slide ${s.no}`);
-        for (const line of doc.splitTextToSize(title, W - M * 2)) {
+        for (const line of splitThaiTextToSize(doc, title, W - M * 2)) {
           doc.text(line, M, y); y += 38;
         }
 
@@ -82,7 +82,7 @@ export function mount(tool) {
         doc.setFontSize(18);
         for (const p of s.paras) {
           const indent = p.level * 22;
-          const lines = doc.splitTextToSize(("• " + p.text), W - M * 2 - indent);
+          const lines = splitThaiTextToSize(doc, "• " + p.text, W - M * 2 - indent);
           for (const line of lines) {
             if (y > H - M) break;   // เนื้อหาเกินหน้า ตัดที่ขอบ (สไลด์คือ 1 หน้าเสมอ)
             doc.text(line, M + indent, y);
@@ -93,7 +93,7 @@ export function mount(tool) {
         if (withNotes.value === "yes" && s.notes && y < H - M - 20) {
           doc.setFontSize(12);
           doc.setTextColor(dark ? 150 : 120, dark ? 155 : 125, dark ? 175 : 145);
-          for (const line of doc.splitTextToSize(tr("โน้ต: ", "Notes: ") + s.notes, W - M * 2)) {
+          for (const line of splitThaiTextToSize(doc, tr("โน้ต: ", "Notes: ") + s.notes, W - M * 2)) {
             if (y > H - M) break;
             doc.text(line, M, y); y += 16;
           }

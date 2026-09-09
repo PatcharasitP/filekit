@@ -118,7 +118,7 @@ export function mount(tool) {
   const sliderWrap = el("div", { class: "cmp-slider" }, [frame]);
   wireSlider();
 
-  const go = button(tr("บีบอัดไฟล์", "Compress file"), { onclick: run });
+  const go = button(tr("บีบอัดไฟล์", "Compress file"), { onclick: () => run() });
 
   const ws = workspace(tool, {
     left: {
@@ -139,8 +139,10 @@ export function mount(tool) {
       button(tr("รีเซ็ตตำแหน่ง", "Reset position"), { ghost: true, icon: "undo", onclick: () => setHandlePos(50) }),
     ],
     footer: [go, st.node, results],
-    note: tr("วิธีนี้แปลงแต่ละหน้าเป็นภาพ ข้อความจะคัดลอก/ค้นหาไม่ได้อีก",
-      "This turns each page into an image. Text can no longer be copied or searched"),
+    // ‼️ บอกให้ครบว่าเสียอะไรบ้าง ไม่ใช่แค่เรื่องข้อความ — วิธีนี้วาดทุกหน้าใหม่เป็นภาพ
+    //    ช่องกรอกฟอร์ม ไฮไลต์ และโน้ตติดหน้าจึงหายไปทั้งหมดด้วย (ยิงจริงยืนยันแล้ว 09/09/2026)
+    note: tr("แปลงแต่ละหน้าเป็นภาพ ข้อความจะคัดลอก/ค้นหาไม่ได้ ฟอร์ม ไฮไลต์ และโน้ตจะหายไป",
+      "Each page becomes an image. Text can't be copied or searched, and form fields, highlights, and notes are lost"),
   });
   ws.wrap.prepend(styleEl);
 
@@ -287,7 +289,7 @@ export function mount(tool) {
   }
 
   /* ── บีบอัดจริงทุกหน้า (เหมือนเดิมทุกประการ ต่างแค่ใช้เอกสารที่เปิดไว้แล้วร่วมกับพรีวิว) ── */
-  async function run() {
+  async function run(allowRaster = false) {
     if (!file) return st.err(tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF file first"));
     results.innerHTML = "";
     go.disabled = true;
@@ -299,9 +301,43 @@ export function mount(tool) {
       const doc = await getDoc();
       const hadText = await hasTextLayer(doc);
       const { PDFDocument } = PDFLib;
+
+      /* ‼️ ไฟล์ที่ยังค้นหาข้อความได้ ต้องลอง "บีบแบบไม่เสียข้อความ" ก่อนเสมอ
+       * การวาดทุกหน้าใหม่เป็นภาพกับไฟล์ข้อความล้วนให้ผลแย่สองต่อ: ไฟล์มักใหญ่ขึ้น
+       * (วัดจริงพบบวม 26-267%) และเสียชั้นข้อความไปฟรี ๆ ค้นหา/คัดลอก/อ่านด้วย
+       * โปรแกรมอ่านหน้าจอไม่ได้อีกเลย · การบันทึกใหม่ผ่าน pdf-lib แบบรวม object stream
+       * เก็บข้อความไว้ครบและมักเล็กลงจริงกับไฟล์ที่ยังไม่เคยถูกบีบโครงสร้างมาก่อน
+       * (จับได้จาก tests/browser_chain.py โซ่ Word → PDF → รวม → บีบอัด แล้วไทยหายเกลี้ยง) */
+      let losslessBlob = null;
+      if (hadText) {
+        try {
+          const keepDoc = await PDFDocument.load(new Uint8Array(await file.arrayBuffer()),
+                                                 { ignoreEncryption: true, updateMetadata: false });
+          const kept = await keepDoc.save({ useObjectStreams: true });
+          if (kept.byteLength < file.size * 0.98)
+            losslessBlob = new Blob([kept], { type: "application/pdf" });
+        } catch { /* โหลดด้วย pdf-lib ไม่ได้ (เช่นไฟล์ใส่รหัส) ก็ไปทางวาดใหม่ตามเดิม */ }
+      }
+
+      /* ‼️ ถ้าเป็นไฟล์ที่ยังค้นหาข้อความได้ และบีบแบบไม่เสียข้อความแล้วไม่เล็กลง
+       * ห้ามไปวาดใหม่เป็นภาพให้เองเงียบ ๆ — นั่นคือทำลายของที่ผู้ใช้มีอยู่เพื่อแลกกับ
+       * ขนาดที่มักไม่ได้เล็กลงจริงด้วยซ้ำ · หยุดแล้วให้ผู้ใช้เลือกเองว่าจะยอมแลกไหม */
+      if (hadText && !losslessBlob && !allowRaster) {
+        st.progress(null);
+        st.err(tr("บีบให้เล็กลงโดยไม่ทำให้ข้อความหายไม่ได้ ไฟล์นี้บีบโครงสร้างมาดีแล้ว",
+                  "Can't shrink this without losing the text. Its structure is already well packed"));
+        results.appendChild(el("div", { class: "note warn" }, [
+          el("div", {}, tr("ถ้ายอมให้ข้อความค้นหา/คัดลอกไม่ได้ ยังบีบต่อได้ด้วยการวาดทุกหน้าใหม่เป็นภาพ",
+                           "If you accept losing searchable text, it can still be compressed by redrawing every page as an image")),
+          button(tr("บีบต่อโดยยอมให้ข้อความหาย", "Compress anyway, losing the text"),
+                 { onclick: () => run(true) }),
+        ]));
+        return;
+      }
+
       const out = await PDFDocument.create();
 
-      for (let p = 1; p <= doc.numPages; p++) {
+      for (let p = 1; !losslessBlob && p <= doc.numPages; p++) {
         const page = await doc.getPage(p);
         const viewport = page.getViewport({ scale });
         const canvas = document.createElement("canvas");
@@ -326,8 +362,8 @@ export function mount(tool) {
       // ‼️ ไม่ doc.destroy() ที่นี่ — เอกสารนี้ใช้ร่วมกับพรีวิวตัวเลื่อน ต้องอยู่ต่อให้เปลี่ยนระดับ/บีบซ้ำได้อีก
       //    (จะถูกปิดตอนเลือกไฟล์ใหม่แทน ผ่าน onFileChange)
 
-      const bytes = await out.save();
-      const blob = new Blob([bytes], { type: "application/pdf" });
+      const blob = losslessBlob || new Blob([await out.save()], { type: "application/pdf" });
+      const keptText = !!losslessBlob;
       st.progress(null);
 
       const diff = 1 - blob.size / file.size;
@@ -357,7 +393,10 @@ export function mount(tool) {
          * เดิมบอกเรื่องนี้เฉพาะตอน "ไม่เล็กลง" เท่านั้น พอมันเล็กลงจริงก็เงียบไปเลย
          * ทั้งที่นั่นแหละคือตอนที่ผู้ใช้เสียของไปโดยไม่รู้ตัว (จับได้จาก tests/browser_chain.py
          *  โซ่ Word → PDF → รวม → บีบอัด แล้วข้อความไทยหายเกลี้ยงตอนจบ) */
-        const note = hadText
+        const note = keptText
+          ? tr(" (บีบโดยไม่วาดใหม่ ข้อความยังค้นหาและคัดลอกได้เหมือนเดิม)",
+               " (compressed without redrawing, so text is still searchable and copyable)")
+          : hadText
           ? tr(" (ไฟล์นี้เคยค้นหาข้อความได้ หลังบีบอัดจะกลายเป็นภาพ ค้นหาหรือคัดลอกข้อความไม่ได้แล้ว ถ้าต้องใช้ข้อความ ให้เก็บไฟล์เดิมไว้ด้วย)",
                " (this file had searchable text; compressing turns every page into an image, so text can no longer be searched or copied. Keep the original if you need the text.)")
           : "";

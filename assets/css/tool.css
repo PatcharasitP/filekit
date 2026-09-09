@@ -31,6 +31,16 @@
 }
 .panel + .panel{margin-top:var(--sp4)}
 .note{font-size:12.5px;color:var(--text-mute);margin-top:10px;line-height:1.6}
+/* คำเตือนที่ต้องอ่านจริง ๆ (เช่น ข้ามชีทที่ซ่อนไว้) — ต่างจาก .note เฉย ๆ ที่เป็นข้อมูลประกอบ
+   ใส่สีทึบไว้ก่อนหนึ่งชั้น เผื่อเบราว์เซอร์ที่ยังไม่รู้จัก color-mix จะได้ไม่กลายเป็นใสสนิท */
+.note.warn{
+  display:grid; gap:8px; justify-items:start; margin-top:12px;
+  padding:10px 12px; border-radius:var(--r-sm);
+  color:var(--text); background:var(--bg-soft);
+  background:color-mix(in srgb,var(--warn) 10%,var(--card));
+  border:1px solid var(--warn);
+  border-color:color-mix(in srgb,var(--warn) 45%,transparent);
+}
 
 /* ---- dropzone ---- */
 /* เดิมกล่องลากไฟล์คือกรอบเส้นประ 14px มุมกับพื้น bg-soft เฉย ๆ — เป็นองค์ประกอบที่ผู้ใช้

@@ -68,8 +68,14 @@ export function mount(tool) {
   ws.body.append(
     results,
     el("div", { class: "note" },
+      // ‼️ เครื่องมือนี้สร้างไฟล์ใหม่แล้วคัดลอกหน้าที่เก็บเข้าไป สารบัญ/บุ๊กมาร์กของไฟล์เดิม
+      //    จึงไม่ติดมาด้วย แม้ผู้ใช้จะไม่ได้แก้อะไรเลย · บอกไว้ตรง ๆ เหมือนที่ pdf-merge บอก
       tr("คลิกหน้าเพื่อเลือก ลากเพื่อสลับลำดับ หรือพิมพ์ช่วงหน้าด้านขวาเพื่อเก็บเฉพาะบางหน้า",
          "Click a page to select, drag to reorder, or type a range on the right to keep pages")),
+    // แยกเป็นอีกก้อนเพราะข้อความบนหน้าจอก้อนเดียวห้ามยาวเกิน 100 ตัวอักษร (มีเทสจับ)
+    el("div", { class: "note" },
+      tr("ไฟล์ที่ได้จะไม่มีสารบัญ/บุ๊กมาร์กของไฟล์เดิมติดมา",
+         "The result will not carry over the original bookmarks")),
   );
   ws.showCanvas(false);
 

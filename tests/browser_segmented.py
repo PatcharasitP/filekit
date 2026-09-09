@@ -1,7 +1,7 @@
 import sys, os
 from playwright.sync_api import sync_playwright
 BASE = os.environ.get("FK_BASE", "http://localhost:8899")
-CASES = [("pdf-watermark", 3), ("word-to-pdf", 5), ("images-to-pdf", 2),
+CASES = [("pdf-watermark", 5), ("word-to-pdf", 5), ("images-to-pdf", 2),
          ("powerpoint-to-pdf", 2), ("pdf-ocr", 3)]
 P, F = 0, []
 def ck(n, g, w):

@@ -58,6 +58,10 @@ const STYLE = `
 .wmp-title{width:52%;height:4.2%;min-height:5px;margin-bottom:2%;background:rgba(0,0,0,.32)}
 .wmp-wm-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .wmp-wm-text{position:absolute;left:50%;font-weight:700;font-family:inherit;white-space:nowrap;line-height:1.15}
+.wmp-wm-img{position:absolute;height:auto;object-fit:contain;pointer-events:none}
+.wmp-wm-tile .wmp-wm-img{position:static}
+.wmp-logo-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wmp-logo-name{color:var(--text-mute);font-size:12px;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .wmp-wm-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   padding:12%;text-align:center;font-size:12.5px;color:rgba(0,0,0,.38);font-weight:500}
 .wmp-wm-tile{position:absolute;inset:-25%;display:flex;flex-wrap:wrap;align-content:space-evenly;justify-content:space-evenly}
@@ -78,13 +82,74 @@ export function mount(tool) {
   const oLabel = el("small", {}, tr("ความเข้ม 18%", "Opacity 18%"));
   const sizeSel = segmented([["small", tr("เล็ก", "Small")], ["medium", tr("กลาง", "Medium")], ["large", tr("ใหญ่", "Large")]], "medium");
 
+  /* ‼️ ลายน้ำแบบโลโก้ — บริษัทไทยประทับตราบริษัทบนเอกสารร่างหรือสำเนาภายในกันเป็นปกติ
+   * กลไกที่ต้องใช้มีอยู่ครบแล้ว: โหมดข้อความก็แปลงข้อความเป็น PNG แล้ว embedPng อยู่ดี
+   * จึงแค่เปลี่ยนที่มาของ PNG จาก "canvas ที่วาดข้อความ" เป็น "รูปที่ผู้ใช้เลือก"
+   * ตำแหน่ง ขนาด ความเข้ม ใช้เส้นทางเดิมทั้งหมดโดยไม่ต้องแก้ */
+  const modeSel = segmented([["text", tr("ข้อความ", "Text")], ["image", tr("รูปโลโก้", "Logo image")]], "text");
+  const logoInput = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
+  const logoBtn = button(tr("เลือกรูปโลโก้", "Choose a logo"), { ghost: true, onclick: () => logoInput.click() });
+  const logoName = el("small", { class: "wmp-logo-name" }, tr("ยังไม่ได้เลือกรูป", "No image chosen"));
+  const logoField = el("label", { class: "field" }, [
+    el("span", {}, tr("รูปโลโก้", "Logo image")),
+    el("div", { class: "wmp-logo-row" }, [logoBtn, logoName]),
+    logoInput,
+  ]);
+  const textField = field(tr("ข้อความลายน้ำ", "Watermark text"), textInput);
+  const colorField = field(tr("สี", "Color"), colorInput);
+
   const rightBox = el("div", {}, [
-    field(tr("ข้อความลายน้ำ", "Watermark text"), textInput),
+    field(tr("ชนิดลายน้ำ", "Watermark type"), modeSel),
+    textField,
+    logoField,
     field(tr("ตำแหน่ง", "Position"), posSel),
-    field(tr("สี", "Color"), colorInput),
+    colorField,
     el("label", { class: "field" }, [el("span", {}, tr("ความเข้ม", "Opacity")), opacity, oLabel]),
     field(tr("ขนาด", "Size"), sizeSel),
   ]);
+
+  // รูปโลโก้ที่เลือกไว้ เก็บเป็น dataURL พร้อมขนาดจริง (ใช้ทั้งพรีวิวและตอนสร้างไฟล์)
+  let logo = null;   // { dataUrl, w, h, name }
+
+  /* ‼️ ย่อรูปที่ผู้ใช้เลือกให้กว้างไม่เกิน 1200px ก่อนฝัง — โลโก้จากมือถือ 4000px
+   * ทำให้ไฟล์ PDF บวมขึ้นหลายเมกะโดยไม่ได้คมขึ้นเลย เพราะลายน้ำถูกย่อลงอยู่แล้ว
+   * และแปลงเป็น PNG เสมอเพื่อรักษาพื้นโปร่งใสของโลโก้ (JPG ไม่มี alpha) */
+  const LOGO_MAX = 1200;
+  async function readLogo(f) {
+    const bmp = await createImageBitmap(f);
+    const s = Math.min(1, LOGO_MAX / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bmp.width * s));
+    canvas.height = Math.max(1, Math.round(bmp.height * s));
+    canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close?.();
+    return { dataUrl: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height, name: f.name };
+  }
+
+  logoInput.addEventListener("change", async () => {
+    const f = logoInput.files && logoInput.files[0];
+    if (!f) return;
+    try {
+      logo = await readLogo(f);
+      logoName.textContent = logo.name;
+      st.clear();
+    } catch {
+      logo = null;
+      logoName.textContent = tr("ยังไม่ได้เลือกรูป", "No image chosen");
+      st.err(tr("เปิดรูปนี้ไม่ได้ ลองไฟล์อื่น", "Could not open that image. Try another one"));
+    }
+    drawPreview();
+  });
+
+  /** โหมดข้อความกับโหมดรูปใช้ตัวเลือกคนละชุด ซ่อนตัวที่ไม่เกี่ยวไปเลยจะได้ไม่งง */
+  function syncMode() {
+    const img = modeSel.value === "image";
+    textField.hidden = img;
+    colorField.hidden = img;      // สีใช้กับข้อความเท่านั้น รูปใช้สีของตัวเอง
+    logoField.hidden = !img;
+    drawPreview();
+  }
+  modeSel.addEventListener("change", syncMode);
 
   // ── พรีวิวกระดาษจำลอง (แผงกลาง) ──────────────────────────────────────
   // ไม่มี pdfjs ในเครื่องมือนี้ (ดู registry.js libs) จึงไม่เรนเดอร์เนื้อหาไฟล์จริง
@@ -101,6 +166,35 @@ export function mount(tool) {
 
   function drawPreview() {
     wmLayer.innerHTML = "";
+    const pw0 = paper.clientWidth || 300;
+
+    if (modeSel.value === "image") {
+      if (!logo) {
+        wmLayer.appendChild(el("div", { class: "wmp-wm-empty" }, tr("เลือกรูปโลโก้เพื่อดูตัวอย่าง", "Choose a logo to preview")));
+        return;
+      }
+      const posI = posSel.value;
+      const alphaI = +opacity.value / 100;
+      const scaleI = SIZE_SCALE[sizeSel.value];
+      const multI = posI === "diagonal" ? 1.5 : posI === "footer" ? 0.55 : posI === "tile" ? 0.32 : 1;
+      const wI = posI === "tile" ? pw0 * 0.32 : pw0 * scaleI * multI;
+      const mk = () => el("img", { src: logo.dataUrl, alt: "", class: "wmp-wm-img",
+                                   style: { width: wI + "px", opacity: alphaI } });
+      if (posI === "tile") {
+        const grid = el("div", { class: "wmp-wm-tile", style: { transform: "rotate(30deg)" } });
+        for (let i = 0; i < 28; i++) grid.appendChild(mk());
+        wmLayer.appendChild(grid);
+        return;
+      }
+      const img = mk();
+      if (posI === "diagonal") { img.style.top = "50%"; img.style.transform = "translate(-50%,-50%) rotate(-35deg)"; }
+      else if (posI === "footer") { img.style.insetBlockEnd = "6%"; img.style.transform = "translateX(-50%)"; }
+      else { img.style.top = "50%"; img.style.transform = "translate(-50%,-50%)"; }
+      img.style.insetInlineStart = "50%";
+      wmLayer.appendChild(img);
+      return;
+    }
+
     const text = textInput.value.trim();
     if (!text) {
       wmLayer.appendChild(el("div", { class: "wmp-wm-empty" }, tr("พิมพ์ข้อความเพื่อดูตัวอย่าง", "Type text to preview")));
@@ -140,6 +234,7 @@ export function mount(tool) {
   }
 
   if (typeof ResizeObserver !== "undefined") new ResizeObserver(drawPreview).observe(paper);
+  syncMode();          // ตั้งค่าเริ่มต้นให้ตรงโหมดตั้งแต่เปิดหน้า
   [textInput, colorInput, opacity].forEach((n) => n.addEventListener("input", drawPreview));
   opacity.addEventListener("input", () => { oLabel.textContent = tr(`ความเข้ม ${opacity.value}%`, `Opacity ${opacity.value}%`); });
   posSel.addEventListener("change", drawPreview);
@@ -195,8 +290,10 @@ export function mount(tool) {
 
   async function run() {
     if (!file) return st.err(tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF file first"));
+    const useImage = modeSel.value === "image";
     const text = textInput.value.trim();
-    if (!text) return st.err(tr("พิมพ์ข้อความลายน้ำก่อน", "Type watermark text first"));
+    if (useImage && !logo) return st.err(tr("เลือกรูปโลโก้ก่อน", "Choose a logo image first"));
+    if (!useImage && !text) return st.err(tr("พิมพ์ข้อความลายน้ำก่อน", "Type watermark text first"));
     results.innerHTML = "";
     go.disabled = true;
     ws.setBusy(true);
@@ -204,7 +301,8 @@ export function mount(tool) {
     try {
       const { PDFDocument, degrees } = PDFLib;
       const { doc, encrypted } = await loadPdfLib(file);
-      const { dataUrl, w, h } = textToPng(text, { color: colorInput.value });
+      // โหมดรูปใช้ PNG ของโลโก้ตรง ๆ โหมดข้อความวาดข้อความลง canvas เป็น PNG ก่อน
+      const { dataUrl, w, h } = useImage ? logo : textToPng(text, { color: colorInput.value });
       const png = await doc.embedPng(dataUrl);
       const alpha = +opacity.value / 100;
       const pages = doc.getPages();

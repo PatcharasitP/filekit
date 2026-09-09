@@ -1,7 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
 import { loadLibs } from "../loader.js";
-import { useThaiFont, warmThaiFont, THAI_FONT } from "../thaifont.js";
+import { useThaiFont, warmThaiFont, THAI_FONT, splitThaiTextToSize } from "../thaifont.js";
 import { tr } from "../i18n.js";
 
 const PAGE = { a4: "a4", letter: "letter" };
@@ -86,7 +86,7 @@ export function mount(tool) {
         doc.setFontSize(fs);
         const lineH = fs * 1.55;
         const indent = b.type === "li" ? 16 : 0;
-        const lines = doc.splitTextToSize(b.text, W - M * 2 - indent);
+        const lines = splitThaiTextToSize(doc, b.text, W - M * 2 - indent);
 
         if (b.type === "head" && y > M) y += lineH * 0.5;
         for (const line of lines) {

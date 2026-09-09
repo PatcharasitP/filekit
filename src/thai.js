@@ -117,6 +117,27 @@ export function undoDoubleEncode(text) {
   return null;
 }
 
+/* ‼️ ไฟล์ที่ผ่านมือหลายคนถูก "อ่านผิดแล้วบันทึกทับ" ได้มากกว่า 1 รอบ (เจอจริงกับไฟล์เก่า
+ * ที่เวียนกันเปิดหลายโปรแกรม) แกะแค่รอบเดียวจะได้ข้อความที่ยังเป็นขยะอยู่ แต่หน้าจอขึ้นว่า
+ * "ซ่อมแล้ว" ซึ่งหลอกผู้ใช้หนักกว่าไม่ซ่อมให้เสียอีก จึงต้องแกะต่อจนหมดชั้น
+ * ‼️ รอบที่ 2 ขึ้นไปต้องผ่าน looksDoubleEncoded (หลักฐานแน่น) ห้ามใช้แค่ doubleEncodeMarks
+ *    เพราะพยางค์ไทยแท้รูป "เ + ธ/น + พยัญชนะ" แกะกลับได้เสมอ ถ้าใช้เกณฑ์หลวมจะไล่แกะ
+ *    ข้อความที่ถูกอยู่แล้วจนพังทีละรอบ · เพดานรอบไว้กันวนไม่จบ */
+export const MAX_UNDO_PASSES = 4;
+
+export function undoDoubleEncodeDeep(text) {
+  let cur = text;
+  const vias = [];
+  for (let i = 0; i < MAX_UNDO_PASSES; i++) {
+    if (i > 0 && !looksDoubleEncoded(cur)) break;
+    const fixed = undoDoubleEncode(cur);
+    if (!fixed) break;
+    cur = fixed.text;
+    vias.push(fixed.via);
+  }
+  return vias.length ? { text: cur, via: vias[0], vias, passes: vias.length } : null;
+}
+
 // ตัด byte ท้ายที่เป็นลำดับ UTF-8 ครึ่ง ๆ กลาง ๆ จากการหั่นตัวอย่าง (ไม่งั้นตรวจ UTF-8 ตกทั้งที่ไฟล์ดี)
 function trimUtf8Tail(u8, truncated) {
   if (!truncated) return u8;
@@ -166,16 +187,22 @@ export function analyzeBytes(u8, sampleBytes = 65536) {
   let best = cands.find((c) => c.enc === pickEnc) || cands[0] || null;
   // ชั้นสุดท้าย: เป็น UTF-8 ที่ถูกต้องอยู่แล้ว แต่เนื้อในเป็นไทยที่เคยถูกอ่านผิดมาก่อน (เพี้ยนซ้อน)
   if (best && best.enc === "utf-8" && doubleEncodeMarks(best.text)) {
-    const fixed = undoDoubleEncode(best.text);
+    const strong = looksDoubleEncoded(best.text);
+    // หลักฐานแน่นเท่านั้นถึงจะไล่แกะหลายชั้น ถ้าร่องรอยบางให้ลองแค่ชั้นเดียวไว้เป็นตัวเลือก
+    const fixed = strong ? undoDoubleEncodeDeep(best.text) : undoDoubleEncode(best.text);
     if (fixed) {
-      const cand = { enc: "utf-8", undo: true, via: fixed.via, text: fixed.text,
+      const cand = { enc: "utf-8", undo: true, via: fixed.via, passes: fixed.passes || 1, text: fixed.text,
         label: tr(`UTF-8 ที่เคยถูกอ่านผิดเป็น ${ENC_LABEL[fixed.via] || fixed.via}`, `UTF-8, previously misread as ${ENC_LABEL[fixed.via] || fixed.via}`),
         ...scoreText(fixed.text) };
-      if (looksDoubleEncoded(best.text)) {
+      if (strong) {
         // หลักฐานพอ → เลือกให้เลย
         best = cand;
-        why = tr("ไฟล์เป็น UTF-8 ที่ถูกต้อง แต่ข้างในเป็นภาษาไทยที่เคยถูกอ่านผิดแล้วบันทึกซ้ำ",
-                "The file is valid UTF-8, but the Thai text inside was misread once before and saved again");
+        const n = cand.passes;
+        why = n > 1
+          ? tr(`ไฟล์เป็น UTF-8 ที่ถูกต้อง แต่ข้างในเป็นภาษาไทยที่ถูกอ่านผิดแล้วบันทึกซ้ำซ้อนกัน ${n} ชั้น`,
+               `The file is valid UTF-8, but the Thai text inside was misread and re-saved ${n} times over`)
+          : tr("ไฟล์เป็น UTF-8 ที่ถูกต้อง แต่ข้างในเป็นภาษาไทยที่เคยถูกอ่านผิดแล้วบันทึกซ้ำ",
+               "The file is valid UTF-8, but the Thai text inside was misread once before and saved again");
         cands.unshift(cand);
       } else {
         // ‼️ ร่องรอยน้อยเกินจะฟันธง (อาจเป็นภาษาไทยที่ถูกต้องอยู่แล้ว) — เสนอไว้ให้เลือกเอง
@@ -194,7 +221,7 @@ export function smartDecode(u8) {
   if (!a.best) return { text: "", enc: "utf-8", undo: false, why: tr("ไฟล์ว่าง", "Empty file") };
   const full = decodeBytes(u8, a.best.enc);
   if (a.best.undo) {
-    const fixed = undoDoubleEncode(full);
+    const fixed = undoDoubleEncodeDeep(full);
     if (fixed) return { text: fixed.text, enc: a.best.enc, undo: true, via: fixed.via, why: a.why };
   }
   return { text: full, enc: a.best.enc, undo: false, why: a.why };

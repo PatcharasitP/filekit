@@ -235,5 +235,32 @@ ck(middotHits.length + htmlMiddot.length === 0,
      (bare.length ? "\n      " + bare.slice(0, 5).join("\n      ") : ""));
 }
 
+/* ‼️ [hidden] ของเบราว์เซอร์เป็นกฎระดับ user-agent ซึ่งแพ้ display ที่เราเขียนเองเสมอ
+   ผลคือ el.hidden = true ไม่ซ่อนอะไรเลยบน .field (display:grid) และ .actions (display:flex)
+   วัดจริง 09/09/2026 เจอปุ่มลงมือทำของ excel-split, excel-merge, sheetpick โผล่ทั้งที่สั่งซ่อน
+   กติกา: ต้องมีกฎกลาง [hidden]{display:none !important} และห้ามมีใครเขียน display อื่นทับ */
+{
+  const shell = readFileSync(join(ROOT, "index.html"), "utf8");
+  ck(/\[hidden\]\s*\{[^}]*display\s*:\s*none\s*!important/.test(shell),
+     "index.html ต้องมีกฎกลาง [hidden]{display:none !important} (กัน display ของเราทับกฎซ่อนของเบราว์เซอร์)");
+
+  const scan = ["index.html", "assets/css/tool.css",
+    ...toolFiles.map((n) => join("src/tools", n)),
+    ...readdirSync(join(ROOT, "src")).filter((n) => n.endsWith(".js")).map((n) => join("src", n))];
+  const bad = [];
+  for (const f of scan) {
+    // ตัดคอมเมนต์ทิ้งก่อน ไม่งั้นคำอธิบายที่พูดถึง [hidden] จะถูกจับเป็นกฎ CSS (เจอจริงตอนเขียนเทสนี้)
+    const txt = readFileSync(join(ROOT, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const m of txt.matchAll(/\[hidden\][^{}]*\{([^}]*)\}/g)) {
+      const decl = m[1];
+      const d = /display\s*:\s*([^;!}]+)/.exec(decl);
+      if (d && d[1].trim() !== "none") bad.push(`${f}: display:${d[1].trim()}`);
+    }
+  }
+  ck(bad.length === 0,
+     `ห้ามมีกฎไหนตั้ง display ให้ [hidden] เป็นอย่างอื่นนอกจาก none (พบ ${bad.length})` +
+     (bad.length ? "\n      " + bad.join("\n      ") : ""));
+}
+
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);
 process.exit(fail.length ? 1 : 0);

@@ -161,17 +161,25 @@ def chain1_word_pdf_merge_compress(browser):
         pg.locator(".dz input[type=file]").first.set_input_files(str(merged), timeout=STEP_TIMEOUT)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
         pg.get_by_role("button", name="บีบอัดไฟล์").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        final = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c1_final.pdf")
-
-        # ④ เปิดไฟล์สุดท้ายด้วย pymupdf ตรวจจำนวนหน้า + มีข้อความไทย
-        fdoc = fitz.open(str(final))
-        pages_ok = fdoc.page_count == expect_pages
-        thai_found = any(re.search(r"[ก-๙]", fdoc[i].get_text()) for i in range(fdoc.page_count))
-        steps.append(("บีบอัด PDF + ตรวจปลายทาง", merged.name, final.name,
-                      f"จำนวนหน้า={expect_pages}, มีข้อความไทย", "ผ่าน" if (pages_ok and thai_found) else "ตก"))
-        assert pages_ok, f"บีบอัดแล้วหน้าหาย: ได้ {fdoc.page_count} ต้องการ {expect_pages}"
-        assert thai_found, "ไฟล์สุดท้ายไม่มีข้อความไทยเลยหลังผ่าน 3 ขั้นตอน (บีบอัดอาจทำลายชั้นข้อความ)"
+        # ‼️ สิ่งที่ต้องรับประกันคือ "ผู้ใช้ไม่มีทางเสียชั้นข้อความไปเงียบ ๆ" ไม่ใช่ "ต้องได้ไฟล์เสมอ"
+        #    ไฟล์ข้อความล้วนที่บีบต่อไม่ได้โดยไม่ทำลายข้อความ เครื่องมือต้องหยุดแล้วถามก่อน
+        #    (แก้พฤติกรรมนี้ 09/09/2026 เพราะเดิมวาดใหม่เป็นภาพให้เอง ข้อความไทยหายเกลี้ยงทั้งไฟล์)
+        pg.wait_for_selector(".results .result, .results .note.warn", timeout=STEP_TIMEOUT)
+        if pg.locator(".results .result").count():
+            final = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c1_final.pdf")
+            fdoc = fitz.open(str(final))
+            pages_ok = fdoc.page_count == expect_pages
+            thai_found = any(re.search(r"[ก-๙]", fdoc[i].get_text()) for i in range(fdoc.page_count))
+            steps.append(("บีบอัด PDF + ตรวจปลายทาง", merged.name, final.name,
+                          f"จำนวนหน้า={expect_pages}, มีข้อความไทย", "ผ่าน" if (pages_ok and thai_found) else "ตก"))
+            assert pages_ok, f"บีบอัดแล้วหน้าหาย: ได้ {fdoc.page_count} ต้องการ {expect_pages}"
+            assert thai_found, "ไฟล์สุดท้ายไม่มีข้อความไทยเลยหลังผ่าน 3 ขั้นตอน (บีบอัดอาจทำลายชั้นข้อความ)"
+        else:
+            warn = pg.locator(".results .note.warn").inner_text()
+            asked = "ข้อความ" in warn and pg.locator(".results .note.warn button").count() == 1
+            steps.append(("บีบอัด PDF + ตรวจปลายทาง", merged.name, "(ไม่บีบให้)",
+                          "หยุดถามก่อน ไม่ทำลายข้อความเงียบ ๆ", "ผ่าน" if asked else "ตก"))
+            assert asked, f"ไม่ได้บอกผู้ใช้ว่าบีบต่อจะเสียข้อความ และไม่มีปุ่มให้เลือกเอง: {warn[:120]!r}"
 
         real = real_errors(errs)
         assert not real, f"มี JS error ระหว่างโซ่: {real[0][:150]}"

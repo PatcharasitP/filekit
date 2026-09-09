@@ -1,4 +1,4 @@
-import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
+import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, download,
          stripExt, parsePages, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
 import { workspace } from "../workspace.js";
@@ -60,7 +60,7 @@ export function mount(tool) {
   const st = statusBar();
   const results = el("div", { class: "results" });
   let file = null;
-  let cache = null;      // { file, doc, encrypted, total } — กันโหลดไฟล์ซ้ำตอนกดแยกจริง
+  let cache = null;      // { file, doc, encrypted, hiddenLayers, total } — กันโหลดไฟล์ซ้ำตอนกดแยกจริง
   let loading = false;
   let loadError = null;
 
@@ -128,9 +128,9 @@ export function mount(tool) {
     loading = true; loadError = null; cache = null;
     updateAll();
     try {
-      const { doc, encrypted } = await loadPdfLib(myFile);
+      const { doc, encrypted, hiddenLayers } = await loadPdfLib(myFile);
       if (file !== myFile) return; // ผู้ใช้เปลี่ยนไฟล์ระหว่างโหลด — ทิ้งผลเก่า
-      cache = { file: myFile, doc, encrypted, total: doc.getPageCount() };
+      cache = { file: myFile, doc, encrypted, hiddenLayers, total: doc.getPageCount() };
     } catch (e) {
       if (file !== myFile) return;
       loadError = tr("เปิดไฟล์ไม่ได้: ", "Couldn't open file: ") + e.message;
@@ -305,8 +305,9 @@ export function mount(tool) {
     try {
       const { PDFDocument } = PDFLib;
       let src, encrypted;
-      if (cache && cache.file === file) { src = cache.doc; encrypted = cache.encrypted; }
-      else { const loaded = await loadPdfLib(file); src = loaded.doc; encrypted = loaded.encrypted; }
+      let hiddenLayers = 0;
+      if (cache && cache.file === file) { src = cache.doc; encrypted = cache.encrypted; hiddenLayers = cache.hiddenLayers || 0; }
+      else { const loaded = await loadPdfLib(file); src = loaded.doc; encrypted = loaded.encrypted; hiddenLayers = loaded.hiddenLayers; }
       const total = src.getPageCount();
       const { groups, error } = computeGroups(total);
       if (error) throw new Error(error);
@@ -326,6 +327,8 @@ export function mount(tool) {
       st.progress(null);
       st.ok(tr(`แยกได้ ${made.length} ไฟล์`, `Done, ${made.length} files`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
+      // ‼️ ชั้นที่ผู้ใช้ซ่อนไว้จะกลายเป็นมองเห็นได้ในไฟล์ผลลัพธ์ ต้องบอกก่อนไฟล์หลุดไป
+      if (hiddenLayers) results.appendChild(el("div", { class: "note warn" }, HIDDEN_LAYERS_WARNING));
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.count} หน้า`, `${m.count} pages`))]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

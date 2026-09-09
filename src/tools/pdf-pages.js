@@ -1,4 +1,4 @@
-import { loadPdfLib, ENCRYPTED_WARNING, openPdf, passwordBox } from "../pdfopen.js";
+import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
@@ -248,7 +248,7 @@ export function mount(tool) {
     st.info(tr("กำลังบันทึก…", "Saving…"));
     try {
       const { PDFDocument, degrees } = PDFLib;
-      const { doc: src, encrypted } = await loadPdfLib(file);
+      const { doc: src, encrypted, hiddenLayers } = await loadPdfLib(file);
       const out = await PDFDocument.create();
       const copied = await out.copyPages(src, keep.map((k) => k.index));
       copied.forEach((page, i) => {
@@ -261,6 +261,8 @@ export function mount(tool) {
       const blob = new Blob([await out.save()], { type: "application/pdf" });
       st.ok(tr(`บันทึกแล้ว ${keep.length} หน้า`, `Saved, ${keep.length} pages`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
+      // ‼️ ชั้นที่ผู้ใช้ซ่อนไว้จะกลายเป็นมองเห็นได้ในไฟล์ผลลัพธ์ ต้องบอกก่อนไฟล์หลุดไป
+      if (hiddenLayers) results.appendChild(el("div", { class: "note warn" }, HIDDEN_LAYERS_WARNING));
       const name = stripExt(file.name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${keep.length} หน้า`, `${keep.length} pages`))]),

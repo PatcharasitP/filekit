@@ -52,6 +52,10 @@
 #      ผู้ใช้คลิกบนภาพที่หมุนตาม /Rotate มาแล้ว แต่พิกัดในไฟล์ไม่ได้หมุนตาม
 #      ถ้าเอาสัดส่วนที่คลิกไปใช้ตรง ๆ ลายเซ็นไปโผล่คนละมุม บางองศาหลุดออกนอกหน้าไปเลย
 #
+#   ⑭ PDF ที่มีชั้น (OCG) ซึ่งผู้ใช้ตั้งใจซ่อนไว้
+#      ไลบรารีที่ประกอบไฟล์ใหม่คัดลอกโครงสร้างชั้นไปไม่ได้ ของที่เคยซ่อนจึงมองเห็นได้ในผลลัพธ์
+#      วัดจริงแล้วต้นฉบับเห็นพิกเซลของชั้นที่ซ่อน 0% แต่ไฟล์ผลลัพธ์เห็น 37%
+#
 # ‼️ หน้าเว็บมี Content-Security-Policy ที่ไม่มี unsafe-eval — wait_for_function
 #    ต้องส่งสตริงที่เป็นฟังก์ชันลูกศรเท่านั้น (มีเทสจับกฎนี้ใน accepts.test.mjs)
 #
@@ -434,6 +438,19 @@ def make_signature_png():
     return p
 
 
+def make_layered_pdf():
+    """PDF ที่มีชั้น (OCG) ซึ่งผู้ใช้ตั้งใจซ่อนไว้ ใส่กล่องแดงทึบเพื่อให้เห็นชัดถ้ามันโผล่"""
+    d = fitz.open()
+    page = d.new_page(width=400, height=300)
+    page.insert_text((40, 60), "PUBLIC TEXT", fontsize=20)
+    ocg = d.add_ocg("ความลับ", on=False)
+    page.draw_rect(fitz.Rect(40, 120, 360, 260), color=(0.8, 0, 0), fill=(0.9, 0.1, 0.1), oc=ocg)
+    p = TMP / "มีชั้นซ่อน.pdf"
+    d.save(p)
+    d.close()
+    return p
+
+
 def press(pg, pattern):
     """กดปุ่มที่มองเห็นจริงด้วย evaluate — ระหว่างที่เครื่องมือทำงานหนัก .click() ของ Playwright
     จะรอจนงานเสร็จก่อนค่อยกด ทำให้ทดสอบผิดเคสโดยไม่รู้ตัว (บทเรียน 09/09/2026)"""
@@ -468,6 +485,7 @@ def main():
     locked = make_owner_locked_pdf()
     date_xlsx = make_date_xlsx()
     sig_png = make_signature_png()
+    layered = make_layered_pdf()
     text_pdf = make_text_pdf(False)
     compact_pdf = make_text_pdf(True)
 
@@ -891,6 +909,21 @@ def main():
                sorted(r for r, _ in spots), [0, 90, 180, 270])
             ck("ลายเซ็นไปอยู่มุมบนซ้ายทุกหน้า ไม่ว่าหน้าจะหมุนกี่องศา",
                [(r, w) for r, w in spots if w != "บนซ้าย"], [])
+
+            # ── ⑭ PDF ที่มีชั้นซ่อนไว้ ต้องเตือนก่อนไฟล์หลุด ────────────────────────────
+            print("\n── ⑭ PDF ที่มีชั้นซ่อนไว้ ──")
+            pg.goto("about:blank")
+            pg.goto(f"{base}/#/pdf-split", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files(str(layered))
+            pg.wait_for_timeout(2500)
+            press(pg, "แยกไฟล์|แยก")
+            pg.wait_for_timeout(4000)
+            says = " ".join(pg.locator(".status, .note").all_inner_texts())
+            # ‼️ ไลบรารีที่ประกอบไฟล์ใหม่คัดลอกโครงสร้างชั้นไปไม่ได้ ของที่เคยซ่อนจะโผล่มา
+            #    เป็นเรื่องความเป็นส่วนตัว ต้องบอกก่อน ไม่ใช่ให้รู้ตอนไฟล์หลุดไปแล้ว
+            ck("เตือนว่าไฟล์มีชั้นที่ซ่อนไว้ และของที่ซ่อนจะมองเห็นได้",
+               ("ชั้นที่ถูกซ่อน" in says and "มองเห็นได้" in says), True)
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

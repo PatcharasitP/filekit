@@ -96,7 +96,8 @@ export async function loadPdfLib(file) {
   const { PDFDocument } = PDFLib;
   const buf = await file.arrayBuffer();
   try {
-    return { doc: await PDFDocument.load(buf), encrypted: false };
+    const doc = await PDFDocument.load(buf);
+    return { doc, encrypted: false, hiddenLayers: countHiddenLayers(doc) };
   } catch (e) {
     if (/encrypt/i.test(String(e?.message || e))) throw new Error(ENCRYPTED_BLOCKED);
     console.error(e);
@@ -105,6 +106,29 @@ export async function loadPdfLib(file) {
     throw new Error(`${file.name}: ${e?.message || e}`);
   }
 }
+
+/* ‼️ PDF รองรับ "ชั้น" (Optional Content Group) ที่ผู้ใช้สั่งซ่อนไว้ได้ เช่นชั้นร่าง
+ * ชั้นราคาต้นทุน หรือชั้นที่ใช้ปิดทับข้อมูลส่วนตัว · ไลบรารีที่เราใช้ประกอบไฟล์ใหม่
+ * ไม่ได้คัดลอกโครงสร้างชั้นไปด้วย ผลคือของที่เคยซ่อนอยู่ "กลายเป็นมองเห็นได้" ในไฟล์ผลลัพธ์
+ * (ยิงจริง 09/09/2026: ไฟล์ต้นฉบับเห็นพิกเซลสีของชั้นที่ซ่อน 0% ไฟล์ผลลัพธ์เห็น 37%)
+ * นี่คือเรื่องความเป็นส่วนตัว ต้องบอกผู้ใช้ก่อน ไม่ใช่ปล่อยให้รู้ตอนไฟล์หลุดไปแล้ว */
+export function countHiddenLayers(doc) {
+  try {
+    const { PDFName } = PDFLib;
+    const oc = doc.catalog.lookup(PDFName.of("OCProperties"));
+    const d = oc && oc.lookup && oc.lookup(PDFName.of("D"));
+    const off = d && d.lookup && d.lookup(PDFName.of("OFF"));
+    return off && typeof off.size === "function" ? off.size() : 0;
+  } catch {
+    return 0;                 // อ่านโครงสร้างไม่ได้ ถือว่าไม่มี ดีกว่าทำให้ทั้งไฟล์แปลงไม่ผ่าน
+  }
+}
+
+export const HIDDEN_LAYERS_WARNING = tr(
+  "ไฟล์ต้นฉบับมีชั้นที่ถูกซ่อนไว้ เครื่องมือนี้คัดลอกโครงสร้างชั้นไปด้วยไม่ได้ " +
+  "เนื้อหาที่เคยซ่อนจะมองเห็นได้ในไฟล์ผลลัพธ์ ถ้าเป็นข้อมูลที่ไม่ควรเผยแพร่ ให้ลบชั้นนั้นทิ้งก่อน",
+  "The original file has hidden layers. This tool cannot carry the layer structure over, so content " +
+  "that used to be hidden will be visible in the result. If it is private, delete that layer first.");
 
 export const ENCRYPTED_BLOCKED = tr(
   "ไฟล์นี้ถูกเข้ารหัสไว้ เครื่องมือนี้แก้ไขไฟล์ที่เข้ารหัสไม่ได้ ถ้าฝืนทำต่อจะได้ไฟล์ที่เปิดไม่ขึ้น " +

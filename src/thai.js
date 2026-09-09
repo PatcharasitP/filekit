@@ -75,11 +75,24 @@ export function scoreText(s) {
 // ลายเซ็นของ "ไทยเพี้ยนซ้อน 2 ชั้น": UTF-8 ของอักษรไทยคือ E0 B8 xx / E0 B9 xx
 //  · อ่านผิดด้วยตาราง 874  → เธ / เน   (เช่น "เธชเธงเธฑเธชเธ”เธต")
 //  · อ่านผิดด้วยตาราง 1252 → à¸ / à¹  (เช่น "à¸ªà¸§à¸±")
+export function doubleEncodeMarks(s) {
+  return (s.match(/เ[ธน]/g) || []).length + (s.match(/à[¸¹]/g) || []).length;
+}
+
+/* ‼️ ต้องมี "หลักฐานพอ" ก่อนตัดสินว่าเพี้ยนซ้อน ไม่ใช่แค่สัดส่วนตัวอักษรผ่านเกณฑ์
+ * เหตุผล: ไบต์ TIS-620 ของ ธ (0xB8) กับ น (0xB9) ตรงกับไบต์ที่ 2 ของ UTF-8 อักษรไทย
+ * ทุกตัว (U+0E00–U+0E7F) พอดี ทำให้พยางค์ไทยแท้รูป "เ + ธ/น + พยัญชนะ" แกะกลับ
+ * "สำเร็จ" ได้เสมอทั้งที่ไม่ได้เพี้ยนเลย เช่น "เธก" แกะได้ "ม" แล้วเนื้อหาจริงพังทันที
+ * (ยิงครบ 62 คู่ เธ/เน + พยัญชนะ ก-ฟ แกะสำเร็จผิดทั้ง 62 คู่ — จับได้จาก
+ *  tests/thai_adversarial.test.mjs) · ไฟล์ที่เพี้ยนจริงมีร่องรอยเป็นสิบเป็นร้อยจุด
+ * ไม่ใช่ 1-3 จุด ดังนั้นตั้งพื้นหลักฐานขั้นต่ำไว้ · ต่ำกว่านั้น "เสนอเป็นตัวเลือก" ได้
+ * แต่ห้ามเลือกให้เอง — แก้ข้อมูลถูกให้พังเงียบ ๆ แย่กว่าไม่ซ่อมให้
+ * (หลักเดียวกับ [[reference_thai_encoding_detect_repair]]: ใช้กฎเรียงชั้น ไม่ใช่ให้คะแนน) */
+export const MIN_DOUBLE_ENCODE_MARKS = 6;
+
 export function looksDoubleEncoded(s) {
-  const marks =
-    (s.match(/เ[ธน]/g) || []).length +
-    (s.match(/à[¸¹]/g) || []).length;
-  if (!marks) return false;
+  const marks = doubleEncodeMarks(s);
+  if (marks < MIN_DOUBLE_ENCODE_MARKS) return false;
   const letters = (s.match(/[^\s\d\p{P}\p{S}]/gu) || []).length || 1;
   return (marks * 2) / letters > 0.4;
 }
@@ -152,15 +165,23 @@ export function analyzeBytes(u8, sampleBytes = 65536) {
 
   let best = cands.find((c) => c.enc === pickEnc) || cands[0] || null;
   // ชั้นสุดท้าย: เป็น UTF-8 ที่ถูกต้องอยู่แล้ว แต่เนื้อในเป็นไทยที่เคยถูกอ่านผิดมาก่อน (เพี้ยนซ้อน)
-  if (best && best.enc === "utf-8" && looksDoubleEncoded(best.text)) {
+  if (best && best.enc === "utf-8" && doubleEncodeMarks(best.text)) {
     const fixed = undoDoubleEncode(best.text);
     if (fixed) {
-      best = { enc: "utf-8", undo: true, via: fixed.via, text: fixed.text,
+      const cand = { enc: "utf-8", undo: true, via: fixed.via, text: fixed.text,
         label: tr(`UTF-8 ที่เคยถูกอ่านผิดเป็น ${ENC_LABEL[fixed.via] || fixed.via}`, `UTF-8, previously misread as ${ENC_LABEL[fixed.via] || fixed.via}`),
         ...scoreText(fixed.text) };
-      why = tr("ไฟล์เป็น UTF-8 ที่ถูกต้อง แต่ข้างในเป็นภาษาไทยที่เคยถูกอ่านผิดแล้วบันทึกซ้ำ",
-              "The file is valid UTF-8, but the Thai text inside was misread once before and saved again");
-      cands.unshift(best);
+      if (looksDoubleEncoded(best.text)) {
+        // หลักฐานพอ → เลือกให้เลย
+        best = cand;
+        why = tr("ไฟล์เป็น UTF-8 ที่ถูกต้อง แต่ข้างในเป็นภาษาไทยที่เคยถูกอ่านผิดแล้วบันทึกซ้ำ",
+                "The file is valid UTF-8, but the Thai text inside was misread once before and saved again");
+        cands.unshift(cand);
+      } else {
+        // ‼️ ร่องรอยน้อยเกินจะฟันธง (อาจเป็นภาษาไทยที่ถูกต้องอยู่แล้ว) — เสนอไว้ให้เลือกเอง
+        //    ไม่เลือกให้ เพราะถ้าเดาผิดคือแก้ข้อมูลที่ถูกอยู่แล้วให้พังโดยผู้ใช้ไม่รู้ตัว
+        cands.push(cand);
+      }
     }
   }
   const rest = cands.filter((c) => c !== best).sort((a, b) => b.score - a.score);

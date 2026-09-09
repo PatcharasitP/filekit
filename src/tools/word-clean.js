@@ -62,7 +62,9 @@ export function mount(tool) {
 
   function renderReport() {
     const dirty = reports.filter((r) => r.report.anything).length;
-    reportBox.append(el("div", { class: "status show " + (dirty ? "err" : "ok") },
+    // ‼️ ผลตรวจโผล่มาเองหลังอ่านไฟล์เสร็จ ต้องประกาศให้โปรแกรมอ่านหน้าจอได้ยินด้วย
+    //    ไม่ใช่แค่โชว์ให้ตาเห็น (แถบสถานะอีกก้อนมี role นี้อยู่แล้ว ก้อนนี้เคยไม่มี)
+    reportBox.append(el("div", { class: "status show " + (dirty ? "err" : "ok"), role: "status", "aria-live": "polite" },
       dirty
         ? tr(`พบร่องรอยที่ควรล้างใน ${dirty} จาก ${reports.length} ไฟล์`, `Found traces to clean in ${dirty} of ${reports.length} files`)
         : tr(`ตรวจแล้ว ${reports.length} ไฟล์ — ไม่พบร่องรอยที่ต้องล้าง`, `Checked ${reports.length} files — nothing to clean`)));

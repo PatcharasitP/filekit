@@ -42,9 +42,13 @@ def ck(tool, what, name, got, want, contains=False):
 
 
 def wait_status(pg, substr, timeout=20000):
-    """รอจนกล่องสถานะ (.status) มีข้อความที่มี substr อยู่ในนั้น, ทนกว่าการรอ class เฉย ๆ"""
+    """รอจนกล่องสถานะ (.status) มีข้อความที่มี substr อยู่ในนั้น, ทนกว่าการรอ class เฉย ๆ
+    ‼️ ใช้ querySelectorAll ไม่ใช่ querySelector ตัวเดียว — บางเครื่องมือ (เช่น word-clean) มี
+    .status สองก้อนพร้อมกันบนหน้า (สรุปผลสแกนของ reportBox ค้างอยู่ถาวร + แถบสถานะจริงของ st.node
+    ที่มาทีหลังใน DOM) querySelector ตัวเดียวจะไปติดอยู่กับก้อนแรกที่ไม่เคยอัปเดตข้อความอีกเลย
+    แล้วรอจนไทม์เอาต์ทั้งที่งานจริงเสร็จไปนานแล้ว"""
     pg.wait_for_function(
-        "(t) => { const el = document.querySelector('.status'); return !!(el && el.textContent.includes(t)); }",
+        "(t) => [...document.querySelectorAll('.status')].some((el) => el.textContent.includes(t))",
         arg=substr, timeout=timeout,
     )
 
@@ -175,9 +179,16 @@ def make_xlsx_rows(path, headers, rows):
 
 
 def read_docx_text(data: bytes):
-    """คืนข้อความทุกย่อหน้ารวมกัน (join ด้วย \\n) จาก bytes ของ .docx"""
+    """คืนข้อความทุกย่อหน้า + ทุกเซลล์ตาราง รวมกัน (join ด้วย \\n) จาก bytes ของ .docx
+    ‼️ d.paragraphs ของ python-docx คืนเฉพาะย่อหน้าระดับบนสุด ไม่รวมย่อหน้าในตาราง —
+    ต้องไล่ d.tables เพิ่มเอง ไม่งั้นเนื้อหาในตาราง (เช่นที่ word-replace ต้องแก้ด้วย) จะหายไปจากการตรวจทั้งที่ไฟล์จริงมี"""
     d = docx.Document(io.BytesIO(data))
-    return "\n".join(p.text for p in d.paragraphs)
+    parts = [p.text for p in d.paragraphs]
+    for t in d.tables:
+        for row in t.rows:
+            for cell in row.cells:
+                parts.append(cell.text)
+    return "\n".join(parts)
 
 
 def read_pdf_texts(data: bytes):
@@ -359,8 +370,13 @@ def test_word_to_pdf(pg):
 
     texts = read_pdf_texts(out.read_bytes())
     full = "\n".join(texts)
-    ck(tool, "หัวข้อภาษาไทยแปลงมาโดยไม่เพี้ยน (ค้นหาเจอตรงตัว)", "พบหัวข้อในผลลัพธ์ PDF", heading in full, True)
-    ck(tool, "เนื้อย่อหน้าภาษาไทย (สระ/วรรณยุกต์ครบ) แปลงมาโดยไม่เพี้ยน", "พบย่อหน้าในผลลัพธ์ PDF", para in full, True)
+    # ‼️ ประโยคยาวถูกตัดขึ้นบรรทัดใหม่จริงตามความกว้างหน้ากระดาษ (jsPDF splitTextToSize) —
+    # เป็นพฤติกรรมที่ตั้งใจ ไม่ใช่บั๊ก (สังเกตจริง: "...เช่น ก่อน\nก้อน กี่..." ตัด ณ ช่องว่างเดิมพอดี)
+    # จึงยุบช่องว่างก่อนเทียบ ไม่เทียบดิบ ๆ
+    norm = re.sub(r"\s+", " ", full).strip()
+    ck(tool, "หัวข้อภาษาไทยแปลงมาโดยไม่เพี้ยน (ค้นหาเจอตรงตัว)", "พบหัวข้อในผลลัพธ์ PDF", heading in norm, True)
+    ck(tool, "เนื้อย่อหน้าภาษาไทย (สระ/วรรณยุกต์ครบ) แปลงมาโดยไม่เพี้ยน — เทียบหลังยุบช่องว่าง/บรรทัดตัดคำ",
+       "พบย่อหน้าในผลลัพธ์ PDF (normalize whitespace)", para in norm, True)
     ck(tool, "ไม่มีอักขระ replacement char (สระ/วรรณยุกต์หาย) ปนมา", "มี U+FFFD ในผลลัพธ์ไหม", "�" in full, False)
 
 

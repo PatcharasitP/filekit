@@ -27,6 +27,8 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_perfbudget.py # เพดานไบต์ FCP CLS long task เวลาเปิดเครื่องมือ
 ../.venv/bin/python tests/browser_swupdate.py   # ปล่อยเวอร์ชันใหม่แล้วผู้ใช้เดิมเห็นเมื่อไร (เปิด server เอง)
 ../.venv/bin/python tests/browser_crossbrowser.py  # เคสเดียวกันบน chromium + firefox (+ webkit ถ้าติดตั้งได้)
+../.venv/bin/python tests/browser_word.py       # เปิดไฟล์ Word/PDF ผลลัพธ์ตรวจเนื้อใน 6 เครื่องมือสายเอกสาร
+node tests/thai_adversarial.test.mjs            # ยิงข้อมูลไทยโหด ๆ ใส่เครื่องมือไทย (ตรรกะล้วน)
 
 # ③ ยิงใส่เว็บจริง (ประตู 2 — ต้องทำก่อนปิดงานทุกครั้ง)
 FK_BASE=https://patcharasitp.github.io/filekit ../.venv/bin/python tests/browser_ux.py

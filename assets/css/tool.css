@@ -836,3 +836,22 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
    ทั้งที่เป็นคนละเรื่อง (บอกผล / ของที่ได้ / ข้อควรรู้) */
 .results{ margin-top:14px }
 .results + .note{ margin-top:16px }
+
+/* ── หน้าที่มีตัวเลือกหลายช่อง อ่านเป็นขั้นตอน ไม่ใช่ก้อนเดียว ────────────────────────
+   ‼️ วัดจากหน้าจริง (สลับปี พ.ศ. กับ ค.ศ. มี 5 ช่องเรียงกัน): ป้ายชื่อช่องกับค่าในช่อง
+   มีน้ำหนักใกล้กันมาก และทุกแถวห่างเท่ากันหมด ตาจึงกวาดเป็นบล็อกเดียวแล้วต้องอ่านซ้ำ
+   แก้ด้วยการทำให้ป้ายชื่อช่องเป็น "หัวข้อย่อย" ที่ต่างจากค่าชัดเจน แล้วเพิ่มจังหวะ
+   ระหว่างแถว (ไม่แตะขนาดช่องกรอก เพราะเกณฑ์นิ้วกด 36px บนมือถือผ่านอยู่แล้ว) */
+.field > label:first-child,
+.field{ letter-spacing:.005em }
+.field{ font-size:12.5px; color:var(--text-dim) }
+.field input,.field select,.field textarea{
+  font-size:14.5px; color:var(--text); font-weight:600; min-height:40px;
+}
+.row{ margin-top:18px; row-gap:16px }
+.row + .row{ margin-top:16px }
+
+/* ตารางพรีวิวผลแปลง (เครื่องมือสายไทย) — เดิมหัวตารางกับเนื้อกลืนกัน
+   เน้นเฉพาะ "คอลัมน์ผลลัพธ์" ให้รู้ว่าอันไหนคือของใหม่ที่เพิ่งแปลงมา */
+.xt th{ font-size:12.5px; letter-spacing:.01em; color:var(--text-dim) }
+.xt td:last-child{ font-weight:700; color:var(--text) }

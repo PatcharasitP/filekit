@@ -11,18 +11,50 @@ import { tr } from "./i18n.js";
 
 const TEXTY = ["csv", "txt", "tsv"];
 
+/* ‼️ SheetJS แปลงเลขวันที่ของ Excel โดยอิงจุดเริ่ม 30/12/1899 "ตามเขตเวลาของเครื่องผู้ใช้"
+ * ประเทศไทยก่อนปี 2463 ใช้เวลาท้องถิ่น +06:42:04 ซึ่งไม่ลงตัวเป็นนาที
+ * JavaScript ปัดเศษวินาทีทิ้งจากค่า offset ทุกวันที่ที่อ่านจาก .xlsx จึงเพี้ยนไป 4 วินาที
+ * วันที่ล้วนกลายเป็น 23:59:56 ของ "วันก่อนหน้า" พอเอาไปแสดงผลจะได้วันผิดไป 1 วันทั้งไฟล์
+ *
+ * พิสูจน์แล้ว 09/09/2026: เซลล์วันที่ 1 ก.ย. 2026 อ่านได้เป็น 31 ส.ค. 2026 เวลา 23:59:56
+ * ในเครื่องเขตเวลาไทย แต่ถ้าตั้งเครื่องเป็น UTC อ่านได้ 1 ก.ย. 2026 00:00:00 ถูกต้อง
+ * (new Date(1899,11,30) ในเครื่องนี้คืน 1899-12-29T17:17:56Z คือ +06:42:04 ไม่ใช่ +07:00)
+ *
+ * แก้โดยดึงค่ากลับเข้าเส้นนาทีเมื่อห่างไม่เกิน 6 วินาที ซึ่งครอบคลุมความคลาดเคลื่อนนี้พอดี
+ * และไม่ไปแตะเวลาที่มีวินาทีจริงเป็นเรื่องเป็นราว (เช่น 10:30:12 ห่างเส้นนาที 12 วินาที ไม่ถูกแตะ) */
+const SKEW_TOLERANCE_MS = 6000;
+
+export function fixExcelDateSkew(wb) {
+  for (const name of wb.SheetNames || []) {
+    const ws = wb.Sheets[name];
+    if (!ws) continue;
+    for (const addr of Object.keys(ws)) {
+      if (addr[0] === "!") continue;               // !ref, !merges ฯลฯ ไม่ใช่เซลล์
+      const cell = ws[addr];
+      if (!cell || cell.t !== "d" || !(cell.v instanceof Date)) continue;
+      const ms = cell.v.getTime();
+      if (!Number.isFinite(ms)) continue;
+      const off = ((ms % 60000) + 60000) % 60000;  // ห่างจากเส้นนาทีก่อนหน้ากี่มิลลิวินาที
+      const delta = off <= SKEW_TOLERANCE_MS ? -off
+        : (60000 - off <= SKEW_TOLERANCE_MS ? 60000 - off : 0);
+      if (delta) cell.v = new Date(ms + delta);
+    }
+  }
+  return wb;
+}
+
 /** อ่านไฟล์เป็นสมุดงาน — ไฟล์ข้อความจะเดาการเข้ารหัสให้เองด้วย (ไทยเพี้ยนก็อ่านออก) */
 export async function readWorkbook(file) {
   const buf = new Uint8Array(await file.arrayBuffer());
   const ext = (file.name.split(".").pop() || "").toLowerCase();
   if (!TEXTY.includes(ext))
-    return { wb: XLSX.read(buf, { type: "array", cellDates: true }), encNote: null };
+    return { wb: fixExcelDateSkew(XLSX.read(buf, { type: "array", cellDates: true })), encNote: null };
 
   const d = smartDecode(buf);
   let encNote = null;
   if (d.undo) encNote = tr("ไฟล์นี้ไทยเพี้ยนซ้อน ซ่อมให้แล้ว", "Thai text was double-garbled, fixed automatically");
   else if (d.enc !== "utf-8") encNote = tr(`เข้ารหัส ${ENC_LABEL[d.enc] || d.enc} แปลงแล้ว`, `${ENC_LABEL[d.enc] || d.enc} encoding, converted`);
-  return { wb: XLSX.read(d.text, { type: "string", cellDates: true }), encNote };
+  return { wb: fixExcelDateSkew(XLSX.read(d.text, { type: "string", cellDates: true })), encNote };
 }
 
 /* ‼️ ตารางจริงจำนวนมากใช้หัวตาราง 2 ชั้น แถวบนผสานช่องเป็นชื่อหมวด แถวล่างเป็นชื่อคอลัมน์ย่อย

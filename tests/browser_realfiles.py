@@ -43,6 +43,11 @@
 #      ไลบรารีที่ใช้เขียนไฟล์ไม่มีโค้ดถอดรหัสเลย ถ้าฝืนทำต่อจะได้ไฟล์ที่หน้าว่างเปล่า
 #      หรือเปิดไม่ขึ้นเลย ทั้งที่สถานะขึ้นว่าสำเร็จ ต้องหยุดแล้วบอกวิธีแก้แทน
 #
+#   ⑫ วันที่จากไฟล์ Excel ในเครื่องเขตเวลาไทย
+#      ไลบรารีอ่าน .xlsx แปลงเลขวันที่โดยอิงจุดเริ่ม 30/12/1899 ตามเขตเวลาเครื่อง
+#      ไทยก่อนปี 2463 ใช้ +06:42:04 ซึ่งไม่ลงตัวเป็นนาที ทุกวันที่จึงคลาดไป 4 วินาที
+#      กลายเป็น 23:59:56 ของวันก่อนหน้า แล้วแสดงผลเป็นวันผิดไป 1 วันทั้งไฟล์
+#
 # ‼️ หน้าเว็บมี Content-Security-Policy ที่ไม่มี unsafe-eval — wait_for_function
 #    ต้องส่งสตริงที่เป็นฟังก์ชันลูกศรเท่านั้น (มีเทสจับกฎนี้ใน accepts.test.mjs)
 #
@@ -401,6 +406,19 @@ def make_owner_locked_pdf():
     return p
 
 
+def make_date_xlsx():
+    """xlsx ที่มีคอลัมน์วันที่ล้วน (ไม่มีเวลา) ซึ่งเป็นเคสที่โดนความคลาดเคลื่อนของไลบรารีเต็ม ๆ"""
+    import datetime
+    wb = openpyxl.Workbook(); ws = wb.active
+    ws.append(["ชื่อ", "วันที่เริ่ม"])
+    ws.append(["สมชาย", datetime.date(2026, 9, 1)])
+    ws.append(["สมหญิง", datetime.date(2026, 1, 31)])
+    ws.append(["อานันท์", datetime.date(2026, 12, 25)])
+    p = TMP / "วันที่.xlsx"
+    wb.save(p)
+    return p
+
+
 def press(pg, pattern):
     """กดปุ่มที่มองเห็นจริงด้วย evaluate — ระหว่างที่เครื่องมือทำงานหนัก .click() ของ Playwright
     จะรอจนงานเสร็จก่อนค่อยกด ทำให้ทดสอบผิดเคสโดยไม่รู้ตัว (บทเรียน 09/09/2026)"""
@@ -433,6 +451,7 @@ def main():
     hf_doc = make_docx_with_header_footer()
     num_docs = [make_docx_numbered("AAA", "decimal"), make_docx_numbered("BBB", "thaiLetters")]
     locked = make_owner_locked_pdf()
+    date_xlsx = make_date_xlsx()
     text_pdf = make_text_pdf(False)
     compact_pdf = make_text_pdf(True)
 
@@ -793,6 +812,20 @@ def main():
                 ck(f"{tool}: บอกตรง ๆ ว่าเข้ารหัสไว้ และบอกวิธีแก้",
                    ("เข้ารหัส" in says and "ปลดล็อก" in says), True)
                 ck(f"{tool}: ไม่ขึ้นข้อความ Error แบบดิบ ๆ", "Error:" in says, False)
+
+            # ── ⑫ วันที่จากไฟล์ Excel ต้องไม่เพี้ยนไป 1 วัน ────────────────────────────
+            print("\n── ⑫ วันที่จากไฟล์ Excel ──")
+            pg.goto("about:blank")
+            pg.goto(f"{base}/#/thai-date", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files(str(date_xlsx))
+            pg.wait_for_timeout(2500)
+            olds = pg.evaluate("() => [...document.querySelectorAll('td.old')].map(e=>e.textContent.trim())")
+            ck("อ่านตารางวันที่ได้จริง (ประชากรต้องไม่เป็นศูนย์)", len(olds) >= 3, True)
+            # ‼️ ในเขตเวลาไทย ไลบรารีอ่านวันที่ล้วนคลาดไป 4 วินาที กลายเป็น 23:59:56 ของวันก่อนหน้า
+            #    ถ้าไม่ดึงกลับเข้าเส้นนาที ทุกวันที่ในไฟล์จะเลื่อนไป 1 วันโดยไม่มีอะไรฟ้อง
+            ck("วันที่ตรงกับที่อยู่ในไฟล์ทุกแถว",
+               [w for w in ("01/09/2026", "31/01/2026", "25/12/2026") if w not in olds], [])
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

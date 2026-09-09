@@ -52,7 +52,7 @@ if (!document.getElementById("rz-style")) {
 .rz-compare.busy{opacity:.55}
 .rz-tag{
   position:absolute;top:10px;font-size:11px;font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;
-  background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(6px);color:var(--text-dim);
+  background:color-mix(in srgb,var(--card) 82%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--text-dim);
   border:1px solid var(--line-soft);pointer-events:none;z-index:3;
 }
 .rz-tag-l{left:10px}

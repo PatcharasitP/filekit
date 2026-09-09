@@ -491,7 +491,14 @@ export async function viewFile(file, allFiles) {
   //    (ตัวดัก pointerdown ด้านบนไม่ทันครั้งแรก เพราะโมดูลนี้เพิ่งถูก import ตอนคลิก)
   if (document.activeElement instanceof HTMLElement && !document.activeElement.closest('dialog.pv'))
     openerEl = document.activeElement;
-  d.showModal();
+  /* ‼️ Safari รู้จัก <dialog>.showModal() ตั้งแต่รุ่น 15.4 (มีนาคม 2022) เท่านั้น
+   * รุ่นก่อนหน้านั้น showModal เป็น undefined เรียกแล้วโยน TypeError ทันที
+   * ผลคือกดภาพย่อแล้วตัวดูรูปไม่เปิดเลย และ error หลุดไปคอนโซลด้วย
+   * เปิดแบบธรรมดาแทนได้ (ยังเห็นภาพและปิดด้วยปุ่มกากบาทได้ แค่ไม่กันโฟกัสให้)
+   * เครื่องนี้ทดสอบ WebKit จริงไม่ได้ (ลง system library ไม่ได้เพราะต้องใช้ sudo)
+   * จึงกันไว้ตามเอกสารรองรับของ Safari แทนการยืนยันด้วยการรันจริง */
+  if (typeof d.showModal === "function") d.showModal();
+  else d.setAttribute("open", "");
 
   await loadIntoStage(list[idx], idx);
   renderFrame();

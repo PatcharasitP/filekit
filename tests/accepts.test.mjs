@@ -184,6 +184,35 @@ ck(middotHits.length + htmlMiddot.length === 0,
   void enBlock;
 }
 
+/* ‼️ Safari รู้จัก backdrop-filter แบบไม่มี prefix ตั้งแต่รุ่น 18 เท่านั้น (ปลายปี 2024)
+   คนที่ยังใช้รุ่นเก่ากว่านั้นจะไม่ได้เบลอเลย ซึ่งไม่ใช่แค่สวยน้อยลง — พื้นหลังโปร่ง 12-18%
+   ที่ไม่ถูกเบลอทำให้ตัวหนังสือทับกับภาพข้างหลังจนอ่านไม่ออก
+   เครื่องนี้ทดสอบ WebKit จริงไม่ได้ (ลง system library ไม่ได้เพราะต้องใช้ sudo)
+   จึงต้องกันด้วยการตรวจโค้ดแทน — ทุกจุดที่ใช้ต้องมีคู่ -webkit- เสมอ */
+{
+  const cssFiles = ["index.html", "assets/css/tool.css",
+    ...toolFiles.map((n) => join("src/tools", n)),
+    ...readdirSync(join(ROOT, "src")).filter((n) => n.endsWith(".js")).map((n) => join("src", n))];
+  const missing = [];
+  let found = 0;
+  for (const f of cssFiles) {
+    const txt = readFileSync(join(ROOT, f), "utf8");
+    const lines = txt.split("\n");
+    lines.forEach((ln, i) => {
+      const t = ln.trimStart();
+      if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) return;
+      if (!/(?<!-webkit-)backdrop-filter\s*:/.test(ln)) return;
+      found++;
+      const nearby = lines.slice(i, i + 2).join("\n");
+      if (!nearby.includes("-webkit-backdrop-filter")) missing.push(`${f}:${i + 1}`);
+    });
+  }
+  ck(found > 0, `หา backdrop-filter เจอ (${found} จุด — ประชากรต้องไม่เป็นศูนย์)`);
+  ck(missing.length === 0,
+     `backdrop-filter ทุกจุดต้องมีคู่ -webkit- ให้ Safari รุ่นก่อน 18 (ขาด ${missing.length})` +
+     (missing.length ? "\n      " + missing.join(", ") : ""));
+}
+
 /* ‼️ CSP ของหน้าเว็บไม่มี 'unsafe-eval' (โดยเจตนา) — Playwright จะไปใช้ eval() ในหน้าเว็บ
    ทันทีที่ wait_for_function ได้รับ "นิพจน์เปล่า" แทน "ฟังก์ชันลูกศร" ผลคือเทสตายทั้งไฟล์
    ด้วย EvalError ซึ่งอ่านแล้วดูเหมือนเว็บพัง ทั้งที่เว็บปกติ (เจอจริง 09/09/2026)

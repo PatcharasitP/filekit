@@ -102,7 +102,7 @@
    ‼️ pointer-events:none เด็ดขาด ไม่งั้นตัวมันเองจะไปกิน dragleave/drop ของหน้า */
 .dropveil{position:fixed;inset:0;z-index:60;display:grid;place-items:center;pointer-events:none;
   opacity:0;transition:opacity .16s ease;background:color-mix(in srgb,var(--brand) 16%,transparent);
-  backdrop-filter:blur(2px)}
+  backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px)}
 .dropveil.on{opacity:1}
 .dropveil.on .dropveil-in{transform:scale(1)}
 .dropveil .dropveil-in{transform:scale(.92)}
@@ -608,8 +608,13 @@
 }
 .ws-toolbar{
   position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-  padding:9px 12px; background:color-mix(in srgb,var(--card) 88%,transparent);
-  backdrop-filter:blur(10px); border-bottom:1px solid var(--line-soft);
+  padding:9px 12px;
+  /* ‼️ Safari ก่อนรุ่น 16.2 ไม่รู้จัก color-mix() แล้วทิ้งทั้งบรรทัด แถบนี้จะกลายเป็นใส
+     สนิท เนื้อหาที่เลื่อนอยู่ข้างหลังจะทะลุมาทับตัวหนังสือจนอ่านไม่ออก
+     ใส่สีทึบไว้ก่อนหนึ่งบรรทัด รุ่นเก่าใช้บรรทัดนี้ รุ่นใหม่ทับด้วยบรรทัดถัดไป */
+  background:var(--card);
+  background:color-mix(in srgb,var(--card) 88%,transparent);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid var(--line-soft);
 }
 .ws-toolbar .btn{padding:7px 14px;font-size:13px;min-height:34px}
 .ws-toolbar .sep{width:1px;height:20px;background:var(--line);margin-inline:4px}
@@ -680,6 +685,8 @@ select,
     position:sticky; bottom:0; z-index:6;
     margin-inline:calc(var(--sp4) * -1);
     padding:var(--sp3) var(--sp4) calc(var(--sp3) + env(safe-area-inset-bottom,0px));
+    /* ‼️ สีทึบสำรองสำหรับ Safari ก่อน 16.2 ที่ไม่รู้จัก color-mix() (ดูเหตุผลที่ .ws-toolbar) */
+    background:var(--card);
     background:color-mix(in srgb, var(--card) 92%, transparent);
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border-top:1px solid var(--line-soft);

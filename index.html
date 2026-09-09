@@ -208,6 +208,10 @@ body.tool .skip{display:none}
   transition:background var(--t-panel) var(--ease), border-color var(--t-panel) var(--ease);
 }
 :root[data-scrolled] .top{
+  /* ‼️ Safari ก่อนรุ่น 16.2 ไม่รู้จัก color-mix() แล้วทิ้งทั้งบรรทัด แถบบนจะกลายเป็นใสสนิท
+     เนื้อหาที่เลื่อนอยู่ข้างหลังทะลุมาทับชื่อเว็บกับปุ่มจนอ่านไม่ออก
+     ใส่สีทึบไว้ก่อนหนึ่งบรรทัด รุ่นเก่าใช้บรรทัดนี้ รุ่นใหม่ทับด้วยบรรทัดถัดไป */
+  background:var(--bg);
   background:color-mix(in srgb, var(--bg) 82%, transparent);
   border-bottom-color:var(--line-soft);
 }

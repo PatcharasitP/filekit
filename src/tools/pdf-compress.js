@@ -59,7 +59,7 @@ const STYLE = `
 .cmp-tag{position:absolute;bottom:10px;z-index:2;pointer-events:none;
   background:color-mix(in srgb,var(--bg) 72%,transparent);color:var(--text);
   font-size:11.5px;font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;
-  border:1px solid var(--line-soft);backdrop-filter:blur(6px)}
+  border:1px solid var(--line-soft);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .cmp-tag-before{left:10px}
 .cmp-tag-after{right:10px}
 

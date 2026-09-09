@@ -15,6 +15,7 @@
 
 import { loadLibs } from "./loader.js";
 import { tr } from "./i18n.js";
+import { clean as cleanDocx } from "./docxclean.js";
 
 let libPromise = null;
 async function lib() {
@@ -70,7 +71,12 @@ export async function mergeAll(file, records, { nameOf, onProgress } = {}) {
   const h = await handler();
   const out = [];
   for (let i = 0; i < records.length; i++) {
-    const blob = await h.process(file, records[i]);
+    let blob = await h.process(file, records[i]);
+    /* ‼️ easy-template-x คัดลอก docProps/core.xml ของเทมเพลตไปทุกไฟล์ที่สร้าง — ชื่อผู้เขียน
+     * เทมเพลตจึงติดไปกับเอกสารทุกใบที่แจกจ่ายออก (ยิงจริง 09/09/2026: ทุกไฟล์ที่ merge ออกมา
+     * มี dc:creator เดิมของเทมเพลตอยู่) ใช้ตัวล้าง metadata เดียวกับ word-clean ไม่เขียนซ้ำ
+     * เฉพาะ metadata เท่านั้น — เนื้อหาที่ merge เข้าไปจริงไม่แตะ */
+    ({ blob } = await cleanDocx(blob, { comments: false, trackChanges: false, metadata: true, rsid: false }));
     out.push({ name: nameOf ? nameOf(records[i], i) : tr(`เอกสาร-${i + 1}.docx`, `Document-${i + 1}.docx`), blob });
     onProgress?.({ done: i + 1, total: records.length });
   }

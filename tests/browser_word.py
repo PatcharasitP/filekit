@@ -10,6 +10,7 @@
 
 import sys, os, io, re, shutil, zipfile, traceback
 import pathlib
+import tempfile
 from playwright.sync_api import sync_playwright
 
 import fitz            # PyMuPDF
@@ -18,7 +19,7 @@ import openpyxl
 
 BASE = os.environ.get("FK_BASE", "http://localhost:8899")
 
-ROOT = pathlib.Path("/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/fk_word_test")
+ROOT = pathlib.Path(tempfile.mkdtemp(prefix="fk_word_test_"))   # เดิม hardcode path ของ scratchpad session เก่า (ซ่อม 09/09/2026)
 FIX = ROOT / "fixtures"
 DL = ROOT / "downloads"
 

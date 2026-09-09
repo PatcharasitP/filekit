@@ -313,6 +313,11 @@ export function mount(tool) {
         try {
           const keepDoc = await PDFDocument.load(new Uint8Array(await file.arrayBuffer()),
                                                  { ignoreEncryption: true, updateMetadata: false });
+          // ‼️ updateMetadata:false กันไม่ให้ pdf-lib แก้ ModDate/Producer เอง (ไว้ให้ไฟล์เล็กสุด)
+          //    แต่ผลข้างเคียงคือ Title/Author/Subject/Keywords/Creator/Producer เดิมก็ติดไปด้วย
+          //    ทั้งดุ้น (ยิงจริง 09/09/2026) ต้องล้างเองตรงนี้ ไม่พึ่งค่าตั้งต้นของไลบรารี
+          keepDoc.setTitle(""); keepDoc.setAuthor(""); keepDoc.setSubject("");
+          keepDoc.setKeywords([]); keepDoc.setCreator(""); keepDoc.setProducer("");
           const kept = await keepDoc.save({ useObjectStreams: true });
           if (kept.byteLength < file.size * 0.98)
             losslessBlob = new Blob([kept], { type: "application/pdf" });

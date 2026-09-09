@@ -38,6 +38,7 @@ import time
 import shutil
 import socket
 import pathlib
+import tempfile
 import zipfile
 import subprocess
 import urllib.request
@@ -56,10 +57,7 @@ PORT = 8933   # ไม่ชนกับ browser_leak.py(8924) / browser_chain.p
 BASE_ENV = os.environ.get("FK_BASE", "").strip()
 BASE = BASE_ENV or f"http://localhost:{PORT}"
 
-SCRATCH = pathlib.Path(
-    "/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/"
-    "1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/privacy_test"
-)
+SCRATCH = pathlib.Path(tempfile.mkdtemp(prefix="fk_privacy_test_"))   # เดิม hardcode path ของ scratchpad session เก่า (ซ่อม 09/09/2026)
 IN_DIR = SCRATCH / "in"
 OUT_DIR = SCRATCH / "out"
 

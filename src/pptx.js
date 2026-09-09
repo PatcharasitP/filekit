@@ -98,9 +98,10 @@ function readShapes(doc) {
 
 /**
  * อ่านไฟล์ .pptx ทั้งไฟล์
- * คืน { slides: [{ no, title, paras, notes }], images: [{name, blob}] }
+ * คืน { slides: [{ no, title, paras, notes }], images: [{name, blob}], hiddenCount }
+ * hiddenCount = จำนวนสไลด์ที่ผู้พูดสั่งซ่อนไว้ (show="0") ที่ถูกข้ามไป ไม่รวมอยู่ใน slides เลย
  */
-export async function readPptx(file, { withImages = false, onProgress } = {}) {
+export async function readPptx(file, { withImages = false, onProgress, includeHidden = false } = {}) {
   assertNotEmpty(file);
   const [JSZipLib] = await loadLibs("jszip");
   let buf, zip;
@@ -120,9 +121,20 @@ export async function readPptx(file, { withImages = false, onProgress } = {}) {
 
   const parser = new DOMParser();
   const slides = [];
+  let hiddenCount = 0;
   for (let i = 0; i < slideNames.length; i++) {
     onProgress?.({ current: i + 1, total: slideNames.length });
     const doc = parser.parseFromString(await zip.file(slideNames[i]).async("string"), "application/xml");
+
+    /* ‼️ สไลด์ที่ผู้พูดสั่งซ่อนไว้ (คลิกขวา → Hide Slide) ถูกมาร์กด้วย show="0" บน <p:sld> ราก
+     * ของไฟล์สไลด์นั้นเอง (ไม่มี attribute นี้ = แสดงปกติ ตาม spec OOXML) เดิมเครื่องมือปลายทาง
+     * แปลงทุกสไลด์ที่เจอในไฟล์เท่ากันหมด ของที่ผู้พูดตั้งใจซ่อนจึงโผล่ในผลลัพธ์ (ยิงจริง 09/09/2026)
+     * ต้องข้ามแบบเดียวกับที่ excel-to-pdf ข้ามชีทที่ซ่อนไว้ + บอกจำนวนที่ข้ามให้ผู้ใช้รู้ตัว */
+    if (doc.documentElement.getAttribute("show") === "0") {
+      hiddenCount++;
+      if (!includeHidden) continue;   // ผู้ใช้กดขอรวมสไลด์ที่ซ่อนไว้เองได้ (เหมือน excel-to-pdf)
+    }
+
     const shapes = readShapes(doc);
     const titleShape = shapes.find((s) => s.isTitle);
     const bodyShapes = shapes.filter((s) => s !== titleShape);
@@ -140,7 +152,9 @@ export async function readPptx(file, { withImages = false, onProgress } = {}) {
     }
 
     slides.push({
-      no: i + 1,
+      // ‼️ นับเลขจากลำดับสไลด์ที่ "แสดงจริง" เท่านั้น (slides.length + 1) ไม่ใช่ index เดิม (i + 1)
+      //    ไม่งั้นถ้าสไลด์ 2 ถูกซ่อนไว้ ผลลัพธ์จะโชว์เลข 1, 3 กระโดดข้าม 2 ทำให้ดูเหมือนของหาย
+      no: slides.length + 1,
       title: titleShape ? titleShape.paras.map((p) => p.text).join(" ") : "",
       paras: bodyShapes.flatMap((s) => s.paras),
       // นับของที่แปลงเป็นข้อความไม่ได้ไว้ ให้เครื่องมือปลายทางบอกผู้ใช้ได้ว่าสไลด์ไหนมีอะไรตกหล่น
@@ -156,5 +170,5 @@ export async function readPptx(file, { withImages = false, onProgress } = {}) {
       images.push({ name: name.split("/").pop(), blob: await zip.file(name).async("blob") });
     }
   }
-  return { slides, images };
+  return { slides, images, hiddenCount };
 }

@@ -91,6 +91,31 @@ function jpegOrientation(u8) {
   return 1;
 }
 
+/* ตัดก้อน APP1 (0xE1 — เก็บทั้ง EXIF และ XMP: กล้อง/ผู้ถ่าย/วันเวลา/พิกัด GPS) ออกจาก JPEG
+ * โดยไม่ถอดรหัส/บีบอัดใหม่ (ต่างจากทาง canvas ที่เสียคุณภาพจากการ re-encode) — เดินไล่มาร์กเกอร์
+ * เหมือน jpegOrientation() ด้านบน แต่คัดลอกทุกก้อนยกเว้น APP1 กลับออกมาเป็นไฟล์ใหม่
+ * ก้อนอื่น (เช่น APP0/JFIF, DQT, DHT) ปล่อยไว้เหมือนเดิมเพราะไม่ใช่ข้อมูลส่วนตัว */
+function stripJpegExif(u8) {
+  if (u8.length < 4 || u8[0] !== 0xff || u8[1] !== 0xd8) return u8;   // ไม่ใช่ JPEG จริง คืนของเดิม
+  const parts = [u8.subarray(0, 2)];
+  let p = 2;
+  while (p + 4 <= u8.length) {
+    if (u8[p] !== 0xff) { parts.push(u8.subarray(p)); p = u8.length; break; }   // โครงสร้างเพี้ยน หยุดตัด
+    const marker = u8[p + 1];
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd9)) { parts.push(u8.subarray(p, p + 2)); p += 2; continue; }
+    if (marker === 0xda) { parts.push(u8.subarray(p)); p = u8.length; break; }   // ถึงเนื้อภาพแล้ว คัดลอกที่เหลือทั้งหมด
+    const len = (u8[p + 2] << 8) | u8[p + 3];
+    if (len < 2 || p + 2 + len > u8.length) { parts.push(u8.subarray(p)); p = u8.length; break; }   // ความยาวเพี้ยน อย่าเดา
+    if (marker !== 0xe1) parts.push(u8.subarray(p, p + 2 + len));   // ตัดเฉพาะ APP1 (EXIF/XMP) ทิ้ง
+    p += 2 + len;
+  }
+  if (p < u8.length) parts.push(u8.subarray(p));
+  let total = 0; for (const s of parts) total += s.length;
+  const out = new Uint8Array(total);
+  let o = 0; for (const s of parts) { out.set(s, o); o += s.length; }
+  return out;
+}
+
   async function toEmbeddable(file) {
     const isPng = /png$/i.test(file.type);
     const raw = (/jpe?g$/i.test(file.type) || isPng) ? new Uint8Array(await file.arrayBuffer()) : null;
@@ -103,7 +128,10 @@ function jpegOrientation(u8) {
       try { probe = await createImageBitmap(file); }
       catch { throw new Error(tr("ไฟล์รูปเสียหาย เปิดไม่ได้", "This image file is damaged")); }
       probe.close?.();
-      return { bytes: raw, kind: isPng ? "png" : "jpg" };
+      // ‼️ ทางลัดนี้ฝังไบต์ JPEG ดิบตรง ๆ — ถ้าไม่ตัด EXIF ก่อน พิกัด GPS/ชื่อกล้อง/ผู้ถ่าย
+      //    ของต้นฉบับจะติดไปกับไฟล์ PDF ทั้งดุ้นโดยผู้ใช้ไม่รู้ตัว (ยิงจริง 09/09/2026)
+      //    ไม่กระทบทิศทางรูปเลย เพราะกรณีที่ต้องหมุน (needsRotate) แยกไปทาง canvas อยู่แล้วข้างบน
+      return { bytes: isPng ? raw : stripJpegExif(raw), kind: isPng ? "png" : "jpg" };
     }
     let bmp;
     // ระบุ from-image ให้ชัด ไม่พึ่งค่าตั้งต้น เพราะเบราว์เซอร์รุ่นเก่าเคยตั้งต้นเป็น none

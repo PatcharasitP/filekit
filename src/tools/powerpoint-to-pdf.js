@@ -12,13 +12,14 @@ export function mount(tool) {
   const st = statusBar();
   const results = el("div", { class: "results" });
   let file = null;
+  let includeHiddenSlides = false;
   warmThaiFont();
 
   const dz = dropzone({
     expect: ["pptx"], expectLabel: tr("ไฟล์ PowerPoint (.pptx)", "PowerPoint files (.pptx)"),
     accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation",
     multiple: false, hint: tr(".pptx (PowerPoint 2007+)", ".pptx (PowerPoint 2007+)"),
-    onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; },
+    onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; includeHiddenSlides = false; },
   });
 
   const ratio = segmented([["16:9", "16:9"], ["4:3", "4:3"]], "16:9");
@@ -39,7 +40,8 @@ export function mount(tool) {
     go.disabled = true;
     st.info(tr("กำลังอ่านสไลด์…", "Reading slides…"));
     try {
-      const { slides } = await readPptx(file, {
+      const { slides, hiddenCount } = await readPptx(file, {
+        includeHidden: includeHiddenSlides,
         onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${p.total} slides)`)),
       });
 
@@ -118,6 +120,14 @@ export function mount(tool) {
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์, ${ratio.value}`, `${slides.length} slides, ${ratio.value}`))]),
         downloadButton(blob, name),
+      ]));
+      // สไลด์ที่ผู้พูดสั่งซ่อนไว้ (show="0") ไม่ควรโผล่ในไฟล์ที่แชร์ออกไปแบบเงียบ ๆ — บอกจำนวน
+      // ที่ข้ามไป + ให้ผู้ใช้เลือกเองได้ว่าจะรวมด้วยไหม (ลอก pattern เดียวกับ excel-to-pdf)
+      if (hiddenCount && !includeHiddenSlides) results.appendChild(el("div", { class: "note warn" }, [
+        el("div", {}, tr(`ข้ามสไลด์ที่ซ่อนไว้ ${hiddenCount} สไลด์ เพราะมักเป็นของที่ตั้งใจไม่ให้แสดง`,
+                         `Skipped ${hiddenCount} hidden slide(s) because they are usually meant to stay unshown`)),
+        button(tr("แปลงสไลด์ที่ซ่อนด้วย", "Include the hidden slides too"),
+               { onclick: () => { includeHiddenSlides = true; run(); } }),
       ]));
       await yieldToBrowser();
     } catch (e) {

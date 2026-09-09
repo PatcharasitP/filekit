@@ -10,6 +10,7 @@
 import { loadLibs } from "./loader.js";
 import { tr } from "./i18n.js";
 import { assertNotEmpty, friendlyZipOpenError } from "./filetype.js";
+import { clean as cleanDocx } from "./docxclean.js";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const PARTS = /^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/;
@@ -148,7 +149,12 @@ export async function replaceInDocx(file, rules) {
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     compression: "DEFLATE",
   });
-  return { blob, total };
+  // ‼️ ไฟล์ที่ยังไม่ผ่านตรงนี้คัดลอก docProps/core.xml (ชื่อผู้เขียนเดิม) มาตรง ๆ ทั้งดุ้น
+  //    ทั้งที่ผู้ใช้แค่สั่งค้นหา/แทนที่คำ ไม่เกี่ยวอะไรกับใครเป็นผู้เขียน (ยิงจริง 09/09/2026)
+  //    ใช้ตัวล้าง metadata เดียวกับ word-clean (src/docxclean.js) ไม่เขียนตรรกะซ้ำ
+  //    เฉพาะ metadata เท่านั้น — comments/track-changes/rsid ของผู้ใช้ไม่แตะ
+  const { blob: cleaned } = await cleanDocx(blob, { comments: false, trackChanges: false, metadata: true, rsid: false });
+  return { blob: cleaned, total };
 }
 
 /** แปลงรายการที่ผู้ใช้กรอกเป็นกฎที่ใช้ค้นได้ */

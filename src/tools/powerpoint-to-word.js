@@ -9,15 +9,19 @@ export function mount(tool) {
   const results = el("div", { class: "results" });
   const preview = el("div", { class: "preview-text", hidden: true });
   let file = null;
+  let includeHiddenSlides = false;
 
   const dz = dropzone({
     expect: ["pptx"], expectLabel: tr("ไฟล์ PowerPoint (.pptx)", "PowerPoint files (.pptx)"),
     accept: ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation",
     multiple: false, hint: tr(".pptx (PowerPoint 2007+)", ".pptx (PowerPoint 2007+)"),
-    onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; preview.hidden = true; },
+    onChange: (f) => { file = f[0] || null; st.clear(); results.innerHTML = ""; preview.hidden = true; includeHiddenSlides = false; },
   });
 
-  const withNotes = select([["yes", tr("รวมโน้ตผู้บรรยายด้วย", "Include speaker notes")], ["no", tr("เอาเฉพาะเนื้อสไลด์", "Slide content only")]], "yes");
+  // ‼️ ค่าเริ่มต้น = "ไม่เอา" (เดิม default "yes") — โน้ตผู้บรรยายมักมีข้อความที่ไม่ได้ตั้งใจ
+  // ให้คนอ่านสไลด์เห็น (คำสั่งพูด/ข้อมูลลับ) การแปลงเป็น Word ไม่ควรพาไปด้วยเงียบ ๆ โดยไม่ถาม
+  // แต่ยังกดเลือกเอาไปด้วยได้เหมือนเดิม ไม่ได้ตัดออปชันทิ้ง (ยิงจริง 09/09/2026: leak จริง)
+  const withNotes = select([["no", tr("เอาเฉพาะเนื้อสไลด์ (แนะนำ)", "Slide content only (recommended)")], ["yes", tr("รวมโน้ตผู้บรรยายด้วย", "Include speaker notes")]], "no");
   const layout = select([["heading", tr("หัวสไลด์เป็นหัวข้อ (แนะนำ)", "Slide titles as headings (recommended)")], ["plain", tr("ข้อความล้วนต่อกัน", "Plain running text")]], "heading");
   const breakMode = select([["page", tr("ขึ้นหน้าใหม่ทุกสไลด์", "New page per slide")], ["flow", tr("ไหลต่อเนื่อง", "Continuous flow")]], "flow");
   const go = button(tr("แปลงเป็น Word", "Convert to Word"), { onclick: run });
@@ -35,7 +39,8 @@ export function mount(tool) {
     go.disabled = true;
     st.info(tr("กำลังอ่านสไลด์…", "Reading slides…"));
     try {
-      const { slides } = await readPptx(file, {
+      const { slides, hiddenCount } = await readPptx(file, {
+        includeHidden: includeHiddenSlides,
         onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${p.total} slides)`)),
       });
 
@@ -102,6 +107,12 @@ export function mount(tool) {
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์`, `${slides.length} slides`))]),
         downloadButton(blob, name),
+      ]));
+      if (hiddenCount && !includeHiddenSlides) results.appendChild(el("div", { class: "note warn" }, [
+        el("div", {}, tr(`ข้ามสไลด์ที่ซ่อนไว้ ${hiddenCount} สไลด์ เพราะมักเป็นของที่ตั้งใจไม่ให้แสดง`,
+                         `Skipped ${hiddenCount} hidden slide(s) because they are usually meant to stay unshown`)),
+        button(tr("แปลงสไลด์ที่ซ่อนด้วย", "Include the hidden slides too"),
+               { onclick: () => { includeHiddenSlides = true; run(); } }),
       ]));
       await yieldToBrowser();
     } catch (e) {

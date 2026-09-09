@@ -209,17 +209,25 @@ export function mount(tool) {
     return lines.join("  ");
   }
 
-  /** อ่านหัว/ท้ายกระดาษของ section แรกจากไฟล์ .docx โดยตรง คืน { header, footer } เป็นข้อความ */
+  /** อ่านหัว/ท้ายกระดาษของ section แรกจากไฟล์ .docx โดยตรง คืน { header, footer, trackChanges } */
   async function readHeaderFooter(file) {
     try {
       const [JSZipLib] = await loadLibs("jszip");
       const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
       const docFile = zip.file("word/document.xml");
       const relsFile = zip.file("word/_rels/document.xml.rels");
-      if (!docFile || !relsFile) return { header: "", footer: "" };
+      if (!docFile || !relsFile) return { header: "", footer: "", trackChanges: 0 };
       const parser = new DOMParser();
       const main = parser.parseFromString(await docFile.async("string"), "application/xml");
       const rels = parser.parseFromString(await relsFile.async("string"), "application/xml");
+
+      /* ‼️ เตือนอย่างเดียว ห้ามแก้เนื้อหาให้เอง (ยังไม่เคาะเชิงผลิตภัณฑ์ว่าจะยอมรับ/ปฏิเสธทั้งหมด
+       * ยังไง) — mammoth (ตัวแปลง html ด้านล่าง) พิมพ์ข้อความที่ยังไม่ยอมรับลง PDF เหมือนเป็น
+       * เนื้อหาสุดท้ายอยู่แล้ว ตรงกับที่ Word เองพิมพ์ออกมาทุกประการ พฤติกรรมแปลงจึงคงเดิม
+       * 100% ตรงนี้แค่นับให้ผู้ใช้เห็นว่ามีอยู่กี่จุดก่อนที่จะพลาดส่งออกไปโดยไม่รู้ตัว
+       * (ยิงจริง 09/09/2026: ข้อความที่ยังไม่ accept ติดไปกับ PDF เหมือนข้อความปกติเป๊ะ) */
+      const trackChanges = main.getElementsByTagNameNS(W_NS, "ins").length
+                          + main.getElementsByTagNameNS(W_NS, "del").length;
 
       const targetOf = (id) => {
         for (const r of rels.getElementsByTagName("Relationship")) {
@@ -242,9 +250,9 @@ export function mount(tool) {
         if (!f) return "";
         return partText(parser.parseFromString(await f.async("string"), "application/xml"));
       };
-      return { header: await read("header"), footer: await read("footer") };
+      return { header: await read("header"), footer: await read("footer"), trackChanges };
     } catch {
-      return { header: "", footer: "" };   // อ่านไม่ได้ก็แค่ไม่มีหัวท้าย ไม่ควรทำให้ทั้งไฟล์แปลงไม่ผ่าน
+      return { header: "", footer: "", trackChanges: 0 };   // อ่านไม่ได้ก็แค่ไม่มีหัวท้าย ไม่ควรทำให้ทั้งไฟล์แปลงไม่ผ่าน
     }
   }
 
@@ -329,6 +337,7 @@ export function mount(tool) {
         blob: doc.output("blob"),
         pages: doc.getNumberOfPages(),
         warnings: messages.filter((m) => m.type === "warning").length,
+        trackChanges: headFoot.trackChanges,
       };
   }
 
@@ -337,7 +346,7 @@ export function mount(tool) {
     results.innerHTML = "";
     go.disabled = true;
     const made = [];
-    let failed = 0, warned = 0;
+    let failed = 0, warned = 0, tracked = 0;
     try {
       for (let i = 0; i < files.length; i++) {
         st.info(tr(`กำลังแปลง ${files[i].name} (${i + 1}/${files.length})`, `Converting ${files[i].name} (${i + 1}/${files.length})`));
@@ -345,6 +354,7 @@ export function mount(tool) {
           const r = await convertOne(files[i]);
           made.push({ name: stripExt(files[i].name) + ".pdf", ...r });
           warned += r.warnings;
+          tracked += r.trackChanges;
         } catch (e) {
           failed++;
           results.appendChild(el("div", { class: "status show err" },
@@ -359,10 +369,20 @@ export function mount(tool) {
       const pages = made.reduce((a, m) => a + m.pages, 0);
       st.ok(tr(`แปลงสำเร็จ ${made.length} ไฟล์, รวม ${pages} หน้า` +
         (failed ? `, ล้มเหลว ${failed} ไฟล์` : "") +
-        (warned ? `, มี ${warned} จุดที่จัดรูปแบบไม่ครบ` : ""),
+        (warned ? `, มี ${warned} จุดที่จัดรูปแบบไม่ครบ` : "") +
+        (tracked ? `, มีการแก้ไขที่ยังไม่ยอมรับ ${tracked} จุด` : ""),
         `Done, ${made.length} files, ${pages} pages total` +
         (failed ? `, ${failed} failed` : "") +
-        (warned ? `, ${warned} spots with incomplete formatting` : "")));
+        (warned ? `, ${warned} spots with incomplete formatting` : "") +
+        (tracked ? `, ${tracked} unaccepted tracked change(s)` : "")));
+
+      // เตือนอย่างเดียว ไม่แก้เนื้อหาให้เอง — ข้อความที่ยังไม่ accept ถูกแปลงลง PDF เหมือนข้อความ
+      // ปกติ (ตรงกับที่ Word เองพิมพ์ออกมา) ผู้ใช้ต้องรู้ก่อนส่งไฟล์ออก ไม่ใช่รู้ทีหลัง
+      if (tracked) results.appendChild(el("div", { class: "note warn" },
+        tr(`ไฟล์นี้มีการแก้ไขที่ยังไม่ยอมรับ ${tracked} จุด ข้อความเหล่านั้นจะถูกแปลงลง PDF ด้วย ` +
+           `เปิดไฟล์ต้นฉบับด้วย Word แล้วกด “ยอมรับการแก้ไขทั้งหมด” ก่อน ถ้าไม่ต้องการให้ติดไปด้วย`,
+           `This file has ${tracked} unaccepted tracked change(s), and that text will be included in the PDF. ` +
+           `Open the original in Word and “Accept All Changes” first if you don't want it included`)));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: async () => {

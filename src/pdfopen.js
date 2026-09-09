@@ -97,6 +97,7 @@ export async function loadPdfLib(file) {
   const buf = await file.arrayBuffer();
   try {
     const doc = await PDFDocument.load(buf);
+    clearInfoMetadata(doc);
     return { doc, encrypted: false, hiddenLayers: countHiddenLayers(doc) };
   } catch (e) {
     if (/encrypt/i.test(String(e?.message || e))) throw new Error(ENCRYPTED_BLOCKED);
@@ -105,6 +106,20 @@ export async function loadPdfLib(file) {
       throw new Error(tr(`${file.name}: ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย, ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน`, `${file.name}: this isn't a valid PDF, or the file is damaged, try opening it in a PDF reader first`));
     throw new Error(`${file.name}: ${e?.message || e}`);
   }
+}
+
+/* ‼️ ล้าง Info dict (Title/Author/Subject/Keywords/Creator/Producer) ของไฟล์ต้นฉบับทันทีหลังโหลด
+ * เครื่องมือที่แก้ไข "เอกสารเดิม" ต่อแล้ว save() เอกสารเดิมตรง ๆ (ใส่ลายน้ำ/เลขหน้า/เซ็นชื่อ)
+ * เคยพาชื่อผู้เขียน/หัวเรื่อง/บริษัทของไฟล์ต้นฉบับติดไปกับไฟล์ผลลัพธ์ทั้งดุ้นโดยผู้ใช้ไม่รู้ตัว
+ * (ยิงจริง 09/09/2026: /Author,/Title,/Subject,/Keywords,/Creator ของต้นฉบับติดไปเป๊ะ ทั้งที่
+ * ผู้ใช้แค่ใส่ลายน้ำ/เลขหน้า/เซ็นชื่อ ไม่เกี่ยวอะไรกับ metadata เลย)
+ * เครื่องมือที่ copyPages ไปไฟล์ใหม่ (รวม/แยก/จัดหน้า/ลบหน้าว่าง) ไม่กระทบ เพราะไม่เคย save()
+ * เอกสารที่โหลดจากฟังก์ชันนี้อยู่แล้ว (สร้าง PDFDocument.create() ใหม่ต่างหาก) */
+function clearInfoMetadata(doc) {
+  try {
+    doc.setTitle(""); doc.setAuthor(""); doc.setSubject("");
+    doc.setKeywords([]); doc.setCreator(""); doc.setProducer("");
+  } catch { /* ไฟล์แปลกที่ตั้งค่าพวกนี้ไม่ได้ ปล่อยผ่าน ไม่ทำให้ทั้งฟังก์ชันพัง */ }
 }
 
 /* ‼️ PDF รองรับ "ชั้น" (Optional Content Group) ที่ผู้ใช้สั่งซ่อนไว้ได้ เช่นชั้นร่าง

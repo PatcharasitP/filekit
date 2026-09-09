@@ -66,6 +66,34 @@ export async function ocrPdf(pdf, { lang = "tha+eng", scale = 3.4, pages, onProg
   }
 }
 
+/**
+ * อ่านข้อความจากไฟล์รูปภาพด้วย OCR (ใช้ตัวตั้งค่าชุดเดียวกับ ocrPdf เป๊ะ)
+ * คืน { text, lines } เพื่อให้เครื่องมือปลายทางเอาไปทำเป็นแถวของตารางต่อได้
+ */
+export async function ocrImage(file, { lang = "tha+eng", onProgress, minConfidence = 55 } = {}) {
+  const [Tess] = await loadLibs("tesseract");
+  const worker = await Tess.createWorker(lang, 1, {
+    logger: (m) => {
+      if (m.status === "recognizing text" && onProgress) onProgress({ phase: "read", ratio: m.progress });
+      else if (onProgress && /load|initial/i.test(m.status || "")) onProgress({ phase: "prepare", status: m.status });
+    },
+  });
+  try {
+    const { data } = await worker.recognize(file);
+    // ตัดบรรทัดขยะแบบเดียวกับ ocrPdf: ตัดเฉพาะที่ทั้งความมั่นใจต่ำและสั้นมาก
+    const raw = Array.isArray(data.lines) && data.lines.length
+      ? data.lines.map((l) => ({ text: (l.text || "").trim(), conf: l.confidence ?? 100 }))
+      : (data.text || "").split("\n").map((t) => ({ text: t.trim(), conf: 100 }));
+    const lines = raw
+      .filter((l) => l.text)
+      .filter((l) => !(l.conf < minConfidence && l.text.replace(/\s/g, "").length <= 4))
+      .map((l) => l.text);
+    return { text: lines.join("\n"), lines };
+  } finally {
+    await worker.terminate();
+  }
+}
+
 /** ตรวจว่า PDF มีชั้นข้อความจริงหรือไม่ (ใช้ตัดสินว่าต้อง OCR ไหม) */
 export async function hasTextLayer(pdf, sampleUpTo = 3) {
   const n = Math.min(pdf.numPages, sampleUpTo);

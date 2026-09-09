@@ -19,7 +19,9 @@ import sys
 import tempfile
 import time
 
+import fitz
 import openpyxl
+from docx import Document
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -64,6 +66,42 @@ def make_workbook():
     return p
 
 
+TABLE = [
+    ["รหัส", "รายการ", "จำนวน", "ราคา"],
+    ["A01", "ปากกาน้ำเงิน", "120", "15.50"],
+    ["A02", "ดินสอ 2B", "250", "8.00"],
+    ["A03", "สมุดปกแข็ง", "45", "62.75"],
+]
+
+
+def make_pdf_table():
+    """PDF ที่มีชั้นข้อความ จัดคอลัมน์ด้วยระยะห่างชัดเจน แบบรายงานที่พิมพ์ออกมาจากระบบ"""
+    font = str(ROOT / "vendor/fonts/Sarabun-Regular-th.ttf")
+    d = fitz.open()
+    page = d.new_page(width=595, height=842)
+    page.insert_font(fontname="TH", fontfile=font)
+    for r, row in enumerate(TABLE):
+        for x, cell in zip((55, 150, 330, 430), row):
+            page.insert_text((x, 90 + r * 30), cell, fontsize=11, fontname="TH")
+    p = TMP / "ตารางสินค้า.pdf"
+    d.save(p)
+    d.close()
+    return p
+
+
+def make_docx_table():
+    """.docx ที่มีตารางจริง (ไม่ใช่ข้อความจัดคอลัมน์ด้วยช่องว่าง)"""
+    doc = Document()
+    doc.add_paragraph("รายงานสินค้าคงเหลือ")
+    t = doc.add_table(rows=len(TABLE), cols=4)
+    for r, row in enumerate(TABLE):
+        for c, cell in enumerate(row):
+            t.cell(r, c).text = cell
+    p = TMP / "ตารางสินค้า.docx"
+    doc.save(p)
+    return p
+
+
 def main():
     base = os.environ.get("FK_BASE")
     server = None
@@ -75,6 +113,8 @@ def main():
         time.sleep(1.5)
 
     xlsx = make_workbook()
+    pdf_file = make_pdf_table()
+    docx_file = make_docx_table()
     try:
         with sync_playwright() as pw:
             b = pw.chromium.launch()
@@ -155,6 +195,26 @@ def main():
             teach = pg.locator("details.pq-teach").inner_text()
             ck("สอนเรื่องเปอร์เซ็นต์เป็นสัดส่วน", "0.875" in teach, True)
             ck("สอนวิธีเอาโค้ดไปใช้", "Advanced Editor" in teach, True)
+
+            print("\n── ⑥ รับไฟล์ PDF และ Word ได้ด้วย ──")
+            # ‼️ ไม่ใส่เคสรูปถ่ายไว้ในชุดนี้ เพราะ OCR ต้องโหลด language pack จาก CDN
+            #    ทำให้ชุดเทสช้าและขึ้นกับเน็ต ตรวจด้วยมือแล้วว่าใช้ได้ (โครงตารางถูกทุกคอลัมน์
+            #    ส่วนตัวอักษรเล็ก ๆ OCR อ่านคลาดได้ ซึ่งเครื่องมือเตือนผู้ใช้ไว้แล้ว)
+            for path, label, want_note in [(pdf_file, "PDF", False), (docx_file, "Word", False)]:
+                pg.goto("about:blank")
+                pg.goto(f"{base}/#/excel-to-pq", wait_until="networkidle")
+                pg.wait_for_selector(".dz")
+                pg.locator(".dz input[type=file]").first.set_input_files(str(path))
+                pg.wait_for_timeout(6000)
+                types2 = pg.evaluate("() => [...document.querySelectorAll('.pq-cols tbody tr select')]"
+                                     ".map((s) => s.value)")
+                code2 = pg.locator(".pq-code").inner_text() if pg.locator(".pq-code").count() else ""
+                ck(f"{label}: ดึงตารางออกมาได้ครบ 4 คอลัมน์", len(types2), 4)
+                ck(f"{label}: สร้างโค้ดได้", code2.startswith("= #table("), True)
+                ck(f"{label}: ข้อมูลในแถวครบ", '"ปากกาน้ำเงิน"' in code2, True)
+                ck(f"{label}: รหัสสินค้าเก็บเป็นข้อความ", '"A01"' in code2, True)
+                ck(f"{label}: จำนวนเป็นจำนวนเต็ม ราคาเป็นทศนิยม",
+                   '#"จำนวน" = Int64.Type' in code2 and '#"ราคา" = number' in code2, True)
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

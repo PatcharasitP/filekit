@@ -10,6 +10,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, segmented,
 import { readWorkbook, sheetToTable } from "../sheetpick.js";
 import { splitSheetsByVisibility } from "../xlsxutil.js";
 import { guessTableTypes } from "../pqtypes.js";
+import { extractTable, kindOfFile } from "../tabledata.js";
 import { PQ_TYPES, buildTableCode, wrapAsQuery } from "../pqm.js";
 import { tr } from "../i18n.js";
 
@@ -50,6 +51,7 @@ export function mount(tool) {
   let table = null;         // { header, rows }
   let cols = [];            // [{ name, type, confidence, reason }]
   let wb = null, sheetNames = [], hiddenNames = [];
+  let srcNote = null;      // คำเตือนเรื่องที่มาของข้อมูล เช่นอ่านมาจาก OCR
 
   const sheetSel = select([], "0");
   const sheetField = field(tr("ชีท", "Sheet"), sheetSel);
@@ -73,11 +75,13 @@ export function mount(tool) {
   const actions = el("div", { class: "actions", hidden: true }, [copyBtn, saveBtn]);
 
   const dz = dropzone({
-    accept: ".xlsx,.xls,.csv",
+    accept: ".xlsx,.xls,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp",
     multiple: false,
-    hint: tr("ลากไฟล์ Excel หรือ CSV มาวาง", "Drop an Excel or CSV file"),
-    expect: ["xlsx", "csv"],
-    expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV file"),
+    hint: tr("ลากไฟล์ Excel, CSV, PDF, Word หรือรูปถ่ายตารางมาวาง",
+             "Drop an Excel, CSV, PDF, Word file, or a photo of a table"),
+    // ‼️ ชื่อชนิดต้องตรงกับที่ detectType คืนมา รูปภาพทุกนามสกุลคืนเป็น "image" ตัวเดียว
+    expect: ["xlsx", "csv", "pdf", "docx", "image"],
+    expectLabel: tr("ไฟล์ตาราง หรือไฟล์ที่มีตารางอยู่ข้างใน", "A spreadsheet, or a file with a table inside"),
     onChange: () => load(),
   });
 
@@ -95,10 +99,37 @@ export function mount(tool) {
   async function load() {
     colsBox.innerHTML = ""; summary.textContent = "";
     codeBox.hidden = true; actions.hidden = true; st.clear();
+    table = null; srcNote = null;
     const f = dz.files[0];
     if (!f) { sheetField.hidden = true; return; }
     try {
+      /* ‼️ ไฟล์ที่ไม่ใช่สเปรดชีต (PDF, Word, รูปถ่าย) ต้องดึงตารางออกมาก่อน
+         ใช้ตัวอ่านที่โปรเจกต์มีอยู่แล้วทุกตัว ไม่เขียนใหม่ แล้วส่งเข้าเส้นทางเดียวกันกับ Excel
+         ตั้งแต่จุดนี้เป็นต้นไป โค้ดไม่ต้องรู้เลยว่าไฟล์มาจากไหน */
+      if (kindOfFile(f.name)) {
+        st.begin();
+        st.info(tr("กำลังดึงตารางออกจากไฟล์…", "Pulling the table out of the file…"));
+        const got = await extractTable(f, {
+          onProgress: (p) => {
+            if (p.phase === "page") st.progress((p.current / p.total) * 100, `(${p.current}/${p.total})`);
+            else if (p.phase === "read") st.progress(p.ratio * 100);
+          },
+        });
+        st.end();
+        st.progress(null);
+        wb = null; sheetNames = []; hiddenNames = [];
+        sheetField.hidden = true;
+        if (!got.header.length) throw new Error(tr("ไม่พบตารางในไฟล์นี้", "No table found in this file"));
+        table = { header: got.header, rows: got.rows };
+        srcNote = got.note;
+        cols = guessTableTypes(table.header, table.rows);
+        st.clear();
+        renderColumns();
+        regenerate();
+        return;
+      }
       st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
+      srcNote = null;
       const r = await readWorkbook(f);
       wb = r.wb;
       // ‼️ ชีทที่ผู้ใช้ซ่อนไว้ มักเป็นข้อมูลที่ตั้งใจไม่ให้คนอื่นเห็น ไม่เอามาเป็นตัวเลือกตั้งต้น
@@ -154,6 +185,7 @@ export function mount(tool) {
         ? [el("div", {}, tr(`ข้ามชีทที่ซ่อนไว้ ${hiddenNames.length} ชีท (${hiddenNames.join(", ")})`,
                             `Skipped ${hiddenNames.length} hidden sheet(s) (${hiddenNames.join(", ")})`))]
         : []),
+      ...(srcNote ? [el("div", {}, srcNote)] : []),
     );
 
     colsBox.innerHTML = "";

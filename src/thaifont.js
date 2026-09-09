@@ -113,6 +113,16 @@ function hardSplitThai(doc, word, maxWidth, k) {
   return out.length ? out : [word];
 }
 
+/** ซอยข้อความเป็นชิ้นตามขอบเขตคำ (ไทยใช้ Intl.Segmenter, ภาษาอื่นแยกที่ช่องว่าง)
+ *  ใช้เมื่อผู้เรียกต้องจัดบรรทัดเอง เช่นย่อหน้าที่มีตัวหนาสลับตัวธรรมดากลางประโยค */
+export function textChunks(text) {
+  const s = String(text ?? "");
+  if (!s) return [];
+  const seg = THAI_LETTER.test(s) ? thaiWordSegmenter() : null;
+  if (seg) return [...seg.segment(s)].map((x) => x.segment);
+  return s.split(/(\s+)/).filter((x) => x !== "");
+}
+
 /** ตัดบรรทัดแบบไม่ฉีกคำไทย — ใช้แทน doc.splitTextToSize() ได้ตรง ๆ (คืนอาเรย์ของบรรทัด)
  *  opts.fallback  ตัวตัดบรรทัดเดิมที่จะใช้เมื่อไม่ใช่ข้อความไทย (ต้องส่งมาถ้าไป
  *                 สลับ doc.splitTextToSize ไว้ ไม่งั้นจะเรียกวนหาตัวเอง)

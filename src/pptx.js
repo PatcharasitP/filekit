@@ -3,7 +3,7 @@
 // JSZip + DOMParser โดยไม่ต้องพึ่งเซิร์ฟเวอร์หรือไลบรารีเพิ่ม
 //
 // สิ่งที่ดึงได้: ข้อความทุกกล่องในสไลด์ (แยกหัวเรื่องกับเนื้อหา), ระดับ bullet,
-// โน้ตผู้บรรยาย และรูปภาพที่ฝังอยู่
+// ข้อความในตารางบนสไลด์, โน้ตผู้บรรยาย และรูปภาพที่ฝังอยู่
 // สิ่งที่ทำไม่ได้: ตำแหน่ง/ขนาด/สี/แอนิเมชันแบบเป๊ะ ๆ — งานนั้นต้องใช้เอนจิน
 // เรนเดอร์เต็มรูปแบบอย่าง LibreOffice ซึ่งรันในเบราว์เซอร์ไม่ไหว
 
@@ -13,6 +13,8 @@ import { assertNotEmpty, friendlyZipOpenError } from "./filetype.js";
 
 const A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const P = "http://schemas.openxmlformats.org/presentationml/2006/main";
+const CHART_URI = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+const DIAGRAM_URI = "http://schemas.openxmlformats.org/drawingml/2006/diagram";
 
 const numOf = (name) => {
   const m = name.match(/(\d+)\.xml$/);
@@ -39,10 +41,16 @@ function textOfParagraph(p) {
   return [...p.getElementsByTagNameNS(A, "t")].map((t) => t.textContent).join("").trim();
 }
 
-/** ดึงกล่องข้อความทั้งหมดในสไลด์ พร้อมบอกว่ากล่องไหนคือหัวเรื่อง */
+/* ดึงเนื้อหาทั้งหมดในสไลด์ พร้อมบอกว่ากล่องไหนคือหัวเรื่อง
+ * ‼️ เดิมไล่แค่ <p:sp> (กล่องข้อความ) อย่างเดียว ตารางกับกราฟบนสไลด์อยู่ใน <p:graphicFrame>
+ *    จึงหายไปทั้งก้อนแบบเงียบสนิท ไม่มีอะไรฟ้อง (ยิงจริง 09/09/2026: สไลด์ที่มีตาราง 4x3
+ *    กับกราฟแท่ง แปลงออกมาเหลือแค่หัวเรื่อง เนื้อในตารางหายหมดทุกเซลล์)
+ * ‼️ ต้องเดินตามลำดับใน spTree เอง ไม่ใช้ getElementsByTagNameNS รวด ๆ เพราะต้องรู้ลำดับ
+ *    ของกล่องข้อความกับตารางที่สลับกัน และต้องลงไปในกล่องที่จัดกลุ่มไว้ (<p:grpSp>) ด้วย */
 function readShapes(doc) {
   const out = [];
-  for (const sp of doc.getElementsByTagNameNS(P, "sp")) {
+
+  const readSp = (sp) => {
     const ph = sp.getElementsByTagNameNS(P, "ph")[0];
     const phType = ph?.getAttribute("type") || "";
     const isTitle = phType === "title" || phType === "ctrTitle";
@@ -54,7 +62,37 @@ function readShapes(doc) {
       paras.push({ text, level: lvl });
     }
     if (paras.length) out.push({ isTitle, paras });
-  }
+  };
+
+  const readFrame = (frame) => {
+    const tbl = frame.getElementsByTagNameNS(A, "tbl")[0];
+    if (tbl) {
+      const rows = [];
+      for (const tr of tbl.getElementsByTagNameNS(A, "tr")) {
+        const cells = [...tr.getElementsByTagNameNS(A, "tc")].map((tc) =>
+          [...tc.getElementsByTagNameNS(A, "p")].map(textOfParagraph).filter(Boolean).join(" "));
+        if (cells.some((c) => c)) rows.push(cells.join("  |  "));
+      }
+      // ไม่คงเส้นตาราง แต่ต้องไม่ทำข้อมูลในเซลล์หาย จึงเรียงเป็นบรรทัดคั่นด้วยขีด
+      if (rows.length) out.push({ kind: "table", isTitle: false, paras: rows.map((text) => ({ text, level: 0 })) });
+      return;
+    }
+    const uri = frame.getElementsByTagNameNS(A, "graphicData")[0]?.getAttribute("uri") || "";
+    // กราฟกับ SmartArt แปลงเป็นข้อความตรง ๆ ไม่ได้ แต่ต้องบอกให้รู้ว่าตรงนี้มีของอยู่
+    if (uri.startsWith(CHART_URI)) out.push({ kind: "chart", isTitle: false, paras: [] });
+    else if (uri.startsWith(DIAGRAM_URI)) out.push({ kind: "diagram", isTitle: false, paras: [] });
+  };
+
+  const visit = (node) => {
+    for (const el of node.children) {
+      if (el.namespaceURI !== P) continue;
+      if (el.localName === "sp") readSp(el);
+      else if (el.localName === "graphicFrame") readFrame(el);
+      else if (el.localName === "grpSp") visit(el);      // กล่องที่จัดกลุ่มไว้ ต้องลงไปดูข้างใน
+    }
+  };
+  const tree = doc.getElementsByTagNameNS(P, "spTree")[0];
+  visit(tree || doc.documentElement);
   return out;
 }
 
@@ -105,6 +143,9 @@ export async function readPptx(file, { withImages = false, onProgress } = {}) {
       no: i + 1,
       title: titleShape ? titleShape.paras.map((p) => p.text).join(" ") : "",
       paras: bodyShapes.flatMap((s) => s.paras),
+      // นับของที่แปลงเป็นข้อความไม่ได้ไว้ ให้เครื่องมือปลายทางบอกผู้ใช้ได้ว่าสไลด์ไหนมีอะไรตกหล่น
+      charts: shapes.filter((s) => s.kind === "chart").length,
+      diagrams: shapes.filter((s) => s.kind === "diagram").length,
       notes,
     });
   }

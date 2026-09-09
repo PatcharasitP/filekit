@@ -1,5 +1,5 @@
 import { el, dropzone, statusBar, button, field, select, download,
-         stripExt, fmtBytes, eachFile, failedBox, registerCleanup } from "../ui.js";
+         stripExt, fmtBytes, eachFileConcurrent, failedBox, registerCleanup } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr } from "../i18n.js";
@@ -379,11 +379,15 @@ export function mount(tool) {
     const made = [];
     let before = 0, after = 0;
     try {
-      const failed = await eachFile(files, st, async (f) => {
-        const r = await processOne(f);
-        resultsByFile.set(f, r);
-        made.push(r);
-        before += f.size; after += r.blob.size;
+      // งานหนักคือถอดรหัส/วาด/เข้ารหัสรูป ซึ่งเบราว์เซอร์ทำนอกเธรดหลักได้อยู่แล้ว
+      // ทำทีละใบ = แกนอื่นว่างเปล่า จึงสั่งพร้อมกันหลายใบ แต่เก็บผลตามลำดับไฟล์เดิม
+      const failed = await eachFileConcurrent(files, st, {
+        prepare: (f) => processOne(f),
+        commit: (r, f) => {
+          resultsByFile.set(f, r);
+          made.push(r);
+          before += f.size; after += r.blob.size;
+        },
       });
       st.progress(null);
       failedNote.innerHTML = "";

@@ -28,7 +28,9 @@ async function pageToImage(pdf, pageNo, scale) {
  * อ่านข้อความจากหน้า PDF ด้วย OCR
  * คืน [{ page, text, lines }] — lines ใช้ต่อได้ทั้งกับ Word (ย่อหน้า) และ Excel (แถว)
  */
-export async function ocrPdf(pdf, { lang = "tha+eng", scale = 2.6, pages, onProgress, minConfidence = 55 } = {}) {
+// ‼️ scale ตั้งต้น 3.4 (เดิม 2.6) วัดจริงแล้วแม่นกว่าโดยเวลาเท่าเดิม ดูเหตุผลเต็มใน pdf-ocr.js
+//    เครื่องมือที่พึ่งค่านี้แล้วไม่มี UI ให้ปรับ: pdf-to-text, pdf-to-word, pdf-to-excel
+export async function ocrPdf(pdf, { lang = "tha+eng", scale = 3.4, pages, onProgress, minConfidence = 55 } = {}) {
   const [Tess] = await loadLibs("tesseract");
   const list = pages || Array.from({ length: pdf.numPages }, (_, i) => i + 1);
   const worker = await Tess.createWorker(lang, 1, {

@@ -2,7 +2,7 @@ import { openPdf, passwordBox } from "../pdfopen.js";
 import { hasTextLayer } from "../ocr.js";
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, downloadButton, dropzone,
-         stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, mapConcurrent } from "../ui.js";
 import { tr } from "../i18n.js";
 
 // ระดับการบีบ: scale = ความละเอียดที่เรนเดอร์ · q = คุณภาพ JPEG
@@ -337,28 +337,33 @@ export function mount(tool) {
 
       const out = await PDFDocument.create();
 
-      for (let p = 1; !losslessBlob && p <= doc.numPages; p++) {
-        const page = await doc.getPage(p);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.floor(viewport.width);
-        canvas.height = Math.floor(viewport.height);
-        const ctx = canvas.getContext("2d");
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        const blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", q));
-        canvas.width = canvas.height = 0;
-
-        const img = await out.embedJpg(new Uint8Array(await blob.arrayBuffer()));
-        const base = page.getViewport({ scale: 1 });
-        const newPage = out.addPage([base.width, base.height]);
-        newPage.drawImage(img, { x: 0, y: 0, width: base.width, height: base.height });
-        page.cleanup();
-
-        st.progress((p / doc.numPages) * 100, `(${p}/${doc.numPages})`);
-        await yieldToBrowser();
-      }
+      /* เรนเดอร์หลายหน้าพร้อมกัน แต่ต่อหน้าเข้าไฟล์ใหม่ตามลำดับเดิมเสมอ
+         ‼️ แต่ละหน้าต้องมี canvas ของตัวเอง เพราะ pdf.js ทาพื้นทับทั้งใบก่อนวาดทุกครั้ง */
+      const pageNums = losslessBlob ? [] : Array.from({ length: doc.numPages }, (_, i) => i + 1);
+      await mapConcurrent(pageNums, {
+        cancelled: () => !!st.cancelled,
+        prepare: async (num) => {
+          const page = await doc.getPage(num);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          const blob = await new Promise((r) => canvas.toBlob(r, "image/jpeg", q));
+          canvas.width = canvas.height = 0;
+          const base = page.getViewport({ scale: 1 });
+          page.cleanup();
+          return { bytes: new Uint8Array(await blob.arrayBuffer()), w: base.width, h: base.height };
+        },
+        commit: async ({ bytes, w, h }, num) => {
+          const img = await out.embedJpg(bytes);
+          out.addPage([w, h]).drawImage(img, { x: 0, y: 0, width: w, height: h });
+          st.progress((num / doc.numPages) * 100, `(${num}/${doc.numPages})`);
+        },
+      });
       // ‼️ ไม่ doc.destroy() ที่นี่ — เอกสารนี้ใช้ร่วมกับพรีวิวตัวเลื่อน ต้องอยู่ต่อให้เปลี่ยนระดับ/บีบซ้ำได้อีก
       //    (จะถูกปิดตอนเลือกไฟล์ใหม่แทน ผ่าน onFileChange)
 

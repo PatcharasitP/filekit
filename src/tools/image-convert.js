@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, eachFileConcurrent, failedBox } from "../ui.js";
 import { tr } from "../i18n.js";
 
 const TYPES = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
@@ -42,8 +42,10 @@ export function mount(tool) {
     const q = +quality.value / 100;
     const made = [];
     try {
-      const failed = await eachFile(files, st, async (f) => {
-        const bmp = await createImageBitmap(f);
+      // แปลงหลายใบพร้อมกันได้ (งานหนักอยู่ฝั่ง codec ของเบราว์เซอร์) แต่เก็บผลตามลำดับไฟล์เดิม
+      const failed = await eachFileConcurrent(files, st, {
+        prepare: async (f) => {
+        const bmp = await createImageBitmap(f, { imageOrientation: "from-image" });
         const canvas = document.createElement("canvas");
         canvas.width = bmp.width; canvas.height = bmp.height;
         const ctx = canvas.getContext("2d");
@@ -54,7 +56,9 @@ export function mount(tool) {
         const blob = await new Promise((r) => canvas.toBlob(r, mime, q));
         if (!blob) throw new Error(tr(`เบราว์เซอร์นี้ยังบันทึกเป็น ${typeSel.value.toUpperCase()} ไม่ได้`, `This browser cannot save as ${typeSel.value.toUpperCase()} yet`));
         canvas.width = canvas.height = 0; // ปล่อยหน่วยความจำทันที ไม่รอ GC
-        made.push({ name: `${stripExt(f.name)}.${typeSel.value === "jpeg" ? "jpg" : typeSel.value}`, blob, from: f.size });
+        return { name: `${stripExt(f.name)}.${typeSel.value === "jpeg" ? "jpg" : typeSel.value}`, blob, from: f.size };
+        },
+        commit: (r) => { made.push(r); },
       });
       st.progress(null);
       if (!made.length) throw new Error(tr("แปลงไม่สำเร็จ ตรวจว่าเป็นรูปจริง", "Could not convert. Check they're valid images."));

@@ -108,7 +108,12 @@ export function mount(tool) {
 
       const blob = doc.output("blob");
       st.progress(null);
-      st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done, ${slides.length} pages (1 slide = 1 page)`));
+      // นับของที่แปลงเป็นข้อความไม่ได้ เพื่อบอกผู้ใช้ตรง ๆ แทนที่จะให้หายไปเงียบ ๆ
+      const skipped = slides.reduce((n, s) => n + (s.charts || 0) + (s.diagrams || 0), 0);
+      st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done, ${slides.length} pages (1 slide = 1 page)`) + (skipped
+        ? tr(` (มีกราฟ/แผนภาพ ${skipped} ชิ้นที่แปลงเป็นข้อความไม่ได้ ตารางถูกแปลงเป็นบรรทัดข้อความให้แล้ว)`,
+             ` (${skipped} chart(s)/diagram(s) could not be turned into text; tables were converted into text lines)`)
+        : ""));
       const name = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์, ${ratio.value}`, `${slides.length} slides, ${ratio.value}`))]),

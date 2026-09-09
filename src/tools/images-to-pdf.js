@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
-         stripExt, segmented, eachFile, failedBox } from "../ui.js";
+         stripExt, segmented, eachFileConcurrent, failedBox } from "../ui.js";
 import { tr } from "../i18n.js";
 
 const PAGE_SIZES = { auto: null, a4: [595.28, 841.89], letter: [612, 792] };
@@ -131,9 +131,13 @@ function jpegOrientation(u8) {
       // ‼️ เดิมใช้ for ธรรมดา — ไฟล์เสียใบเดียวทำให้ทั้งชุดพัง ("สร้าง PDF ไม่สำเร็จ: undefined")
       //    และไม่มีปุ่มหยุดให้กดเลยระหว่างงานหนัก · eachFile() แก้ทั้งสองอย่างในตัว
       //    (ข้ามไฟล์เสียแล้วทำต่อ + มีปุ่มหยุด + บอกท้ายว่าข้ามใบไหนเพราะอะไร)
+      /* ‼️ ถอดรหัส/แปลงรูปทำพร้อมกันหลายใบได้ แต่การต่อหน้าเข้าไฟล์ PDF ต้องเรียงตามลำดับไฟล์เดิม
+         eachFileConcurrent จึงแยกให้: prepare ทำพร้อมกัน, commit ถูกเรียกตามลำดับดัชนีเสมอ
+         (ถ้าปล่อยให้ต่อหน้าตามลำดับที่ทำเสร็จ หน้าใน PDF จะสลับกันแบบสุ่ม) */
       let pages = 0;
-      const failed = await eachFile(files, st, async (f) => {
-        const { bytes, kind } = await toEmbeddable(f);
+      const failed = await eachFileConcurrent(files, st, {
+        prepare: (f) => toEmbeddable(f),
+        commit: async ({ bytes, kind }) => {
         const img = kind === "png" ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
 
         let pw, ph;
@@ -150,6 +154,7 @@ function jpegOrientation(u8) {
         page.drawImage(img, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
 
         pages++;
+        },
       });
 
       if (!pages) {

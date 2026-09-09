@@ -88,8 +88,13 @@ export function mount(tool) {
 
       const blob = await Packer.toBlob(new Document({ sections: [{ properties: {}, children }] }));
       st.progress(null);
+      // นับของที่แปลงเป็นข้อความไม่ได้ เพื่อบอกผู้ใช้ตรง ๆ แทนที่จะให้หายไปเงียบ ๆ
+      const skipped = slides.reduce((n, s) => n + (s.charts || 0) + (s.diagrams || 0), 0);
       st.ok(tr(`แปลงสำเร็จ ${slides.length} สไลด์, ${words.toLocaleString("th-TH")} ตัวอักษร`,
-        `Done, ${slides.length} slides, ${words.toLocaleString("en-US")} characters`));
+        `Done, ${slides.length} slides, ${words.toLocaleString("en-US")} characters`) + (skipped
+        ? tr(` (มีกราฟ/แผนภาพ ${skipped} ชิ้นที่แปลงเป็นข้อความไม่ได้ ตารางถูกแปลงเป็นบรรทัดข้อความให้แล้ว)`,
+             ` (${skipped} chart(s)/diagram(s) could not be turned into text; tables were converted into text lines)`)
+        : ""));
       preview.hidden = false;
       preview.textContent = previewLines.join("\n").slice(0, 4000);
 

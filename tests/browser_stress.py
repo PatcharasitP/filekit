@@ -335,12 +335,15 @@ def case5_rapid_actions(b):
     pg.locator("input[type=file]").set_input_files(slow)
     pg.wait_for_timeout(1000)
     pg.locator("button.btn", has_text="สร้างไฟล์ PDF").first.click()
+    # ‼️ ต้องสำรวจถี่ ๆ ตั้งแต่ 09/09/2026 ที่เครื่องมือสายภาพทำงานขนานหลายไฟล์พร้อมกัน
+    #    งานชุดเดิมจบเร็วกว่า 400 มิลลิวินาที ปุ่มหยุดจึงโผล่แล้วหายไปก่อนที่เทสจะสำรวจรอบแรก
+    #    (ตกทั้งที่ปุ่มยังทำงานถูกต้อง ยืนยันแยกด้วย tests/browser_cancel.py)
     stop_seen = False
-    for _ in range(8):
-        pg.wait_for_timeout(400)
+    for _ in range(80):
         if pg.locator(".btn-cancel:visible").count():
             stop_seen = True
             break
+        pg.wait_for_timeout(50)
     ok = ck_true("[images-to-pdf] มีปุ่มหยุดให้กดระหว่างทำงานหนัก (เหมือน image-resize)", stop_seen)
     if not ok:
         bug("กลาง — ฟีเจอร์หาย/ไม่สมส่วนกับเครื่องมืออื่น", "images-to-pdf ไม่มีปุ่มหยุดเลย ผู้ใช้ยกเลิกงานหนักไม่ได้",

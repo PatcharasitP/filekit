@@ -8,6 +8,11 @@
 //  2. รูปภาพและไฟล์แนบต้องคัดลอกมาพร้อมตั้งชื่อใหม่ กันชื่อชนกัน
 //  3. <w:sectPr> ตัวสุดท้ายของแต่ละไฟล์คือการตั้งค่าหน้ากระดาษของไฟล์นั้น
 //     ต้องตัดทิ้งเพื่อไม่ให้ขึ้น section ใหม่ที่ทำให้หน้าเพี้ยน (คงของไฟล์แรกไว้)
+//  4. footnotes.xml เป็น part แบบ "unique ต่อเอกสาร" เหมือน styles/numbering — แต่ต่างจากพวกนั้นตรงที่
+//     "มีเนื้อหาที่ต้องรวมจริง ๆ" (ไม่ใช่แค่ใช้ของไฟล์แรกอย่างเดียว) จึงต้อง merge เนื้อ <w:footnote>
+//     เข้าด้วยกัน + ออกเลข w:id ใหม่ให้ไม่ชนกัน (คนละเรื่องกับ r:id ของ rIdJoinNNN ที่จัดการอยู่แล้ว
+//     เพราะ w:footnoteReference ใช้ attribute w:id คนละ namespace กับ r:id — ถ้าไม่ remap จุดนี้
+//     ทุกไฟล์ที่เริ่มนับ footnote id ที่ 1/2 เหมือนกัน จะชนกันเงียบ ๆ แล้ว Word เอาไปแสดงเนื้อหาไฟล์แรกซ้ำ)
 
 import { loadLibs } from "./loader.js";
 import { tr } from "./i18n.js";
@@ -16,6 +21,26 @@ import { assertNotEmpty, friendlyZipOpenError } from "./filetype.js";
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 const RELS_NS = "http://schemas.openxmlformats.org/package/2006/relationships";
+
+/* ‼️ part กลุ่มนี้เป็น "ไฟล์เดียวต่อเอกสาร" เหมือน styles/numbering แต่ต่างกันตรงที่
+ * มันมีเนื้อหาของผู้ใช้อยู่ข้างใน จึงต้อง merge จริง ไม่ใช่ใช้ของไฟล์แรกแล้วทิ้งที่เหลือ
+ * และเนื้อแต่ละชิ้นถูกอ้างจาก body ด้วย attribute w:id ซึ่งทุกไฟล์เริ่มนับใหม่ที่เลขต่ำเหมือนกันหมด
+ * ถ้าไม่ออกเลขใหม่ให้ ตัวอ้างอิงของไฟล์หลังจะไปชี้เนื้อของไฟล์แรก = เนื้อหาสลับกันแบบเงียบสนิท
+ * (ยิงจริง 09/09/2026: รวม 2 ไฟล์ที่ต่างมีเชิงอรรถ ได้จุดอ้างอิง w:id = ['2','2'] ทั้งคู่
+ *  เนื้อของไฟล์ที่ 2 หายไปนอนเป็นไฟล์กำพร้าใน word/media/ และคอมเมนต์หายสนิทไม่เหลือใน zip เลย)
+ * ‼️ w:id ตรงนี้คนละเรื่องกับ r:id ของ relationship คนละเนมสเปซ ตัว remap จึงต้องแยกกัน */
+const MERGE_PARTS = [
+  { part: "word/footnotes.xml", root: "footnotes", item: "footnote", relType: "footnotes",
+    refs: ["footnoteReference"],
+    ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml" },
+  { part: "word/endnotes.xml", root: "endnotes", item: "endnote", relType: "endnotes",
+    refs: ["endnoteReference"],
+    ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml" },
+  // คอมเมนต์อ้างถึง 3 จุดในเนื้อความ: จุดวางเครื่องหมาย กับหัวและท้ายช่วงที่คลุมไว้
+  { part: "word/comments.xml", root: "comments", item: "comment", relType: "comments",
+    refs: ["commentReference", "commentRangeStart", "commentRangeEnd"],
+    ct: "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml" },
+];
 
 const PAGE_BREAK =
   '<w:p xmlns:w="' + W + '"><w:r><w:br w:type="page"/></w:r></w:p>';
@@ -56,6 +81,24 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
   const baseRels = new DOMParser().parseFromString(baseRelsXml, "application/xml");
   const relsRoot = baseRels.documentElement;
 
+  // สถานะของ part ที่ต้อง merge (เชิงอรรถ, อ้างอิงท้ายเรื่อง, คอมเมนต์) เริ่มจากของไฟล์ฐาน
+  // maxId = เลข w:id สูงสุดที่ใช้ไปแล้ว ไฟล์ถัดไปจะออกเลขต่อจากนี้เสมอ จึงไม่มีทางชนกัน
+  const merged = [];
+  for (const spec of MERGE_PARTS) {
+    const f = base.file(spec.part);
+    const doc = f
+      ? new DOMParser().parseFromString(await f.async("string"), "application/xml")
+      : null;
+    let maxId = 0;
+    if (doc) {
+      for (const it of doc.getElementsByTagNameNS(W, spec.item)) {
+        const id = parseInt(it.getAttributeNS(W, "id"), 10);
+        if (!Number.isNaN(id) && id > maxId) maxId = id;
+      }
+    }
+    merged.push({ spec, doc, maxId, isNew: false, written: false });
+  }
+
   const extraFiles = {};          // ไฟล์สื่อที่ต้องเพิ่มเข้าแพ็กเกจ
   const parts = [{ name: files[0].name, paragraphs: countParagraphs(body) }];
   let relSeq = 1000;              // เริ่มรหัสใหม่ให้ห่างจากของเดิม กันชนกันแน่นอน
@@ -79,7 +122,8 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
         const type = rel.getAttribute("Type") || "";
         const target = rel.getAttribute("Target") || "";
         // ข้ามส่วนที่ผูกกับโครงเอกสาร (styles/numbering/settings) เพราะใช้ของไฟล์แรก
-        if (/(styles|numbering|settings|webSettings|fontTable|theme|comments)/.test(target)) continue;
+        // footnotes/endnotes/comments ถูกจัดการแยกด้านล่าง (merge เนื้อหาจริง ไม่ใช่ข้ามหรือก็อปเป็น media)
+        if (/(styles|numbering|settings|webSettings|fontTable|theme|comments|footnotes|endnotes)/.test(target)) continue;
 
         const newId = `rIdJoin${relSeq++}`;
         map.set(rel.getAttribute("Id"), newId);
@@ -105,6 +149,44 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
       }
     }
 
+    // merge เนื้อของ part กลุ่ม MERGE_PARTS จากไฟล์นี้เข้ากับของฐาน พร้อมออก w:id ใหม่ให้ไม่ชนกัน
+    const idMaps = new Map();      // spec → Map(id เดิม → id ใหม่)
+    for (const m of merged) {
+      const map = new Map();
+      idMaps.set(m.spec, map);
+      const srcFile = zip.file(m.spec.part);
+      if (!srcFile) continue;
+      const srcDoc = new DOMParser().parseFromString(await srcFile.async("string"), "application/xml");
+      if (!m.doc) {
+        // ไฟล์ฐานไม่มี part นี้มาก่อน สร้างใหม่ + ผูก relationship (content-type เติมตอนประกอบ zip)
+        m.doc = new DOMParser().parseFromString(
+          `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:${m.spec.root} xmlns:w="${W}"></w:${m.spec.root}>`,
+          "application/xml",
+        );
+        const relEl = baseRels.createElementNS(RELS_NS, "Relationship");
+        relEl.setAttribute("Id", `rIdJoin${relSeq++}`);
+        relEl.setAttribute("Type", `${R}/${m.spec.relType}`);
+        relEl.setAttribute("Target", m.spec.part.slice("word/".length));
+        relsRoot.appendChild(relEl);
+        m.isNew = true;
+      }
+      const root = m.doc.documentElement;
+      for (const it of [...srcDoc.getElementsByTagNameNS(W, m.spec.item)]) {
+        const type = it.getAttributeNS(W, "type");
+        // เส้นคั่นมาตรฐานที่ทุกไฟล์มีเหมือนกันอยู่แล้ว ใช้ของฐานพอ ไม่ต้องรวมซ้ำ
+        if (type === "separator" || type === "continuationSeparator") continue;
+        const oldId = it.getAttributeNS(W, "id");
+        m.maxId += 1;
+        const newId = String(m.maxId);
+        map.set(oldId, newId);
+        const imported = m.doc.importNode(it, true);
+        for (const attr of [...imported.attributes]) {
+          if (attr.namespaceURI === W && attr.localName === "id") attr.value = newId;
+        }
+        root.appendChild(imported);
+      }
+    }
+
     if (pageBreak) {
       const br = new DOMParser().parseFromString(PAGE_BREAK, "application/xml").documentElement;
       body.appendChild(baseDoc.importNode(br, true));
@@ -116,6 +198,7 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
       if (child.nodeType === 1 && child.localName === "sectPr") continue;
       const node = baseDoc.importNode(child, true);
       remapRelIds(node, map);
+      remapMergedIds(node, merged, idMaps);
       body.appendChild(node);
       if (child.nodeType === 1 && child.localName === "p") added++;
     }
@@ -127,13 +210,29 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
   if (sect) body.appendChild(sect);
 
   const out = new JSZipLib();
+  const ser = (d) => new XMLSerializer().serializeToString(d);
   for (const name of Object.keys(base.files)) {
     const entry = base.files[name];
     if (entry.dir) continue;
-    if (name === "word/document.xml") { out.file(name, new XMLSerializer().serializeToString(baseDoc)); continue; }
-    if (name === "word/_rels/document.xml.rels") { out.file(name, new XMLSerializer().serializeToString(baseRels)); continue; }
+    if (name === "word/document.xml") { out.file(name, ser(baseDoc)); continue; }
+    if (name === "word/_rels/document.xml.rels") { out.file(name, ser(baseRels)); continue; }
+    const hit = merged.find((m) => m.spec.part === name && m.doc);
+    if (hit) { out.file(name, ser(hit.doc)); hit.written = true; continue; }
+    const fresh = merged.filter((m) => m.isNew);
+    if (name === "[Content_Types].xml" && fresh.length) {
+      let ct = await entry.async("string");
+      for (const m of fresh) {
+        if (ct.includes(`PartName="/${m.spec.part}"`)) continue;
+        ct = ct.replace("</Types>", `<Override PartName="/${m.spec.part}" ContentType="${m.spec.ct}"/></Types>`);
+      }
+      out.file(name, ct);
+      continue;
+    }
     out.file(name, await entry.async("uint8array"));
   }
+  // part ที่ไฟล์ฐานไม่มีมาก่อนแต่ไฟล์อื่นเติมเข้ามา ต้องเขียนเพิ่มเอง
+  // (ลูปข้างบนไล่จากรายชื่อไฟล์ของฐาน จะไม่มีทางเจอชื่อนี้เพื่อ trigger เงื่อนไขด้านบน)
+  for (const m of merged) if (m.doc && !m.written) out.file(m.spec.part, ser(m.doc));
   for (const [name, data] of Object.entries(extraFiles)) out.file(name, data);
 
   const blob = await out.generateAsync({
@@ -157,6 +256,31 @@ function remapRelIds(node, map) {
     if (n.nodeType === 1 && n.attributes) {
       for (const attr of [...n.attributes]) {
         if (attr.namespaceURI === R && map.has(attr.value)) attr.value = map.get(attr.value);
+      }
+    }
+    for (const c of n.childNodes) walk(c);
+  };
+  walk(node);
+}
+
+/** เปลี่ยน w:id ของตัวอ้างอิงเชิงอรรถ/อ้างอิงท้ายเรื่อง/คอมเมนต์ ให้ตรงกับเลขใหม่ที่ออกให้ตอน merge
+ *  (คนละเรื่องกับ r:id ข้างบน: w:footnoteReference w:id="N" ชี้เข้า <w:footnote w:id="N"> ในอีกไฟล์หนึ่ง
+ *   ไม่ได้ชี้ผ่าน relationship เลย ถ้าลืม remap จุดนี้ เนื้อหาจะสลับกันโดยไม่มีอะไรฟ้อง) */
+function remapMergedIds(node, merged, idMaps) {
+  const byTag = new Map();
+  for (const m of merged) {
+    const map = idMaps.get(m.spec);
+    if (!map || !map.size) continue;
+    for (const tag of m.spec.refs) byTag.set(tag, map);
+  }
+  if (!byTag.size) return;
+  const walk = (n) => {
+    if (n.nodeType === 1 && n.namespaceURI === W && byTag.has(n.localName)) {
+      const map = byTag.get(n.localName);
+      for (const attr of [...n.attributes]) {
+        if (attr.namespaceURI === W && attr.localName === "id" && map.has(attr.value)) {
+          attr.value = map.get(attr.value);
+        }
       }
     }
     for (const c of n.childNodes) walk(c);

@@ -16,11 +16,15 @@ with sync_playwright() as p:
     pg.locator("input[type=file]").set_input_files(files); pg.wait_for_timeout(900)
     ck("โหลดครบ 30 ไฟล์", pg.locator(".file-row").count(), 30)
     ck("ยังไม่เริ่มงาน → ไม่มีปุ่มหยุด", pg.locator(".btn-cancel:visible").count(), 0)
+    # ‼️ ตั้งเป็น PNG ก่อน เพราะการเข้ารหัส PNG ช้ากว่า JPG มาก
+    #    ตั้งแต่ทำงานขนานหลายไฟล์พร้อมกัน (09/09/2026) งาน JPG 30 ไฟล์จบเร็วกว่า 700 มิลลิวินาที
+    #    ปุ่มหยุดจึงหายไปก่อนที่เทสจะกดทัน = เทสตกทั้งที่การยกเลิกยังทำงานถูกต้อง
+    pg.select_option("select", "png")
     pg.locator("button.btn", has_text="แปลง").first.click()
     pg.wait_for_selector(".btn-cancel:visible", timeout=5000)
     ck("เริ่มงานแล้ว → ปุ่มหยุดโผล่", pg.locator(".btn-cancel:visible").count(), 1)
-    pg.wait_for_timeout(700)
-    pg.locator(".btn-cancel").click()
+    # ‼️ ห้ามใช้ .click() ตรงนี้ Playwright จะรอจนงานหนักเสร็จก่อนค่อยกด = ทดสอบผิดเคสเงียบ ๆ
+    pg.evaluate("() => document.querySelector('.btn-cancel')?.click()")
     pg.wait_for_timeout(3000)
     done = pg.locator(".result").count()
     ck(f"หยุดกลางคัน → ได้ผลบางส่วน ({done} ไฟล์) ไม่ใช่ศูนย์และไม่ใช่ครบ 30", 0 < done < 30, True)
@@ -28,7 +32,7 @@ with sync_playwright() as p:
     ck("ปุ่มหยุดหายไปหลังจบ", pg.locator(".btn-cancel:visible").count(), 0)
     # กดใหม่ต้องเริ่มได้ปกติ ไม่ติดธงยกเลิกค้าง
     pg.locator("button.btn", has_text="แปลง").first.click()
-    pg.wait_for_timeout(6000)
+    pg.wait_for_timeout(12000)
     ck("กดแปลงใหม่ → ทำครบ 30 ไฟล์ (ธงยกเลิกไม่ค้าง)", pg.locator(".result").count(), 30)
     b.close()
 print(f"\nผ่าน {P} · ตก {len(F)}")

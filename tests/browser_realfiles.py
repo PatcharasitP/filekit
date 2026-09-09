@@ -25,6 +25,11 @@
 #      เดิมวาดทุกหน้าใหม่เป็นภาพให้เอง = ไฟล์มักใหญ่ขึ้นและชั้นข้อความหายทั้งไฟล์
 #      ตอนนี้ต้องบีบแบบไม่วาดใหม่ก่อน และถ้าทำไม่ได้ต้องหยุดถาม ไม่ทำลายของเงียบ ๆ
 #
+#   ⑥ รวมไฟล์ Word ที่ต่างมี เชิงอรรถ / อ้างอิงท้ายเรื่อง / คอมเมนต์
+#      ทุกไฟล์ .docx เริ่มนับ w:id ของของพวกนี้ใหม่ที่เลขต่ำเหมือนกันหมด ถ้าไม่ออกเลขใหม่ตอนรวม
+#      ตัวอ้างอิงของไฟล์หลังจะไปชี้เนื้อของไฟล์แรก = เนื้อหาสลับกันโดยไม่มีอะไรฟ้อง
+#      และเนื้อของไฟล์หลังหายไปเลย (คอมเมนต์หายสนิท เชิงอรรถไปนอนเป็นไฟล์กำพร้าใน word/media/)
+#
 # ‼️ หน้าเว็บมี Content-Security-Policy ที่ไม่มี unsafe-eval — wait_for_function
 #    ต้องส่งสตริงที่เป็นฟังก์ชันลูกศรเท่านั้น (มีเทสจับกฎนี้ใน accepts.test.mjs)
 #
@@ -38,6 +43,9 @@ import shutil
 import socket
 import tempfile
 import time
+
+import re
+import zipfile
 
 import fitz
 import openpyxl
@@ -188,6 +196,119 @@ def pages_with_text(path):
     return n
 
 
+W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+
+def make_docx_with_notes(tag):
+    """.docx ที่มีทั้งเชิงอรรถ อ้างอิงท้ายเรื่อง และคอมเมนต์ โดยตั้ง w:id ให้ตรงกันทุกไฟล์
+    (แบบที่ Word ทำจริง คือทุกไฟล์เริ่มนับใหม่จากเลขต่ำ) เพื่อบังคับให้ชนกันตอนรวม"""
+    doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+           f'<w:document xmlns:w="{W_NS}" xmlns:r="{R_NS}"><w:body>'
+           '<w:p><w:commentRangeStart w:id="1"/>'
+           f'<w:r><w:t>เนื้อความ {tag}</w:t></w:r><w:commentRangeEnd w:id="1"/>'
+           '<w:r><w:commentReference w:id="1"/></w:r>'
+           '<w:r><w:footnoteReference w:id="2"/></w:r>'
+           '<w:r><w:endnoteReference w:id="2"/></w:r></w:p>'
+           '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr></w:body></w:document>')
+    fn = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          f'<w:footnotes xmlns:w="{W_NS}">'
+          '<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:footnote>'
+          f'<w:footnote w:id="2"><w:p><w:r><w:t>เชิงอรรถ {tag}</w:t></w:r></w:p></w:footnote></w:footnotes>')
+    en = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          f'<w:endnotes xmlns:w="{W_NS}">'
+          '<w:endnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:endnote>'
+          f'<w:endnote w:id="2"><w:p><w:r><w:t>ท้ายเรื่อง {tag}</w:t></w:r></w:p></w:endnote></w:endnotes>')
+    cm = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          f'<w:comments xmlns:w="{W_NS}">'
+          '<w:comment w:id="1" w:author="ผู้ตรวจ" w:date="2026-09-09T00:00:00Z">'
+          f'<w:p><w:r><w:t>คอมเมนต์ {tag}</w:t></w:r></w:p></w:comment></w:comments>')
+    over = ('<Override PartName="/word/{0}.xml" ContentType="application/vnd.openxmlformats-'
+            'officedocument.wordprocessingml.{0}+xml"/>')
+    ct = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          '<Default Extension="xml" ContentType="application/xml"/>'
+          '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-'
+          'officedocument.wordprocessingml.document.main+xml"/>'
+          + "".join(over.format(k) for k in ("footnotes", "endnotes", "comments")) + '</Types>')
+    rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            f'<Relationship Id="rId1" Type="{R_NS}/officeDocument" Target="word/document.xml"/></Relationships>')
+    drels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+             f'<Relationship Id="rId3" Type="{R_NS}/footnotes" Target="footnotes.xml"/>'
+             f'<Relationship Id="rId4" Type="{R_NS}/endnotes" Target="endnotes.xml"/>'
+             f'<Relationship Id="rId5" Type="{R_NS}/comments" Target="comments.xml"/></Relationships>')
+    path = TMP / f"บันทึก-{tag}.docx"
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", ct)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("word/document.xml", doc)
+        z.writestr("word/_rels/document.xml.rels", drels)
+        z.writestr("word/footnotes.xml", fn)
+        z.writestr("word/endnotes.xml", en)
+        z.writestr("word/comments.xml", cm)
+    return path
+
+
+def make_pptx_with_table_and_chart():
+    """สไลด์ที่มีทั้งตารางและกราฟ แบบสไลด์สรุปยอดขายจริง"""
+    from pptx import Presentation
+    from pptx.util import Inches
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE
+    pr = Presentation()
+    sl = pr.slides.add_slide(pr.slide_layouts[5])
+    sl.shapes.title.text = "สรุปยอดขายรายไตรมาส"
+    data = [["ไตรมาส", "ยอดขาย", "เติบโต"],
+            ["ไตรมาสหนึ่ง", "1,250,000", "+4.2%"],
+            ["ไตรมาสสอง", "1,410,000", "+12.8%"]]
+    tb = sl.shapes.add_table(3, 3, Inches(0.5), Inches(1.8), Inches(6), Inches(1.5)).table
+    for r in range(3):
+        for c in range(3):
+            tb.cell(r, c).text = data[r][c]
+    cd = CategoryChartData()
+    cd.categories = ["ก", "ข", "ค"]
+    cd.add_series("ชุดหนึ่ง", (1.0, 2.0, 3.0))
+    sl.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(7), Inches(1.8),
+                        Inches(2.5), Inches(2), cd)
+    p = TMP / "นำเสนอ-มีตาราง.pptx"
+    pr.save(p)
+    return p
+
+
+def make_docx_with_textbox():
+    """.docx ที่มีกล่องข้อความซ้อนอยู่ในย่อหน้า (ข้อความคนละที่บนหน้ากระดาษ)"""
+    V_NS = "urn:schemas-microsoft-com:vml"
+    doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+           f'<w:document xmlns:w="{W_NS}" xmlns:r="{R_NS}" xmlns:v="{V_NS}"><w:body>'
+           '<w:p><w:r><w:t>ยอดรวมทั้งสิ้น</w:t></w:r>'
+           '<w:r><w:pict><v:shape id="s1" style="width:200pt;height:60pt"><v:textbox>'
+           '<w:txbxContent><w:p><w:r><w:t>หมายเหตุในกล่อง</w:t></w:r></w:p>'
+           '</w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>'
+           '<w:p><w:r><w:t>บรรทัดสุดท้าย</w:t></w:r></w:p>'
+           '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/></w:sectPr></w:body></w:document>')
+    ct = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          '<Default Extension="xml" ContentType="application/xml"/>'
+          '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-'
+          'officedocument.wordprocessingml.document.main+xml"/></Types>')
+    rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            f'<Relationship Id="rId1" Type="{R_NS}/officeDocument" Target="word/document.xml"/></Relationships>')
+    path = TMP / "มีกล่องข้อความ.docx"
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", ct)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("word/document.xml", doc)
+        z.writestr("word/_rels/document.xml.rels",
+                   '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/'
+                   'package/2006/relationships"/>')
+    return path
+
+
 def press(pg, pattern):
     """กดปุ่มที่มองเห็นจริงด้วย evaluate — ระหว่างที่เครื่องมือทำงานหนัก .click() ของ Playwright
     จะรอจนงานเสร็จก่อนค่อยกด ทำให้ทดสอบผิดเคสโดยไม่รู้ตัว (บทเรียน 09/09/2026)"""
@@ -214,6 +335,9 @@ def main():
     docx = make_thai_docx()
     narrow = make_narrow_table()
     rotated = make_rotated_pdf()
+    note_docs = [make_docx_with_notes("AAA"), make_docx_with_notes("BBB")]
+    deck = make_pptx_with_table_and_chart()
+    tbox = make_docx_with_textbox()
     text_pdf = make_text_pdf(False)
     compact_pdf = make_text_pdf(True)
 
@@ -414,6 +538,86 @@ def main():
             out7 = DL / "forced.pdf"
             info.value.save_as(str(out7))
             ck("กดยอมแล้วยังบีบให้ได้จริง (ไม่ได้ปิดทางผู้ใช้)", out7.stat().st_size > 0, True)
+
+            # ── ⑥ รวมไฟล์ Word ต้องไม่ทำเชิงอรรถ/คอมเมนต์ของไฟล์หลังหาย ────────────────
+            print("\n── ⑥ รวมไฟล์ Word ที่มีเชิงอรรถ อ้างอิงท้ายเรื่อง และคอมเมนต์ ──")
+            pg.goto(f"{base}/#/word-join", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files([str(x) for x in note_docs])
+            pg.wait_for_timeout(1500)
+            press(pg, "รวมไฟล์|รวมเป็น")
+            pg.wait_for_selector(".result", timeout=60000)
+            pg.wait_for_timeout(1200)
+            with pg.expect_download(timeout=30000) as info:
+                pg.locator(".result button").last.click()
+            out8 = DL / "joined.docx"
+            info.value.save_as(str(out8))
+            with zipfile.ZipFile(out8) as z:
+                names = z.namelist()
+                body = z.read("word/document.xml").decode()
+                parts = {n: z.read(n).decode() for n in
+                         ("word/footnotes.xml", "word/endnotes.xml", "word/comments.xml") if n in names}
+            for kind, part, item, ref, txt in [
+                ("เชิงอรรถ", "word/footnotes.xml", "footnote", "footnoteReference", "เชิงอรรถ"),
+                ("อ้างอิงท้ายเรื่อง", "word/endnotes.xml", "endnote", "endnoteReference", "ท้ายเรื่อง"),
+                ("คอมเมนต์", "word/comments.xml", "comment", "commentReference", "คอมเมนต์"),
+            ]:
+                inner = parts.get(part, "")
+                refs = re.findall(r'<w:%s[^>]*w:id="(-?\d+)"' % ref, body)
+                ids = re.findall(r'<w:%s [^>]*w:id="(-?\d+)"' % item, inner)
+                ck(f"{kind}: เนื้อของทั้ง 2 ไฟล์อยู่ครบ",
+                   (f"{txt} AAA" in inner, f"{txt} BBB" in inner), (True, True))
+                ck(f"{kind}: จุดอ้างอิง 2 จุดชี้คนละ id", len(refs) == 2 and refs[0] != refs[1], True)
+                ck(f"{kind}: ทุกจุดอ้างอิงมีเนื้อรองรับจริง", all(r in ids for r in refs), True)
+            rng = sorted(set(re.findall(r'<w:commentRange(?:Start|End)[^>]*w:id="(-?\d+)"', body)))
+            cref = sorted(set(re.findall(r'<w:commentReference[^>]*w:id="(-?\d+)"', body)))
+            ck("คอมเมนต์: หัวและท้ายช่วงที่คลุมไว้ถูกเปลี่ยนเลขตามไปด้วย", rng, cref)
+            ck("ไม่มีไฟล์กำพร้าหลุดไปอยู่ใน word/media/",
+               [n for n in names if n.startswith("word/media/") and n.endswith(".xml")], [])
+
+            # ── ⑦ ตารางในสไลด์ และการแทนที่คำข้ามขอบเขตกล่องข้อความ ────────────────────
+            print("\n── ⑦ ตารางในสไลด์ PowerPoint ──")
+            pg.goto(f"{base}/#/powerpoint-to-pdf", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files(str(deck))
+            pg.wait_for_timeout(1500)
+            press(pg, "แปลง|สร้าง")
+            pg.wait_for_selector(".result", timeout=60000)
+            status = pg.locator(".status").inner_text()
+            with pg.expect_download(timeout=30000) as info:
+                pg.locator(".result button").last.click()
+            out9 = DL / "deck.pdf"
+            info.value.save_as(str(out9))
+            doc = fitz.open(out9)
+            deck_text = doc[0].get_text()
+            doc.close()
+            ck("ข้อความในตารางบนสไลด์ไม่หาย",
+               [w for w in ("ไตรมาสหนึ่ง", "1,250,000", "+12.8%", "เติบโต") if w not in deck_text], [])
+            ck("บอกผู้ใช้ว่ามีกราฟที่แปลงเป็นข้อความไม่ได้", "กราฟ" in status, True)
+
+            print("\n── ⑧ แทนที่คำ ห้ามข้ามขอบเขตกล่องข้อความ ──")
+            pg.goto(f"{base}/#/word-replace", wait_until="networkidle")
+            pg.wait_for_selector(".dz")
+            pg.locator(".dz input[type=file]").first.set_input_files(str(tbox))
+            pg.wait_for_timeout(1200)
+            boxes = pg.locator("input[type=text]")
+            # คำนี้ "ไม่มีอยู่จริง" ในเอกสาร มันคร่อมรอยต่อระหว่างข้อความนอกกล่องกับในกล่อง
+            boxes.nth(0).fill("ทั้งสิ้นหมายเหตุ")
+            boxes.nth(1).fill("XXX")
+            pg.wait_for_timeout(500)
+            press(pg, "แทนที่|เริ่ม")
+            pg.wait_for_timeout(3000)
+            ck("ไม่แทนที่คำที่ไม่มีอยู่จริง (คร่อมขอบเขตกล่องข้อความ)",
+               "0 จุด" in pg.locator(".status").inner_text(), True)
+            if pg.locator(".result button").count():
+                with pg.expect_download(timeout=30000) as info:
+                    pg.locator(".result button").last.click()
+                out10 = DL / "rep.docx"
+                info.value.save_as(str(out10))
+                with zipfile.ZipFile(out10) as z:
+                    xml = z.read("word/document.xml").decode()
+                ck("ข้อความในกล่องข้อความไม่ถูกลบทิ้ง", "หมายเหตุในกล่อง" in xml, True)
+                ck("ข้อความนอกกล่องไม่ถูกลบทิ้ง", "ยอดรวมทั้งสิ้น" in xml, True)
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

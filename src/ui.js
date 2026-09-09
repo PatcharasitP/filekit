@@ -826,6 +826,91 @@ export async function eachFile(files, st, fn) {
   return failed;
 }
 
+/* ‼️ งานหนักของเครื่องมือสายภาพ (ถอดรหัส JPEG/PNG, วาด canvas, เข้ารหัสใหม่, เรนเดอร์หน้า PDF)
+ * เกือบทั้งหมดเป็นโค้ด native ของเบราว์เซอร์ที่ทำงานนอกเธรดหลักอยู่แล้ว วัดจริงแล้วเวลา 60-86%
+ * หมดไปกับตรงนี้ แต่โค้ดเราสั่งทีละชิ้นแล้วรอให้เสร็จก่อนค่อยสั่งชิ้นถัดไป = ปล่อยแกนอื่นว่างเปล่าตลอดทาง
+ *
+ * ตัวช่วยนี้แยกงานเป็น 2 จังหวะ
+ *   prepare  งานหนักที่ทำพร้อมกันหลายชิ้นได้ (จำกัดจำนวนกันแรมพุ่ง)
+ *   commit   งานเบาที่ต้อง "เรียงตามลำดับเดิมเป๊ะ ๆ" เช่นต่อหน้าเข้าไฟล์ PDF หรือเก็บผลลงรายการ
+ * ‼️ commit ถูกเรียกตามลำดับดัชนีเดิมเสมอ ไม่ใช่ตามลำดับที่ทำเสร็จ ไม่งั้นหน้าใน PDF จะสลับกันแบบสุ่ม */
+export function suggestedConcurrency() {
+  const cores = (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
+  return Math.max(2, Math.min(4, cores));
+}
+
+/** ทำ prepare พร้อมกันหลายชิ้น แล้วเรียก commit ตามลำดับเดิม · คืนจำนวนชิ้นที่ commit สำเร็จ */
+export async function mapConcurrent(items, { prepare, commit, concurrency, cancelled } = {}) {
+  const list = [...items];
+  if (!list.length) return 0;
+  const limit = Math.max(1, Math.min(concurrency || suggestedConcurrency(), list.length));
+  const running = new Map();   // ดัชนี → งานที่กำลังทำอยู่
+  const ready = new Map();     // ดัชนี → ผลที่เสร็จแล้ว รอถึงคิวตัวเอง
+  let next = 0, at = 0;
+
+  const fill = () => {
+    while (running.size < limit && next < list.length && !cancelled?.()) {
+      const i = next++;
+      const job = Promise.resolve()
+        .then(() => prepare(list[i], i))
+        .then((v) => ready.set(i, { ok: true, v }), (e) => ready.set(i, { ok: false, e }))
+        .then(() => { running.delete(i); });
+      running.set(i, job);
+    }
+  };
+
+  fill();
+  while (at < list.length) {
+    if (!ready.has(at)) {
+      if (!running.size) break;                       // ผู้ใช้กดหยุด ไม่มีงานค้างแล้ว
+      await Promise.race([...running.values()]);
+      fill();
+      continue;
+    }
+    const r = ready.get(at);
+    ready.delete(at);
+    if (!r.ok) throw r.e;                             // ผู้เรียกที่อยากข้ามชิ้นเสีย ให้ดักเองใน prepare
+    await commit(r.v, list[at], at);
+    at++;
+    fill();
+    await yieldToBrowser();
+  }
+  return at;
+}
+
+/** เหมือน eachFile แต่ทำงานหนักพร้อมกันหลายไฟล์ · ไฟล์เสียใบเดียวไม่ทำให้ทั้งชุดพัง */
+export async function eachFileConcurrent(files, st, { prepare, commit, concurrency } = {}) {
+  const list = [...files];       // วนบนสำเนาเสมอ ผู้ใช้ลบไฟล์กลางลิสต์ระหว่างทำงานได้
+  const failed = [];
+  failed.stopped = 0;
+  if (!list.length) return failed;
+  const why = (e) => (e && e.message) || String(e);
+
+  st?.begin?.();
+  const done = await mapConcurrent(list, {
+    concurrency,
+    cancelled: () => !!st?.cancelled,
+    prepare: async (f, i) => {
+      emitFileState(f, "working");
+      try { return { ok: true, v: await prepare(f, i) }; }
+      catch (e) { return { ok: false, e }; }
+    },
+    commit: async (r, f, i) => {
+      if (r.ok) {
+        try { await commit(r.v, f, i); emitFileState(f, "done"); }
+        catch (e) { emitFileState(f, "error"); failed.push({ name: f.name, why: why(e) }); }
+      } else {
+        emitFileState(f, "error");
+        failed.push({ name: f.name, why: why(r.e) });
+      }
+      st?.progress?.(((i + 1) / list.length) * 100, `(${i + 1}/${list.length})`);
+    },
+  });
+  st?.end?.();
+  failed.stopped = list.length - done;               // ที่ยังไม่ได้ทำเพราะผู้ใช้กดหยุด
+  return failed;
+}
+
 /** กล่องสรุปไฟล์ที่ข้ามไป — ใช้คู่กับ eachFile */
 export function failedBox(failed) {
   if (!failed) return null;

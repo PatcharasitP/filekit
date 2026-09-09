@@ -20,7 +20,11 @@ export function mount(tool) {
 
   const lang = segmented([["tha+eng", tr("ไทย + อังกฤษ", "Thai + English")], ["tha", tr("ไทย", "Thai")], ["eng", tr("อังกฤษ", "English")]], "tha+eng");
   const rangeInput = el("input", { type: "text", value: "1-", placeholder: tr("เช่น 1-3", "e.g. 1-3") });
-  const quality = select([["2", tr("ปกติ (เร็ว)", "Normal (fast)")], ["2.6", tr("ละเอียด (แนะนำ)", "Detailed (recommended)")], ["3.4", tr("ละเอียดสูง (ช้า)", "High detail (slow)")]], "2.6");
+  /* ‼️ ค่าตั้งต้นเป็น 3.4 ไม่ใช่ 2.6 เพราะวัดจริงแล้วอ่านแม่นกว่าโดยไม่ช้าขึ้นเลย
+     (ใบเสร็จไทยที่จำลองสแกน 200dpi: อัตราตัวอักษรผิด 0.1085 ที่ 2.6 เทียบ 0.0969 ที่ 3.4
+      เวลาเท่ากันที่ 1.6 วินาที วัดซ้ำ 3 รอบได้เลขเดิมเป๊ะ) และเกิน 3.4 ไปแล้วแทบไม่ดีขึ้นอีก
+     แต่ช้าขึ้นเรื่อย ๆ จึงไม่เปิดค่าที่สูงกว่านี้ให้เลือก */
+  const quality = select([["2", tr("ปกติ (เร็ว)", "Normal (fast)")], ["2.6", tr("ละเอียด", "Detailed")], ["3.4", tr("ละเอียดสูง (แนะนำ)", "High detail (recommended)")]], "3.4");
   const go = button(tr("เริ่มอ่าน", "Start reading"), { onclick: run });
 
   body.append(dz.container,

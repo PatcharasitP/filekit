@@ -1,6 +1,6 @@
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, parsePages, fmtBytes, yieldToBrowser } from "../ui.js";
+         stripExt, parsePages, fmtBytes, yieldToBrowser, mapConcurrent } from "../ui.js";
 import { tr } from "../i18n.js";
 
 export function mount(tool) {
@@ -42,22 +42,31 @@ export function mount(tool) {
       const base = stripExt(file.name);
       const made = [];
 
-      for (let i = 0; i < pages.length; i++) {
-        const page = await pdf.getPage(pages[i]);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.floor(viewport.width);
-        canvas.height = Math.floor(viewport.height);
-        const ctx = canvas.getContext("2d");
-        if (mime === "image/jpeg") { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        const blob = await new Promise((r) => canvas.toBlob(r, mime, 0.92));
-        canvas.width = canvas.height = 0;
-        page.cleanup();
-        made.push({ name: tr(`${base}-หน้า${String(pages[i]).padStart(2, "0")}.${ext}`, `${base}-page${String(pages[i]).padStart(2, "0")}.${ext}`), blob });
-        st.progress(((i + 1) / pages.length) * 100, `(${i + 1}/${pages.length})`);
-        await yieldToBrowser();
-      }
+      /* เรนเดอร์หลายหน้าพร้อมกัน (งานหนักอยู่ฝั่ง canvas/codec ของเบราว์เซอร์ ซึ่งขนานได้)
+         แต่เก็บผลตามลำดับหน้าเดิมเสมอ ไม่งั้นชื่อไฟล์กับลำดับใน ZIP จะสลับกัน
+         ‼️ แต่ละหน้าต้องมี canvas ของตัวเอง ห้ามใช้ผืนเดียวร่วมกัน เพราะ pdf.js
+            ทาพื้นทับ canvas ทั้งใบก่อนวาดทุกครั้ง งานที่วาดค้างอยู่จะถูกลบเกลี้ยง */
+      await mapConcurrent(pages, {
+        cancelled: () => !!st.cancelled,
+        prepare: async (num) => {
+          const page = await pdf.getPage(num);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          const ctx = canvas.getContext("2d");
+          if (mime === "image/jpeg") { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          const blob = await new Promise((r) => canvas.toBlob(r, mime, 0.92));
+          canvas.width = canvas.height = 0;
+          page.cleanup();
+          return blob;
+        },
+        commit: (blob, num, i) => {
+          made.push({ name: tr(`${base}-หน้า${String(num).padStart(2, "0")}.${ext}`, `${base}-page${String(num).padStart(2, "0")}.${ext}`), blob });
+          st.progress(((i + 1) / pages.length) * 100, `(${i + 1}/${pages.length})`);
+        },
+      });
       pdf.destroy();
 
       st.progress(null);

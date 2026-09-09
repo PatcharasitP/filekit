@@ -39,8 +39,23 @@ function buildPattern(find, { matchCase, wholeWord }) {
   return new RegExp(src, matchCase ? "g" : "gi");
 }
 
+/** ย่อหน้าที่ใกล้ที่สุดที่ครอบโหนดนี้อยู่ (ใช้กันข้อความในกล่องข้อความปนกับย่อหน้าแม่) */
+function nearestParagraph(node) {
+  for (let n = node.parentNode; n; n = n.parentNode) {
+    if (n.nodeType === 1 && n.namespaceURI === W && n.localName === "p") return n;
+  }
+  return null;
+}
+
+/* ‼️ ต้องเก็บเฉพาะ <w:t> ที่ย่อหน้าใกล้สุดคือย่อหน้านี้จริง ๆ
+ * ข้อความในกล่องข้อความ (<w:txbxContent>) มี <w:p> ของตัวเองซ้อนอยู่ข้างใน ถ้าเหมามาด้วย
+ * ข้อความสองก้อนที่อยู่คนละที่บนหน้ากระดาษจะถูกต่อเป็นสตริงเดียว แล้วเจอ "คำที่ไม่มีอยู่จริง"
+ * คร่อมรอยต่อ พอสั่งแทนที่ก็ลบเนื้อในกล่องข้อความทิ้งแล้วยัดคำแทนที่ไปไว้ผิดที่
+ * (ยิงจริง 09/09/2026: ค้น "ทั้งสิ้นหมายเหตุ" ซึ่งไม่มีในเอกสาร แต่ระบบแทนที่ให้ 1 จุด
+ *  แล้วทั้งข้อความนอกกล่องและในกล่องหายไปทั้งคู่) และยังทำให้พรีวิวนับซ้ำ 2 เท่า
+ * เพราะย่อหน้าในกล่องถูกวนซ้ำอีกรอบในฐานะย่อหน้าของตัวเอง */
 function joinRuns(p) {
-  const nodes = [...p.getElementsByTagNameNS(W, "t")];
+  const nodes = [...p.getElementsByTagNameNS(W, "t")].filter((n) => nearestParagraph(n) === p);
   const spans = [];
   let text = "";
   for (const n of nodes) {

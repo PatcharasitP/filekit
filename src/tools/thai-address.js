@@ -42,7 +42,7 @@ const MARK_RE = new RegExp(
 const POSTCODE_RE = /(?<!\d)\d{5}(?!\d)/g;
 
 /* ── โหลด+ปั้นดัชนีจาก vendor/th-address.json ────────────────────────── */
-function buildGeo(doc) {
+export function buildGeo(doc) {
   const provinces = doc.p.map(([name, districts]) => {
     const isBkk = name === BKK_NAME;
     const dList = districts.map(([dname, defZip, subs]) => {
@@ -189,7 +189,7 @@ function normalizeText(raw) {
 }
 
 /* ── ตัวหลัก: 1 ที่อยู่ → {ok,value:[ตำบล,อำเภอ,จังหวัด,รหัสไปรษณีย์],warn?,reason?} ────── */
-function parseAddress(raw, geo) {
+export function parseAddress(raw, geo) {
   const text = normalizeText(raw);
   const { segs, hasMarkers } = extractSegments(text);
   let provSeg = segs.prov, distSeg = segs.dist, subSeg = segs.sub;

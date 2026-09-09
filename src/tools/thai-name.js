@@ -77,7 +77,7 @@ const NAME_CHARS = /^[ก-๎a-zA-Z.'-]+$/;
 const HAS_LETTER = /[ก-๎a-zA-Z]/;
 const tokenOk = (t) => NAME_CHARS.test(t) && HAS_LETTER.test(t);
 
-function splitThaiName(raw) {
+export function splitThaiName(raw) {
   let s = String(raw).replace(/\s+/g, " ").trim();
   if (!s) return null;
 

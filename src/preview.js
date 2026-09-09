@@ -13,6 +13,7 @@ import { el } from "./dom.js";
 import { tr } from "./i18n.js";
 import { detectType } from "./filetype.js";
 import { fileKindIcon } from "./icons.js";
+import { normalizeThaiPUA } from "./thai.js";
 
 // ── สไตล์ของโหมด coverflow — ฝังเองเพราะห้ามแก้ assets/css/tool.css ─────────────
 // ‼️ ทุกอย่างที่นี่ scope อยู่ใต้ .pv.pv-gallery เท่านั้น (ยกเว้น .pv-card ที่มีแค่ตอน
@@ -161,7 +162,9 @@ async function renderSheet(file, d, expectedIdx) {
 async function renderDoc(file, d, expectedIdx) {
   const { loadLibs } = await import("./loader.js");
   await loadLibs("mammoth");
-  const { value } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  const { value: raw } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  // เอกสารฟอนต์ TH รุ่นเก่าเก็บวรรณยุกต์เป็นอักขระเฉพาะฟอนต์ ต้องแปลงก่อนถึงจะอ่านออกในตัวดูไฟล์
+  const value = normalizeThaiPUA(raw).text;
   if (!(d.open && expectedIdx === idx)) return;
   const dom = new DOMParser().parseFromString(value, "text/html");
   const out = [];

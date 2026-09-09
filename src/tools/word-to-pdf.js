@@ -3,6 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
 import { loadLibs } from "../loader.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, textChunks } from "../thaifont.js";
 import { tr } from "../i18n.js";
+import { normalizeThaiPUA } from "../thai.js";
 
 const PAGE = { a4: "a4", letter: "letter" };
 
@@ -287,7 +288,14 @@ export function mount(tool) {
 
   /** แปลงหนึ่งไฟล์ คืน { blob, pages, warnings } */
   async function convertOne(file) {
-      const { value: html, messages } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      const { value: rawHtml, messages } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      /* ‼️ เอกสารที่พิมพ์ด้วยฟอนต์ตระกูล TH รุ่นเก่า (TH SarabunPSK) เก็บวรรณยุกต์บางตัวเป็น
+       * อักขระเฉพาะของฟอนต์ ไม่ใช่รหัสไทยมาตรฐาน ถ้าปล่อยไหลลง PDF ต่อ ฟอนต์ที่เราฝังจะไม่มี
+       * รหัสพวกนั้น วรรณยุกต์จึงหายเงียบทั้งเล่ม (เจอจริงกับคู่มือโครงงานของ สจล. 09/09/2026:
+       * "ชื่อหัวข้อ/ปัญหา" ออกมาเป็น "ชื่อหัวขอ/ปญหา") · ใน Word เองก็ขึ้นเป็นกล่องอยู่แล้ว
+       * ถ้าเครื่องไม่มีฟอนต์นั้น เราจึงแปลงกลับเป็นรหัสมาตรฐานให้ แล้วบอกผู้ใช้ว่าแปลงไปกี่จุด */
+      const pua = normalizeThaiPUA(rawHtml);
+      const html = pua.text;
       const headFoot = await readHeaderFooter(file);
       const blocks = htmlToBlocks(html);
       if (!blocks.length) throw new Error(tr("ไม่พบเนื้อหาข้อความในไฟล์นี้", "No text content was found in this file"));
@@ -338,6 +346,8 @@ export function mount(tool) {
         pages: doc.getNumberOfPages(),
         warnings: messages.filter((m) => m.type === "warning").length,
         trackChanges: headFoot.trackChanges,
+        puaFixed: pua.fixed,
+        puaDropped: pua.dropped,
       };
   }
 
@@ -346,7 +356,7 @@ export function mount(tool) {
     results.innerHTML = "";
     go.disabled = true;
     const made = [];
-    let failed = 0, warned = 0, tracked = 0;
+    let failed = 0, warned = 0, tracked = 0, puaFixed = 0, puaDropped = 0;
     try {
       for (let i = 0; i < files.length; i++) {
         st.info(tr(`กำลังแปลง ${files[i].name} (${i + 1}/${files.length})`, `Converting ${files[i].name} (${i + 1}/${files.length})`));
@@ -355,6 +365,7 @@ export function mount(tool) {
           made.push({ name: stripExt(files[i].name) + ".pdf", ...r });
           warned += r.warnings;
           tracked += r.trackChanges;
+          puaFixed += r.puaFixed; puaDropped += r.puaDropped;
         } catch (e) {
           failed++;
           results.appendChild(el("div", { class: "status show err" },
@@ -378,6 +389,16 @@ export function mount(tool) {
 
       // เตือนอย่างเดียว ไม่แก้เนื้อหาให้เอง — ข้อความที่ยังไม่ accept ถูกแปลงลง PDF เหมือนข้อความ
       // ปกติ (ตรงกับที่ Word เองพิมพ์ออกมา) ผู้ใช้ต้องรู้ก่อนส่งไฟล์ออก ไม่ใช่รู้ทีหลัง
+      if (puaFixed || puaDropped) results.appendChild(el("div", { class: "note warn" },
+        tr(`ไฟล์นี้พิมพ์ด้วยฟอนต์ตระกูล TH รุ่นเก่า (เช่น TH SarabunPSK) ซึ่งเก็บวรรณยุกต์บางตัวเป็น` +
+           ` อักขระเฉพาะของฟอนต์ ไม่ใช่รหัสไทยมาตรฐาน เว็บแปลงกลับให้แล้ว ${puaFixed} จุด` +
+           (puaDropped ? ` และมีอีก ${puaDropped} จุดที่ไม่รู้ว่าเป็นตัวไหนจึงตัดออก` : "") +
+           ` ถ้าจะแก้ที่ต้นทางให้ถาวร ให้เปิดไฟล์ด้วย Word แล้วเปลี่ยนฟอนต์ทั้งเอกสารเป็นฟอนต์ยุคใหม่`,
+           `This file was typed with an old TH-family font (like TH SarabunPSK) that stores some tone` +
+           ` marks as font-private characters instead of standard Thai. We converted ${puaFixed} of them` +
+           (puaDropped ? `, and dropped ${puaDropped} we could not identify` : "") +
+           `. To fix it at the source, open it in Word and switch the whole document to a modern font`)));
+
       if (tracked) results.appendChild(el("div", { class: "note warn" },
         tr(`ไฟล์นี้มีการแก้ไขที่ยังไม่ยอมรับ ${tracked} จุด ข้อความเหล่านั้นจะถูกแปลงลง PDF ด้วย ` +
            `เปิดไฟล์ต้นฉบับด้วย Word แล้วกด “ยอมรับการแก้ไขทั้งหมด” ก่อน ถ้าไม่ต้องการให้ติดไปด้วย`,

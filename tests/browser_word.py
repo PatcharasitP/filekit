@@ -467,6 +467,45 @@ TESTS = [
     test_word_join, test_word_replace, test_word_clean,
     test_word_mailmerge, test_word_to_pdf, test_pdf_to_word, test_pdf_to_word_columns,
 ]
+# ‼️ ฟังก์ชันนี้นิยามอยู่ใต้รายการ จึงต้องต่อท้ายหลังนิยามเสร็จ (Python อ่านไฟล์บนลงล่าง)
+
+
+
+def test_word_to_pdf_old_th_font(pg):
+    """‼️ เอกสารที่พิมพ์ด้วยฟอนต์ตระกูล TH รุ่นเก่าเก็บวรรณยุกต์เป็นอักขระเฉพาะฟอนต์ (U+F700)
+    ถ้าไม่แปลงกลับก่อนวาด วรรณยุกต์จะหายเงียบทั้งเล่ม (เจอจริงกับคู่มือโครงงาน สจล.:
+    "ชื่อหัวข้อ/ปัญหา" ออกมาเป็น "ชื่อหัวขอ/ปญหา") และผู้ใช้ไม่มีทางรู้ว่าอะไรหายไป"""
+    tool = "word-to-pdf"
+    src = FIX / "old_th_font.docx"
+    d = docx.Document()
+    # ข้อความที่ใช้อักขระเฉพาะฟอนต์แบบเดียวกับไฟล์จริง
+    d.add_paragraph("ชื่อหัวข\uf70bอโครงงานพิเศษ/ป\uf710ญหาพิเศษ")
+    d.add_paragraph("ตัวพิมพ\uf70eใหญ\uf70a และ เป\uf712นส\uf70aวนหนึ่ง ป\uf702การศึกษา")
+    d.save(str(src))
+
+    pg.goto("about:blank"); pg.goto(f"{BASE}/#/word-to-pdf", wait_until="networkidle")
+    pg.wait_for_selector(".dz")
+    pg.locator(".dz input[type=file]").set_input_files(str(src))
+    pg.wait_for_timeout(400)
+    pg.locator("button.btn", has_text="แปลงเป็น PDF").click()
+    wait_status(pg, "แปลงสำเร็จ")
+    out = DL / "old-th-font.pdf"
+    dl_click(pg, pg.locator(".results .result button"), out)
+
+    full = "\n".join(read_pdf_texts(out.read_bytes()))
+    ck(tool, "วรรณยุกต์", "อ่านคำว่า 'ชื่อหัวข้อ' ได้ครบ", "ชื่อหัวข้อ" in full, True)
+    ck(tool, "วรรณยุกต์", "อ่านคำว่า 'ปัญหาพิเศษ' ได้ครบ", "ปัญหาพิเศษ" in full, True)
+    ck(tool, "วรรณยุกต์", "อ่านคำว่า 'ตัวพิมพ์ใหญ่' ได้ครบ", "ตัวพิมพ์ใหญ่" in full, True)
+    ck(tool, "วรรณยุกต์", "อ่านคำว่า 'เป็นส่วนหนึ่ง' ได้ครบ", "เป็นส่วนหนึ่ง" in full, True)
+    ck(tool, "วรรณยุกต์", "อ่านคำว่า 'ปีการศึกษา' ได้ครบ", "ปีการศึกษา" in full, True)
+    ck(tool, "วรรณยุกต์", "ไม่มีอักขระเฉพาะฟอนต์หลงเหลือในไฟล์ผลลัพธ์",
+       bool(re.search(r"[\uf700-\uf71f]", full)), False)
+    # ต้องบอกผู้ใช้ ไม่ใช่แก้ให้เงียบ ๆ
+    body = pg.locator("body").inner_text()
+    ck(tool, "คำเตือน", "ขึ้นคำเตือนว่าไฟล์ใช้ฟอนต์ TH รุ่นเก่า และบอกจำนวนที่แปลงให้",
+       ("ฟอนต์ตระกูล TH" in body) and ("7 จุด" in body), True)
+
+TESTS.append(test_word_to_pdf_old_th_font)
 
 
 def main():

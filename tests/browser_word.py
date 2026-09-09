@@ -503,7 +503,7 @@ def test_word_to_pdf_old_th_font(pg):
     # ต้องบอกผู้ใช้ ไม่ใช่แก้ให้เงียบ ๆ
     body = pg.locator("body").inner_text()
     ck(tool, "คำเตือน", "ขึ้นคำเตือนว่าไฟล์ใช้ฟอนต์ TH รุ่นเก่า และบอกจำนวนที่แปลงให้",
-       ("ฟอนต์ตระกูล TH" in body) and ("7 จุด" in body), True)
+       ("ฟอนต์ไทยรุ่นเก่า" in body) and ("7 จุด" in body), True)
 
 TESTS.append(test_word_to_pdf_old_th_font)
 

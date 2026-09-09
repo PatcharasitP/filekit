@@ -380,8 +380,8 @@ export function mount(tool) {
       const pages = made.reduce((a, m) => a + m.pages, 0);
       st.ok(tr(`แปลงสำเร็จ ${made.length} ไฟล์, รวม ${pages} หน้า` +
         (failed ? `, ล้มเหลว ${failed} ไฟล์` : "") +
-        (warned ? `, มี ${warned} จุดที่จัดรูปแบบไม่ครบ` : "") +
-        (tracked ? `, มีการแก้ไขที่ยังไม่ยอมรับ ${tracked} จุด` : ""),
+        (warned ? `, จัดรูปแบบไม่ครบ ${warned} จุด` : "") +
+        (tracked ? `, แก้ไขค้าง ${tracked} จุด` : ""),
         `Done, ${made.length} files, ${pages} pages total` +
         (failed ? `, ${failed} failed` : "") +
         (warned ? `, ${warned} spots with incomplete formatting` : "") +
@@ -390,20 +390,18 @@ export function mount(tool) {
       // เตือนอย่างเดียว ไม่แก้เนื้อหาให้เอง — ข้อความที่ยังไม่ accept ถูกแปลงลง PDF เหมือนข้อความ
       // ปกติ (ตรงกับที่ Word เองพิมพ์ออกมา) ผู้ใช้ต้องรู้ก่อนส่งไฟล์ออก ไม่ใช่รู้ทีหลัง
       if (puaFixed || puaDropped) results.appendChild(el("div", { class: "note warn" },
-        tr(`ไฟล์นี้พิมพ์ด้วยฟอนต์ตระกูล TH รุ่นเก่า (เช่น TH SarabunPSK) ซึ่งเก็บวรรณยุกต์บางตัวเป็น` +
-           ` อักขระเฉพาะของฟอนต์ ไม่ใช่รหัสไทยมาตรฐาน เว็บแปลงกลับให้แล้ว ${puaFixed} จุด` +
-           (puaDropped ? ` และมีอีก ${puaDropped} จุดที่ไม่รู้ว่าเป็นตัวไหนจึงตัดออก` : "") +
-           ` ถ้าจะแก้ที่ต้นทางให้ถาวร ให้เปิดไฟล์ด้วย Word แล้วเปลี่ยนฟอนต์ทั้งเอกสารเป็นฟอนต์ยุคใหม่`,
-           `This file was typed with an old TH-family font (like TH SarabunPSK) that stores some tone` +
-           ` marks as font-private characters instead of standard Thai. We converted ${puaFixed} of them` +
-           (puaDropped ? `, and dropped ${puaDropped} we could not identify` : "") +
-           `. To fix it at the source, open it in Word and switch the whole document to a modern font`)));
+        tr(`ฟอนต์ไทยรุ่นเก่า แปลงวรรณยุกต์ให้ ${puaFixed} จุด` +
+           (puaDropped ? ` ตัดทิ้ง ${puaDropped} จุด` : "") +
+           ` แก้ถาวรได้โดยเปลี่ยนฟอนต์ใน Word`,
+           `Old Thai font: we converted ${puaFixed} tone mark(s)` +
+           (puaDropped ? `, dropped ${puaDropped}` : "") +
+           `. Change the document font in Word to fix it for good`)));
 
       if (tracked) results.appendChild(el("div", { class: "note warn" },
-        tr(`ไฟล์นี้มีการแก้ไขที่ยังไม่ยอมรับ ${tracked} จุด ข้อความเหล่านั้นจะถูกแปลงลง PDF ด้วย ` +
-           `เปิดไฟล์ต้นฉบับด้วย Word แล้วกด “ยอมรับการแก้ไขทั้งหมด” ก่อน ถ้าไม่ต้องการให้ติดไปด้วย`,
-           `This file has ${tracked} unaccepted tracked change(s), and that text will be included in the PDF. ` +
-           `Open the original in Word and “Accept All Changes” first if you don't want it included`)));
+        tr(`มีแก้ไขค้าง ${tracked} จุด ข้อความนั้นจะไปอยู่ใน PDF ด้วย ` +
+           `กดยอมรับใน Word ก่อนถ้าไม่ต้องการ`,
+           `${tracked} unaccepted tracked change(s) will be included in the PDF. ` +
+           `Accept all changes in Word first if you don't want them`)));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: async () => {

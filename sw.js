@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v60";
+const VERSION = "filekit-v61";
 const SHELL = `${VERSION}-shell`;
 const LIBS = `${VERSION}-libs`;
 

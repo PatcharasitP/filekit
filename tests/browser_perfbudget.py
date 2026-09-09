@@ -25,7 +25,7 @@ long-task-ตอนสกอลล์/เวลาเปิด 3 เครื่
 จึงเป็น "ขนาดไฟล์ดิบ" ไม่ใช่ขนาดที่ส่งจริงตอนขึ้น GitHub Pages (ซึ่งบีบอัดให้เล็กลงอีก) — ใช้
 เทียบงบ "โค้ดที่ต้องโหลด/parse" ได้ตรง แต่ตัวเลข "byte บนเน็ตจริง" จะดีกว่านี้ในโปรดักชัน
 """
-import os, re, sys, time, pathlib, statistics
+import os, re, sys, time, gzip, pathlib, statistics
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
@@ -247,6 +247,28 @@ with sync_playwright() as p:
     total_count = len(ref["resources"]) + 1  # +1 = ตัว document เอง
     js_bytes = by_type.get("js", {}).get("bytes", 0)
 
+    # ‼️ เพดานไบต์ต้องวัด "ไบต์ที่วิ่งผ่านเน็ตจริง" ไม่ใช่ไบต์ดิบบนดิสก์ — ของจริง (GitHub Pages)
+    #    บีบ gzip ให้ทุกไฟล์ ผู้ใช้จ่ายแค่ราว 1 ใน 3 แต่ python http.server ที่ใช้รันเทสไม่บีบเลย
+    #    ทำให้ตัวเลขในเครื่องสูงเกินความจริงเกือบ 3 เท่า และเทสตกทั้งที่ของจริงผ่านสบาย
+    #    จึงตรวจว่ารอบนี้เสิร์ฟแบบบีบมาหรือยัง ถ้าไม่บีบ ให้บีบเองจากไฟล์บนดิสก์เพื่อประเมิน
+    #    (พิสูจน์กับ production จริงแล้ว 09/09/2026: JS ดิบ 112,615 B วิ่งผ่านเน็ตจริง 36,455 B)
+    js_urls = by_type.get("js", {}).get("urls", [])
+    compressed = any(
+        r["transferSize"] and r["decodedBodySize"] and r["transferSize"] < r["decodedBodySize"] * 0.9
+        for r in ref["resources"] if categorize(r["name"]) == "js" and r["decodedBodySize"]
+    )
+    if compressed:
+        js_wire = js_bytes
+        wire_note = "เสิร์ฟแบบบีบมาแล้ว ใช้ตัวเลขที่วัดได้ตรง ๆ"
+    else:
+        js_wire = 0
+        for u in js_urls:
+            rel = urlparse(u).path.lstrip("/")
+            f = ROOT / rel.split("filekit/")[-1] if "filekit/" in rel else ROOT / rel
+            js_wire += len(gzip.compress(f.read_bytes(), 6)) if f.is_file() else 0
+        wire_note = f"เซิร์ฟเวอร์ทดสอบไม่บีบ gzip จึงบีบเองจากไฟล์บนดิสก์ (ดิบ {js_bytes:,} B)"
+    print(f"\n  JS ที่วิ่งผ่านเน็ตจริง: {js_wire:,} B  ({wire_note})")
+
     print("\n  ── ตารางขนาดแยกประเภท (รอบล่าสุด, ยึดเป็นตัวแทน) ──")
     print(f"  {'ประเภท':<10} {'จำนวน':>6} {'ไบต์':>10}")
     for c in sorted(by_type, key=lambda k: -by_type[k]["bytes"]):
@@ -268,7 +290,7 @@ with sync_playwright() as p:
     print(f"\n  Service Worker คุมหน้าอยู่ไหม (ควรเป็น false ตอน cold/first-visit): {ref['swController']}")
 
     print("\n━━ เทียบเพดาน ①②④ (เน็ตปกติ) ━━")
-    ck_le(f"JS ที่โหลดจริงหน้าแรก (ไม่รวมฟอนต์)", js_bytes, JS_BYTES_BUDGET, " B")
+    ck_le(f"JS ที่วิ่งผ่านเน็ตจริงตอนอยู่หน้าแรก (ไม่รวมฟอนต์)", js_wire, JS_BYTES_BUDGET, " B")
     ck_le(f"จำนวน request หน้าแรก", total_count, REQUEST_COUNT_BUDGET)
     ck_le(f"FCP มัธยฐาน (เน็ตปกติ, {COLD_ROUNDS} รอบ)", med_fcp, FCP_NORMAL_BUDGET_MS, " ms")
     ck_le(f"CLS มัธยฐาน ({COLD_ROUNDS} รอบ)", med_cls, CLS_BUDGET)

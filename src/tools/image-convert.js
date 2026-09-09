@@ -57,9 +57,9 @@ export function mount(tool) {
         made.push({ name: `${stripExt(f.name)}.${typeSel.value === "jpeg" ? "jpg" : typeSel.value}`, blob, from: f.size });
       });
       st.progress(null);
-      if (!made.length) throw new Error(tr("แปลงไม่สำเร็จ — ตรวจว่าเป็นรูปจริง", "Could not convert — check they're valid images"));
+      if (!made.length) throw new Error(tr("แปลงไม่สำเร็จ ตรวจว่าเป็นรูปจริง", "Could not convert. Check they're valid images."));
       st.ok(tr(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? `, ข้าม ${failed.length} ไฟล์` : ""),
-        `Done — ${made.length} files` + (failed.length ? `, skipped ${failed.length}` : "")));
+        `Done, ${made.length} files` + (failed.length ? `, skipped ${failed.length}` : "")));
       const fb = failedBox(failed); if (fb) results.appendChild(fb);
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),

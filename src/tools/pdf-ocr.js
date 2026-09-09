@@ -37,7 +37,7 @@ export function mount(tool) {
     if (file.type.startsWith("image/")) return [{ label: file.name, url: URL.createObjectURL(file) }];
     const pdf = await openPdf(file, passwordBox(extra));
     const pages = parsePages(rangeInput.value || "1-", pdf.numPages);
-    if (!pages.length) throw new Error(tr(`ไฟล์มี ${pdf.numPages} หน้า — ช่วงที่ระบุไม่ตรงหน้าใดเลย`, `File has ${pdf.numPages} pages — range matches none`));
+    if (!pages.length) throw new Error(tr(`ไฟล์มี ${pdf.numPages} หน้า ช่วงที่ระบุไม่ตรงหน้าใดเลย`, `File has ${pdf.numPages} pages, but the range matches none`));
     const out = [];
     for (const p of pages) {
       const page = await pdf.getPage(p);
@@ -88,8 +88,8 @@ export function mount(tool) {
       const text = parts.join("\n\n");
       const chars = text.replace(/\s/g, "").length;
       st.progress(null);
-      if (!chars) { st.err(tr("ไม่พบตัวอักษร ลองเพิ่มความละเอียด", "No text found — try higher quality")); return; }
-      st.ok(tr(`อ่านสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${images.length} หน้า`, `Done — ${chars.toLocaleString("en-US")} characters from ${images.length} pages`));
+      if (!chars) { st.err(tr("ไม่พบตัวอักษร ลองเพิ่มความละเอียด", "No text found, try higher quality")); return; }
+      st.ok(tr(`อ่านสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${images.length} หน้า`, `Done, ${chars.toLocaleString("en-US")} characters from ${images.length} pages`));
       preview.hidden = false;
       preview.textContent = text.slice(0, 4000) + (text.length > 4000 ? tr("\n\n… (ตัวอย่าง 4,000 ตัวแรก)", "\n\n… (first 4,000 chars)") : "");
 
@@ -99,7 +99,7 @@ export function mount(tool) {
           download(new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" }), name) }),
         button(tr("คัดลอกทั้งหมด", "Copy all"), { ghost: true, onclick: async () => {
           try { await navigator.clipboard.writeText(text); st.ok(tr("คัดลอกลงคลิปบอร์ดแล้ว", "Copied to clipboard")); }
-          catch { st.err(tr("คัดลอกไม่ได้ — ลองใช้ปุ่มดาวน์โหลดแทน", "Couldn't copy — try Download instead")); }
+          catch { st.err(tr("คัดลอกไม่ได้ ลองใช้ปุ่มดาวน์โหลดแทน", "Couldn't copy, try Download instead")); }
         } }),
       ]));
     } catch (e) {

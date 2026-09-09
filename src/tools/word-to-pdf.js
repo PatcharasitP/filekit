@@ -122,7 +122,7 @@ export function mount(tool) {
         } catch (e) {
           failed++;
           results.appendChild(el("div", { class: "status show err" },
-            tr(`${files[i].name} — แปลงไม่สำเร็จ: ${e.message}`, `${files[i].name} — could not convert: ${e.message}`)));
+            tr(`${files[i].name}: แปลงไม่สำเร็จ: ${e.message}`, `${files[i].name}: could not convert: ${e.message}`)));
         }
         st.progress(((i + 1) / files.length) * 100);
         await yieldToBrowser();
@@ -134,7 +134,7 @@ export function mount(tool) {
       st.ok(tr(`แปลงสำเร็จ ${made.length} ไฟล์, รวม ${pages} หน้า` +
         (failed ? `, ล้มเหลว ${failed} ไฟล์` : "") +
         (warned ? `, มี ${warned} จุดที่จัดรูปแบบไม่ครบ` : ""),
-        `Done — ${made.length} files, ${pages} pages total` +
+        `Done, ${made.length} files, ${pages} pages total` +
         (failed ? `, ${failed} failed` : "") +
         (warned ? `, ${warned} spots with incomplete formatting` : "")));
 

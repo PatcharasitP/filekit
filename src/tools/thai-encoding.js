@@ -21,14 +21,14 @@ export function mount(tool) {
   const dz = dropzone({
     accept: ".csv,.txt,.tsv,.json,.sql,.log,.md",
     expect: ["csv", "txt", "tsv", "json", "sql", "log", "md"], expectLabel: tr("ไฟล์ข้อความหรือ CSV", "a text or CSV file"),
-    hint: tr(".csv .txt .tsv .json — หลายไฟล์ได้", ".csv .txt .tsv .json — multiple files"),
+    hint: tr(".csv .txt .tsv .json (หลายไฟล์ได้)", ".csv .txt .tsv .json (multiple files)"),
     onChange: scan,
   });
 
   body.append(dz.container, bomBox, st.node, list, actions);
   body.appendChild(el("div", { class: "note" },
-    tr("ไม่เกี่ยวกับ .xlsx — ปัญหานี้เกิดเฉพาะไฟล์ CSV",
-       "Doesn't apply to .xlsx — only affects CSV files.")));
+    tr("ไม่เกี่ยวกับ .xlsx ปัญหานี้เกิดเฉพาะไฟล์ CSV",
+       "Doesn't apply to .xlsx. Only affects CSV files.")));
 
   async function scan() {
     list.innerHTML = ""; actions.innerHTML = ""; st.clear();
@@ -42,10 +42,10 @@ export function mount(tool) {
     }
     render();
     const fixable = items.filter((it) => needsFix(it)).length;
-    if (!fixable) st.ok(tr(`ตรวจ ${items.length} ไฟล์ — UTF-8 ถูกต้องแล้วทุกไฟล์`,
-                           `Checked ${items.length} files — all valid UTF-8`));
-    else st.info(tr(`ตรวจ ${items.length} ไฟล์ — ต้องซ่อม ${fixable} ไฟล์`,
-                    `Checked ${items.length} files — ${fixable} need fixing`));
+    if (!fixable) st.ok(tr(`ตรวจ ${items.length} ไฟล์ UTF-8 ถูกต้องแล้วทุกไฟล์`,
+                           `Checked ${items.length} files, all valid UTF-8`));
+    else st.info(tr(`ตรวจ ${items.length} ไฟล์ ต้องซ่อม ${fixable} ไฟล์`,
+                    `Checked ${items.length} files, ${fixable} need fixing`));
   }
 
   const needsFix = (it) => {
@@ -107,7 +107,7 @@ export function mount(tool) {
         download(await zip.generateAsync({ type: "blob" }), tr("ไฟล์ซ่อมแล้ว.zip", "fixed-files.zip"));
       } else made.forEach((m) => download(m.blob, m.name));
       st.ok(tr(`บันทึกแล้ว ${made.length} ไฟล์ (UTF-8)`, `Saved ${made.length} files (UTF-8)`));
-    } catch (e) { st.err(tr("บันทึกไม่สำเร็จ — ", "Save failed — ") + (e.message || e)); }
+    } catch (e) { st.err(tr("บันทึกไม่สำเร็จ: ", "Save failed: ") + (e.message || e)); }
   }
 
   return wrap;

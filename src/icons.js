@@ -12,6 +12,8 @@ export const ICONS = {
   "pdf-split":    `<rect x="2.5"y="8"width="7.5"height="8"rx="1.5"/><path d="M10 12h2.4"/><path d="M12.4 12V7.4h2.6M12.4 12v4.6h2.6"/><rect x="15"y="4"width="6.5"height="6.5"rx="1.3"/><rect x="15"y="13.5"width="6.5"height="6.5"rx="1.3"/>`,
   "pdf-compress": `<path d="M9.6 4v5.6H4"/><path d="M14.4 4v5.6H20"/><path d="M9.6 20v-5.6H4"/><path d="M14.4 20v-5.6H20"/><path d="M3.8 3.8l4.4 4.4M20.2 3.8l-4.4 4.4M3.8 20.2l4.4-4.4M20.2 20.2l-4.4-4.4"/>`,
   "pdf-sign":     `<path d="M3 19.5c3.2 0 3-9.5 6.2-9.5s2.8 6 6 6 3-3 5.8-3"/><path d="M15.6 3.6l4.8 4.8L12 16.8l-5 1.2 1.2-5z"/>`,
+  // หน้ากระดาษที่มีป้ายเลขอยู่ขอบล่าง (จุดที่เลขหน้าจะไปอยู่จริง)
+  "pdf-page-numbers": `<path d="${DOC}"/><path d="M8.4 11h7M8.4 14h4.4"/><circle cx="12"cy="17.6"r="1.9"/>`,
   "pdf-watermark":`<path d="${DOC}"/><path d="M8.4 16.6c0-2.4 3.4-5.6 3.4-5.6s3.4 3.2 3.4 5.6a3.4 3.4 0 0 1-6.8 0z"/>`,
   "pdf-ocr":      `<path d="M7 3h7l4 4v4"/><path d="M14 3v4h4"/><path d="M5 5v14a2 2 0 0 0 2 2h4.5"/><path d="M8.5 10.5h5M8.5 13.5h3"/><circle cx="16.8"cy="16.8"r="3.4"/><path d="M19.3 19.3L21.5 21.5"/>`,
 
@@ -41,6 +43,12 @@ export const ICONS = {
   "powerpoint-to-pdf":  `<rect x="2.5"y="3.5"width="10"height="8"rx="1.4"/><path d="M7.5 11.5v3M5 17h5"/><path d="M14 8h3"/><path d="M15.4 5.8L17.8 8l-2.4 2.2"/><rect x="14.5"y="12"width="7"height="8.5"rx="1.3"/><path d="M16.5 15h3M16.5 17.6h3"/>`,
 
   // ── ตารางและข้อมูล ──
+  // ตารางหนึ่งใบแตกเป็นสองใบ (เส้นบนสุดของทุกใบ = หัวตาราง)
+  // สามหน้าต่อกันกลายเป็นแถบยาวแผ่นเดียว
+  "pdf-to-longimage": `<rect x="2.5"y="3"width="7"height="5"rx="1.2"/><rect x="2.5"y="9.5"width="7"height="5"rx="1.2"/><rect x="2.5"y="16"width="7"height="5"rx="1.2"/><path d="M11.2 12h2.4"/><path d="M15 9.6L17.4 12L15 14.4"/><rect x="18.4"y="3"width="3.1"height="18"rx="1.2"/>`,
+  "excel-split":  `<rect x="2.5"y="8"width="7.5"height="8"rx="1.5"/><path d="M2.5 10.8h7.5"/><path d="M10.6 12h2"/><path d="M15 4.6h6.5a1.3 1.3 0 0 1 1.3 1.3v3.9a1.3 1.3 0 0 1-1.3 1.3H15a1.3 1.3 0 0 1-1.3-1.3V5.9A1.3 1.3 0 0 1 15 4.6z"/><path d="M13.7 7h9.1"/><path d="M15 13.9h6.5a1.3 1.3 0 0 1 1.3 1.3v3.9a1.3 1.3 0 0 1-1.3 1.3H15a1.3 1.3 0 0 1-1.3-1.3v-3.9a1.3 1.3 0 0 1 1.3-1.3z"/><path d="M13.7 16.3h9.1"/>`,
+  // ตารางสองใบรวมเป็นใบเดียว
+  "excel-merge":  `<rect x="2.5"y="3"width="8"height="7"rx="1.5"/><path d="M2.5 5.6h8"/><rect x="2.5"y="14"width="8"height="7"rx="1.5"/><path d="M2.5 16.6h8"/><path d="M11 6.5h3.6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H11"/><path d="M18.2 9.6L21 12l-2.8 2.4"/>`,
   "excel-csv":    `<rect x="2.5"y="4.5"width="8"height="15"rx="1.4"/><path d="M2.5 9h8M6.5 4.5v15"/><path d="M12.5 12h6"/><path d="M16.6 9.6L19.4 12l-2.8 2.4"/><path d="M21.5 7v10"opacity="0"/><path d="M12.5 12h-.2"/>`,
 
   // ── งานเอกสารไทย ──

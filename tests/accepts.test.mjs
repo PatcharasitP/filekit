@@ -157,6 +157,33 @@ ck(middotHits.length + htmlMiddot.length === 0,
      (hashMissing.length ? "\n      ค่าที่ควรใส่: " + hashMissing.join(" ") : ""));
 }
 
+/* ‼️ เพิ่มเครื่องมือใหม่แล้วลืมใส่คำแปลอังกฤษ = ชื่อกับคำอธิบายเป็นไทยค้างอยู่ในโหมดอังกฤษ
+   เดิมจับได้ด้วย tests/browser_lang.py เท่านั้น ซึ่งต้องเปิดเบราว์เซอร์และรอเป็นนาที
+   (พลาดจริงตอนเพิ่มเครื่องมือ 3 ตัว 09/09/2026) · เช็คจากไฟล์ตรง ๆ รู้ผลในเสี้ยววินาที */
+{
+  const reg = readFileSync(join(ROOT, "src/registry.js"), "utf8");
+  const ids = [...reg.matchAll(/\{ id:"([\w-]+)"/g)].map((m) => m[1]);
+  const enBlock = reg.slice(reg.indexOf("TOOL_EN") >= 0 ? reg.indexOf("TOOL_EN") : 0);
+  const translated = new Set([...reg.matchAll(/^ {2}"([\w-]+)":\s+\[/gm)].map((m) => m[1]));
+  ck(ids.length === toolCount,
+     `ทะเบียนมีเครื่องมือครบเท่าไฟล์จริง (ทะเบียน ${ids.length} · ไฟล์ ${toolCount})`);
+  /* ‼️ ไอคอนก็เหมือนคำแปล — เพิ่มเครื่องมือแล้วลืมวาดไอคอน ระบบจะตกกลับไปใช้อีโมจิใน
+     ทะเบียนแทน ซึ่งผิดหลักหน้าตาของเว็บนี้ทั้งเว็บ (ไอคอนเส้นวาดเองทั้งหมด ไม่ใช้อีโมจิ)
+     เดิมจับได้ด้วย tests/browser_noemoji.py ซึ่งต้องเปิดทุกหน้าเครื่องมือรอเป็นนาที */
+  const icons = readFileSync(join(ROOT, "src/icons.js"), "utf8");
+  const drawn = new Set([...icons.matchAll(/^ {2}"([\w-]+)":\s*`/gm)].map((m) => m[1]));
+  const noIcon = ids.filter((i) => !drawn.has(i));
+  ck(noIcon.length === 0,
+     `เครื่องมือทุกตัวต้องมีไอคอนเส้นวาดเองใน icons.js (ขาด ${noIcon.length})` +
+     (noIcon.length ? "\n      " + noIcon.join(", ") : ""));
+
+  const noEn = ids.filter((i) => !translated.has(i));
+  ck(noEn.length === 0,
+     `เครื่องมือทุกตัวต้องมีคำแปลอังกฤษในทะเบียน (ขาด ${noEn.length})` +
+     (noEn.length ? "\n      " + noEn.join(", ") : ""));
+  void enBlock;
+}
+
 /* ‼️ CSP ของหน้าเว็บไม่มี 'unsafe-eval' (โดยเจตนา) — Playwright จะไปใช้ eval() ในหน้าเว็บ
    ทันทีที่ wait_for_function ได้รับ "นิพจน์เปล่า" แทน "ฟังก์ชันลูกศร" ผลคือเทสตายทั้งไฟล์
    ด้วย EvalError ซึ่งอ่านแล้วดูเหมือนเว็บพัง ทั้งที่เว็บปกติ (เจอจริง 09/09/2026)

@@ -29,19 +29,19 @@ const LABEL_EN = {
 const SUGGEST = {
   pdf:   ["pdf-to-word", "PDF → Word"],
   docx:  ["word-to-pdf", "Word → PDF"],
-  doc:   [null, "ไฟล์ .doc รุ่นเก่ายังไม่รองรับ — บันทึกเป็น .docx ก่อนแล้วลองใหม่", "Old .doc files aren't supported yet — save as .docx first, then try again."],
+  doc:   [null, "ไฟล์ .doc รุ่นเก่ายังไม่รองรับ บันทึกเป็น .docx ก่อนแล้วลองใหม่", "Old .doc files aren't supported yet. Save as .docx first, then try again."],
   xlsx:  ["excel-to-pdf", "Excel → PDF"],
   csv:   ["excel-csv", "Excel → CSV"],
   pptx:  ["powerpoint-to-word", "PowerPoint → Word"],
-  ppt:   [null, "ไฟล์ .ppt รุ่นเก่ายังไม่รองรับ — บันทึกเป็น .pptx ก่อนแล้วลองใหม่", "Old .ppt files aren't supported yet — save as .pptx first, then try again."],
+  ppt:   [null, "ไฟล์ .ppt รุ่นเก่ายังไม่รองรับ บันทึกเป็น .pptx ก่อนแล้วลองใหม่", "Old .ppt files aren't supported yet. Save as .pptx first, then try again."],
   image: ["images-to-pdf", "รูปภาพ → PDF", "Image → PDF"],
 };
 
 /** ไฟล์ว่าง 0 ไบต์ — เช็คได้แน่นอนโดยไม่ต้องเดา ควรเรียกก่อนพยายามอ่านไฟล์ใด ๆ ทั้งนั้น */
 export function assertNotEmpty(file) {
   if (file.size === 0)
-    throw new Error(tr(`${file.name} — ไฟล์นี้ว่างเปล่า (0 ไบต์), เลือกไฟล์ที่มีเนื้อหาแล้วลองใหม่`,
-      `${file.name} — this file is empty (0 bytes), choose one that has content and try again`));
+    throw new Error(tr(`${file.name}: ไฟล์นี้ว่างเปล่า (0 ไบต์), เลือกไฟล์ที่มีเนื้อหาแล้วลองใหม่`,
+      `${file.name}: this file is empty (0 bytes), choose one that has content and try again`));
 }
 
 const OLE_SIG = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]; // .doc/.ppt/.xls รุ่นเก่า (Compound File)
@@ -60,12 +60,12 @@ function sigMatch(buf, sig) {
  */
 export function friendlyZipOpenError(e, file, buf) {
   console.error(e);
-  const name = file?.name ? `${file.name} — ` : "";
+  const name = file?.name ? `${file.name}: ` : "";
   const msg = String(e?.message || e);
   if (sigMatch(buf, OLE_SIG))
     return new Error(tr(
       `${name}ไฟล์ Office รุ่นเก่า (.doc/.ppt/.xls) เปลี่ยนนามสกุลมา, เปิดแล้วบันทึกเป็นรุ่นใหม่ก่อน`,
-      `${name}This is an old Office file (.doc/.ppt/.xls) with a renamed extension — open it and save as the new format first`));
+      `${name}This is an old Office file (.doc/.ppt/.xls) with a renamed extension. Open it and save as the new format first`));
   if (sigMatch(buf, PDF_SIG))
     return new Error(tr(`${name}เป็นไฟล์ PDF ที่เปลี่ยนนามสกุลเอง ไม่ใช่ไฟล์นี้จริง, เลือกไฟล์ต้นฉบับที่ถูกต้อง`,
       `${name}This is actually a PDF with a renamed extension, choose the correct source file`));
@@ -73,7 +73,7 @@ export function friendlyZipOpenError(e, file, buf) {
     return new Error(tr(`${name}ไฟล์ใหญ่เกินไป เบราว์เซอร์ประมวลผลไม่ไหว, ลองแบ่งไฟล์ให้เล็กลงหรือใช้เครื่องแรมเยอะขึ้น`,
       `${name}This file is too large for the browser to handle, try splitting it or using a device with more memory`));
   return new Error(tr(`${name}เปิดไม่ได้ ไฟล์นี้อาจเสียหายหรือเนื้อในไม่ตรงนามสกุล, เปิดต้นฉบับแล้วบันทึกใหม่อีกครั้ง`,
-    `${name}Could not open — the file may be damaged or its content doesn't match the extension, open the original and save again`));
+    `${name}Could not open. The file may be damaged or its content doesn't match the extension, open the original and save again`));
 }
 
 export function detectType(file) {
@@ -109,6 +109,6 @@ export function wrongTypeMessage(kind, expectLabel) {
       toolName: tr(s[1], s[2]),
     };
   }
-  if (s) return { text: tr(`${whatTh} — ${s[1]}`, `${whatEn} — ${s[2]}`), toolId: null };
+  if (s) return { text: tr(`${whatTh} ${s[1]}`, `${whatEn}. ${s[2]}`), toolId: null };
   return { text: tr(`${whatTh} เครื่องมือนี้รับเฉพาะ${expectLabel}`, `${whatEn}. This tool only accepts ${expectLabel}`), toolId: null };
 }

@@ -63,7 +63,7 @@ export function offlineBar() {
   const render = () => {
     bar.innerHTML = "";
     if (isReady()) {
-      bar.appendChild(el("span", { class: "ob-ready" }, tr("เตรียมไฟล์ไว้ในเครื่องแล้ว — ใช้ได้ครบทุกเครื่องมือแม้ไม่มีเน็ต", "Files are ready on this device — every tool works even without internet")));
+      bar.appendChild(el("span", { class: "ob-ready" }, tr("เตรียมไฟล์ไว้ในเครื่องแล้ว ใช้ได้ครบทุกเครื่องมือแม้ไม่มีเน็ต", "Files are ready on this device. Every tool works even without internet")));
       bar.appendChild(el("button", { class: "ob-link", type: "button", onclick: run }, tr("โหลดใหม่อีกครั้ง", "Refresh files")));
       return;
     }
@@ -90,8 +90,8 @@ export function offlineBar() {
     bar.innerHTML = "";
     if (r.failed) {
       bar.appendChild(el("span", { class: "ob-fail" },
-        tr(`เตรียมไม่ครบ (${r.failed} จาก ${r.total} ไฟล์โหลดไม่ได้) — ลองใหม่เมื่อสัญญาณดีขึ้น`,
-           `Not all files were ready (${r.failed} of ${r.total} failed to load) — try again once your connection is better`)));
+        tr(`เตรียมไม่ครบ (${r.failed} จาก ${r.total} ไฟล์โหลดไม่ได้) ลองใหม่เมื่อสัญญาณดีขึ้น`,
+           `Not all files were ready (${r.failed} of ${r.total} failed to load), try again once your connection is better`)));
       bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, tr("ลองใหม่", "Try again")));
     } else {
       render();

@@ -101,7 +101,7 @@ export function mount(tool) {
   const afterLayer = el("div", { class: "rz-layer rz-after" }, [afterImg]);
   const handle = el("div", {
     class: "rz-handle", tabindex: "0", role: "slider",
-    "aria-label": tr("ลากเพื่อเทียบก่อน–หลัง", "Drag to compare before and after"), "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": "50",
+    "aria-label": tr("ลากเพื่อเทียบก่อนกับหลัง", "Drag to compare before and after"), "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": "50",
   }, [el("span", { class: "rz-grip", "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")])]);
   const tagBefore = el("span", { class: "rz-tag rz-tag-l" }, tr("ก่อน", "Before"));
   const tagAfter = el("span", { class: "rz-tag rz-tag-r" }, tr("หลัง", "After"));
@@ -128,7 +128,7 @@ export function mount(tool) {
   const statOrig = el("span", { class: "val" });
   const statOut = el("span", { class: "val" });
   const statVerdict = el("div", { class: "rz-verdict" });
-  const statKept = el("div", { class: "rz-kept-note" }, tr("จะคงไฟล์ต้นฉบับไว้ — บีบแล้วไฟล์ใหญ่กว่าเดิม", "Original file kept — compressing made it larger"));
+  const statKept = el("div", { class: "rz-kept-note" }, tr("จะคงไฟล์ต้นฉบับไว้ เพราะบีบแล้วไฟล์ใหญ่กว่าเดิม", "Original file kept because compressing made it larger"));
   hideEl(statKept, true);
   const statsBox = el("div", { class: "rz-stats" }, [
     el("div", { class: "rz-stat-row" }, [el("span", { class: "lbl" }, tr("ต้นฉบับ", "Original")), statOrig]),
@@ -163,8 +163,8 @@ export function mount(tool) {
   hideEl(oneBtn, true);
 
   const ws = workspace(tool, {
-    left: { title: tr("ไฟล์รูปภาพ", "Image files"), node: leftBody, hint: tr("คลิกรูปเพื่อดูก่อน–หลัง", "Click an image for before/after"), aside: galCount },
-    center: { node: compareWrap, empty: tr("ยังไม่มีไฟล์ — เลือกรูปเพื่อดูตัวอย่าง", "No files yet — choose an image to preview") },
+    left: { title: tr("ไฟล์รูปภาพ", "Image files"), node: leftBody, hint: tr("คลิกรูปเพื่อดูก่อนกับหลัง", "Click an image for before/after"), aside: galCount },
+    center: { node: compareWrap, empty: tr("ยังไม่มีไฟล์ เลือกรูปเพื่อดูตัวอย่าง", "No files yet. Choose an image to preview") },
     right: { title: tr("ตัวเลือก", "Options"), node: rightBody },
     toolbar: [toolbarLabel, resetPosBtn],
     footer: [st.node, go, oneBtn, zipBtn],
@@ -173,8 +173,8 @@ export function mount(tool) {
   const failedNote = el("div", {});
   ws.body.appendChild(failedNote);
   ws.body.appendChild(el("div", { class: "note" },
-    tr("เหมาะกับรูปแนบอีเมลหรือเว็บที่จำกัดขนาด — รูปต้นฉบับไม่ถูกแก้ไข",
-       "Good for email attachments or size-limited uploads — your original image is untouched")));
+    tr("เหมาะกับรูปแนบอีเมลหรือเว็บที่จำกัดขนาด รูปต้นฉบับไม่ถูกแก้ไข",
+       "Good for email attachments or size-limited uploads. Your original image is untouched")));
 
   // ── ตรรกะย่อขนาด (เหมือนเดิมทุกจุด) ────────────────────────────────────
   function targetSize(w, h) {
@@ -360,7 +360,7 @@ export function mount(tool) {
       ws.showCanvas(true);
       hideEl(compareBox, true); hideEl(statsBox, true);
       hideEl(previewErr, false);
-      previewErr.textContent = tr("สร้างตัวอย่างไม่ได้ — ไฟล์นี้อาจเสียหาย: ", "Could not create preview — this file may be corrupted: ") + e.message;
+      previewErr.textContent = tr("สร้างตัวอย่างไม่ได้ ไฟล์นี้อาจเสียหาย: ", "Could not create preview. This file may be corrupted: ") + e.message;
       toolbarLabel.textContent = f.name;
     } finally {
       if (seq === previewSeq) compareBox.classList.remove("busy");
@@ -388,13 +388,13 @@ export function mount(tool) {
       st.progress(null);
       failedNote.innerHTML = "";
       const fb = failedBox(failed); if (fb) failedNote.appendChild(fb);
-      if (!made.length) throw new Error(tr("ไม่สำเร็จ — ตรวจว่าเป็นรูปจริง", "Could not process — check they're valid images"));
+      if (!made.length) throw new Error(tr("ไม่สำเร็จ ตรวจว่าเป็นรูปจริง", "Could not process. Check they're valid images."));
       const saved = before ? Math.round((1 - after / before) * 100) : 0;
       const keptCount = made.filter((m) => m.kept).length;
       const verdict = saved > 0 ? tr(`เล็กลง ${saved}%`, `${saved}% smaller`) : saved < 0 ? tr(`ใหญ่ขึ้น ${-saved}%`, `${-saved}% larger`) : tr("ขนาดเท่าเดิม", "Same size");
       const tail = keptCount ? tr(`, ${keptCount} ไฟล์คงต้นฉบับ (เล็กกว่าอยู่แล้ว)`, `, ${keptCount} kept original (already smaller)`) : "";
       st.ok(tr(`เสร็จ ${made.length} ไฟล์, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`,
-        `Done — ${made.length} files, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`));
+        `Done, ${made.length} files, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`));
       lastMade = made;
       hideEl(zipBtn, made.length <= 1);
       hideEl(oneBtn, made.length !== 1);

@@ -72,7 +72,7 @@ export function mount(tool) {
       el("div", {}, [el("h2", {}, tr("เลือกไฟล์ข้อมูล", "Choose a data file")), dataZone.container])]),
     step3 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "3"),
       el("div", {}, [el("h2", {}, tr("จับคู่ข้อมูลกับตัวยึด", "Match data to placeholders")),
-        wait3 = el("div", { class: "step-wait" }, tr("รอไฟล์จากขั้นที่ 1-2 — จับคู่คอลัมน์ให้อัตโนมัติ", "Waiting for files from steps 1–2 — columns match automatically")),
+        wait3 = el("div", { class: "step-wait" }, tr("รอไฟล์จากขั้นที่ 1-2 จับคู่คอลัมน์ให้อัตโนมัติ", "Waiting for files from steps 1 to 2, columns match automatically")),
         mapBox])]),
     step4 = el("div", { class: "mm-step", "data-locked": "1" }, [el("span", { class: "mm-num" }, "4"),
       el("div", {}, [el("h2", {}, tr("ตรวจดูก่อนสร้าง", "Preview before generating")),
@@ -110,8 +110,8 @@ export function mount(tool) {
   syncLocks();          // เรียกหลังประกาศ sampleBox แล้วเท่านั้น — ไม่งั้นชนกับ TDZ ของ const
 
   body.appendChild(el("div", { class: "note" },
-    tr("พิมพ์ตัวยึดในไฟล์ Word เช่น {{คำนำหน้า}}{{ชื่อ}} แล้วจับคู่คอลัมน์ Excel — สร้างเอกสารทีละแถว รองรับหัว-ท้ายกระดาษ",
-    "Type placeholders like {{Title}}{{Name}} in Word, then match Excel columns — one document per row. Headers/footers supported")));
+    tr("พิมพ์ตัวยึดในไฟล์ Word เช่น {{คำนำหน้า}}{{ชื่อ}} แล้วจับคู่คอลัมน์ Excel สร้างเอกสารทีละแถว รองรับหัว-ท้ายกระดาษ",
+    "Type placeholders like {{Title}}{{Name}} in Word, then match Excel columns. One document per row. Headers/footers supported")));
 
   body.appendChild(el("div", { class: "note" },
     tr("เงื่อนไข: {{#โบนัส}}…{{/โบนัส}} + Excel ใส่ TRUE/FALSE (หรือ ใช่/ไม่ใช่, มี/ไม่มี), ตรงข้าม {{#ไม่โบนัส}}…{{/ไม่โบนัส}} ไม่ต้องเพิ่มคอลัมน์",
@@ -141,8 +141,8 @@ export function mount(tool) {
       fieldsBox.hidden = false;
       if (!fields.length && !loops.length) {
         fieldsBox.appendChild(el("div", { class: "status show err" },
-          tr("ไม่พบตัวยึด — ต้องอยู่ในรูป {{ชื่อคอลัมน์}} เช่น {{ชื่อ}}",
-             "No placeholders found — must look like {{ColumnName}}, e.g. {{Name}}")));
+          tr("ไม่พบตัวยึด ต้องอยู่ในรูป {{ชื่อคอลัมน์}} เช่น {{ชื่อ}}",
+             "No placeholders found. Must look like {{ColumnName}}, e.g. {{Name}}")));
       } else {
         fieldsBox.append(
           el("p", { class: "mm-label" }, tr(`พบตัวยึด ${fields.length} รายการ` +
@@ -211,7 +211,7 @@ export function mount(tool) {
       const guess = byNorm.get(norm(f)) || "";
       mapping[f] = guess;
       const sel = el("select", { onchange: (e) => { mapping[f] = e.target.value; renderPreview(); renderUnmatched(); refresh(); } });
-      sel.appendChild(el("option", { value: "" }, tr("— ไม่ใช้ —", "— Not used —")));
+      sel.appendChild(el("option", { value: "" }, tr("(ไม่ใช้)", "(Not used)")));
       columns.forEach((c) => sel.appendChild(el("option", { value: c, selected: c === guess }, c)));
       grid.append(
         el("code", { class: "mm-key", text: `{{${f}}}` }),
@@ -219,13 +219,13 @@ export function mount(tool) {
         sel
       );
     });
-    mapBox.append(el("p", { class: "mm-label" }, tr("ระบบจับคู่ให้อัตโนมัติเมื่อชื่อตรงกัน ปรับเองได้", "Matched automatically when names match — adjust as needed")), grid);
+    mapBox.append(el("p", { class: "mm-label" }, tr("ระบบจับคู่ให้อัตโนมัติเมื่อชื่อตรงกัน ปรับเองได้", "Matched automatically when names match, adjust as needed")), grid);
 
     renderUnmatched();
     syncLocks();
 
     nameCol.innerHTML = "";
-    nameCol.appendChild(el("option", { value: "" }, tr("— ตั้งชื่อตามลำดับ —", "— Name by sequence —")));
+    nameCol.appendChild(el("option", { value: "" }, tr("(ตั้งชื่อตามลำดับ)", "(Name by sequence)")));
     columns.forEach((c) => nameCol.appendChild(el("option", { value: c }, c)));
 
     groupCol.innerHTML = "";
@@ -258,12 +258,12 @@ export function mount(tool) {
         el("span", { class: v ? "mm-val" : "mm-val empty", text: v || (col ? tr("(ว่างในแถวแรก)", "(empty in first row)") : tr("(ยังไม่จับคู่)", "(not mapped yet)")) })
       );
     });
-    let head = tr(`ตัวอย่างจากแถวแรกของข้อมูล — จะสร้างทั้งหมด ${rows.length.toLocaleString("th-TH")} ไฟล์`,
-      `Preview from the first data row — will generate ${rows.length.toLocaleString("en-US")} files total`);
+    let head = tr(`ตัวอย่างจากแถวแรกของข้อมูล จะสร้างทั้งหมด ${rows.length.toLocaleString("th-TH")} ไฟล์`,
+      `Preview from the first data row, will generate ${rows.length.toLocaleString("en-US")} files total`);
     if (modeSel.value === "group" && groupCol.value) {
       const n = new Set(rows.map((r) => String(r[groupCol.value] ?? ""))).size;
-      head = tr(`จัดกลุ่มตามคอลัมน์ “${groupCol.value}” — จะได้ ${n.toLocaleString("th-TH")} ไฟล์ จาก ${rows.length.toLocaleString("th-TH")} แถว`,
-        `Grouped by column “${groupCol.value}” — will produce ${n.toLocaleString("en-US")} files from ${rows.length.toLocaleString("en-US")} rows`);
+      head = tr(`จัดกลุ่มตามคอลัมน์ “${groupCol.value}” จะได้ ${n.toLocaleString("th-TH")} ไฟล์ จาก ${rows.length.toLocaleString("th-TH")} แถว`,
+        `Grouped by column “${groupCol.value}”, will produce ${n.toLocaleString("en-US")} files from ${rows.length.toLocaleString("en-US")} rows`);
     }
     previewBox.append(el("p", { class: "mm-label" }, head), list);
   }
@@ -338,7 +338,7 @@ export function mount(tool) {
       st.progress(null);
       const totalSize = made.reduce((a, m) => a + m.blob.size, 0);
       st.ok(tr(`สร้างเอกสารสำเร็จ ${made.length.toLocaleString("th-TH")} ไฟล์, รวม ${fmtBytes(totalSize)}`,
-        `Done — ${made.length.toLocaleString("en-US")} files, ${fmtBytes(totalSize)} total`));
+        `Done, ${made.length.toLocaleString("en-US")} files, ${fmtBytes(totalSize)} total`));
 
       if (made.length > 1) {
         results.appendChild(el("div", { class: "actions" }, [

@@ -30,6 +30,7 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_word.py       # เปิดไฟล์ Word/PDF ผลลัพธ์ตรวจเนื้อใน 6 เครื่องมือสายเอกสาร
 node tests/thai_adversarial.test.mjs            # ยิงข้อมูลไทยโหด ๆ ใส่เครื่องมือไทย (ตรรกะล้วน)
 node tests/thai_parsers.test.mjs               # ตัวแยกชื่อไทย + ที่อยู่ไทย ระดับหน่วย (ตรรกะล้วน)
+../.venv/bin/python tests/browser_datatools.py  # เครื่องมือใหม่ 3 ตัว แยก/รวม Excel และใส่เลขหน้า PDF
 
 # ③ ยิงใส่เว็บจริง (ประตู 2 — ต้องทำก่อนปิดงานทุกครั้ง)
 FK_BASE=https://patcharasitp.github.io/filekit ../.venv/bin/python tests/browser_ux.py

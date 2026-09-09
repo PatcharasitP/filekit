@@ -171,8 +171,8 @@ function renderDropped(stageH) {
   if (!tools.length) {
     grids.appendChild(el("div", { class: "empty" }, dropped.mixed ? [
       el("b", {}, tr(`ไฟล์ที่วางมาเป็นคนละชนิดกัน (${label})`, `These files are different types (${label})`)),
-      el("div", {}, tr("ยังไม่มีเครื่องมือที่ทำงานกับทุกชนิดพร้อมกัน — กด “ล้าง” แล้วใส่ทีละชนิด",
-                       "No tool handles all of them at once — press “Clear” and add one type at a time")),
+      el("div", {}, tr("ยังไม่มีเครื่องมือที่ทำงานกับทุกชนิดพร้อมกัน กด “ล้าง” แล้วใส่ทีละชนิด",
+                       "No tool handles all of them at once, press “Clear” and add one type at a time")),
     ] : [
       el("b", {}, tr("ไฟล์ชนิดนี้ยังไม่มีเครื่องมือรองรับ", "No tool supports this file type yet")),
       el("div", {}, tr("ลองไฟล์ PDF, Word, Excel, CSV, PowerPoint, รูปภาพ",
@@ -222,7 +222,7 @@ function showEmpty(q) {
   grids.appendChild(el("div", { class: "empty" }, [
     el("b", {}, tr(`ไม่พบเครื่องมือที่ตรงกับ “${q}”`, `No tool matches “${q}”`)),
     el("div", {}, tr("ลองพิมพ์สั้นลง หรือใช้คำอื่น เช่น “PDF”, “Word”, “รูป”, “ไทย”",
-                     "Try a shorter word, or another one — “PDF”, “Word”, “image”, “Excel”")),
+                     "Try a shorter word, or another one: “PDF”, “Word”, “image”, “Excel”")),
     el("button", { class: "btn-soft", type: "button", onclick: clearSearch }, tr("ล้างคำค้นหา แล้วดูทั้งหมด", "Clear search and show everything")),
   ]));
 }
@@ -302,7 +302,7 @@ async function go(id, push = true) {
 
   swap(() => {
     document.body.classList.add("tool");
-    document.title = `${tool.title} — FileKit`;
+    document.title = `${tool.title} - FileKit`;
     sleepCurrent();
     toolBox.innerHTML = "";
     const cached = mounted.get(id);
@@ -353,8 +353,8 @@ async function go(id, push = true) {
 function goHome(push = true) {
   swap(() => {
     document.body.classList.remove("tool");
-    document.title = tr("FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์",
-                        "FileKit — file tools that run in your browser");
+    document.title = tr("FileKit - เครื่องมือจัดการไฟล์ในเบราว์เซอร์",
+                        "FileKit - file tools that run in your browser");
     sleepCurrent();
     toolBox.innerHTML = "";
     renderHome(search.value);            // อัปเดตแถว "เพิ่งใช้"ให้ทันที

@@ -71,7 +71,7 @@ export function mount(tool) {
   const results = el("div", { class: "results" });
 
   // ── ตัวเลือกทั้งหมด (แผงขวา) — ความสามารถเดิมทุกตัว ──────────────────
-  const textInput = el("input", { type: "text", value: tr("เอกสารลับ ห้ามเผยแพร่", "Confidential — do not distribute"), placeholder: tr("ข้อความลายน้ำ", "Watermark text") });
+  const textInput = el("input", { type: "text", value: tr("เอกสารลับ ห้ามเผยแพร่", "Confidential, do not distribute"), placeholder: tr("ข้อความลายน้ำ", "Watermark text") });
   const posSel = select([["diagonal", tr("ทแยงกลางหน้า", "Diagonal, centered")], ["center", tr("กลางหน้า แนวนอน", "Centered, horizontal")], ["footer", tr("ท้ายหน้า", "Footer")], ["tile", tr("ปูเต็มหน้า", "Tiled across page")]], "diagonal");
   const colorInput = el("input", { type: "color", value: "#ff3b5c" });
   const opacity = el("input", { type: "range", min: "5", max: "60", value: "18" });
@@ -180,13 +180,13 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ PDF", "PDF file"), node: dz.container },
-    center: { node: stage, empty: tr("ยังไม่มีไฟล์ — เลือก PDF ก่อน", "No file yet — choose a PDF") },
+    center: { node: stage, empty: tr("ยังไม่มีไฟล์ เลือก PDF ก่อน", "No file yet. Choose a PDF") },
     right: { title: tr("ตัวเลือกลายน้ำ", "Watermark options"), node: rightBox },
     toolbar: [el("div", { class: "wmp-toolbar-note" }, tr("พรีวิวจำลอง ไม่ใช่เนื้อหาไฟล์จริง",
                                                             "Simulated preview, not real content"))],
     footer: [go, st.node],
     note: tr("ลายน้ำเป็นภาพทับเนื้อหา ป้องกันการคัดลอกภาพหน้าจอไม่ได้ ใช้ระบุสถานะเอกสารเป็นหลัก",
-      "The watermark is an overlay image — it does not stop screenshots, it just marks status"),
+      "The watermark is an overlay image. It does not stop screenshots, it just marks status"),
   });
   ws.showCanvas(false);
   ws.wrap.prepend(el("style", {}, STYLE));
@@ -246,7 +246,7 @@ export function mount(tool) {
 
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(tr(`ใส่ลายน้ำครบ ${pages.length} หน้า`, `Watermark added — ${pages.length} pages`));
+      st.ok(tr(`ใส่ลายน้ำครบ ${pages.length} หน้า`, `Watermark added, ${pages.length} pages`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(file.name) + tr("-ลายน้ำ.pdf", "-watermarked.pdf");
       results.appendChild(el("div", { class: "result" }, [

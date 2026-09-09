@@ -46,14 +46,14 @@ export function mount(tool) {
     ]),
     rulesBox,
     el("div", { class: "clean-opts" }, [
-      el("label", { class: "clean-check" }, [matchCase, el("span", {}, tr("ตรงตัวพิมพ์ใหญ่–เล็ก (อังกฤษ)", "Match case (English)"))]),
+      el("label", { class: "clean-check" }, [matchCase, el("span", {}, tr("ตรงตัวพิมพ์ใหญ่เล็ก (อังกฤษ)", "Match case (English)"))]),
       el("label", { class: "clean-check" }, [wholeWord, el("span", {}, tr("ทั้งคำ (เฉพาะอังกฤษ)", "Whole word (English only)"))]),
     ]),
     el("div", { class: "actions" }, [preview, go]), st.node, previewBox, results);
 
   body.appendChild(el("div", { class: "note" },
-    tr("แก้หลายไฟล์พร้อมกัน — กด “ดูตัวอย่าง” เช็คจำนวนก่อนแก้จริงเสมอ",
-    "Batch-edit many files — always click “Preview” to check the count first")));
+    tr("แก้หลายไฟล์พร้อมกัน กด “ดูตัวอย่าง” เช็คจำนวนก่อนแก้จริงเสมอ",
+    "Batch-edit many files, always click “Preview” to check the count first")));
 
   const getPairs = () => [...rulesBox.children].map((r) => r._get()).filter((p) => p.find);
   function refresh() {
@@ -110,7 +110,7 @@ export function mount(tool) {
         made.push({ name: tr(`${stripExt(f.name)}-แก้แล้ว.docx`, `${stripExt(f.name)}-edited.docx`), blob, n });
       });
       st.progress(null);
-      if (!made.length) throw new Error(tr("แก้ไม่สำเร็จ — ตรวจว่าเป็น .docx จริง", "Could not process — check they're valid .docx files"));
+      if (!made.length) throw new Error(tr("แก้ไม่สำเร็จ ตรวจว่าเป็น .docx จริง", "Could not process. Check they're valid .docx files."));
       if (failed.length) results.appendChild(failedBox(failed));
       st.ok(tr(`แทนที่ ${total.toLocaleString("th-TH")} จุด ใน ${made.length} ไฟล์`,
         `Replaced ${total.toLocaleString("en-US")} matches in ${made.length} files`));

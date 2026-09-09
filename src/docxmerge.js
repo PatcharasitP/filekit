@@ -45,8 +45,8 @@ export async function readPlaceholders(file) {
   try {
     tags = await h.parseTags(file);
   } catch (e) {
-    throw new Error(tr("อ่านเทมเพลตไม่สำเร็จ — ตรวจว่าเป็นไฟล์ .docx จริง และตัวยึดปิดครบทุกอัน (" + e.message + ")",
-      "Could not read the template — check that it's really a .docx and every placeholder is closed (" + e.message + ")"));
+    throw new Error(tr("อ่านเทมเพลตไม่สำเร็จ ตรวจว่าเป็นไฟล์ .docx จริง และตัวยึดปิดครบทุกอัน (" + e.message + ")",
+      "Could not read the template. Check that it's really a .docx and every placeholder is closed (" + e.message + ")"));
   }
   const loops = new Set(), fields = new Set();
   for (const t of tags) {

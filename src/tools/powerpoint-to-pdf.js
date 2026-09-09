@@ -31,7 +31,7 @@ export function mount(tool) {
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
     tr("สำคัญ: จัดหน้าใหม่จากข้อความ ไม่คงดีไซน์เดิม (ต้องเป๊ะ ใช้ PowerPoint → Save as PDF)",
-    "Note: rebuilds layout from text — design not kept (need it exact? use PowerPoint's Save as PDF)")));
+    "Note: rebuilds layout from text. Design not kept (need it exact? use PowerPoint's Save as PDF)")));
 
   async function run() {
     if (!file) return st.err(tr("กรุณาเลือกไฟล์ .pptx ก่อน", "Please choose a .pptx file first"));
@@ -108,7 +108,7 @@ export function mount(tool) {
 
       const blob = doc.output("blob");
       st.progress(null);
-      st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done — ${slides.length} pages (1 slide = 1 page)`));
+      st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done, ${slides.length} pages (1 slide = 1 page)`));
       const name = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์, ${ratio.value}`, `${slides.length} slides, ${ratio.value}`))]),

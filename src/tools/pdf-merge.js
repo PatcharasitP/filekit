@@ -42,7 +42,7 @@ export function mount(tool) {
       }
       const blob = new Blob([await out.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(tr(`รวมเสร็จ ${out.getPageCount()} หน้า จาก ${files.length} ไฟล์`, `Done — ${out.getPageCount()} pages from ${files.length} files`));
+      st.ok(tr(`รวมเสร็จ ${out.getPageCount()} หน้า จาก ${files.length} ไฟล์`, `Done, ${out.getPageCount()} pages from ${files.length} files`));
       if (sawEncrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(files[0].name) + tr("-รวม.pdf", "-merged.pdf");
       results.appendChild(el("div", { class: "result" }, [

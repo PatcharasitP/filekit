@@ -44,11 +44,11 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
 
   const base = await openDocxZip(files[0], JSZipLib);
   const baseDocFile = base.file("word/document.xml");
-  if (!baseDocFile) throw new Error(tr(`${files[0].name} — เนื้อในไม่ใช่ไฟล์ Word (.docx) ที่ถูกต้อง, ตรวจไฟล์ต้นทางแล้วลองใหม่`, `${files[0].name} — the content inside isn't a valid Word (.docx) file, check the source and try again`));
+  if (!baseDocFile) throw new Error(tr(`${files[0].name}: เนื้อในไม่ใช่ไฟล์ Word (.docx) ที่ถูกต้อง, ตรวจไฟล์ต้นทางแล้วลองใหม่`, `${files[0].name}: the content inside isn't a valid Word (.docx) file, check the source and try again`));
   const baseDocXml = await baseDocFile.async("string");
   const baseDoc = new DOMParser().parseFromString(baseDocXml, "application/xml");
   const body = baseDoc.getElementsByTagNameNS(W, "body")[0];
-  if (!body) throw new Error(tr(`${files[0].name} — เปิดไม่ได้ อาจไม่ใช่ .docx ที่ถูกต้อง, ตรวจไฟล์ต้นทางแล้วลองใหม่`, `${files[0].name} — could not open, it may not be a valid .docx, check the source and try again`));
+  if (!body) throw new Error(tr(`${files[0].name}: เปิดไม่ได้ อาจไม่ใช่ .docx ที่ถูกต้อง, ตรวจไฟล์ต้นทางแล้วลองใหม่`, `${files[0].name}: could not open, it may not be a valid .docx, check the source and try again`));
 
   const baseRelsXml = base.file("word/_rels/document.xml.rels")
     ? await base.file("word/_rels/document.xml.rels").async("string")
@@ -64,7 +64,7 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
     onProgress?.({ done: i, total: files.length - 1 });
     const zip = await JSZipLib.loadAsync(await files[i].arrayBuffer());
     const docFile = zip.file("word/document.xml");
-    if (!docFile) throw new Error(tr(`เปิดไฟล์ “${files[i].name}” ไม่ได้ — อาจไม่ใช่ .docx ที่ถูกต้อง`, `Could not open "${files[i].name}" — it may not be a valid .docx`));
+    if (!docFile) throw new Error(tr(`เปิดไฟล์ “${files[i].name}” ไม่ได้ อาจไม่ใช่ .docx ที่ถูกต้อง`, `Could not open "${files[i].name}", it may not be a valid .docx`));
 
     const doc = new DOMParser().parseFromString(await docFile.async("string"), "application/xml");
     const srcBody = doc.getElementsByTagNameNS(W, "body")[0];

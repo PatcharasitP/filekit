@@ -26,8 +26,8 @@ export function mount(tool) {
     el("div", { class: "row" }, [field(tr("โน้ตผู้บรรยาย", "Speaker notes"), withNotes), field(tr("รูปแบบเอกสาร", "Document format"), layout), field(tr("การขึ้นหน้า", "Page breaks"), breakMode)]),
     el("div", { class: "actions" }, [go]), st.node, results, preview);
   body.appendChild(el("div", { class: "note" },
-    tr("ดึงข้อความเป็น Word แก้ไขได้ — ไม่คงรูป/สี/เลย์เอาต์ (อยากได้เดิม ใช้ PowerPoint→PDF)",
-    "Pulls text into an editable Word doc — images/colors/layout not kept (exact look? use PowerPoint → PDF)")));
+    tr("ดึงข้อความเป็น Word แก้ไขได้ ไม่คงรูป/สี/เลย์เอาต์ (อยากได้เดิม ใช้ PowerPoint→PDF)",
+    "Pulls text into an editable Word doc. Images/colors/layout not kept (exact look? use PowerPoint → PDF)")));
 
   async function run() {
     if (!file) return st.err(tr("กรุณาเลือกไฟล์ .pptx ก่อน", "Please choose a .pptx file first"));
@@ -59,7 +59,7 @@ export function mount(tool) {
             spacing: { before: 200, after: 80 },
           }));
         }
-        previewLines.push(`— ${heading}`);
+        previewLines.push(`--- ${heading} ---`);
 
         s.paras.forEach((p) => {
           words += p.text.length;
@@ -84,12 +84,12 @@ export function mount(tool) {
           children.push(new Paragraph({ children: [], pageBreakBefore: true }));
       });
 
-      if (!words) throw new Error(tr("ไม่พบข้อความ — ไฟล์นี้อาจมีแต่รูป ลองใช้ PowerPoint → PDF แทน", "No text found — this file may be images only. Try PowerPoint → PDF instead"));
+      if (!words) throw new Error(tr("ไม่พบข้อความ ไฟล์นี้อาจมีแต่รูป ลองใช้ PowerPoint → PDF แทน", "No text found. This file may be images only. Try PowerPoint → PDF instead"));
 
       const blob = await Packer.toBlob(new Document({ sections: [{ properties: {}, children }] }));
       st.progress(null);
       st.ok(tr(`แปลงสำเร็จ ${slides.length} สไลด์, ${words.toLocaleString("th-TH")} ตัวอักษร`,
-        `Done — ${slides.length} slides, ${words.toLocaleString("en-US")} characters`));
+        `Done, ${slides.length} slides, ${words.toLocaleString("en-US")} characters`));
       preview.hidden = false;
       preview.textContent = previewLines.join("\n").slice(0, 4000);
 

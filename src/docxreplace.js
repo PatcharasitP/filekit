@@ -25,8 +25,8 @@ async function openDocxZip(file, JSZipLib) {
     throw friendlyZipOpenError(e, file, buf);
   }
   if (!zip.file("word/document.xml"))
-    throw new Error(tr(`${file.name} — เนื้อในไม่ใช่ไฟล์ Word (.docx) ที่ถูกต้อง, ตรวจไฟล์ต้นทางแล้วลองใหม่`,
-      `${file.name} — the content inside isn't a valid Word (.docx) file, check the source and try again`));
+    throw new Error(tr(`${file.name}: เนื้อในไม่ใช่ไฟล์ Word (.docx) ที่ถูกต้อง, ตรวจไฟล์ต้นทางแล้วลองใหม่`,
+      `${file.name}: the content inside isn't a valid Word (.docx) file, check the source and try again`));
   return zip;
 }
 

@@ -103,7 +103,7 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ต้นฉบับ", "Source file"), node: leftNode, hint: tr("ครั้งละ 1 ไฟล์", "One file at a time") },
-    center: { title: tr("แผนผังหน้า", "Page layout"), node: centerNode, empty: tr("ยังไม่มีไฟล์ — เลือก PDF เพื่อดูจุดตัด", "No file yet — choose a PDF to preview cuts") },
+    center: { title: tr("แผนผังหน้า", "Page layout"), node: centerNode, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูจุดตัด", "No file yet. Choose a PDF to preview cuts") },
     right: { title: tr("ตั้งค่าการแยก", "Split settings"), node: rightNode },
     toolbar: [toolbarStatus],
     footer: [st.node, go],
@@ -111,7 +111,7 @@ export function mount(tool) {
   ws.wrap.prepend(el("style", {}, STYLE));
   ws.body.append(results, el("div", { class: "note" },
     tr("พรีวิวเป็นเลขหน้าจำลอง ไม่ใช่ภาพจริง แต่สี/รอยตัด/ชื่อไฟล์ตรงกับผลลัพธ์จริง",
-       "Preview uses number tiles, not real pages — colors, cuts, and file names match the real output")));
+       "Preview uses number tiles, not real pages. Colors, cuts, and file names match the real output")));
   ws.showCanvas(false);
 
   modeSeg.addEventListener("change", () => {
@@ -231,7 +231,7 @@ export function mount(tool) {
       el("span", {}, [tr("ขนาดไฟล์ ", "File size "), el("b", {}, fmtBytes(file.size))]),
     ]));
     if (cache && cache.encrypted)
-      infoBox.appendChild(el("div", { class: "status show info" }, tr("ไฟล์ล็อกรหัสผ่าน ระบบจะพยายามอ่านให้", "Password-protected — attempting to read anyway")));
+      infoBox.appendChild(el("div", { class: "status show info" }, tr("ไฟล์ล็อกรหัสผ่าน ระบบจะพยายามอ่านให้", "Password-protected, attempting to read anyway")));
   }
 
   function renderCenter(total, groups, error) {
@@ -246,8 +246,8 @@ export function mount(tool) {
     if (error) { centerNode.appendChild(el("div", { class: "status show err" }, error)); return; }
     if (total > MAX_TILES) {
       centerNode.appendChild(el("div", { class: "status show info" },
-        tr(`${total} หน้า มากเกินจะแสดงแผนผัง — ดูรายชื่อไฟล์ในแผงขวาแทน`,
-           `${total} pages — too many to diagram. See the list on the right.`)));
+        tr(`${total} หน้า มากเกินจะแสดงแผนผัง ดูรายชื่อไฟล์ในแผงขวาแทน`,
+           `${total} pages, too many to diagram. See the list on the right.`)));
       return;
     }
     const base = stripExt(file.name);
@@ -324,7 +324,7 @@ export function mount(tool) {
       }
 
       st.progress(null);
-      st.ok(tr(`แยกได้ ${made.length} ไฟล์`, `Done — ${made.length} files`));
+      st.ok(tr(`แยกได้ ${made.length} ไฟล์`, `Done, ${made.length} files`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.count} หน้า`, `${m.count} pages`))]),

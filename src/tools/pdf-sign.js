@@ -73,7 +73,7 @@ export function mount(tool) {
       placed[selected].rw = +sizeSlider.value / 100;
       refresh();
     } });
-  const sizeVal = el("span", { class: "ps-sizeval" }, "—");
+  const sizeVal = el("span", { class: "ps-sizeval" }, "-");
   const sizeBox = el("div", {}, [
     el("p", { class: "mm-label" }, tr("คลิกลายเซ็นบนหน้าเพื่อเลือก แล้วปรับขนาดที่นี่", "Click a placed signature to select it, then resize here")),
     el("div", { class: "ps-sizerow" }, [sizeSlider, sizeVal]),
@@ -108,7 +108,7 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("เอกสาร PDF", "PDF document"), node: leftNode, hint: tr("เลือกไฟล์แล้วคลิกเลขหน้า", "Choose a file, click a page") },
-    center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ — เลือกทางซ้ายเพื่อเซ็น", "No file yet — choose one on the left") },
+    center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ เลือกทางซ้ายเพื่อเซ็น", "No file yet. Choose one on the left") },
     right: { title: tr("ลายเซ็นของคุณ", "Your signature"), node: rightNode },
     toolbar: [prevBtn, pageLabel, nextBtn, el("span", { class: "sep" }), delSelBtn, clearPageBtn],
     footer: [go, st.node],
@@ -145,7 +145,7 @@ export function mount(tool) {
     signature = url;
     if (persist) saveSignature(url);
     renderSaved();
-    st.ok(tr("เลือกแล้ว — คลิกบนหน้าเพื่อวาง", "Selected — click the page to place"));
+    st.ok(tr("เลือกแล้ว คลิกบนหน้าเพื่อวาง", "Selected, click the page to place"));
   }
 
   function renderSaved() {
@@ -156,7 +156,7 @@ export function mount(tool) {
     const row = el("div", { class: "sign-thumbs" });
     list.forEach((url) => {
       const item = el("div", { class: "sign-thumb" + (url === signature ? " on" : "") }, [
-        el("img", { src: url, alt: tr("ลายเซ็น", "Signature"), onclick: () => { signature = url; renderSaved(); st.ok(tr("เลือกแล้ว — คลิกบนหน้าเพื่อวาง", "Selected — click the page to place")); } }),
+        el("img", { src: url, alt: tr("ลายเซ็น", "Signature"), onclick: () => { signature = url; renderSaved(); st.ok(tr("เลือกแล้ว คลิกบนหน้าเพื่อวาง", "Selected, click the page to place")); } }),
         el("button", { class: "icon-btn danger", type: "button", title: tr("ลบออก", "Remove"),
           onclick: (e) => { e.stopPropagation(); removeSignature(url); if (signature === url) signature = null; renderSaved(); } }, [uiIcon("close", "pg-ico")]),
       ]);
@@ -180,7 +180,7 @@ export function mount(tool) {
       current = 1;
       showCanvas(true);
       await gotoPage(1);
-      st.ok(tr(`เปิดแล้ว ${pageCount} หน้า — เลือกลายเซ็นแล้วคลิกวาง`, `Opened — ${pageCount} pages — pick a signature, click to place`));
+      st.ok(tr(`เปิดแล้ว ${pageCount} หน้า เลือกลายเซ็นแล้วคลิกวาง`, `Opened ${pageCount} pages. Pick a signature, then click to place`));
     } catch (e) {
       pdf = null; pageCount = 0;
       showCanvas(false);
@@ -269,7 +269,7 @@ export function mount(tool) {
 
   function renderPageList() {
     pageList.innerHTML = "";
-    if (!pageCount) { pageList.appendChild(el("p", { class: "ps-empty-note" }, tr("ยังไม่มีไฟล์ — เลือกไฟล์ PDF ก่อน", "No file yet — choose a PDF file first"))); return; }
+    if (!pageCount) { pageList.appendChild(el("p", { class: "ps-empty-note" }, tr("ยังไม่มีไฟล์ เลือกไฟล์ PDF ก่อน", "No file yet. Choose a PDF file first"))); return; }
     for (let n = 1; n <= pageCount; n++) {
       const count = placed.filter((p) => p.page === n).length;
       pageList.appendChild(el("button", {
@@ -294,7 +294,7 @@ export function mount(tool) {
     const has = selected >= 0;
     sizeSlider.disabled = !has;
     if (has) sizeSlider.value = String(Math.round(placed[selected].rw * 100));
-    sizeVal.textContent = has ? Math.round(placed[selected].rw * 100) + "%" : "—";
+    sizeVal.textContent = has ? Math.round(placed[selected].rw * 100) + "%" : "-";
   }
 
   // ── บันทึกลงไฟล์จริง ─────────────────────────────────────────────────────

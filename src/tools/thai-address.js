@@ -252,8 +252,8 @@ export function parseAddress(raw, geo) {
   }
 
   if (!dist)
-    return { ok: false, reason: tr("ระบุจังหวัดได้ แต่หาอำเภอ/เขตที่ตรงกันไม่เจอ — ข้อมูลไม่พอให้มั่นใจ",
-                                    "Found the province but no matching district/khet — not enough to be confident") };
+    return { ok: false, reason: tr("ระบุจังหวัดได้ แต่หาอำเภอ/เขตที่ตรงกันไม่เจอ ข้อมูลไม่พอให้มั่นใจ",
+                                    "Found the province but no matching district/khet, so not enough to be confident") };
   if (!sub) warn = true;   // มีจังหวัด+อำเภอ แต่ยืนยันตำบลไม่ได้ — ให้ผ่านแบบติดธง ไม่ทิ้งทั้งแถว
 
   const zip = sub ? sub.zip : dist.defaultZip;
@@ -270,9 +270,9 @@ export function mount(tool) {
   function setNote() {
     if (!noteEl) return;
     noteEl.textContent = geoErr
-      ? tr("โหลดฐานข้อมูลที่อยู่ไม่สำเร็จ — ลองรีเฟรชหน้านี้ใหม่", "Could not load the address database — try refreshing this page")
+      ? tr("โหลดฐานข้อมูลที่อยู่ไม่สำเร็จ ลองรีเฟรชหน้านี้ใหม่", "Could not load the address database, try refreshing this page")
       : geo
-      ? tr("พร้อมใช้ — ฐานข้อมูล 77 จังหวัดทั่วประเทศ", "Ready — database covers all 77 provinces")
+      ? tr("พร้อมใช้: ฐานข้อมูล 77 จังหวัดทั่วประเทศ", "Ready: database covers all 77 provinces")
       : tr("กำลังโหลดฐานข้อมูลที่อยู่ไทย…", "Loading the Thai address database…");
   }
 
@@ -285,13 +285,13 @@ export function mount(tool) {
 
   return columnTool(tool, {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
-    hint: tr("ไฟล์เดียว .xlsx .xls .csv — เลือกคอลัมน์ที่อยู่ที่ยังไม่ได้แยก",
-             "One .xlsx .xls .csv file — pick the column with an unsplit address"),
+    hint: tr("ไฟล์เดียว .xlsx .xls .csv (เลือกคอลัมน์ที่อยู่ที่ยังไม่ได้แยก)",
+             "One .xlsx .xls .csv file (pick the column with an unsplit address)"),
     suffix: tr("-แยกที่อยู่แล้ว", "-address-split"), writeFail: true,
     guessColumn: (h) => /ที่อยู่|address/i.test(h),
     labels: {
       ok: tr("แยกได้", "Split"),
-      warn: tr("ไม่ชัวร์เต็มร้อย — ควรตรวจซ้ำ", "Not fully certain — double-check"),
+      warn: tr("ไม่ชัวร์เต็มร้อย ควรตรวจซ้ำ", "Not fully certain, double-check"),
       bad: tr("แยกไม่ได้", "Could not split"),
     },
 

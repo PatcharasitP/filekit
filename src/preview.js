@@ -291,7 +291,7 @@ async function loadIntoStage(file, expectedIdx) {
     console.error(e);
     if (d.open && expectedIdx === idx) {
       d._stage.appendChild(el("div", { class: "pv-err" },
-        tr("เปิดดูไฟล์นี้ไม่ได้ — อาจเสียหายหรือถูกล็อกไว้", "Could not open this file — it may be damaged or locked")));
+        tr("เปิดดูไฟล์นี้ไม่ได้ อาจเสียหายหรือถูกล็อกไว้", "Could not open this file, it may be damaged or locked")));
     }
   }
 }

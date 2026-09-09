@@ -119,7 +119,7 @@ export function mount(tool) {
       }
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(tr(`สร้าง PDF ${pages} หน้าเรียบร้อย`, `Done — created a ${pages}-page PDF`));
+      st.ok(tr(`สร้าง PDF ${pages} หน้าเรียบร้อย`, `Done, created a ${pages}-page PDF`));
       const name = stripExt(files[0].name) + tr("-รูปภาพ.pdf", "-images.pdf");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages} หน้า`, `${pages} pages`))]),

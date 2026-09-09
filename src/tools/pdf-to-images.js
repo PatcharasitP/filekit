@@ -61,7 +61,7 @@ export function mount(tool) {
       pdf.destroy();
 
       st.progress(null);
-      st.ok(tr(`แปลงเสร็จ ${made.length} รูป`, `Done — ${made.length} images`));
+      st.ok(tr(`แปลงเสร็จ ${made.length} รูป`, `Done, ${made.length} images`));
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: async () => {
           st.info(tr("กำลังบีบเป็น ZIP…", "Zipping files…"));

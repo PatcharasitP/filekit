@@ -409,8 +409,8 @@ export function dropzone(opts = {}) {
     onclick: (e) => { e.stopPropagation(); input.click(); } }, tr("เลือกไฟล์", "Choose files"));
   const zone = el("div", {
     class: "dz", tabindex: "0", role: "button",
-    "aria-label": tr(`เลือกไฟล์: ${expectLabel} — คลิกหรือกด Enter เพื่อเลือก หรือลากไฟล์มาวาง`,
-                     `Choose files: ${expectLabel} — click or press Enter to pick, or drop files here`),
+    "aria-label": tr(`เลือกไฟล์: ${expectLabel} คลิกหรือกด Enter เพื่อเลือก หรือลากไฟล์มาวาง`,
+                     `Choose files: ${expectLabel}, click or press Enter to pick, or drop files here`),
   }, [
     el("div", { class: "dz-ico", "aria-hidden": "true" }, [uiIcon("upload", "dz-svg")]),
     el("div", { class: "dz-main" }, tr("ลากไฟล์มาวางที่นี่", "Drop your files here")),
@@ -420,7 +420,7 @@ export function dropzone(opts = {}) {
     el("div", { class: "dz-hint" }, expect && expect.includes("image")
       ? hint + tr(", วางจากคลิปบอร์ดได้ (Ctrl+V)", ", or paste from clipboard (Ctrl+V)") : hint),
     // ย้ำความเป็นส่วนตัวตรงจุดที่ผู้ใช้กำลังลังเลจะปล่อยไฟล์ ไม่ใช่ปล่อยให้ไปอ่านที่ท้ายหน้า
-    el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device — nothing is uploaded")]),
+    el("div", { class: "dz-safe" }, [uiIcon("lock", "safe-svg"), tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device, nothing is uploaded")]),
     input,
   ]);
 
@@ -586,7 +586,7 @@ export function dropzone(opts = {}) {
     const box = el("div", { class: "wrong-type" }, [
       el("div", {}, [
         el("strong", {}, tr("ไฟล์นี้ใช้กับเครื่องมือนี้ไม่ได้", "This file does not work with this tool")),
-        el("div", { class: "wt-detail" }, `${info.text} — ${names}`),
+        el("div", { class: "wt-detail" }, `${info.text}: ${names}`),
       ]),
       info.toolId
         ? el("button", { class: "btn", type: "button",
@@ -754,7 +754,7 @@ export function dropzone(opts = {}) {
           add(loaded);
         } catch (e) {
           // ออฟไลน์/ไฟล์หาย/ถูกบล็อก — บอกสั้น ๆ ไม่ให้หน้าเครื่องมือพัง
-          sampleErr.textContent = tr("โหลดไฟล์ตัวอย่างไม่สำเร็จ ลองใหม่อีกครั้ง", "Couldn't load the sample file — please try again.");
+          sampleErr.textContent = tr("โหลดไฟล์ตัวอย่างไม่สำเร็จ ลองใหม่อีกครั้ง", "Couldn't load the sample file. Please try again.");
         } finally {
           sampleBtn.disabled = false;
           sampleBtn.textContent = tr("ลองด้วยไฟล์ตัวอย่าง", "Try a sample file");
@@ -831,14 +831,14 @@ export function failedBox(failed) {
   if (!failed) return null;
   if (!failed.length && !failed.stopped) return null;
   if (!failed.length) return el("div", { class: "fail-box" }, [
-    el("strong", {}, tr(`หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`,
-                        `Stopped as asked — ${failed.stopped} files left untouched (whatever finished is still yours to download)`)),
+    el("strong", {}, tr(`หยุดตามที่สั่งแล้ว ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`,
+                        `Stopped as asked, ${failed.stopped} files left untouched (whatever finished is still yours to download)`)),
   ]);
   return el("div", { class: "fail-box" }, [
     el("strong", {}, tr(`ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`,
                         `Skipped ${failed.length} files this tool could not handle (the rest finished fine)`)),
-    el("ul", {}, failed.map((f) => el("li", {}, `${f.name} — ${f.why}`))),
-    failed.stopped ? el("div", {}, tr(`หยุดตามที่สั่งแล้ว — ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`,
-                                      `Stopped as asked — ${failed.stopped} files left untouched`)) : null,
+    el("ul", {}, failed.map((f) => el("li", {}, `${f.name}: ${f.why}`))),
+    failed.stopped ? el("div", {}, tr(`หยุดตามที่สั่งแล้ว ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`,
+                                      `Stopped as asked, ${failed.stopped} files left untouched`)) : null,
   ]);
 }

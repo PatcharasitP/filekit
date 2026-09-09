@@ -86,12 +86,12 @@ export function mount(tool) {
   });
 
   /* ── ขวา: ระดับการบีบ + ตัวเลขสรุป ─────────────────────────────────── */
-  const level = select([["light", tr("เบา — คมชัดสุด", "Light — sharpest")], ["medium", tr("ปานกลาง — แนะนำ", "Medium — recommended")], ["strong", tr("แรง — ไฟล์เล็กสุด", "Strong — smallest file")]], "medium");
+  const level = select([["light", tr("เบา (คมชัดสุด)", "Light (sharpest)")], ["medium", tr("ปานกลาง (แนะนำ)", "Medium (recommended)")], ["strong", tr("แรง (ไฟล์เล็กสุด)", "Strong (smallest file)")]], "medium");
   level.addEventListener("change", () => renderAfterPreview());
 
-  const statOrigin = el("span", { class: "cmp-stat-v" }, "–");
-  const statNew = el("span", { class: "cmp-stat-v" }, "–");
-  const statDiff = el("span", { class: "cmp-stat-v" }, "–");
+  const statOrigin = el("span", { class: "cmp-stat-v" }, "-");
+  const statNew = el("span", { class: "cmp-stat-v" }, "-");
+  const statDiff = el("span", { class: "cmp-stat-v" }, "-");
   const statsBox = el("div", { class: "cmp-stats" }, [
     statRow(tr("ขนาดเดิม", "Original size"), statOrigin),
     statRow(tr("ขนาดใหม่", "New size"), statNew),
@@ -126,8 +126,8 @@ export function mount(tool) {
       hint: tr("ลากมาวาง หรือคลิกเลือก", "Drag or click to choose"),
     },
     center: {
-      title: tr("พรีวิวเทียบก่อน–หลัง", "Before–after preview"), node: sliderWrap,
-      empty: tr("ยังไม่มีไฟล์ — เลือก PDF เพื่อเทียบก่อน–หลัง", "No file yet — choose a PDF to compare"),
+      title: tr("พรีวิวเทียบก่อนกับหลัง", "Before and after preview"), node: sliderWrap,
+      empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อเทียบก่อนกับหลัง", "No file yet. Choose a PDF to compare"),
     },
     right: {
       title: tr("ตัวเลือก", "Options"),
@@ -140,7 +140,7 @@ export function mount(tool) {
     ],
     footer: [go, st.node, results],
     note: tr("วิธีนี้แปลงแต่ละหน้าเป็นภาพ ข้อความจะคัดลอก/ค้นหาไม่ได้อีก",
-      "This turns each page into an image — text can no longer be copied or searched"),
+      "This turns each page into an image. Text can no longer be copied or searched"),
   });
   ws.wrap.prepend(styleEl);
 
@@ -184,8 +184,8 @@ export function mount(tool) {
     return el("div", { class: "cmp-stat" }, [el("span", { class: "cmp-stat-k" }, label), valueNode]);
   }
   function resetStats() {
-    statOrigin.textContent = "–"; statNew.textContent = "–";
-    statDiff.textContent = "–"; statDiff.className = "cmp-stat-v";
+    statOrigin.textContent = "-"; statNew.textContent = "-";
+    statDiff.textContent = "-"; statDiff.className = "cmp-stat-v";
   }
 
   /* ── เปิดเอกสาร pdf.js ครั้งเดียวต่อไฟล์ (ขอรหัสผ่านครั้งเดียว) แล้วใช้ร่วมกัน
@@ -343,13 +343,13 @@ export function mount(tool) {
         // จะพาผู้ใช้ไปผิดทาง (ไฟล์ภาพที่บีบมาดีแล้วควรได้คำแนะนำคนละแบบ)
         const textual = hadText;
         st.err(
-          tr(`ไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `,
-             `Didn't shrink (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}) — `) +
+          tr(`ไม่เล็กลง (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}): `,
+             `Didn't shrink (${fmtBytes(file.size)} → ${fmtBytes(blob.size)}): `) +
           (textual
             ? tr("เป็นข้อความล้วน แปลงภาพไม่ช่วย ใช้ไฟล์เดิม",
-                 "Text-only — converting won't help. Keep the original.")
+                 "Text-only, converting won't help. Keep the original.")
             : tr("บีบมาดีแล้ว ลองระดับ “แรง” หรือใช้ไฟล์เดิม",
-                 "Already well compressed — try \"Strong\" or keep it."))
+                 "Already well compressed, try \"Strong\" or keep it."))
         );
       } else {
         /* ‼️ เครื่องมือนี้บีบอัดด้วยการ "วาดทุกหน้าใหม่เป็นภาพ" ซึ่งทำให้ชั้นข้อความหายไปทั้งไฟล์

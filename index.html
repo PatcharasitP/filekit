@@ -26,7 +26,7 @@
   form-action 'none'">
 <!-- ‼️ ชื่อหน้าต้องแปลด้วย data-en เหมือน element อื่น ๆ ไม่ใช่ให้ JS ตั้งตอนวาดหน้าแรก
      (เคยตั้งใน goHome() แล้วพอเลิกเรียก goHome() ตอนบูตหน้าแรก ชื่อหน้าก็ค้างเป็นไทยในโหมดอังกฤษ) -->
-<title data-en="FileKit — file tools that run in your browser">FileKit — เครื่องมือจัดการไฟล์ในเบราว์เซอร์</title>
+<title data-en="FileKit - file tools that run in your browser">FileKit - เครื่องมือจัดการไฟล์ในเบราว์เซอร์</title>
 <meta name="description" content="แปลง รวม แยก บีบอัด PDF Excel Word รูปภาพ ทำงานในเครื่องคุณเอง ไฟล์ไม่ถูกอัปโหลดไปไหน ใช้ได้แม้ออฟไลน์">
 <meta name="theme-color" content="#0f1220" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
@@ -38,13 +38,13 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FileKit">
 <meta property="og:locale" content="th_TH">
-<meta property="og:title" content="FileKit — เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน">
-<meta property="og:description" content="29 เครื่องมือ แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
+<meta property="og:title" content="FileKit - เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน">
+<meta property="og:description" content="33 เครื่องมือ แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
 <meta property="og:url" content="https://patcharasitp.github.io/filekit/">
 <meta property="og:image" content="https://patcharasitp.github.io/filekit/assets/social/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="FileKit — 29 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
+<meta property="og:image:alt" content="FileKit - 33 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
@@ -64,7 +64,7 @@
  "applicationCategory":"UtilitiesApplication","operatingSystem":"Any web browser",
  "inLanguage":["th-TH","en"],"isAccessibleForFree":true,
  "browserRequirements":"ต้องเปิดใช้งาน JavaScript",
- "description":"29 เครื่องมือแปลง รวม แยก บีบอัด PDF, Word, Excel, PowerPoint, รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
+ "description":"33 เครื่องมือแปลง รวม แยก บีบอัด PDF, Word, Excel, PowerPoint, รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"THB"},
  "featureList":["รวมไฟล์ PDF","แยกไฟล์ PDF","บีบอัดไฟล์ PDF","จัดการหน้า PDF","เซ็นชื่อบน PDF","ใส่ลายน้ำ PDF","OCR อ่านข้อความจากสแกน","PDF เป็น Word","PDF เป็น Excel","PDF เป็นรูปภาพ","PDF เป็นข้อความ","Word เป็น PDF","Excel เป็น PDF","PowerPoint เป็น PDF","PowerPoint เป็น Word","รูปภาพเป็น PDF","ย่อและบีบอัดรูปภาพ","แปลงชนิดไฟล์รูป","รวมไฟล์ Word","ค้นหาและแทนที่ทั้งชุด","ตรวจเอกสารก่อนส่ง","จดหมายเวียน Word กับ Excel","สลับ Excel กับ CSV","ซ่อมไฟล์ไทยเพี้ยน","สลับปี พ.ศ. กับ ค.ศ.","ตรวจเลขบัตรประชาชน","ตัวเลขเป็นบาทถ้วน"]}
 ]}
@@ -682,14 +682,14 @@ body.tool #home{display:none}
             <div class="search" id="searchbox">
               <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8L21 21"/></svg>
               <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, บาทถ้วน, ไทยเพี้ยน" autocomplete="off"
-                     data-en-ph="Search tools — e.g. merge PDF, split, compress" data-en-al="Search tools"
+                     data-en-ph="Search tools, e.g. merge PDF, split, compress" data-en-al="Search tools"
                      aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
               <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา" data-en-al="Clear search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button>
             </div>
             <div class="hits" id="hits" role="status" aria-live="polite"></div>
           </div>
           <div class="facts">
-            <div class="fact"><b id="fact-n">29</b><span data-en="tools">เครื่องมือ</span></div>
+            <div class="fact"><b id="fact-n">33</b><span data-en="tools">เครื่องมือ</span></div>
             <div class="fact"><b>0</b><span data-en="files uploaded">ไฟล์ที่ถูกอัปโหลด</span></div>
             <div class="fact"><b data-en="$0">฿0</b><span data-en="free, no ads">ฟรี ไม่มีโฆษณา</span></div>
           </div>

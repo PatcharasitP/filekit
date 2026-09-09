@@ -41,7 +41,7 @@ export function mount(tool) {
       .join("\n\n");
     st.progress(null);
     st.ok(tr(`ดึงข้อความสำเร็จ ${bodyChars.toLocaleString("th-TH")} ตัวอักษร จาก ${pages.length} หน้า${note ? ", " + note : ""}`,
-             `Done — ${bodyChars.toLocaleString("en-US")} characters from ${pages.length} pages${note ? ", " + note : ""}`));
+             `Done, ${bodyChars.toLocaleString("en-US")} characters from ${pages.length} pages${note ? ", " + note : ""}`));
     preview.hidden = false;
     preview.textContent = text.slice(0, 4000) + (text.length > 4000 ? tr("\n\n… (แสดงตัวอย่าง 4,000 ตัวอักษรแรก)", "\n\n… (showing the first 4,000 characters)") : "");
     const name = stripExt(file.name) + ".txt";
@@ -51,7 +51,7 @@ export function mount(tool) {
         download(new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" }), name) }),
       button(tr("คัดลอกทั้งหมด", "Copy all"), { ghost: true, onclick: async () => {
         try { await navigator.clipboard.writeText(text); st.ok(tr("คัดลอกลงคลิปบอร์ดแล้ว", "Copied to clipboard")); }
-        catch { st.err(tr("คัดลอกไม่ได้ ใช้ดาวน์โหลดแทน", "Can't copy — use download")); }
+        catch { st.err(tr("คัดลอกไม่ได้ ใช้ดาวน์โหลดแทน", "Can't copy, use download")); }
       } }),
     ]));
   }
@@ -86,8 +86,8 @@ export function mount(tool) {
         st.info(tr("ไม่มีชั้นข้อความ (อาจเป็นไฟล์สแกน)", "No text layer (probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            tr("อ่านด้วย OCR ได้ทั้งไทย-อังกฤษ, ครั้งแรกโหลดชุดภาษา ~10–30 MB",
-               "OCR reads Thai and English, first time downloads a ~10–30 MB language pack")),
+            tr("อ่านด้วย OCR ได้ทั้งไทย-อังกฤษ, ครั้งแรกโหลดชุดภาษา ~10 ถึง 30 MB",
+               "OCR reads Thai and English, first time downloads a ~10 to 30 MB language pack")),
           el("div", { class: "actions" }, [
             button(tr("อ่านด้วย OCR", "Read with OCR"), { onclick: () => runOcr(pdf) }),
             button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),

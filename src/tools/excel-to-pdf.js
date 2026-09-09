@@ -77,7 +77,7 @@ export function mount(tool) {
       const blob = doc.output("blob");
       st.progress(null);
       st.ok(tr(`แปลงสำเร็จ ${doc.getNumberOfPages()} หน้า, ${totalRows.toLocaleString("th-TH")} แถว`,
-               `Done — ${doc.getNumberOfPages()} pages, ${totalRows.toLocaleString("en-US")} rows`));
+               `Done, ${doc.getNumberOfPages()} pages, ${totalRows.toLocaleString("en-US")} rows`));
       const outName = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, tr(`${doc.getNumberOfPages()} หน้า`, `${doc.getNumberOfPages()} pages`))]),

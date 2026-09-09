@@ -59,7 +59,7 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ PDF", "PDF file"), node: leftNode },
-    center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ — เลือก PDF เพื่อดูตัวอย่าง", "No file yet — choose a PDF to preview") },
+    center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูตัวอย่าง", "No file yet. Choose a PDF to preview") },
     right: { title: tr("ตัวเลือก", "Options"), node: rightNode },
     toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }), resetBtn],
     footer: [st.node, saveBtn],
@@ -253,7 +253,7 @@ export function mount(tool) {
         out.addPage(page);
       });
       const blob = new Blob([await out.save()], { type: "application/pdf" });
-      st.ok(tr(`บันทึกแล้ว ${keep.length} หน้า`, `Saved — ${keep.length} pages`));
+      st.ok(tr(`บันทึกแล้ว ${keep.length} หน้า`, `Saved, ${keep.length} pages`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(file.name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
       results.appendChild(el("div", { class: "result" }, [

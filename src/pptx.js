@@ -77,8 +77,8 @@ export async function readPptx(file, { withImages = false, onProgress } = {}) {
     .filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
     .sort((a, b) => numOf(a) - numOf(b));   // slide10 ต้องมาหลัง slide9 ไม่ใช่หลัง slide1
   if (!slideNames.length)
-    throw new Error(tr(`${file.name} — ไม่พบสไลด์ในไฟล์ อาจไม่ใช่ .pptx จริง (.ppt รุ่นเก่ายังไม่รองรับ), ตรวจไฟล์แล้วลองใหม่`,
-      `${file.name} — no slides found, this may not be a real .pptx (.ppt isn't supported yet), check the file and try again`));
+    throw new Error(tr(`${file.name}: ไม่พบสไลด์ในไฟล์ อาจไม่ใช่ .pptx จริง (.ppt รุ่นเก่ายังไม่รองรับ), ตรวจไฟล์แล้วลองใหม่`,
+      `${file.name}: no slides found, this may not be a real .pptx (.ppt isn't supported yet), check the file and try again`));
 
   const parser = new DOMParser();
   const slides = [];

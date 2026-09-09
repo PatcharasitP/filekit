@@ -54,11 +54,11 @@ export function mount(tool) {
         { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
       st.ok(tr(`อ่านด้วย OCR สำเร็จ ${rows.toLocaleString("th-TH")} แถว, ${wb.SheetNames.length} ชีท`,
-               `OCR done — ${rows.toLocaleString("en-US")} rows, ${wb.SheetNames.length} sheets`));
+               `OCR done, ${rows.toLocaleString("en-US")} rows, ${wb.SheetNames.length} sheets`));
       const name = stripExt(file.name) + ".xlsx";
       results.innerHTML = "";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr("ควรตรวจทาน (OCR)", "OCR — please review"))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr("ควรตรวจทาน (OCR)", "OCR (please review)"))]),
         downloadButton(blob, name),
       ]));
     } catch (e) {
@@ -124,7 +124,7 @@ export function mount(tool) {
       const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
       st.ok(tr(`แปลงสำเร็จ ${totalRows.toLocaleString("th-TH")} แถว, ${wb.SheetNames.length} ชีท`,
-               `Done — ${totalRows.toLocaleString("en-US")} rows, ${wb.SheetNames.length} sheets`));
+               `Done, ${totalRows.toLocaleString("en-US")} rows, ${wb.SheetNames.length} sheets`));
 
       const sample = (sheetMode.value === "single" ? all : XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 })).slice(0, 12);
       preview.hidden = false;

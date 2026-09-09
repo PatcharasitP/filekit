@@ -50,7 +50,7 @@ export function mount(tool) {
     const blob = await buildDocx(blocks);
     st.progress(null);
     st.ok(tr(`แปลงสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${blocks.length} หน้า${note ? ", " + note : ""}`,
-             `Done — ${chars.toLocaleString("en-US")} characters from ${blocks.length} pages${note ? ", " + note : ""}`));
+             `Done, ${chars.toLocaleString("en-US")} characters from ${blocks.length} pages${note ? ", " + note : ""}`));
     const name = stripExt(file.name) + ".docx";
     results.innerHTML = "";
     results.appendChild(el("div", { class: "result" }, [
@@ -96,8 +96,8 @@ export function mount(tool) {
         st.info(tr("ไม่มีชั้นข้อความ (อาจเป็นไฟล์สแกน)", "No text layer (probably a scan)"));
         extra.appendChild(el("div", { class: "panel" }, [
           el("div", { class: "note", style: { marginTop: "0" } },
-            tr("OCR อ่านไทย-อังกฤษได้, ครั้งแรกโหลดชุดภาษา ~10–30 MB ใช้เวลา ~3–15 วิ/หน้า",
-               "OCR reads Thai and English, first time downloads a ~10–30 MB pack, ~3–15 sec/page")),
+            tr("OCR อ่านไทย-อังกฤษได้, ครั้งแรกโหลดชุดภาษา ~10 ถึง 30 MB ใช้เวลา ~3 ถึง 15 วิ/หน้า",
+               "OCR reads Thai and English, first time downloads a ~10 to 30 MB pack, ~3 to 15 sec/page")),
           el("div", { class: "actions" }, [
             button(tr("อ่านด้วย OCR", "Read with OCR"), { onclick: () => runOcr(pdf) }),
             button(tr("ยกเลิก", "Cancel"), { ghost: true, onclick: () => { extra.innerHTML = ""; st.clear(); pdf.destroy(); } }),

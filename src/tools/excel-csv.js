@@ -20,8 +20,8 @@ export function mount(tool) {
   body.append(el("div", { class: "row" }, [field(tr("ทิศทางการแปลง", "Conversion direction"), dirSel)]), dz.container,
     el("div", { class: "actions" }, [go]), st.node, results);
   body.appendChild(el("div", { class: "note" },
-    tr("CSV ใส่ BOM (UTF-8) อัตโนมัติ — ไทยไม่เพี้ยนใน Excel",
-       "CSV gets a UTF-8 BOM — Thai text won't garble in Excel")));
+    tr("CSV ใส่ BOM (UTF-8) อัตโนมัติ ทำให้ไทยไม่เพี้ยนใน Excel",
+       "CSV gets a UTF-8 BOM, so Thai text won't garble in Excel")));
 
   async function run() {
     const files = dz.files;
@@ -45,7 +45,7 @@ export function mount(tool) {
           await yieldToBrowser();
         }
         if (!made.length) throw new Error(tr("ไม่พบข้อมูลในไฟล์นี้", "No data was found in this file"));
-        st.ok(tr(`แยกได้ ${made.length} ไฟล์ CSV`, `Done — ${made.length} CSV files`));
+        st.ok(tr(`แยกได้ ${made.length} ไฟล์ CSV`, `Done, ${made.length} CSV files`));
         made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
           el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
@@ -79,7 +79,7 @@ export function mount(tool) {
         st.progress(null);
         st.ok(tr(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +
           (fixedEnc ? `, ซ่อมภาษาไทยที่เพี้ยนให้ ${fixedEnc} ไฟล์` : ""),
-          `Combined into Excel — ${wb.SheetNames.length} sheets` +
+          `Combined into Excel, ${wb.SheetNames.length} sheets` +
           (fixedEnc ? `, fixed garbled Thai text in ${fixedEnc} files` : "")));
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [

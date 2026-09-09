@@ -43,7 +43,7 @@ export function mount(tool) {
       st.progress(null);
       const total = parts.reduce((a, p) => a + p.paragraphs, 0);
       st.ok(tr(`รวมเสร็จ ${parts.length} ไฟล์, ${total.toLocaleString("th-TH")} ย่อหน้า`,
-        `Done — ${parts.length} files, ${total.toLocaleString("en-US")} paragraphs`));
+        `Done, ${parts.length} files, ${total.toLocaleString("en-US")} paragraphs`));
 
       const name = stripExt(files[0].name) + tr("-รวม.docx", "-merged.docx");
       results.appendChild(el("div", { class: "result" }, [

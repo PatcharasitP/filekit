@@ -4,7 +4,16 @@ import os
 # รับ FK_BASE เหมือนไฟล์เทสอื่น เพื่อยิงใส่เว็บจริง/พอร์ตอื่นได้
 BASE = os.environ.get("FK_BASE", "http://localhost:8899")
 
-S = pathlib.Path("/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/fx")
+# ‼️ สร้างไฟล์ทดสอบเองทุกครั้ง ไม่ผูกกับโฟลเดอร์ชั่วคราวของเครื่องใครเครื่องหนึ่ง
+#    (เดิมชี้ path ของ session เก่าแบบตายตัว พอ session เปลี่ยนก็รันไม่ได้เลยทั้งไฟล์)
+import tempfile, shutil, atexit
+from PIL import Image
+S = pathlib.Path(tempfile.mkdtemp(prefix="fk_batch_"))
+atexit.register(lambda: shutil.rmtree(S, ignore_errors=True))
+Image.new("RGB", (320, 240), (200, 60, 60)).save(S / "รูปดี1.png")
+Image.new("RGB", (280, 200), (60, 140, 200)).save(S / "รูปดี2.png")
+# ไฟล์นามสกุล .png ที่เนื้อในไม่ใช่รูป — ต้องถูกข้ามโดยไม่ทำให้ทั้งชุดล้ม
+(S / "รูปเสีย.png").write_bytes(b"\x89PNG\r\n\x1a\n" + "เนื้อในพัง ไม่ใช่รูปจริง".encode())
 P,F=0,[]
 def ck(n,g,w,contains=False):
     global P

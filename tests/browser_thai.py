@@ -14,7 +14,64 @@ N_TOOLS = _tool_count()
 
 
 BASE = __import__("os").environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
-FX = pathlib.Path("/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/fx")
+# ‼️ สร้างไฟล์ทดสอบเองทุกครั้ง ไม่ผูกกับโฟลเดอร์ชั่วคราวของ session ใด session หนึ่ง
+#    (เดิมชี้ path ตายตัวของเครื่องที่เขียนเทส พอโฟลเดอร์นั้นหายก็รันไม่ได้เลยทั้งไฟล์
+#     = กฎที่ไฟล์นี้เฝ้าอยู่กลายเป็นไม่มีใครบังคับ ตั้งแต่ session ถัดไปเป็นต้นมา)
+import tempfile, shutil, atexit
+FX = pathlib.Path(tempfile.mkdtemp(prefix="fk_thai_"))
+atexit.register(lambda: shutil.rmtree(FX, ignore_errors=True))
+
+
+def _thai_id(first12):
+    """ต่อหลักตรวจสอบให้เลขบัตร 13 หลักถูกต้องตามสูตรจริง (ไม่ฮาร์ดโค้ดเลขสุ่ม)"""
+    total = sum(int(d) * (13 - i) for i, d in enumerate(first12))
+    return first12 + str((11 - total % 11) % 10)
+
+
+def _make_fixtures():
+    import openpyxl
+    # ① CSV ที่บันทึกด้วย TIS-620 ตรง ๆ (เปิดใน UTF-8 แล้วเป็นตัวประหลาด)
+    rows = ["รหัส,ชื่อ,แผนก,ตำแหน่ง",
+            "EMP-001,สมชาย ใจดี,ฝ่ายบุคคล,เจ้าหน้าที่อาวุโส",
+            "EMP-002,สุดารัตน์ รักงาน,ฝ่ายบัญชี,นักบัญชี"]
+    (FX / "พนักงาน-TIS620.csv").write_bytes("\n".join(rows).encode("cp874"))
+    # ② เพี้ยนซ้อนสองชั้นแบบไทย (UTF-8 ถูกอ่านเป็น windows-874 แล้วบันทึกซ้ำเป็น UTF-8)
+    #    ‼️ ไบต์ที่ตาราง cp874 ไม่ได้กำหนดไว้ ต้องปล่อยผ่านเป็นอักขระรหัสเดิม เหมือนที่
+    #    โปรแกรมจริงทำ ถ้าใช้ errors="replace" จะได้ตัวแทนที่ผิด แล้วกู้กลับไม่ได้อีกเลย
+    def _mojibake(text, enc):
+        out = []
+        for b in text.encode("utf-8"):
+            try: out.append(bytes([b]).decode(enc))
+            except Exception: out.append(chr(b))
+        return "".join(out)
+    sale = "รายการ,ลูกค้า,ยอด\nS-01,สมชาย ใจดี,12000\nS-02,ประไพ ศรีทอง,8400"
+    (FX / "ยอดขาย-เพี้ยนซ้อน.csv").write_text(_mojibake(sale, "cp874"), encoding="utf-8")
+    # ③ เพี้ยนซ้อนแบบฝรั่ง — latin-1 แทนค่าไบต์ได้ครบทั้ง 256 ตัว ผลที่ได้จึงกู้กลับได้จริง
+    #    (cp1252 ไม่มีนิยามที่ไบต์ 0x81 ซึ่งเป็นส่วนหนึ่งของตัว "ก" พอดี)
+    cust = "รหัส,ชื่อ,เมือง\nC-01,สุดารัตน์ รักงาน,เชียงใหม่\nC-02,วิชัย ทองดี,ขอนแก่น"
+    (FX / "ลูกค้า-เพี้ยนแบบฝรั่ง.csv").write_text(
+        cust.encode("utf-8").decode("latin-1"), encoding="utf-8")
+    # ④ Excel ทดสอบ: ชีทซ่อน 1 ชีท + คอลัมน์วันที่ เลขบัตร เงินเดือน อย่างละคอลัมน์
+    # ชีทเดียวพอ — เทสข้อ ③ อ่านช่องเลือกคอลัมน์ที่ตำแหน่ง 1 ซึ่งจะเลื่อนไปถ้ามีช่องเลือกชีทโผล่มาด้วย
+    wb = openpyxl.Workbook()
+    ws = wb.active; ws.title = "ข้อมูล"
+    ws.append(["รหัส", "ชื่อ", "วันที่เริ่มงาน", "หมายเหตุ", "เลขบัตรประชาชน", "เงินเดือน"])
+    ids = [_thai_id("110200150432"), _thai_id("310501203417"),
+           _thai_id("110200150432")[:-1] + str((int(_thai_id("110200150432")[-1]) + 1) % 10),  # ผิดหลักสุดท้าย
+           _thai_id("120990012345"), _thai_id("340100987654")[:-1] + "0"]
+    ids[3] = "-".join([ids[3][0], ids[3][1:5], ids[3][5:10], ids[3][10:12], ids[3][12]])  # แบบมีขีดคั่น ต้องผ่าน
+    if ids[4][-1] == _thai_id("340100987654")[-1]:      # กันเผลอสุ่มได้เลขที่ถูกต้อง
+        ids[4] = ids[4][:-1] + str((int(ids[4][-1]) + 1) % 10)
+    data = [["EMP-001", "สมชาย ใจดี", "15 ม.ค. 2569", "", ids[0], 38000],
+            ["EMP-002", "สุดารัตน์ รักงาน", "1 กันยายน 2568", "", ids[1], 27500],
+            ["EMP-003", "ประไพ ศรีทอง", "2569-03-31", "", ids[2], 24000],
+            ["EMP-004", "วิชัย ทองดี", "01/10/2569", "", ids[3], 128400],
+            ["EMP-005", "อารีย์ สุขใจ", "ยังไม่ระบุ", "", ids[4], 52000]]
+    for r in data: ws.append(r)
+    wb.save(FX / "ข้อมูลพนักงาน-ทดสอบ.xlsx")
+
+
+_make_fixtures()
 OUT = FX / "downloads"; OUT.mkdir(exist_ok=True)
 P, Fa = 0, []
 def ck(name, got, want, contains=False):

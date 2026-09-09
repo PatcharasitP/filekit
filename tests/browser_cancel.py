@@ -1,7 +1,14 @@
 import sys, pathlib, os
 from playwright.sync_api import sync_playwright
 BASE = os.environ.get("FK_BASE","http://localhost:8899")
-D = pathlib.Path("/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/fx/many")
+# ‼️ สร้างรูป 30 ใบเองทุกครั้ง (เดิมผูกกับ path ของ session เก่า พอหายก็รันไม่ได้)
+import tempfile, shutil, atexit
+from PIL import Image
+D = pathlib.Path(tempfile.mkdtemp(prefix="fk_cancel_"))
+atexit.register(lambda: shutil.rmtree(D, ignore_errors=True))
+for i in range(30):
+    # ภาพใหญ่พอให้การเข้ารหัส PNG กินเวลา ปุ่มหยุดจะได้โผล่ทันให้กด
+    Image.new("RGB", (900, 700), (i * 8 % 256, 90, 160)).save(D / f"รูป{i:02d}.png")
 P,F=0,[]
 def ck(n,g,w,contains=False):
     global P

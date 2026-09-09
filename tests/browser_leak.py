@@ -26,10 +26,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 PORT = 8924
 BASE_ENV = os.environ.get("FK_BASE", "").strip()
 BASE = BASE_ENV or f"http://localhost:{PORT}"
-SCRATCH = pathlib.Path(
-    "/tmp/claude-1000/-mnt-c-Users-USER-Desktop-Claude-Code/"
-    "1a23ba41-65a0-437b-a9bd-bf64961a3d72/scratchpad/leak_imgs"
-)
+# ‼️ โฟลเดอร์ชั่วคราวของเครื่องที่รัน ไม่ผูกกับ session ใด session หนึ่ง
+import tempfile
+SCRATCH = pathlib.Path(tempfile.mkdtemp(prefix="fk_leak_"))
 
 # ── ผลรวม + ตัวช่วยพิมพ์ผลแบบเดียวกับเทสอื่นในชุดนี้ ────────────────────────
 P, F = 0, []

@@ -146,7 +146,7 @@ export function mount(tool) {
       drawPreview();
     } catch (e) {
       stage.hidden = true; ws.showCanvas(false);
-      st.err(friendlyPdfError(e, file.name));
+      st.err(friendlyPdfError(e, file.name).message);   // st.err รับข้อความ ไม่ใช่ Error ไม่งั้นขึ้นคำว่า Error: นำหน้า
     }
   }
 
@@ -194,6 +194,9 @@ export function mount(tool) {
 
   async function run() {
     if (!file) return st.err(tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF file first"));
+    // ‼️ เปิดไฟล์ไม่ได้ (เช่นไฟล์เข้ารหัส) ข้อความจริงถูกแสดงไว้แล้วตอนโหลด
+    //    ห้ามเขียนทับด้วยเหตุผลผิด ๆ ว่า "ไม่มีหน้าไหนได้เลข" ซึ่งพาผู้ใช้ไปแก้ผิดจุด
+    if (!pageCount) return;
     const { from, start, numbered, last } = plan();
     if (!numbered) return st.err(tr("ตั้งค่าแล้วไม่มีหน้าไหนได้เลข ลองลดเลข “เริ่มใส่จากหน้าที่”",
                                     "With these settings no page gets a number. Try lowering “Start printing on page”"));
@@ -278,7 +281,7 @@ export function mount(tool) {
     } catch (e) {
       st.end();
       st.progress(null);
-      st.err(friendlyPdfError(e, file.name));
+      st.err(friendlyPdfError(e, file.name).message);   // st.err รับข้อความ ไม่ใช่ Error ไม่งั้นขึ้นคำว่า Error: นำหน้า
     } finally {
       go.disabled = false;
       ws.setBusy(false);

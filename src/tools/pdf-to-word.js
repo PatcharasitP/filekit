@@ -1,6 +1,6 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser } from "../ui.js";
-import { pageLines, lineText } from "../pdftext.js";
+import { pageLines, columnAwareLines } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
 import { tr } from "../i18n.js";
@@ -112,8 +112,11 @@ export function mount(tool) {
       for (let p = 1; p <= pdf.numPages; p++) {
         const page = await pdf.getPage(p);
         const rows = await pageLines(page);
+        const pageWidth = page.getViewport({ scale: 1 }).width;
         page.cleanup();
-        blocks.push({ lines: rows.map(lineText).filter((t) => t !== "") });
+        // ตรวจว่าหน้านี้จัดเป็นหลายคอลัมน์แบบบทความไหม (จุลสาร/วารสาร/ประกาศ) — ถ้าใช่ อ่านคอลัมน์ซ้าย
+        // ให้จบก่อนค่อยอ่านคอลัมน์ขวา ไม่งั้นข้อความคนละคอลัมน์ที่บรรทัดสูงใกล้กันจะถูกยำรวมเป็นบรรทัดเดียว
+        blocks.push({ lines: columnAwareLines(rows, pageWidth) });
         st.progress((p / pdf.numPages) * 100, `(${p}/${pdf.numPages})`);
         await yieldToBrowser();
       }

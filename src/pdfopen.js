@@ -11,10 +11,15 @@ import { assertNotEmpty } from "./filetype.js";
 
 /** แปลง error ของ pdf.js เป็นข้อความไทยที่บอกว่าต้องทำอะไรต่อ (log ของจริงลง console ก่อนเสมอ) */
 export function friendlyPdfError(e, filename) {
-  console.error(e);
+  // ‼️ เดิม console.error ทุกกรณี ทำให้เรื่องปกติอย่าง "ไฟล์นี้เข้ารหัสไว้" ไปโผล่เป็น error
+  //    ใน console ด้วย ทั้งที่เราจัดการและอธิบายให้ผู้ใช้เรียบร้อยแล้ว
+  //    เก็บ log ไว้เฉพาะกรณีที่เราเองก็ไม่รู้จัก (ท้ายฟังก์ชัน) ซึ่งเป็นตอนที่ต้องการ trace จริง
   const name = e?.name || "";
   const msg = String(e?.message || e);
   const pre = filename ? `${filename}: ` : "";
+  // ไฟล์เข้ารหัส: ข้อความเต็มถูกประกอบไว้แล้วตอนโหลด ส่งต่อตรง ๆ ไม่ต้องแปลงอีก
+  if (msg.includes("ถูกเข้ารหัสไว้") || msg.includes("is encrypted"))
+    return new Error(pre + msg);
   if (name === "PasswordException" || /password/i.test(msg))
     return new Error(tr(`${pre}ไฟล์นี้ถูกล็อกด้วยรหัสผ่าน ต้องใส่รหัสให้ถูกก่อนจึงจะเปิดได้`, `${pre}This file is password-protected, you need the correct password to open it`));
   if (name === "InvalidPDFException" || /invalid pdf/i.test(msg))
@@ -23,6 +28,7 @@ export function friendlyPdfError(e, filename) {
     return new Error(tr(`${pre}โหลดตัวอ่าน PDF ไม่สำเร็จ ลองรีเฟรชหน้าเว็บอีกครั้ง`, `${pre}Could not load the PDF reader, try refreshing the page`));
   if (/out of memory|allocation failed|invalid (string|array|typed array) length/i.test(msg))
     return new Error(tr(`${pre}ไฟล์ใหญ่เกินไป เบราว์เซอร์ประมวลผลไม่ไหว, ลองแบ่งไฟล์ให้เล็กลงหรือใช้เครื่องแรมเยอะขึ้น`, `${pre}This file is too large for the browser to handle, try splitting it or using a device with more memory`));
+  console.error(e);         // กรณีที่ยังไม่รู้จัก เก็บ trace ไว้ให้ไล่ต่อได้
   return new Error(pre + msg);
 }
 
@@ -74,8 +80,16 @@ export async function openPdf(file, askPassword) {
 
 /**
  * โหลดด้วย pdf-lib สำหรับเครื่องมือที่ต้อง "ประกอบไฟล์ใหม่"
- * ลองแบบเข้มก่อน ถ้าไฟล์เข้ารหัสจะลองใหม่แบบผ่อนปรนพร้อมบอกให้ผู้ใช้รู้ตัว
- * คืน { doc, encrypted } — encrypted = true แปลว่าผลลัพธ์อาจไม่สมบูรณ์
+ *
+ * ‼️ ไฟล์ PDF ที่เข้ารหัสไว้ ต้องหยุดแล้วบอกผู้ใช้ ห้ามทำต่อเด็ดขาด
+ * เดิมใช้ ignoreEncryption แล้วทำต่อพร้อมขึ้นคำเตือนว่า "เนื้อหาบางส่วนอาจไม่ครบ"
+ * แต่ความจริงคือ pdf-lib ไม่มีโค้ดถอดรหัสอยู่เลย เนื้อในทุกหน้าจึงยังเป็นข้อมูลที่เข้ารหัสอยู่
+ * ผลลัพธ์ไม่ใช่ "ไม่ครบ" แต่คือ "พังทั้งไฟล์" (ยิงจริง 09/09/2026 กับไฟล์ที่ล็อกแค่สิทธิ์
+ * ซึ่งเปิดอ่านได้ปกติไม่ต้องใส่รหัส: pdf-split ได้ไฟล์ 3 หน้าว่างเปล่าสนิท
+ * ส่วน pdf-page-numbers ได้ไฟล์ที่เปิดไม่ขึ้นเลย และไม่มีคำเตือนอะไรสักตัว)
+ * ยัดไฟล์เสียให้ผู้ใช้โดยที่สถานะขึ้นว่าสำเร็จ แย่กว่าบอกไปตรง ๆ ว่าทำให้ไม่ได้
+ *
+ * คืน { doc, encrypted } โดย encrypted จะเป็น false เสมอ (คงรูปคืนค่าไว้ให้เครื่องมือเดิมใช้ได้)
  */
 export async function loadPdfLib(file) {
   assertNotEmpty(file);
@@ -84,10 +98,7 @@ export async function loadPdfLib(file) {
   try {
     return { doc: await PDFDocument.load(buf), encrypted: false };
   } catch (e) {
-    if (/encrypt/i.test(String(e?.message || e))) {
-      const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-      return { doc, encrypted: true };
-    }
+    if (/encrypt/i.test(String(e?.message || e))) throw new Error(ENCRYPTED_BLOCKED);
     console.error(e);
     if (/invalid|parse/i.test(String(e?.message || e)))
       throw new Error(tr(`${file.name}: ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย, ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน`, `${file.name}: this isn't a valid PDF, or the file is damaged, try opening it in a PDF reader first`));
@@ -95,8 +106,11 @@ export async function loadPdfLib(file) {
   }
 }
 
-export const ENCRYPTED_WARNING = tr(
-  "ไฟล์ต้นฉบับถูกล็อกด้วยรหัสผ่าน ระบบทำต่อให้แล้วแต่เนื้อหาบางส่วนอาจไม่ครบ " +
-  "แนะนำให้ปลดล็อกไฟล์ก่อนแล้วทำใหม่อีกครั้ง",
-  "The original file is password-protected. We carried on, but some content may be missing, " +
-  "unlock the file first and try again for a complete result.");
+export const ENCRYPTED_BLOCKED = tr(
+  "ไฟล์นี้ถูกเข้ารหัสไว้ เครื่องมือนี้แก้ไขไฟล์ที่เข้ารหัสไม่ได้ ถ้าฝืนทำต่อจะได้ไฟล์ที่เปิดไม่ขึ้น " +
+  "ให้ปลดล็อกไฟล์ก่อน (เปิดไฟล์แล้วสั่งพิมพ์เป็น PDF ใหม่) แล้วลองอีกครั้ง",
+  "This file is encrypted, and this tool cannot edit encrypted files. Forcing it through would " +
+  "produce a file that won't open. Unlock the file first (open it and print to a new PDF), then try again.");
+
+// ชื่อเดิม คงไว้ให้เครื่องมือที่ยัง import อยู่ ไม่พัง (ตอนนี้ไฟล์เข้ารหัสถูกหยุดตั้งแต่ตอนโหลดแล้ว)
+export const ENCRYPTED_WARNING = ENCRYPTED_BLOCKED;

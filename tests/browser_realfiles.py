@@ -39,6 +39,10 @@
 #      ให้ใช้รูปแบบของไฟล์แรก (เช่นตั้งใจเป็น ก. ข. ค. แต่กลายเป็น 1. 2. 3.) โดยข้อความไม่หาย
 #      จึงไม่มีอะไรฟ้อง ตัวนิยามซ้อนสองชั้น numId ชี้ไป abstractNumId ต้องออกเลขใหม่ทั้งคู่
 #
+#   ⑪ PDF ที่เข้ารหัสไว้ (รวมไฟล์ที่ล็อกแค่สิทธิ์ ซึ่งเปิดอ่านได้ปกติไม่ต้องใส่รหัส)
+#      ไลบรารีที่ใช้เขียนไฟล์ไม่มีโค้ดถอดรหัสเลย ถ้าฝืนทำต่อจะได้ไฟล์ที่หน้าว่างเปล่า
+#      หรือเปิดไม่ขึ้นเลย ทั้งที่สถานะขึ้นว่าสำเร็จ ต้องหยุดแล้วบอกวิธีแก้แทน
+#
 # ‼️ หน้าเว็บมี Content-Security-Policy ที่ไม่มี unsafe-eval — wait_for_function
 #    ต้องส่งสตริงที่เป็นฟังก์ชันลูกศรเท่านั้น (มีเทสจับกฎนี้ใน accepts.test.mjs)
 #
@@ -383,6 +387,20 @@ def make_docx_numbered(tag, fmt):
     return path
 
 
+def make_owner_locked_pdf():
+    """PDF ที่ล็อกเฉพาะสิทธิ์ (owner password) เปิดอ่านได้ปกติไม่ต้องใส่รหัส
+    แต่ไลบรารีที่เราใช้เขียนไฟล์ถอดรหัสไม่ได้ ถ้าฝืนทำต่อจะได้ไฟล์เสีย"""
+    d = fitz.open()
+    for i in range(3):
+        page = d.new_page(width=595, height=842)
+        page.insert_text((60, 100), f"page {i + 1} important content", fontsize=16)
+    p = TMP / "ล็อกสิทธิ์.pdf"
+    d.save(p, encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw="owner123",
+           permissions=fitz.PDF_PERM_ACCESSIBILITY)
+    d.close()
+    return p
+
+
 def press(pg, pattern):
     """กดปุ่มที่มองเห็นจริงด้วย evaluate — ระหว่างที่เครื่องมือทำงานหนัก .click() ของ Playwright
     จะรอจนงานเสร็จก่อนค่อยกด ทำให้ทดสอบผิดเคสโดยไม่รู้ตัว (บทเรียน 09/09/2026)"""
@@ -414,6 +432,7 @@ def main():
     tbox = make_docx_with_textbox()
     hf_doc = make_docx_with_header_footer()
     num_docs = [make_docx_numbered("AAA", "decimal"), make_docx_numbered("BBB", "thaiLetters")]
+    locked = make_owner_locked_pdf()
     text_pdf = make_text_pdf(False)
     compact_pdf = make_text_pdf(True)
 
@@ -756,6 +775,24 @@ def main():
                sorted(used.get("AAA", set()) & used.get("BBB", set())), [])
             ck("ทุกหมายเลขรายการที่เนื้อหาอ้างถึง มีนิยามรองรับจริง",
                [x for v in used.values() for x in v if x not in defined], [])
+
+            # ── ⑪ PDF ที่เข้ารหัสไว้ ต้องหยุดแล้วบอก ไม่ใช่ยัดไฟล์เสียให้ ────────────────
+            print("\n── ⑪ PDF ที่เข้ารหัสไว้ ──")
+            for tool, btn in [("pdf-split", "แยกไฟล์|แยก"),
+                              ("pdf-page-numbers", "ใส่เลขหน้า|เพิ่มเลขหน้า")]:
+                pg.goto("about:blank")
+                pg.goto(f"{base}/#/{tool}", wait_until="networkidle")
+                pg.wait_for_selector(".dz")
+                pg.locator(".dz input[type=file]").first.set_input_files(str(locked))
+                pg.wait_for_timeout(2500)
+                press(pg, btn)
+                pg.wait_for_timeout(5000)
+                says = " ".join(pg.locator(".status").all_inner_texts())
+                ck(f"{tool}: ไม่ยัดไฟล์ที่เปิดไม่ขึ้นให้ผู้ใช้",
+                   pg.locator(".result button").count(), 0)
+                ck(f"{tool}: บอกตรง ๆ ว่าเข้ารหัสไว้ และบอกวิธีแก้",
+                   ("เข้ารหัส" in says and "ปลดล็อก" in says), True)
+                ck(f"{tool}: ไม่ขึ้นข้อความ Error แบบดิบ ๆ", "Error:" in says, False)
 
             print("\n── ไม่มี error หลุดออกมา ──")
             ck("ไม่มี console หรือ page error ตลอดทั้งชุด", errs, [])

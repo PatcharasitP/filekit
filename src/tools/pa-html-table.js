@@ -2,6 +2,7 @@ import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, download } from "../ui.js";
 import { tr } from "../i18n.js";
 import { colorPicker, contrastBadge, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
+import { jumpSystem, JUMPTO_CSS } from "../jumpto.js";
 
 /* ‼️ ทำไมเครื่องนี้ถึงคุ้มค่าที่สุดในหมวด Power Automate
  * แอ็กชัน Create HTML table คืน HTML เปล่า ๆ ไม่มีสไตล์เลย และ Outlook เดสก์ท็อป
@@ -49,6 +50,7 @@ const STYLE = `
 .pah-row2{display:flex;gap:10px;flex-wrap:wrap}
 .pah-row2 > *{flex:1;min-width:120px}
 ${COLORKIT_CSS}
+${JUMPTO_CSS}
 
 /* ‼️ คลาสสองชุดนี้ยืมชื่อมาจากเครื่องมือกราฟโดนัท แต่ CSS ของมันฝังอยู่ในโมดูลนั้น
    หน้านี้ไม่ได้โหลดโมดูลนั้น จึงต้องประกาศเองซ้ำ ไม่งั้นสวิตช์กลายเป็นช่องติ๊กเปล่า
@@ -75,6 +77,7 @@ export function mount(tool) {
   // ‼️ ต้องประกาศไว้บนสุด ไม่ใช่ใต้ฟังก์ชันที่ใช้มัน
   // โค้ดสร้างแผงในไฟล์นี้ทำงานตั้งแต่ต้น mount ส่วน const ไม่ hoist เหมือน function
   // วางผิดที่เมื่อไรได้ ReferenceError ทันที (พลาดมาแล้ว 3 รอบในคืนเดียว 11/09/2026)
+  const jump = jumpSystem();   // คลิกบนตัวอย่างแล้วพาไปหาช่องที่คุมมัน
   const pickers = {};   // key -> ตัวเลือกสี ไว้ setUI ตอนคืนค่าเริ่มต้น
   const badges = [];    // ป้ายเตือนความต่างสี ต้อง update ทุกครั้งที่สีเปลี่ยน
 
@@ -125,9 +128,13 @@ export function mount(tool) {
     html: button(tr("HTML สำหรับ Compose", "HTML for Compose"), { ghost: true, onclick: () => setView("html") }),
     json: button(tr("JSON วางลง flow", "JSON to paste into a flow"), { ghost: true, onclick: () => setView("json") }),
   };
+  const jumpHint = el("p", { class: "pah-hint", style: "margin:0 0 10px" }, tr(
+    "เคล็ดลับ คลิกตรงส่วนไหนก็ได้ในตัวอย่าง เว็บจะพาไปหาช่องที่คุมส่วนนั้นให้เอง",
+    "Tip, click any part of the preview and the page takes you to the field that controls it"
+  ));
   const centerNode = el("div", {}, [
     el("div", { class: "pah-tabs" }, Object.values(tabs)),
-    warnEl, previewBox, codeBox,
+    jumpHint, warnEl, previewBox, codeBox,
   ]);
 
   const colsEl = el("div", {});
@@ -157,12 +164,12 @@ export function mount(tool) {
 
   const rightBody = el("div", {}, [
     el("h3", { class: "pbid-group-title" }, tr("หัวอีเมล", "Email header")),
-    field(tr("หัวเรื่อง", "Title"), textInput(head, "title")),
-    field(tr("คำบรรยายใต้หัวเรื่อง", "Subtitle"), textInput(head, "subtitle")),
+    jfield("title", tr("หัวเรื่อง", "Title"), textInput(head, "title")),
+    jfield("subtitle", tr("คำบรรยายใต้หัวเรื่อง", "Subtitle"), textInput(head, "subtitle")),
     switchField(tr("โชว์การ์ดตัวเลขสรุป", "Show the summary card"), head, "showCard"),
-    field(tr("นิพจน์ตัวเลขในการ์ด", "Card number expression"), textInput(head, "cardValue")),
-    field(tr("คำอธิบายใต้ตัวเลข", "Caption under the number"), textInput(head, "cardLabel")),
-    field(tr("หมายเหตุท้ายอีเมล", "Note at the bottom"), textInput(head, "note")),
+    jfield("cardValue", tr("นิพจน์ตัวเลขในการ์ด", "Card number expression"), textInput(head, "cardValue")),
+    jfield("cardLabel", tr("คำอธิบายใต้ตัวเลข", "Caption under the number"), textInput(head, "cardLabel")),
+    jfield("note", tr("หมายเหตุท้ายอีเมล", "Note at the bottom"), textInput(head, "note")),
 
     el("h3", { class: "pbid-group-title", style: "margin:18px 0 8px" }, tr("หน้าตาตาราง", "Table look")),
     el("div", { class: "pah-row2" }, [
@@ -171,7 +178,7 @@ export function mount(tool) {
     ]),
     headBadge.node,
     el("div", { class: "pah-row2" }, [
-      field(tr("สีเส้นขอบ", "Border colour"), colorInput(look, "borderColor", SWATCHES.neutral)),
+      jfield("borderColor", tr("สีเส้นขอบ", "Border colour"), colorInput(look, "borderColor", SWATCHES.neutral)),
       field(tr("ขนาดตัวอักษร", "Font size"), numInput(look, "fontSize", 9, 20)),
     ]),
     borderBadge.node,
@@ -206,6 +213,7 @@ export function mount(tool) {
   ws.showCanvas(true);
 
   buildColumns();
+  jump.attach(previewBox);
   setView("preview");
 
   return ws.wrap;
@@ -235,6 +243,13 @@ export function mount(tool) {
     i.addEventListener("input", () => { obj[key] = i.value; render(); });
     return i;
   }
+  // สร้างช่องกรอกพร้อมลงทะเบียนปลายทางของการกระโดดในคราวเดียว
+  function jfield(key, labelText, control, hint) {
+    const node = field(labelText, control, hint);
+    jump.register(key, node);
+    return node;
+  }
+
   function switchField(labelText, obj, key) {
     const input = el("input", { type: "checkbox" });
     input.checked = !!obj[key];
@@ -248,6 +263,7 @@ export function mount(tool) {
   /* ── รายการคอลัมน์ ────────────────────────────────────────────────── */
   function buildColumns() {
     colsEl.innerHTML = "";
+    jump.clearPrefix("col:");
     columns.forEach((c, i) => {
       const up = mini("↑", tr("เลื่อนขึ้น", "Move up"), () => moveCol(i, -1));
       const down = mini("↓", tr("เลื่อนลง", "Move down"), () => moveCol(i, 1));
@@ -264,10 +280,12 @@ export function mount(tool) {
       v.value = c.value;
       v.addEventListener("input", () => { c.value = v.value; render(); });
 
-      colsEl.appendChild(el("div", { class: "pah-col" }, [
+      const card = el("div", { class: "pah-col" }, [
         el("div", { class: "pah-col-head" }, [h, up, down, del]),
         v,
-      ]));
+      ]);
+      jump.register("col:" + i, card);
+      colsEl.appendChild(card);
     });
   }
   function mini(text, label, onclick, danger) {
@@ -301,20 +319,22 @@ export function mount(tool) {
     return `replace(replace(replace(${inner}, ${wdl("<table>")}, ${wdl(`<table ${s.table}>`)}), ${wdl("<th>")}, ${wdl(`<th ${s.th}>`)}), ${wdl("<td>")}, ${wdl(`<td ${s.td}>`)})`;
   }
 
-  function buildHtml() {
+  // ‼️ ป้ายกระโดดติดเฉพาะตอนวาดพรีวิว ห้ามหลุดไปอยู่ใน HTML ที่ผู้ใช้ก็อปไปใช้จริง
+  function buildHtml(forPreview = false) {
+    const J = (key) => (forPreview ? ` data-jump="${key}"` : "");
     const w = look.width;
     const L = [];
     L.push(`<table cellpadding="0" cellspacing="0" width="${w}" align="left" style="background-color:#ffffff;font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:14px;color:#222222;line-height:1.6;">`);
     L.push(`<tr><td>`);
     L.push(``);
-    if (head.title.trim()) L.push(`  <div style="font-size:20px;font-weight:bold;color:#222222;">${esc(head.title)}</div>`);
-    if (head.subtitle.trim()) L.push(`  <div style="font-size:14px;color:#444444;margin-top:6px;">${esc(head.subtitle)}</div>`);
+    if (head.title.trim()) L.push(`  <div${J("title")} style="font-size:20px;font-weight:bold;color:#222222;">${esc(head.title)}</div>`);
+    if (head.subtitle.trim()) L.push(`  <div${J("subtitle")} style="font-size:14px;color:#444444;margin-top:6px;">${esc(head.subtitle)}</div>`);
     if (head.showCard) {
       L.push(``);
       L.push(`  <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #E0E0E0;margin:20px 0 26px 0;">`);
       L.push(`    <tr><td style="background-color:#FAFAFA;padding:18px;">`);
-      L.push(`      <div style="font-size:40px;font-weight:bold;color:#222222;line-height:1.1;">${at(head.cardValue)}</div>`);
-      L.push(`      <div style="font-size:13px;color:#666666;margin-top:4px;">${esc(head.cardLabel)}</div>`);
+      L.push(`      <div${J("cardValue")} style="font-size:40px;font-weight:bold;color:#222222;line-height:1.1;">${at(head.cardValue)}</div>`);
+      L.push(`      <div${J("cardLabel")} style="font-size:13px;color:#666666;margin-top:4px;">${esc(head.cardLabel)}</div>`);
       L.push(`    </td></tr>`);
       L.push(`  </table>`);
     }
@@ -324,7 +344,7 @@ export function mount(tool) {
     L.push(`  </div>`);
     if (head.note.trim()) {
       L.push(``);
-      L.push(`  <p style="margin:14px 0 0 0;font-size:12px;color:#888888;">${esc(head.note)}</p>`);
+      L.push(`  <p${J("note")} style="margin:14px 0 0 0;font-size:12px;color:#888888;">${esc(head.note)}</p>`);
     }
     L.push(``);
     L.push(`</td></tr>`);
@@ -374,12 +394,12 @@ export function mount(tool) {
     const cols = columns.filter((c) => c.header.trim() || c.value.trim());
     const rows = [];
     for (let r = 1; r <= SAMPLE_ROWS; r++) {
-      rows.push("<tr>" + cols.map((c) => `<td ${s.td}>${esc(sampleValue(c, r))}</td>`).join("") + "</tr>");
+      rows.push("<tr>" + cols.map((c) => `<td data-jump="borderColor" ${s.td}>${esc(sampleValue(c, r))}</td>`).join("") + "</tr>");
     }
     const table = `<table ${s.table}><thead><tr>`
-      + cols.map((c) => `<th ${s.th}>${esc(c.header)}</th>`).join("")
+      + cols.map((c) => `<th data-jump="col:${columns.indexOf(c)}" ${s.th}>${esc(c.header)}</th>`).join("")
       + `</tr></thead><tbody>${rows.join("")}</tbody></table>`;
-    return buildHtml()
+    return buildHtml(true)
       .replace(at(replaceChain()), table)
       .replace(at(head.cardValue), String(SAMPLE_ROWS));
   }
@@ -435,6 +455,7 @@ export function mount(tool) {
     for (const [k, b] of Object.entries(tabs)) b.classList.toggle("ghost", k !== v);
     previewBox.hidden = v !== "preview";
     codeBox.hidden = v === "preview";
+    jumpHint.hidden = v !== "preview";
     render();
   }
 
@@ -482,19 +503,19 @@ export function mount(tool) {
   function rebuildRight() {
     return [
       el("h3", { class: "pbid-group-title" }, tr("หัวอีเมล", "Email header")),
-      field(tr("หัวเรื่อง", "Title"), textInput(head, "title")),
-      field(tr("คำบรรยายใต้หัวเรื่อง", "Subtitle"), textInput(head, "subtitle")),
+      jfield("title", tr("หัวเรื่อง", "Title"), textInput(head, "title")),
+      jfield("subtitle", tr("คำบรรยายใต้หัวเรื่อง", "Subtitle"), textInput(head, "subtitle")),
       switchField(tr("โชว์การ์ดตัวเลขสรุป", "Show the summary card"), head, "showCard"),
-      field(tr("นิพจน์ตัวเลขในการ์ด", "Card number expression"), textInput(head, "cardValue")),
-      field(tr("คำอธิบายใต้ตัวเลข", "Caption under the number"), textInput(head, "cardLabel")),
-      field(tr("หมายเหตุท้ายอีเมล", "Note at the bottom"), textInput(head, "note")),
+      jfield("cardValue", tr("นิพจน์ตัวเลขในการ์ด", "Card number expression"), textInput(head, "cardValue")),
+      jfield("cardLabel", tr("คำอธิบายใต้ตัวเลข", "Caption under the number"), textInput(head, "cardLabel")),
+      jfield("note", tr("หมายเหตุท้ายอีเมล", "Note at the bottom"), textInput(head, "note")),
       el("h3", { class: "pbid-group-title", style: "margin:18px 0 8px" }, tr("หน้าตาตาราง", "Table look")),
       el("div", { class: "pah-row2" }, [
         field(tr("พื้นหัวตาราง", "Header background"), colorInput(look, "headerBg")),
         field(tr("ตัวอักษรหัวตาราง", "Header text"), colorInput(look, "headerColor")),
       ]),
       el("div", { class: "pah-row2" }, [
-        field(tr("สีเส้นขอบ", "Border colour"), colorInput(look, "borderColor")),
+        jfield("borderColor", tr("สีเส้นขอบ", "Border colour"), colorInput(look, "borderColor", SWATCHES.neutral)),
         field(tr("ขนาดตัวอักษร", "Font size"), numInput(look, "fontSize", 9, 20)),
       ]),
       field(tr("ความกว้างอีเมล (px)", "Email width (px)"), numInput(look, "width", 400, 900)),

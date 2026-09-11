@@ -3,6 +3,7 @@ import { el, statusBar, button, field, select, download } from "../ui.js";
 import { tr, IS_EN } from "../i18n.js";
 import { colorPicker, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { presetBar, PRESETS_CSS } from "../presets.js";
+import { configSearch, CFGSEARCH_CSS } from "../cfgsearch.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
@@ -88,6 +89,7 @@ const STYLE = `
 }
 ${COLORKIT_CSS}
 ${PRESETS_CSS}
+${CFGSEARCH_CSS}
 
 .pbib-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
 .pbib-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
@@ -168,6 +170,7 @@ export function mount(tool) {
   ];
 
   const presets = presetBar(PRESETS, applyPreset);
+  let cfgSearch = null;   // ช่องค้นหาในแผงตั้งค่า สร้างหลังแผงมีเนื้อหาแล้ว
   const dsListEl = el("div", { class: "pbib-ds-list" });
   const rightBody = el("div", { class: "pbib-right" });
 
@@ -560,6 +563,15 @@ export function mount(tool) {
     rightBody.append(presets.node, labelGroup, sortGroup, targetGroup, colorGroup, shapeGroup);
     if (fontFields.length) rightBody.appendChild(groupBox(tr("ขนาดตัวอักษร", "Text size"), fontFields));
     updateConditionalVisibility();
+
+    /* ‼️ ต้องสร้างหลังกลุ่มทั้งหมดอยู่ใน rightBody แล้ว เพราะมันอ่านโครงตอนสร้าง
+       ถ้าสร้างก่อนจะ index ได้ศูนย์รายการแล้วค้นอะไรก็ไม่เจอ */
+    cfgSearch = configSearch({
+      scope: rightBody,
+      groupSel: ".pbib-group",
+      keep: [presets.node],
+    });
+    rightBody.prepend(cfgSearch.node);
   }
 
   // สร้างช่องปรับเฉพาะตอนสเปกมีตัวปรับชื่อนั้นจริง (สเปกเก่าไม่มี = ไม่ขึ้นปุ่ม ไม่พัง)

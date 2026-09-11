@@ -13,6 +13,7 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error
 ../.venv/bin/python tests/browser_ux.py         # หน้าแรก ค้นหา ธีม คีย์บอร์ด คอนทราสต์ มือถือ
 ../.venv/bin/python tests/browser_findability.py # เปิดหน้าแรกแล้วต้องเห็นเครื่องมือและหมวดครบ ไม่ต้องเลื่อนหา
+../.venv/bin/python tests/browser_affordance.py  # ปุ่มลงมือทำต้องกดไม่ได้ตอนยังไม่มีไฟล์ และกลับมากดได้เมื่อพร้อม
 ../.venv/bin/python tests/browser_thai.py       # ชุดเครื่องมือไทย ตรวจค่าจริงในตาราง
 ../.venv/bin/python tests/browser_mailmerge.py  # ขั้นตอนล็อก/ปลดล็อก + ฟอร์มตรงแนว
 ../.venv/bin/python tests/browser_batch.py      # ไฟล์เสียปนมาแล้วไฟล์อื่นต้องรอด

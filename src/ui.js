@@ -170,6 +170,9 @@ export function statusBar() {
   };
 }
 
+// จำไว้ว่าปุ่มไหนถูกปิดโดยกลไกกลางนี้ จะได้ไม่ไปเปิดปุ่มที่เครื่องมือตั้งใจปิดเอง
+const CLOSED_BY_US = new WeakSet();
+
 export function button(text, opts = {}) {
   const ico = opts.icon ? uiIcon(opts.icon) : null;
   return el("button", {
@@ -693,6 +696,7 @@ export function dropzone(opts = {}) {
     //    พอมีไฟล์ในมือ คำเชิญ "ลากไฟล์มาวางที่นี่" กับปุ่มลองไฟล์ตัวอย่างหมดหน้าที่แล้ว
     //    ยุบเหลือแถบเตี้ย "เพิ่มไฟล์" — ผลลัพธ์กับปุ่มลงมือจะเลื่อนขึ้นมาอยู่ในสายตาแทน
     container.classList.toggle("has-files", files.length > 0);
+    syncActionButtons();
     ensureRowStyle();
     list.innerHTML = "";
     files.forEach((f, i) => {
@@ -795,11 +799,44 @@ export function dropzone(opts = {}) {
 
   const container = el("div", { class: "dz-wrap" }, [zone, sampleBox, warn, count, list]);
 
+  /* ── ปุ่มลงมือทำต้องบอกความจริงว่าตอนนี้กดได้หรือยัง ──────────────────
+   * ‼️ สำรวจทั้งเว็บ 11/09/2026 พบ 19 จาก 36 เครื่องมือที่ปุ่มลงมือทำดำเข้มกดได้
+   * ทั้งที่ยังไม่มีไฟล์เลย กดแล้วเจอข้อความดุว่า "กรุณาเลือกไฟล์ก่อน" ทั้งที่ระบบรู้อยู่แล้ว
+   * ส่วนอีกไม่กี่ตัวทำถูกคือปุ่มจาง ความไม่สม่ำเสมอทำให้คนใช้เรียนรู้กฎของเว็บไม่ได้
+   *
+   * ‼️‼️ กฎเหล็กของฟังก์ชันนี้: **ปิดได้ แต่ห้ามเปิดทับ**
+   * เครื่องมือหลายตัวมีเงื่อนไขของตัวเองที่ปิดปุ่มไว้ถูกต้องแล้ว เช่น pdf-sign ที่ยังไม่ได้
+   * วางลายเซ็น หรือ word-replace ที่ยังไม่ได้กรอกคู่คำ ถ้าเราไปเปิดทับจะพังทันที
+   * จึงจำไว้ว่าปุ่มไหน "เราเป็นคนปิด" แล้วเปิดคืนเฉพาะปุ่มนั้น
+   *
+   * ‼️ ต้องดูกล่องลากไฟล์ทุกกล่องในหน้า เพราะบางเครื่องมือรับสองไฟล์คนละกล่อง
+   * (เช่นจดหมายเวียนที่ต้องมีทั้ง Word และ Excel) ครบทุกกล่องแล้วถึงจะเรียกว่าพร้อม */
+  function syncActionButtons() {
+    const scope = container.closest(".panel") || document;
+    const zones = [...scope.querySelectorAll(".dz-wrap")];
+    const ready = zones.length > 0 && zones.every((z) => z.classList.contains("has-files"));
+    const btns = scope.querySelectorAll(".actions button.btn, .ws-footer button.btn");
+    for (const b of btns) {
+      if (b.classList.contains("ghost")) continue;   // ปุ่มช่วยอย่างรีเซ็ตหรือคัดลอก กดได้ตลอด
+      if (!ready) {
+        if (!b.disabled) { CLOSED_BY_US.add(b); b.disabled = true; }
+      } else if (CLOSED_BY_US.has(b)) {
+        CLOSED_BY_US.delete(b); b.disabled = false;
+      }
+    }
+  }
+
+
   // หยิบไฟล์ที่หน้าแรกฝากไว้ (ถ้าชนิดตรงกับที่เครื่องมือนี้รับ) — ผู้ใช้จะได้ไม่ต้องเลือกไฟล์ซ้ำ
   if (stashed) {
     const mine = expect ? stashed.filter((f) => expect.includes(detectType(f))) : stashed;
     if (mine.length) { const take = mine; stashed = null; queueMicrotask(() => add(take)); }
   }
+  /* ‼️ render() ถูกเรียกเฉพาะตอนไฟล์เปลี่ยน ตอนเปิดหน้ามาใหม่จึงไม่มีใครปิดปุ่มให้เลย
+     ต้องยิงครั้งแรกเองหลังหน้าประกอบเสร็จ ใช้ rAF เพราะเครื่องมือยัง append ปุ่มต่อ
+     หลังจากเรียก dropzone() จบ ถ้ายิงทันทีจะยังหาปุ่มไม่เจอ */
+  requestAnimationFrame(syncActionButtons);
+
   return { container, get files() { return files; },
            clear() { files = []; warn.innerHTML = ""; render(); onChange(files); } };
 }

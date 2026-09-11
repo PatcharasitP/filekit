@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { pageLines, guessColumns, rowToCells } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
@@ -59,6 +59,7 @@ export function mount(tool) {
       results.innerHTML = "";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr("ควรตรวจทาน (OCR)", "OCR (please review)"))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
     } catch (e) {
@@ -133,6 +134,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".xlsx";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
     } catch (e) {

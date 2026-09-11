@@ -9,7 +9,7 @@
 //    เพราะเครื่องเดาผิดได้ และการลบหน้าเอกสารทิ้งเป็นเรื่องที่ผิดแล้วเจ็บ
 import { openPdf, passwordBox, loadPdfLib } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr } from "../i18n.js";
 
@@ -201,6 +201,7 @@ export function mount(tool) {
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, tr(`${keep.length} หน้า จากเดิม ${items.length} หน้า`,
                              `${keep.length} pages, down from ${items.length}`))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
     } catch (e) {

@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
-         stripExt, yieldToBrowser, segmented } from "../ui.js";
+         stripExt, yieldToBrowser, segmented, fmtBytes } from "../ui.js";
 import { readPptx } from "../pptx.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, splitThaiTextToSize } from "../thaifont.js";
 import { tr } from "../i18n.js";
@@ -119,6 +119,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์, ${ratio.value}`, `${slides.length} slides, ${ratio.value}`))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
       // สไลด์ที่ผู้พูดสั่งซ่อนไว้ (show="0") ไม่ควรโผล่ในไฟล์ที่แชร์ออกไปแบบเงียบ ๆ — บอกจำนวน

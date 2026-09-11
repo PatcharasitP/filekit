@@ -1,5 +1,5 @@
 import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, openPdf, passwordBox } from "../pdfopen.js";
-import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser } from "../ui.js";
+import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr } from "../i18n.js";
@@ -266,6 +266,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${keep.length} หน้า`, `${keep.length} pages`))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
     } catch (e) {

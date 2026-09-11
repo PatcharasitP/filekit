@@ -567,6 +567,15 @@ function ensureBox() {
     else if (e.key === "0") { scale = 0; applyScale(); }
   });
 
+  /* ‼️ box ตัวนี้ถูกแคชไว้ทั้งหน้าเว็บ (ensureBox คืนตัวเดิมเสมอ) ถ้าคนเปิดดูไฟล์เต็มจอ
+   * แล้วสลับเครื่องมือโดยไม่ปิดก่อน กล่องจะค้างเปิดข้ามหน้า และเพราะเปิดด้วย showModal()
+   * ทุกอย่างนอกกล่องกลายเป็น inert คลิกปุ่มอะไรไม่ได้เลย คนที่ไม่รู้ว่าต้องกด Escape
+   * จะคิดว่าเว็บค้าง (จับได้จาก tests/browser_dialogroute.py)
+   * ตัวดักนี้ลงทะเบียนหลัง route ของ app.js เสมอ เพราะโมดูลนี้เพิ่งถูก import ตอนกดดูไฟล์
+   * ครั้งแรก หน้าใหม่จึงวาดเสร็จก่อนกล่องปิด ตัวคืนโฟกัสใน close เห็นว่าปุ่มต้นทางหลุด DOM
+   * ไปแล้วจึงไม่ไปดึงโฟกัสกลับหาของที่ไม่มีอยู่ */
+  window.addEventListener("hashchange", () => { if (box && box.open) box.close(); });
+
   document.body.appendChild(box);
   box._stage = stage; box._cap = cap; box._scene = scene; box._stageWrap = stageWrap;
   box._prev = prevBtn; box._next = nextBtn;

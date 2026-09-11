@@ -194,6 +194,7 @@ export function mount(tool) {
       for (const m of made) {
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, m.meta)]),
+          el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
           downloadButton(m.blob, m.name),
         ]));
       }

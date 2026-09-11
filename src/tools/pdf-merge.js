@@ -1,5 +1,5 @@
 import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING } from "../pdfopen.js";
-import { el, dropzone, toolShell, statusBar, button, downloadButton, stripExt, yieldToBrowser } from "../ui.js";
+import { el, dropzone, toolShell, statusBar, button, downloadButton, stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { tr } from "../i18n.js";
 
 export function mount(tool) {
@@ -50,6 +50,7 @@ export function mount(tool) {
       const name = stripExt(files[0].name) + tr("-รวม.pdf", "-merged.pdf");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${out.getPageCount()} หน้า`, `${out.getPageCount()} pages`))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
     } catch (e) {

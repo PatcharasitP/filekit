@@ -7,7 +7,7 @@
 //    · ไฟล์แยกกัน (ZIP) = ส่งต่อให้คนอื่นทีละคน ไม่ให้เห็นข้อมูลกลุ่มอื่น
 //    · ไฟล์เดียวหลายชีท = เอาไว้ดูเองเทียบข้ามกลุ่ม เปิดทีเดียวจบ
 import { el, dropzone, toolShell, statusBar, button, field, select,
-         downloadButton, stripExt, yieldToBrowser } from "../ui.js";
+         downloadButton, stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { readWorkbook, sheetToTable, cellText, autoWidths } from "../sheetpick.js";
 import { tr } from "../i18n.js";
 
@@ -261,6 +261,7 @@ export function mount(tool) {
     st.end(); st.progress(null); st.ok(msg);
     results.appendChild(el("div", { class: "result" }, [
       el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, meta)]),
+      el("span", { class: "r-size" }, fmtBytes(blob.size)),
       downloadButton(blob, name),
     ]));
   }

@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, splitThaiTextToSize } from "../thaifont.js";
 import { smartDecode } from "../thai.js";
 import { splitSheetsByVisibility } from "../xlsxutil.js";
@@ -100,6 +100,7 @@ export function mount(tool) {
       const outName = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, tr(`${doc.getNumberOfPages()} หน้า`, `${doc.getNumberOfPages()} pages`))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, outName),
       ]));
       if (hidden.length && !includeHidden) results.appendChild(el("div", { class: "note warn" }, [

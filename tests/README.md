@@ -8,6 +8,8 @@ node tests/thai.test.mjs
 
 node tests/search.test.mjs
 
+node tests/resultsize.test.mjs   # ทุกแถวผลลัพธ์ต้องบอกขนาดไฟล์ที่ได้
+
 # ② เบราว์เซอร์จริง — ต้องเปิดเซิร์ฟเวอร์ก่อน
 python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error
@@ -23,6 +25,7 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_pbibar.py     # กราฟแท่ง Deneb วัดความยาวแท่งจากพิกัดจริงในเบราว์เซอร์
 
 ../.venv/bin/python tests/browser_viewer.py     # ตัวดูรูปเต็มจอ ปิดแล้วต้องไม่พาหลุดออกจากงาน
+../.venv/bin/python tests/browser_dialogroute.py # กล่องดูไฟล์เต็มจอต้องปิดเองตอนสลับเครื่องมือ ไม่งั้นหน้าที่เหลือคลิกไม่ได้
 ../.venv/bin/python tests/browser_a11y.py       # คีย์บอร์ด โฟกัส ป้ายกำกับ คอนทราสต์
 ../.venv/bin/python tests/browser_leak.py       # objectURL / listener / DOM / heap รั่ว (เปิด server เอง พอร์ต 8924)
 ../.venv/bin/python tests/browser_stress.py     # ทรมานด้วยเคสสุดโต่ง ไฟล์เสีย ไฟล์เยอะ กดรัว

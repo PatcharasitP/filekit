@@ -100,6 +100,7 @@ export function mount(tool) {
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
+          el("span", { class: "r-size" }, fmtBytes(blob.size)),
           downloadButton(blob, name),
         ]));
       }

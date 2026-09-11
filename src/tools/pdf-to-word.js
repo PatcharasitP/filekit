@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { pageLines, columnAwareLines } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
@@ -55,6 +55,7 @@ export function mount(tool) {
     results.innerHTML = "";
     results.appendChild(el("div", { class: "result" }, [
       el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${blocks.length} หน้า`, `${blocks.length} pages`))]),
+      el("span", { class: "r-size" }, fmtBytes(blob.size)),
       downloadButton(blob, name),
     ]));
   }

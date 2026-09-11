@@ -10,7 +10,7 @@
 //    ส่วนข้อความที่มีอักษรไทยวาดลง canvas แล้วฝังเป็น PNG (หลักเดียวกับใส่ลายน้ำ)
 import { loadPdfLib, ENCRYPTED_WARNING, friendlyPdfError } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr } from "../i18n.js";
 
@@ -276,6 +276,7 @@ export function mount(tool) {
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, tr(`${pageCount} หน้า, เลข ${start} ถึง ${last}`,
                              `${pageCount} pages, numbered ${start} to ${last}`))]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
     } catch (e) {

@@ -6,7 +6,7 @@
 //    ถ้าสาขาไหนสลับลำดับคอลัมน์ (หรือเพิ่มคอลัมน์แทรกกลาง) ข้อมูลจะเลื่อนช่องกันเงียบ ๆ
 //    ตัวนี้จับคู่ด้วย "ชื่อหัวคอลัมน์" ไม่ใช่ตำแหน่ง และบอกให้เห็นเลยว่าไฟล์ไหนหัวไม่ตรง
 import { el, dropzone, toolShell, statusBar, button, field, select,
-         downloadButton, stripExt, yieldToBrowser, eachFile, failedBox } from "../ui.js";
+         downloadButton, stripExt, yieldToBrowser, eachFile, failedBox, fmtBytes } from "../ui.js";
 import { readWorkbook, sheetToTable, cellText, autoWidths } from "../sheetpick.js";
 import { tr } from "../i18n.js";
 
@@ -284,6 +284,7 @@ export function mount(tool) {
       st.ok(tr(`รวมเสร็จ จาก ${read.length} ไฟล์`, `Done, merged ${read.length} files`));
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, meta)]),
+        el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));
     } catch (e) {

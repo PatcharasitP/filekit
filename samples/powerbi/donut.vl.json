@@ -335,7 +335,29 @@
    "as": "__customIdx"
   },
   {
-   "calculate": "datum.__isOther ? '2' : (sortMode == 'custom' ? (datum.__customIdx >= 0 ? '0_' + format(datum.__customIdx, '020.4f') : '1_' + format(1e15 - datum.__groupValue, '020.4f')) : sortMode == 'nameAsc' ? '0_' + datum.__groupKey : sortMode == 'valueAsc' ? '0_' + format(datum.__groupValue, '020.4f') : '0_' + format(1e15 - datum.__groupValue, '020.4f'))",
+   "joinaggregate": [
+    {
+     "op": "min",
+     "field": "__groupValue",
+     "as": "__sortMinV"
+    },
+    {
+     "op": "max",
+     "field": "__groupValue",
+     "as": "__sortMaxV"
+    }
+   ]
+  },
+  {
+   "calculate": "(datum.__sortMaxV - datum.__sortMinV) != 0 ? (datum.__sortMaxV - datum.__sortMinV) : 1",
+   "as": "__sortSpan"
+  },
+  {
+   "calculate": "clamp((datum.__groupValue - datum.__sortMinV) / datum.__sortSpan, 0, 1)",
+   "as": "__sortFrac"
+  },
+  {
+   "calculate": "datum.__isOther ? '2' : (sortMode == 'custom' ? (datum.__customIdx >= 0 ? '0_' + format(datum.__customIdx, '020.4f') : '1_' + format(1 - datum.__sortFrac, '.12f')) : sortMode == 'nameAsc' ? '0_' + datum.__groupKey : sortMode == 'valueAsc' ? '0_' + format(datum.__sortFrac, '.12f') : '0_' + format(1 - datum.__sortFrac, '.12f'))",
    "as": "__sortKey"
   },
   {

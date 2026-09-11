@@ -160,17 +160,21 @@ export function contrastBadge(fgGetter, bgGetter, opts = {}) {
  * (กฎของโปรเจกต์คือสไตล์อยู่ในโมดูล ไม่ไปแก้ assets/css/tool.css)
  */
 export const COLORKIT_CSS = `
-.ck-wrap{display:flex;flex-direction:column;gap:7px}
-.ck-row{display:flex;align-items:center;gap:8px}
-.ck-dot{flex:none;width:34px;height:28px;padding:0;border:1px solid var(--line);
+.ck-wrap{display:flex;flex-direction:column;gap:7px;min-width:0}
+.ck-row{display:flex;align-items:center;gap:8px;min-width:0}
+.ck-row .ck-dot{flex:none;width:34px;height:28px;padding:0;border:1px solid var(--line);
   border-radius:6px;background:none;cursor:pointer}
-.ck-hex{flex:1;min-width:0;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:12.5px}
+.ck-hex{flex:1;min-width:0;box-sizing:border-box;max-width:100%;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:12.5px}
 .ck-hex.bad{border-color:#d64550;outline:1px solid #d64550}
 .ck-swatches{display:flex;flex-wrap:wrap;gap:5px}
 .ck-sw{width:20px;height:20px;border-radius:5px;border:1px solid var(--line);
   background:var(--sw);cursor:pointer;padding:0}
 .ck-sw:hover{transform:scale(1.12)}
 .ck-sw:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* ‼️ ปุ่มสี 20px กดด้วยนิ้วไม่โดน ขยายเป็น 36px เฉพาะจอสัมผัส */
+@media (pointer:coarse){
+  .ck-sw{width:36px;height:36px;border-radius:8px}
+}
 .ck-contrast{font-size:12px;line-height:1.6;margin-top:5px}
 .ck-contrast.ok{color:var(--text-mute)}
 .ck-contrast.bad{color:#d64550;font-weight:600}

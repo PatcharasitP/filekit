@@ -204,6 +204,12 @@ export const TOOLS = [
     keys:"deneb donut vega โดนัท วงกลม power bi custom visual กราฟ pie พาย",
     next:["pa-parse-json","excel-to-pq"] },
 
+  { id:"pbi-bar", group:"powerbi", icon:"📊", since:"2026-09-11", title:"กราฟแท่งแนวนอน Deneb",
+    desc:"ปรับแท่ง ป้ายตัวเลข และเส้นเป้าหมายสด ๆ ความยาวแท่งตรงสัดส่วนค่าจริงเสมอ แล้วคัดลอกสเปกไปวางใน Deneb",
+    libs:["vega","vegaLite","vegaEmbed"],
+    keys:"deneb bar vega แท่ง แนวนอน power bi custom visual กราฟ ranking จัดอันดับ target เป้าหมาย",
+    next:["pbi-donut","pa-parse-json"] },
+
   { id:"pa-parse-json", group:"powerautomate", icon:"🧩", since:"2026-09-11", title:"ตารางเป็น Schema ของ Parse JSON",
     desc:"อ่านทั้งคอลัมน์ก่อนตัดสินชนิด ช่องที่เคยว่างจริงจะประกาศ null ให้เอง กัน flow พังตอนเจอแถวว่าง",
     accepts:["xlsx","xls","xlsm","csv","txt"],
@@ -284,6 +290,7 @@ const EN_TOOLS = {
   "thai-name":        ["Split Thai name into columns", "Break a full name into title, first name and surname, ready to sort or mail-merge"],
   "thai-address":     ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
   "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
+  "pbi-bar":          ["Deneb horizontal bar chart", "Tweak the bars, value labels and target line live, with bar length always true to the real numbers, then copy the spec into Deneb"],
   "pbi-donut":        ["Deneb donut chart", "Tweak a live donut chart and see it change instantly, then copy the spec straight into Deneb"],
   "pa-parse-json":    ["Table to a Parse JSON schema", "Reads the whole column before deciding the type, so columns that really do go blank are declared nullable and your flow survives them"],
   "pq-multisource-lookup": ["Build a multi source lookup", "Search several tables in order and stop at the first hit, with results landing in one column even when each source names it differently"],

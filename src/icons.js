@@ -65,6 +65,7 @@ export const ICONS = {
 
   // ── Power BI ──
   // วงแหวนโดนัทที่มีเส้นแบ่งส่วนสองเส้น ให้อ่านออกว่าเป็นกราฟ ไม่ใช่แค่วงกลมซ้อน
+  "pbi-bar":      `<path d="M4 4.5v15"/><rect x="4" y="6" width="14.5" height="3.6" rx="1"/><rect x="4" y="11.2" width="9.5" height="3.6" rx="1"/><rect x="4" y="16.4" width="5" height="3.6" rx="1"/>`,
   "pbi-donut":    `<circle cx="12"cy="12"r="8.7"/><circle cx="12"cy="12"r="4.3"/><path d="M12 3.3v4.4"/><path d="M19.5 16.3l-3.8-2.2"/>`,
 
   // ── Power Automate ──

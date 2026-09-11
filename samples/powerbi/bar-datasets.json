@@ -1,0 +1,189 @@
+{
+ "sales_channel": {
+  "title": "ยอดขายตามช่องทาง เทียบเป้าหมาย",
+  "title_en": "Sales by channel vs target",
+  "caption": "ยอดขายรวม",
+  "caption_en": "Total sales",
+  "note": "ชุดนี้มีคอลัมน์ Target ติดมาด้วย ลองเปิดโหมดเป้าหมายที่แผงขวาดู",
+  "note_en": "This set carries a Target column, try switching the target mode on in the right panel",
+  "rows": [
+   {
+    "Category": "หน้าร้าน",
+    "Category_en": "Storefront",
+    "Value": 4820000,
+    "Target": 4500000
+   },
+   {
+    "Category": "ออนไลน์",
+    "Category_en": "Online",
+    "Value": 3150000,
+    "Target": 3800000
+   },
+   {
+    "Category": "ตัวแทนขาย",
+    "Category_en": "Resellers",
+    "Value": 1740000,
+    "Target": 1740000
+   },
+   {
+    "Category": "ขายส่ง",
+    "Category_en": "Wholesale",
+    "Value": 890000,
+    "Target": 1200000
+   }
+  ]
+ },
+ "dept_headcount": {
+  "title": "จำนวนพนักงานตามแผนก",
+  "title_en": "Headcount by department",
+  "caption": "พนักงานทั้งหมด",
+  "caption_en": "Total headcount",
+  "rows": [
+   {
+    "Category": "ผลิต",
+    "Category_en": "Production",
+    "Value": 128
+   },
+   {
+    "Category": "ขาย",
+    "Category_en": "Sales",
+    "Value": 64
+   },
+   {
+    "Category": "คลังสินค้า",
+    "Category_en": "Warehouse",
+    "Value": 41
+   },
+   {
+    "Category": "บัญชี",
+    "Category_en": "Finance",
+    "Value": 18
+   },
+   {
+    "Category": "ไอที",
+    "Category_en": "IT",
+    "Value": 12
+   },
+   {
+    "Category": "บุคคล",
+    "Category_en": "People",
+    "Value": 9
+   }
+  ]
+ },
+ "branch_profit": {
+  "title": "กำไรขาดทุนรายสาขา",
+  "title_en": "Profit and loss by branch",
+  "caption": "กำไรสุทธิ",
+  "caption_en": "Net profit",
+  "note": "มีทั้งค่าบวกและค่าลบ แท่งจะแตกออกสองฝั่งจากเส้นศูนย์เอง",
+  "note_en": "Mixes positive and negative values, so the bars split either side of the zero line",
+  "rows": [
+   {
+    "Category": "สาขาเมือง",
+    "Category_en": "Downtown",
+    "Value": 120000
+   },
+   {
+    "Category": "สาขาริมน้ำ",
+    "Category_en": "Riverside",
+    "Value": 80000
+   },
+   {
+    "Category": "สาขาสนามบิน",
+    "Category_en": "Airport",
+    "Value": -20000
+   },
+   {
+    "Category": "สาขาชานเมือง",
+    "Category_en": "Suburb",
+    "Value": -45000
+   }
+  ]
+ },
+ "top_products": {
+  "title": "สินค้าขายดี 15 รายการ",
+  "title_en": "Top 15 products",
+  "caption": "จำนวนที่ขายได้",
+  "caption_en": "Units sold",
+  "note": "กลุ่มเกินจำนวนสูงสุดจะถูกยุบรวมเป็นแท่งเดียวแล้วปักไว้ท้ายสุด",
+  "note_en": "Groups beyond the maximum collapse into a single bar pinned to the bottom",
+  "rows": [
+   {
+    "Category": "กาแฟคั่วเข้ม",
+    "Category_en": "Dark roast coffee",
+    "Value": 5200
+   },
+   {
+    "Category": "ชาเขียว",
+    "Category_en": "Green tea",
+    "Value": 3100
+   },
+   {
+    "Category": "นมสด",
+    "Category_en": "Fresh milk",
+    "Value": 1870
+   },
+   {
+    "Category": "ขนมปัง",
+    "Category_en": "Bread",
+    "Value": 990
+   },
+   {
+    "Category": "โยเกิร์ต",
+    "Category_en": "Yoghurt",
+    "Value": 640
+   },
+   {
+    "Category": "น้ำผลไม้",
+    "Category_en": "Fruit juice",
+    "Value": 410
+   },
+   {
+    "Category": "ซีเรียล",
+    "Category_en": "Cereal",
+    "Value": 205
+   },
+   {
+    "Category": "แยม",
+    "Category_en": "Jam",
+    "Value": 180
+   },
+   {
+    "Category": "เนย",
+    "Category_en": "Butter",
+    "Value": 150
+   },
+   {
+    "Category": "น้ำผึ้ง",
+    "Category_en": "Honey",
+    "Value": 120
+   },
+   {
+    "Category": "ช็อกโกแลต",
+    "Category_en": "Chocolate",
+    "Value": 95
+   },
+   {
+    "Category": "บิสกิต",
+    "Category_en": "Biscuits",
+    "Value": 80
+   },
+   {
+    "Category": "ถั่วอบ",
+    "Category_en": "Roasted nuts",
+    "Value": 60
+   },
+   {
+    "Category": "ผงโกโก้",
+    "Category_en": "Cocoa powder",
+    "Value": 45
+   },
+   {
+    "Category": "น้ำตาลอ้อย",
+    "Category_en": "Cane sugar",
+    "Value": 30
+   }
+  ]
+ }
+}

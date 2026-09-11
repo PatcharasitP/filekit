@@ -1,0 +1,894 @@
+{
+ "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+ "width": "container",
+ "height": "container",
+ "padding": {
+  "left": 6,
+  "right": 6,
+  "top": 8,
+  "bottom": 8
+ },
+ "autosize": {
+  "type": "fit",
+  "contains": "padding"
+ },
+ "background": "transparent",
+ "usermeta": {
+  "deneb": {
+   "build": "1.9.1.0",
+   "metaVersion": 1,
+   "provider": "vegaLite",
+   "providerVersion": "6.4.0"
+  },
+  "information": {
+   "name": "SiteScope Dynamic Bar",
+   "description": "แท่งแนวนอน reusable ข้ามไฟล์ field contract ตายตัว 2 ช่องบังคับ Category (nominal, ชื่อกลุ่ม) และ Value (quantitative, ค่าความยาวแท่ง) บวก Target (quantitative, ไม่บังคับ — ลาก field เข้า field well เองแล้ว rename เป็น 'Target' ตรงตัว ไม่ผ่าน template wizard เพราะไม่บังคับ) วิธีใช้กับไฟล์อื่น: ลากคอลัมน์/measure เข้า field well ของ Deneb แล้ว Rename for this visual เป็น Category / Value ตามลำดับ สเปกจะทำงานทันทีโดยไม่ต้องแก้โค้ด % และยอดรวมคำนวณในสเปกเอง ไม่ต้องเตรียม measure % มาก่อน",
+   "author": "ลุงเอ (Power BI + Deneb), งาน SiteScope_Donut",
+   "uuid": "c7e1f0a3-7d2e-4b3f-9b4e-3f7d0c2b8c5f",
+   "generated": "2026-09-11"
+  },
+  "dataset": [
+   {
+    "key": "Category",
+    "name": "Category",
+    "type": "text",
+    "kind": "column"
+   },
+   {
+    "key": "Value",
+    "name": "Value",
+    "type": "numeric",
+    "kind": "measure"
+   }
+  ],
+  "paramGuide": {
+   "sortMode": "การเรียงลำดับแท่ง: 'valueDesc' มากไปน้อย (ค่าเริ่มต้น), 'valueAsc' น้อยไปมาก, 'nameAsc' เรียงตามชื่อ, 'custom' ใช้ customOrder — otherLabel ปักท้ายสุดเสมอทุกโหมด",
+   "customOrder": "array ชื่อกลุ่มตามลำดับที่ต้องการ ใช้เมื่อ sortMode = custom เท่านั้น กลุ่มที่ไม่อยู่ในลิสต์นี้ต่อท้ายเรียงมากไปน้อย (ไม่หายไปเงียบ ๆ)",
+   "maxBars": "จำนวนแท่งสูงสุดที่แสดงแยกกัน (3 ถึง 20) ที่เหลือถูกยุบรวมเป็นแท่งเดียวชื่อตาม otherLabel ปักท้ายสุดเสมอ",
+   "otherLabel": "ชื่อกลุ่มที่ถูกยุบรวมเมื่อเกิน maxBars",
+   "barThickness": "สัดส่วนความหนาแท่งต่อช่อง (0.3 ถึง 1.0) ยิ่งมากยิ่งหนา ที่เหลือเป็นช่องว่างระหว่างแท่ง",
+   "cornerRadius": "มุมโค้งปลายแท่ง (พิกเซล, 0 ถึง 8) — โค้งทั้ง 4 มุมเท่ากัน (ไม่ได้แยกโค้งเฉพาะปลายไกล base เพื่อความง่าย ที่ค่า 0-8px ผลต่างมองแทบไม่เห็น)",
+   "valueLabel": "ตำแหน่งป้ายตัวเลข: 'outside' ชิดนอกปลายแท่ง (ค่าเริ่มต้น, สลับเป็น inside เองอัตโนมัติถ้าพื้นที่ขวาไม่พอ), 'inside' ชิดในปลายแท่ง (ซ่อนอัตโนมัติถ้าแท่งสั้นเกินจะใส่ตัวเลขได้โดยไม่ล้น), 'none' ไม่แสดง",
+   "showPercent": "true = ต่อท้ายป้ายตัวเลขด้วยสัดส่วนของยอดรวม เช่น '134 (70.5%)'",
+   "palette": "array สี hex ของตัวเอง ไล่ตามลำดับแท่งหลัง sort ถ้าสีหมดก่อนแท่งหมดจะวนซ้ำ ปล่อยว่าง [] = ใช้สีตามธีมไฟล์แทน",
+   "colorOverrides": "object ล็อกสีเจาะจงรายชื่อกลุ่ม ชนะทุกชั้น (รวมถึง targetMode='color') เช่น {\"A\":\"#1F4E79\"}",
+   "otherColor": "สีของแท่งกลุ่มที่ถูกยุบ (otherLabel) โดยเฉพาะ ชนะ palette/targetMode='color'/ธีม (แต่แพ้ colorOverrides ถ้ามีคีย์ตรงกับ otherLabel)",
+   "targetMode": "ใช้คอลัมน์ Target ยังไง: 'none' ไม่แตะ Target เลย (ค่าเริ่มต้น, ทำงานได้ปกติแม้ไม่มีคอลัมน์นี้), 'line' ขีดเส้นเป้าหมายบนแท่งแต่ละอัน, 'color' ระบายสีแท่งตามถึงเป้าหรือไม่ (ทับ palette แต่แพ้ colorOverrides/otherColor)",
+   "targetColorOver": "สีแท่งเมื่อ Value ถึงหรือเกิน Target (ใช้เมื่อ targetMode = color เท่านั้น)",
+   "targetColorUnder": "สีแท่งเมื่อ Value ไม่ถึง Target (ใช้เมื่อ targetMode = color เท่านั้น)",
+   "axisMode": "แกนค่า: 'auto' ปล่อยตามข้อมูล (เผื่อที่ปลายไกลจาก 0 อีก 12% ให้ป้าย/เส้นเป้าหมายมีที่ยืน, เส้นฐาน 0 คงที่เสมอ), 'zero' บังคับพอดีค่าจริงไม่เผื่อที่เลย (แท่งยาวสุดชนขอบ plot), 'hide' ซ่อนป้ายแกนทั้งหมด (โดเมนคำนวณแบบเดียวกับ auto)",
+   "fontScale": "ตัวคูณขนาดตัวอักษรทุกก้อนพร้อมกัน (0.6 ถึง 1.6) คูณทับขนาดที่คำนวณอัตโนมัติจากพื้นที่ ค่าเริ่มต้น 1 = ไม่เปลี่ยนอะไรเลย",
+   "labelFontScale": "ตัวคูณเฉพาะป้ายตัวเลข (0.5 ถึง 2.0) คูณทับ fontScale อีกชั้น",
+   "nameFontScale": "ตัวคูณเฉพาะชื่อกลุ่มด้านซ้าย (0.5 ถึง 2.0) คูณทับ fontScale อีกชั้น"
+  },
+  "colorMode": "production: ชั้นสีธีม default ใช้ pbiColor(index) จริงตามธีมไฟล์"
+ },
+ "params": [
+  {
+   "name": "sortMode",
+   "value": "valueDesc"
+  },
+  {
+   "name": "customOrder",
+   "value": []
+  },
+  {
+   "name": "maxBars",
+   "value": 10
+  },
+  {
+   "name": "otherLabel",
+   "value": "อื่น ๆ"
+  },
+  {
+   "name": "barThickness",
+   "value": 0.72
+  },
+  {
+   "name": "cornerRadius",
+   "value": 3
+  },
+  {
+   "name": "valueLabel",
+   "value": "outside"
+  },
+  {
+   "name": "showPercent",
+   "value": false
+  },
+  {
+   "name": "palette",
+   "value": []
+  },
+  {
+   "name": "colorOverrides",
+   "value": {}
+  },
+  {
+   "name": "otherColor",
+   "value": "#B3B0AD"
+  },
+  {
+   "name": "targetMode",
+   "value": "none"
+  },
+  {
+   "name": "targetColorOver",
+   "value": "#2E7D32"
+  },
+  {
+   "name": "targetColorUnder",
+   "value": "#D64550"
+  },
+  {
+   "name": "axisMode",
+   "value": "auto"
+  },
+  {
+   "name": "fontScale",
+   "value": 1
+  },
+  {
+   "name": "labelFontScale",
+   "value": 1
+  },
+  {
+   "name": "nameFontScale",
+   "value": 1
+  }
+ ],
+ "data": {
+  "name": "dataset"
+ },
+ "transform": [
+  {
+   "calculate": "isValid(datum.Value) ? toNumber(datum.Value) : 0",
+   "as": "__value"
+  },
+  {
+   "window": [
+    {
+     "op": "rank",
+     "as": "__valueRank"
+    }
+   ],
+   "sort": [
+    {
+     "field": "__value",
+     "order": "descending"
+    }
+   ]
+  },
+  {
+   "calculate": "datum.__valueRank > maxBars",
+   "as": "__isOther"
+  },
+  {
+   "calculate": "datum.__isOther ? otherLabel : datum.Category",
+   "as": "__groupKey"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "sum",
+     "field": "__value",
+     "as": "__groupValue"
+    }
+   ],
+   "groupby": [
+    "__groupKey"
+   ]
+  },
+  {
+   "calculate": "isValid(datum.Target) && isFinite(toNumber(datum.Target))",
+   "as": "__targetRowValid"
+  },
+  {
+   "calculate": "datum.__targetRowValid ? toNumber(datum.Target) : 0",
+   "as": "__targetRowNum"
+  },
+  {
+   "calculate": "datum.__targetRowValid ? 1 : 0",
+   "as": "__targetRowValidNum"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "sum",
+     "field": "__targetRowNum",
+     "as": "__groupTargetSum"
+    },
+    {
+     "op": "max",
+     "field": "__targetRowValidNum",
+     "as": "__groupTargetHasAny"
+    }
+   ],
+   "groupby": [
+    "__groupKey"
+   ]
+  },
+  {
+   "window": [
+    {
+     "op": "rank",
+     "as": "__pickRank"
+    }
+   ],
+   "groupby": [
+    "__groupKey"
+   ],
+   "sort": [
+    {
+     "field": "__value",
+     "order": "descending"
+    }
+   ]
+  },
+  {
+   "filter": "datum.__pickRank == 1"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "sum",
+     "field": "__groupValue",
+     "as": "__totalValue"
+    }
+   ]
+  },
+  {
+   "calculate": "datum.__totalValue != 0 ? datum.__groupValue / datum.__totalValue : 0",
+   "as": "__pct"
+  },
+  {
+   "calculate": "format(datum.__groupValue, ',.0f')",
+   "as": "__valueText"
+  },
+  {
+   "calculate": "format(datum.__pct, '.1%')",
+   "as": "__pctText"
+  },
+  {
+   "calculate": "showPercent ? datum.__valueText + ' (' + datum.__pctText + ')' : datum.__valueText",
+   "as": "__labelText"
+  },
+  {
+   "calculate": "length(datum.__labelText)",
+   "as": "__labelLen"
+  },
+  {
+   "calculate": "length(datum.__groupKey)",
+   "as": "__nameLen"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__labelLen",
+     "as": "__maxLabelLen"
+    },
+    {
+     "op": "max",
+     "field": "__nameLen",
+     "as": "__maxNameLen"
+    }
+   ]
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "min",
+     "field": "__groupValue",
+     "as": "__sortMinV"
+    },
+    {
+     "op": "max",
+     "field": "__groupValue",
+     "as": "__sortMaxV"
+    }
+   ]
+  },
+  {
+   "calculate": "(datum.__sortMaxV - datum.__sortMinV) != 0 ? (datum.__sortMaxV - datum.__sortMinV) : 1",
+   "as": "__sortSpan"
+  },
+  {
+   "calculate": "clamp((datum.__groupValue - datum.__sortMinV) / datum.__sortSpan, 0, 1)",
+   "as": "__sortFrac"
+  },
+  {
+   "calculate": "indexof(customOrder, datum.__groupKey)",
+   "as": "__customIdx"
+  },
+  {
+   "calculate": "datum.__isOther ? '2' : (sortMode == 'custom' ? (datum.__customIdx >= 0 ? '0_' + format(datum.__customIdx, '020.4f') : '1_' + format(1 - datum.__sortFrac, '.12f')) : sortMode == 'nameAsc' ? '0_' + datum.__groupKey : sortMode == 'valueAsc' ? '0_' + format(datum.__sortFrac, '.12f') : '0_' + format(1 - datum.__sortFrac, '.12f'))",
+   "as": "__sortKey"
+  },
+  {
+   "window": [
+    {
+     "op": "row_number",
+     "as": "__barRank"
+    }
+   ],
+   "sort": [
+    {
+     "field": "__sortKey",
+     "order": "ascending"
+    }
+   ]
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__barRank",
+     "as": "__barCount"
+    }
+   ]
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__groupValue",
+     "as": "__maxGroupValue"
+    },
+    {
+     "op": "min",
+     "field": "__groupValue",
+     "as": "__minGroupValue"
+    }
+   ]
+  },
+  {
+   "calculate": "datum.__groupTargetHasAny == 1 ? datum.__groupTargetSum : -1e15",
+   "as": "__targetForMaxCand"
+  },
+  {
+   "calculate": "datum.__groupTargetHasAny == 1 ? datum.__groupTargetSum : 1e15",
+   "as": "__targetForMinCand"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__targetForMaxCand",
+     "as": "__maxTargetForDomain"
+    },
+    {
+     "op": "min",
+     "field": "__targetForMinCand",
+     "as": "__minTargetForDomain"
+    }
+   ]
+  },
+  {
+   "calculate": "(targetMode != 'none' && datum.__maxTargetForDomain > -1e14) ? max(datum.__maxGroupValue, datum.__maxTargetForDomain) : datum.__maxGroupValue",
+   "as": "__rawMax"
+  },
+  {
+   "calculate": "(targetMode != 'none' && datum.__minTargetForDomain < 1e14) ? min(datum.__minGroupValue, datum.__minTargetForDomain) : datum.__minGroupValue",
+   "as": "__rawMin"
+  },
+  {
+   "calculate": "max(0, datum.__rawMax)",
+   "as": "__domainMaxBase"
+  },
+  {
+   "calculate": "min(0, datum.__rawMin)",
+   "as": "__domainMinBase"
+  },
+  {
+   "calculate": "axisMode == 'zero' ? datum.__domainMaxBase : (datum.__domainMaxBase * (1 + 0.12))",
+   "as": "__domainMax"
+  },
+  {
+   "calculate": "axisMode == 'zero' ? datum.__domainMinBase : (datum.__domainMinBase < 0 ? datum.__domainMinBase * (1 + 0.12) : 0)",
+   "as": "__domainMin"
+  },
+  {
+   "calculate": "((datum.__domainMax) - (datum.__domainMin)) != 0 ? ((datum.__domainMax) - (datum.__domainMin)) : 1",
+   "as": "__domainSpan"
+  },
+  {
+   "calculate": "axisMode == 'hide' ? 0 : 14",
+   "as": "__axisZoneH"
+  },
+  {
+   "calculate": "height - datum.__axisZoneH",
+   "as": "__plotBottom"
+  },
+  {
+   "calculate": "datum.__plotBottom / max(datum.__barCount, 1)",
+   "as": "__rowH"
+  },
+  {
+   "calculate": "clamp(barThickness, 0.3, 1.0)",
+   "as": "__barThicknessClamped"
+  },
+  {
+   "calculate": "datum.__rowH * datum.__barThicknessClamped",
+   "as": "__barH"
+  },
+  {
+   "calculate": "(datum.__barRank - 0.5) * datum.__rowH",
+   "as": "__barYCenter"
+  },
+  {
+   "calculate": "datum.__barYCenter - datum.__barH / 2",
+   "as": "__barTop"
+  },
+  {
+   "calculate": "datum.__barYCenter + datum.__barH / 2",
+   "as": "__barBottom"
+  },
+  {
+   "calculate": "clamp(datum.__rowH * 0.5, 9, 20)",
+   "as": "__nameFontSizeAuto"
+  },
+  {
+   "calculate": "datum.__nameFontSizeAuto * fontScale * nameFontScale",
+   "as": "__nameFontSize"
+  },
+  {
+   "calculate": "clamp(datum.__rowH * 0.45, 9, 18)",
+   "as": "__labelFontSizeAutoOutside"
+  },
+  {
+   "calculate": "min(clamp(datum.__rowH * 0.45, 9, 18), datum.__barH * 0.75)",
+   "as": "__labelFontSizeAutoInside"
+  },
+  {
+   "calculate": "datum.__maxNameLen * 0.62 * datum.__nameFontSize",
+   "as": "__nameZoneWRaw"
+  },
+  {
+   "calculate": "min(datum.__nameZoneWRaw, width * 0.35)",
+   "as": "__nameZoneW"
+  },
+  {
+   "calculate": "4 + datum.__nameZoneW + 8",
+   "as": "__plotLeftBase"
+  },
+  {
+   "calculate": "datum.__maxLabelLen * 0.60 * datum.__labelFontSizeAutoOutside + 6 * 2",
+   "as": "__labelZoneWCandOutside"
+  },
+  {
+   "calculate": "datum.__domainMinBase < 0",
+   "as": "__hasNegative"
+  },
+  {
+   "calculate": "width - datum.__plotLeftBase - 8 - datum.__labelZoneWCandOutside - (datum.__hasNegative ? datum.__labelZoneWCandOutside : 0)",
+   "as": "__plotWidthIfOutside"
+  },
+  {
+   "calculate": "valueLabel == 'none' ? 'none' : (valueLabel == 'inside' ? 'inside' : (datum.__plotWidthIfOutside >= width * 0.15 ? 'outside' : 'inside'))",
+   "as": "__effLabelMode"
+  },
+  {
+   "calculate": "datum.__plotLeftBase + ((datum.__hasNegative && datum.__effLabelMode == 'outside') ? datum.__labelZoneWCandOutside : 0)",
+   "as": "__plotLeft"
+  },
+  {
+   "calculate": "width - 8 - (datum.__effLabelMode == 'outside' ? datum.__labelZoneWCandOutside : 0)",
+   "as": "__plotRight"
+  },
+  {
+   "calculate": "(datum.__plotLeft + ((0) - (datum.__domainMin)) / (datum.__domainSpan) * ((datum.__plotRight) - (datum.__plotLeft)))",
+   "as": "__barX0"
+  },
+  {
+   "calculate": "(datum.__plotLeft + ((datum.__groupValue) - (datum.__domainMin)) / (datum.__domainSpan) * ((datum.__plotRight) - (datum.__plotLeft)))",
+   "as": "__barX1"
+  },
+  {
+   "calculate": "min(datum.__barX0, datum.__barX1)",
+   "as": "__barXMin"
+  },
+  {
+   "calculate": "max(datum.__barX0, datum.__barX1)",
+   "as": "__barXMax"
+  },
+  {
+   "calculate": "abs(datum.__barX1 - datum.__barX0)",
+   "as": "__barPixelLen"
+  },
+  {
+   "calculate": "datum.__groupValue >= 0",
+   "as": "__barSignPos"
+  },
+  {
+   "calculate": "(datum.__plotLeft + ((datum.__groupTargetSum) - (datum.__domainMin)) / (datum.__domainSpan) * ((datum.__plotRight) - (datum.__plotLeft)))",
+   "as": "__targetX"
+  },
+  {
+   "calculate": "datum.__groupTargetHasAny == 1",
+   "as": "__groupTargetValid"
+  },
+  {
+   "calculate": "datum.__groupValue >= datum.__groupTargetSum",
+   "as": "__targetMet"
+  },
+  {
+   "calculate": "datum.__groupTargetValid ? format(datum.__groupTargetSum, ',.0f') : '-'",
+   "as": "__targetTooltipText"
+  },
+  {
+   "calculate": "(targetMode == 'line' && datum.__groupTargetValid) ? (datum.__barSignPos ? max(datum.__barX1, datum.__targetX) : min(datum.__barX1, datum.__targetX)) : datum.__barX1",
+   "as": "__outsideAnchor"
+  },
+  {
+   "calculate": "datum.__barSignPos ? (datum.__outsideAnchor + 6) : (datum.__outsideAnchor - 6)",
+   "as": "__labelXOutside"
+  },
+  {
+   "calculate": "datum.__barSignPos ? 'left' : 'right'",
+   "as": "__labelAlignOutside"
+  },
+  {
+   "calculate": "datum.__barSignPos ? (datum.__barX1 - 6) : (datum.__barX1 + 6)",
+   "as": "__labelXInside"
+  },
+  {
+   "calculate": "datum.__barSignPos ? 'right' : 'left'",
+   "as": "__labelAlignInside"
+  },
+  {
+   "calculate": "datum.__labelLen * 0.60 * datum.__labelFontSizeAutoInside",
+   "as": "__labelWidthEstimateInside"
+  },
+  {
+   "calculate": "(datum.__labelWidthEstimateInside + 2 * 6) <= datum.__barPixelLen",
+   "as": "__insideRoomOk"
+  },
+  {
+   "calculate": "datum.__barSignPos ? (datum.__labelXInside - datum.__labelWidthEstimateInside) : datum.__labelXInside",
+   "as": "__insideSpanNear"
+  },
+  {
+   "calculate": "datum.__barSignPos ? datum.__labelXInside : (datum.__labelXInside + datum.__labelWidthEstimateInside)",
+   "as": "__insideSpanFar"
+  },
+  {
+   "calculate": "(targetMode == 'line' && datum.__groupTargetValid) && (datum.__targetX >= datum.__insideSpanNear - 2) && (datum.__targetX <= datum.__insideSpanFar + 2)",
+   "as": "__targetHitsInsideLabel"
+  },
+  {
+   "calculate": "datum.__insideRoomOk && !datum.__targetHitsInsideLabel",
+   "as": "__insideFits"
+  },
+  {
+   "calculate": "datum.__effLabelMode == 'none' ? '' : (datum.__effLabelMode == 'outside' ? datum.__labelText : (datum.__insideFits ? datum.__labelText : ''))",
+   "as": "__labelDisplayText"
+  },
+  {
+   "calculate": "datum.__effLabelMode == 'outside' ? datum.__labelXOutside : datum.__labelXInside",
+   "as": "__labelDisplayX"
+  },
+  {
+   "calculate": "datum.__effLabelMode == 'outside' ? datum.__labelAlignOutside : datum.__labelAlignInside",
+   "as": "__labelDisplayAlign"
+  },
+  {
+   "calculate": "(datum.__effLabelMode == 'outside' ? datum.__labelFontSizeAutoOutside : datum.__labelFontSizeAutoInside) * fontScale * labelFontScale",
+   "as": "__labelDisplayFontSize"
+  },
+  {
+   "calculate": "format(datum.__domainMin, ',.0f')",
+   "as": "__axisMinText"
+  },
+  {
+   "calculate": "format(datum.__domainMax, ',.0f')",
+   "as": "__axisMaxText"
+  },
+  {
+   "calculate": "datum.__plotBottom + 12",
+   "as": "__axisY"
+  },
+  {
+   "calculate": "colorOverrides[datum.__groupKey] ? colorOverrides[datum.__groupKey] : (datum.__isOther ? otherColor : ((targetMode == 'color' && datum.__groupTargetValid) ? (datum.__targetMet ? targetColorOver : targetColorUnder) : (length(palette) > 0 ? palette[(datum.__barRank - 1) % length(palette)] : pbiColor(datum.__barRank - 1))))",
+   "as": "__barColor"
+  },
+  {
+   "calculate": "luminance(datum.__barColor) >= 0.45 ? '#252423' : '#FFFFFF'",
+   "as": "__labelColorInside"
+  }
+ ],
+ "layer": [
+  {
+   "description": "แท่งแนวนอน 1 แท่งต่อ 1 กลุ่มสุดท้าย (หลังยุบ TopN + otherLabel), ตำแหน่ง/ความหนาคำนวณเองจาก __barCount, สีตามลำดับ colorOverrides > otherColor > targetMode='color' > palette > ธีม",
+   "mark": {
+    "type": "rect",
+    "tooltip": true,
+    "cornerRadius": {
+     "expr": "cornerRadius"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__barXMin"
+     }
+    },
+    "x2": {
+     "value": {
+      "expr": "datum.__barXMax"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__barTop"
+     }
+    },
+    "y2": {
+     "value": {
+      "expr": "datum.__barBottom"
+     }
+    },
+    "color": {
+     "field": "__barColor",
+     "type": "nominal",
+     "scale": null,
+     "legend": null
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": 0.3
+     },
+     "value": 1
+    },
+    "tooltip": [
+     {
+      "field": "__groupKey",
+      "type": "nominal",
+      "title": "กลุ่ม"
+     },
+     {
+      "field": "__valueText",
+      "type": "nominal",
+      "title": "ค่า"
+     },
+     {
+      "field": "__pctText",
+      "type": "nominal",
+      "title": "สัดส่วน"
+     },
+     {
+      "field": "__targetTooltipText",
+      "type": "nominal",
+      "title": "เป้าหมาย"
+     }
+    ]
+   }
+  },
+  {
+   "description": "ชื่อกลุ่มด้านซ้าย ชิดขวาโซนชื่อ (ติดกับจุดเริ่มแท่ง), limit ตัดข้อความยาวเกินด้วยจุดไข่ปลา (native VL text limit ไม่ต้องคำนวณตัดเอง)",
+   "mark": {
+    "type": "text",
+    "align": "right",
+    "baseline": "middle",
+    "limit": {
+     "expr": "max(20, datum.__nameZoneW - 4)"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__plotLeftBase - 8"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__barYCenter"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__nameFontSize"
+     }
+    },
+    "text": {
+     "field": "__groupKey",
+     "type": "nominal"
+    },
+    "color": {
+     "value": "#605E5C"
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": 0.3
+     },
+     "value": 1
+    }
+   }
+  },
+  {
+   "description": "ป้ายตัวเลข ตำแหน่ง/สี/แสดงผลคำนวณจาก __effLabelMode (auto-switch outside->inside ถ้าพื้นที่ขวาไม่พอ) และ __insideFits (auto-hide ถ้าแท่งสั้นเกินจะใส่ตัวเลขในแท่งได้โดยไม่ล้น)",
+   "mark": {
+    "type": "text",
+    "baseline": "middle",
+    "fontWeight": "bold",
+    "align": {
+     "expr": "datum.__labelDisplayAlign"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__labelDisplayX"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__barYCenter"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__labelDisplayFontSize"
+     }
+    },
+    "text": {
+     "field": "__labelDisplayText",
+     "type": "nominal"
+    },
+    "color": {
+     "condition": {
+      "test": "datum.__effLabelMode == 'inside'",
+      "field": "__labelColorInside",
+      "type": "nominal",
+      "scale": null,
+      "legend": null
+     },
+     "value": "#605E5C"
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": 0.3
+     },
+     "value": 1
+    }
+   }
+  },
+  {
+   "description": "เส้นเป้าหมายแนวตั้งทับแท่ง (targetMode = 'line' และ Target ของแท่งนั้น valid เท่านั้น) ความสูงเท่าความหนาแท่งพอดี",
+   "mark": {
+    "type": "rule",
+    "strokeWidth": 2,
+    "stroke": "#252423"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__targetX"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__barTop"
+     }
+    },
+    "y2": {
+     "value": {
+      "expr": "datum.__barBottom"
+     }
+    },
+    "opacity": {
+     "value": {
+      "expr": "(targetMode == 'line' && datum.__groupTargetValid) ? 1 : 0"
+     }
+    }
+   }
+  },
+  {
+   "description": "แกนแบบย่อ: เส้นฐาน 0 (แนวตั้ง เต็มความสูง plot) + ป้ายค่าต่ำสุด/สูงสุดของโดเมน 2 ฝั่ง — ซ่อนทั้งหมดเมื่อ axisMode='hide' วาดจากแถวเดียว (__barRank==1) กันซ้อนกัน __barCount ครั้ง",
+   "transform": [
+    {
+     "filter": "datum.__barRank == 1 && axisMode != 'hide'"
+    }
+   ],
+   "layer": [
+    {
+     "mark": {
+      "type": "rule",
+      "strokeWidth": 1,
+      "stroke": "#D9D9D9"
+     },
+     "encoding": {
+      "x": {
+       "value": {
+        "expr": "datum.__barX0"
+       }
+      },
+      "y": {
+       "value": {
+        "expr": "0"
+       }
+      },
+      "y2": {
+       "value": {
+        "expr": "datum.__plotBottom"
+       }
+      }
+     }
+    },
+    {
+     "mark": {
+      "type": "text",
+      "align": "left",
+      "baseline": "top",
+      "fontSize": 10
+     },
+     "encoding": {
+      "x": {
+       "value": {
+        "expr": "datum.__plotLeft"
+       }
+      },
+      "y": {
+       "value": {
+        "expr": "datum.__axisY"
+       }
+      },
+      "text": {
+       "field": "__axisMinText",
+       "type": "nominal"
+      },
+      "color": {
+       "value": "#605E5C"
+      }
+     }
+    },
+    {
+     "mark": {
+      "type": "text",
+      "align": "right",
+      "baseline": "top",
+      "fontSize": 10
+     },
+     "encoding": {
+      "x": {
+       "value": {
+        "expr": "datum.__plotRight"
+       }
+      },
+      "y": {
+       "value": {
+        "expr": "datum.__axisY"
+       }
+      },
+      "text": {
+       "field": "__axisMaxText",
+       "type": "nominal"
+      },
+      "color": {
+       "value": "#605E5C"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "config": {
+  "font": "Segoe UI, Leelawadee UI, Sarabun, Tahoma, sans-serif",
+  "view": {
+   "stroke": null
+  },
+  "background": "transparent"
+ }
+}

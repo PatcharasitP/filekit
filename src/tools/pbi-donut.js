@@ -81,6 +81,12 @@ const STYLE = `
 .pbid-switch input:checked + .pbid-switch-track{background:var(--g-powerbi,var(--brand))}
 .pbid-switch input:checked + .pbid-switch-track::after{transform:translateX(18px)}
 .pbid-switch input:focus-visible + .pbid-switch-track{outline:2px solid var(--brand);outline-offset:2px}
+/* ‼️ จอสัมผัสต้องกดโดน ยืดกรอบสวิตช์ให้สูง 36px แต่ตัวแถบยังสูง 24px เท่าเดิม
+   ระยะเลื่อนปุ่มกลมไม่ต้องแก้ เพราะความกว้างกับตำแหน่งในแถบยังเหมือนเดิมทุกอย่าง */
+@media (pointer:coarse){
+  .pbid-switch{height:36px}
+  .pbid-switch-track{top:6px;bottom:6px}
+}
 ${COLORKIT_CSS}
 ${PRESETS_CSS}
 
@@ -162,7 +168,7 @@ export function mount(tool) {
   const fileInput = el("input", { type: "file", accept: ".xlsx,.xlsm,.xls,.csv,.txt" });
   const ownPick = el("div", { class: "pbid-own-pick", hidden: true });
   const ownBlock = el("div", { class: "pbid-own" }, [
-    el("h4", { class: "pbid-own-title" }, tr("ใช้ข้อมูลของคุณเอง", "Use your own data")),
+    el("h3", { class: "pbid-own-title" }, tr("ใช้ข้อมูลของคุณเอง", "Use your own data")),
     el("p", { class: "pbid-own-hint" }, tr(
       "เปิดไฟล์ Excel หรือ CSV แล้วเลือกว่าคอลัมน์ไหนคือชื่อกลุ่ม คอลัมน์ไหนคือค่า ชื่อกลุ่มที่ซ้ำกันจะถูกรวมยอดให้เอง",
       "Open an Excel or CSV file, then pick which column is the category and which is the value. Repeated categories are summed for you"

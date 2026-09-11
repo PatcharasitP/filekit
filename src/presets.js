@@ -65,4 +65,9 @@ export const PRESETS_CSS = `
 .ps-chip.on{border-color:var(--g-powerbi,var(--brand));
   background:color-mix(in srgb,var(--g-powerbi,var(--brand)) 14%,var(--bg-soft))}
 .ps-chip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* ‼️ บนจอสัมผัส เป้าการแตะต้องไม่ต่ำกว่า 36px ไม่งั้นกดพลาดบ่อยจนใช้ไม่ไหว
+   แยกไว้ใน pointer:coarse เพื่อไม่ให้เมาส์บนจอใหญ่ได้ปุ่มอ้วนเกินจำเป็น */
+@media (pointer:coarse){
+  .ps-chip{min-height:36px;padding:7px 14px}
+}
 `;

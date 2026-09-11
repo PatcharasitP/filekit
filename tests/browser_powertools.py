@@ -75,6 +75,27 @@ with sync_playwright() as p:
     }""")
     ck("ทุกช่องในตารางตัวอย่างมีเส้นขอบจริง (วัดด้วย getComputedStyle)", cells_no_border, 0)
 
+    # ‼️ ชุดพร้อมใช้ต้องเริ่มจากค่าเริ่มต้นใหม่ทุกครั้ง ไม่งั้นค่าจากชุดก่อนค้างมาปน
+    #    และชิปต้องดับเมื่อผู้ใช้แก้ค่าเอง ไม่งั้นชิปโกหกว่ายังเป็นชุดนั้นอยู่
+    def header_bg():
+        return pg.evaluate("""() => {
+          const t=[...document.querySelectorAll('.pah-preview table')].find(x=>(x.getAttribute('style')||'').includes('border-collapse'));
+          return t ? getComputedStyle(t.querySelector('th')).backgroundColor : null;
+        }""")
+
+    has_card = lambda: pg.locator('.pah-preview [data-jump="cardValue"]').count()
+    pg.get_by_role("button", name="กระชับ").click()
+    pg.wait_for_timeout(600)
+    ck("ชุดกระชับ ซ่อนการ์ดตัวเลขจริง", has_card(), 0)
+    pg.get_by_role("button", name="เน้นสี").click()
+    pg.wait_for_timeout(600)
+    ck("ชุดเน้นสี เปลี่ยนพื้นหัวตารางจริง", header_bg(), "rgb(18, 35, 158)")
+    ck("สลับชุดแล้วการ์ดกลับมา ไม่มีค่าค้างจากชุดก่อน", has_card(), 1)
+    ck("ชิปติดทีละอันเท่านั้น", pg.locator(".ps-chip.on").count(), 1)
+    pg.locator(".ck-hex").first.fill("#777777")
+    pg.wait_for_timeout(500)
+    ck("แก้ค่าเองแล้วชิปดับ ไม่โกหกว่ายังเป็นชุดนั้น", pg.locator(".ps-chip.on").count(), 0)
+
     # ── ② ตารางเป็น Schema ของ Parse JSON ─────────────────────────────
     print("\n━━ ② ตารางเป็น Schema ของ Parse JSON ━━")
     open_tool(pg, "pa-parse-json", ".dz")
@@ -92,6 +113,24 @@ with sync_playwright() as p:
     # ชื่อที่ไม่ใช่ตัวระบุ M ธรรมดาต้องถูกครอบ #"..." ไม่งั้นคิวรีพัง
     ck('ชื่อที่มีเว้นวรรคถูกครอบ #"..."', '#"SITE OWNER"' in m, True)
     ck("ชื่อภาษาไทยถูกครอบด้วย", '#"ตารางหลัก"' in m, True)
+
+    # ── ④ ชุดพร้อมใช้ของกราฟโดนัท ──────────────────────────────────────
+    print("\n━━ ④ กราฟโดนัท Deneb ━━")
+    open_tool(pg, "pbi-donut", "#pbid-chart svg")
+    pg.wait_for_timeout(1200)
+
+    def center_font():
+        return pg.evaluate("""() => {
+          const t=[...document.querySelectorAll('#pbid-chart svg text')].find(x=>/^[\\d,]+$/.test(x.textContent));
+          return t ? Math.round(parseFloat(getComputedStyle(t).fontSize)) : null;
+        }""")
+
+    base_font = center_font()
+    pg.get_by_role("button", name="ขึ้นจอนำเสนอ").click()
+    pg.wait_for_timeout(900)
+    ck("ชุดขึ้นจอนำเสนอ ทำให้ตัวอักษรกลางวงใหญ่ขึ้นจริง", center_font() > base_font, True)
+    ck("ชิปชุดโดนัทติดทีละอัน", pg.locator(".ps-chip.on").count(), 1)
+    ck("กราฟยังวาดครบหลังใส่ชุด", pg.locator("#pbid-chart svg path").count(), 10)
 
     print("\n━━ console ━━")
     ck("ไม่มี error ใน console", len([e for e in errs if "favicon" not in e]), 0)

@@ -2,6 +2,7 @@ import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, download } from "../ui.js";
 import { tr, IS_EN } from "../i18n.js";
 import { colorPicker, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
+import { presetBar, PRESETS_CSS } from "../presets.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
 
@@ -80,6 +81,7 @@ const STYLE = `
 .pbid-switch input:checked + .pbid-switch-track::after{transform:translateX(18px)}
 .pbid-switch input:focus-visible + .pbid-switch-track{outline:2px solid var(--brand);outline-offset:2px}
 ${COLORKIT_CSS}
+${PRESETS_CSS}
 
 .pbid-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
 .pbid-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
@@ -125,6 +127,22 @@ export function mount(tool) {
   // กล่องนี้บอกให้รู้ว่าเกิดอะไรขึ้นและต้องทำยังไงถึงจะได้กลับมา
   const collapseNote = el("div", { class: "pbid-collapse", hidden: true });
   const controls = {};       // name -> { setUI(value) } ใช้ sync UI ตอนสลับชุดข้อมูล/คืนค่าเริ่มต้น
+  /* ‼️ ชุดพร้อมใช้เขียนเฉพาะค่าที่ต่างจากค่าเริ่มต้น และตัวไหนที่สเปกไม่มีจะถูกข้ามเอง
+     (สเปกเก่ายังไม่มี legendPosition หรือตัวคูณฟอนต์ ชุดต้องไม่พังเพราะเรื่องนี้) */
+  const PRESETS = [
+    { id: "default", name: tr("ค่าเริ่มต้น", "Default"),
+      desc: tr("วงขนาดกลาง คำอธิบายอยู่ขวา", "Medium ring with the legend on the right"), values: {} },
+    { id: "small", name: tr("วิชวลเล็ก", "Small visual"),
+      desc: tr("วงเล็กลง ย้ายคำอธิบายไปข้างล่าง เหมาะกับช่องแคบในหน้ารายงาน",
+               "Smaller ring with the legend underneath, for a narrow slot in a report"),
+      values: { donutScale: 0.52, legendPosition: "bottom", legendFontScale: 0.9, cornerRadius: 2 } },
+    { id: "present", name: tr("ขึ้นจอนำเสนอ", "For presenting"),
+      desc: tr("ตัวอักษรใหญ่ขึ้นทั้งหมด เห็นชัดจากท้ายห้อง", "Everything larger so it reads from the back of the room"),
+      values: { fontScale: 1.35, centerFontScale: 1.15, donutScale: 0.72, donutThickness: 0.32 } },
+    { id: "minimal", name: tr("เรียบ", "Minimal"),
+      desc: tr("ไม่มีมุมโค้ง ไม่มีช่องไฟ วงหนา ดูสะอาด", "No rounded ends or gaps, a thicker clean ring"),
+      values: { cornerRadius: 0, padAngle: 0, donutThickness: 0.38, legendLayout: "columns" } },
+  ];
   let editable = [];         // ตัวปรับที่ "มีอยู่จริง" ในสเปกที่โหลดมา (ผู้สมัคร ∩ spec.params)
   let ownBook = null;        // สมุดงานของผู้ใช้ที่เพิ่งอ่านเข้ามา (ยังไม่ได้เลือกคอลัมน์)
   let supportsTokens = false;  // สเปกที่โหลดมารู้จักตัวยึด {total} ในข้อความกลางวงหรือยัง
@@ -134,6 +152,7 @@ export function mount(tool) {
   const chartBox = el("div", { class: "pbid-chart-box" }, [chartMsg, chartEl]);
   const centerWrap = el("div", {}, [chartBox, collapseNote]);
 
+  const presets = presetBar(PRESETS, applyPreset);
   const dsListEl = el("div", { class: "pbid-ds-list" });
   const rightBody = el("div", { class: "pbid-right" });
 
@@ -360,6 +379,7 @@ export function mount(tool) {
 
   /* ── ปรับค่า + อัปเดตกราฟทันทีผ่าน view.signal() (เร็วกว่า re-embed สเปก 31KB มาก) ── */
   function setParam(name, value) {
+    presets.clearActive();
     paramValues[name] = value;
     if (!view) return;
     view.signal(name, value);
@@ -487,7 +507,7 @@ export function mount(tool) {
       ...maybe("sliceLabelFontScale", () => rangeField(tr("ป้าย % บนชิ้น", "On-slice labels"), "sliceLabelFontScale",
         { min: 0.5, max: 2.0, step: 0.05, fmt: (v) => v.toFixed(2) })),
     ];
-    rightBody.append(textGroup, sortGroup, colorGroup, shapeGroup);
+    rightBody.append(presets.node, textGroup, sortGroup, colorGroup, shapeGroup);
     if (fontFields.length) rightBody.appendChild(groupBox(tr("ขนาดตัวอักษร", "Text size"), fontFields));
     updateConditionalVisibility();
   }
@@ -838,6 +858,25 @@ export function mount(tool) {
       console.error(e);
       st.err(tr(`ดาวน์โหลด ${filename} ไม่สำเร็จ: `, `Couldn't download ${filename}: `) + e.message);
     }
+  }
+
+  /* เริ่มจากค่าเริ่มต้นก่อนเสมอแล้วทับด้วยค่าของชุด ไม่งั้นค่าจากชุดก่อนจะค้างมาปน
+     คำใต้เลขกลางยังผูกกับชุดข้อมูลที่เลือกอยู่ ไม่ใช่ของชุดพร้อมใช้ */
+  function applyPreset(values) {
+    paramValues = clone(defaults);
+    paramValues.centerCaption = captionOf(currentKey);
+    for (const [k, v] of Object.entries(values)) {
+      if (k in defaults) paramValues[k] = v;   // สเปกไม่มีตัวนี้ = ข้ามไป ไม่พัง
+    }
+    for (const name of editable) controls[name]?.setUI(paramValues[name]);
+    updateConditionalVisibility();
+    if (view) {
+      let v = view;
+      for (const name of editable) v = v.signal(name, paramValues[name]);
+      v.run();
+      updateCollapseNote();
+    }
+    st.ok(tr("ใช้ชุดที่เลือกแล้ว ปรับต่อได้ตามใจ", "Applied, tweak it from here"));
   }
 
   function onReset() {

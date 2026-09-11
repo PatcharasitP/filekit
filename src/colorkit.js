@@ -108,14 +108,18 @@ export function colorPicker(value, onChange, opts = {}) {
     if (parsed) set(toHex(parsed), false);
   });
 
-  function set(hex, syncText) {
+  /* ‼️ silent = อัปเดตแค่หน้าจอ ไม่ยิง onChange กลับ
+     ตอนโปรแกรมตั้งค่าเอง (คืนค่าเริ่มต้น, ใส่ชุดพร้อมใช้) ถ้ายิงกลับจะกลายเป็นว่า
+     ผู้ใช้แก้ค่าเอง ทำให้ชิปชุดพร้อมใช้ดับทันทีที่กด และวาดกราฟซ้ำโดยไม่จำเป็น
+     (เจอจริง 11/09/2026 กดชุดแล้วค่าเปลี่ยนถูกแต่ชิปไม่ติด) */
+  function set(hex, syncText, silent) {
     current = hex;
     dot.value = hex;
     if (syncText) { text.value = hex; text.classList.remove("bad"); }
-    onChange(hex);
+    if (!silent) onChange(hex);
   }
 
-  return { node: wrap, get value() { return current; }, setUI: (v) => set(v, true) };
+  return { node: wrap, get value() { return current; }, setUI: (v) => set(v, true, true) };
 }
 
 /* ── ป้ายบอกความต่างของสีคู่หนึ่ง ─────────────────────────────────────

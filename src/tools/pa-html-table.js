@@ -3,6 +3,7 @@ import { el, statusBar, button, field, select, download } from "../ui.js";
 import { tr } from "../i18n.js";
 import { colorPicker, contrastBadge, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { jumpSystem, JUMPTO_CSS } from "../jumpto.js";
+import { presetBar, PRESETS_CSS } from "../presets.js";
 
 /* ‼️ ทำไมเครื่องนี้ถึงคุ้มค่าที่สุดในหมวด Power Automate
  * แอ็กชัน Create HTML table คืน HTML เปล่า ๆ ไม่มีสไตล์เลย และ Outlook เดสก์ท็อป
@@ -51,6 +52,7 @@ const STYLE = `
 .pah-row2 > *{flex:1;min-width:120px}
 ${COLORKIT_CSS}
 ${JUMPTO_CSS}
+${PRESETS_CSS}
 
 /* ‼️ คลาสสองชุดนี้ยืมชื่อมาจากเครื่องมือกราฟโดนัท แต่ CSS ของมันฝังอยู่ในโมดูลนั้น
    หน้านี้ไม่ได้โหลดโมดูลนั้น จึงต้องประกาศเองซ้ำ ไม่งั้นสวิตช์กลายเป็นช่องติ๊กเปล่า
@@ -110,6 +112,20 @@ export function mount(tool) {
     names: { scope: "EmailBodyBlock", table: "EmailHtmlTable", compose: "EmailBodyHtml" },
   });
 
+  /* ‼️ เขียนเฉพาะค่าที่ชุดนั้นเปลี่ยนจริง ไม่ต้องเขียนครบทุกช่อง
+     ค่าที่ไม่ระบุจะกลับไปใช้ค่าเริ่มต้น ทำให้กดสลับชุดไปมาแล้วไม่มีค่าค้างจากชุดก่อน */
+  const PRESETS = [
+    { id: "formal", name: tr("ทางการ", "Formal"),
+      desc: tr("หัวตารางเทา เส้นบาง อ่านง่ายในอีเมลงาน", "Grey header, thin lines, easy to read in a work email"),
+      values: {} },
+    { id: "compact", name: tr("กระชับ", "Compact"),
+      desc: tr("ไม่มีการ์ดตัวเลข ตัวอักษรเล็กลง เหมาะกับรายการยาว", "No summary card, smaller text, good for long lists"),
+      values: { head: { showCard: false }, look: { fontSize: "11", width: "560", borderColor: "#E0E0E0" } } },
+    { id: "bold", name: tr("เน้นสี", "Bold"),
+      desc: tr("หัวตารางสีเข้มตัวอักษรขาว เห็นหัวคอลัมน์ชัด", "Dark header with white text, the column names stand out"),
+      values: { look: { headerBg: "#12239E", headerColor: "#FFFFFF", borderColor: "#BFBFBF", fontSize: "12.5" } } },
+  ];
+
   const seed = SEED();
   let columns = seed.columns;
   const model = { source: seed.source };
@@ -162,7 +178,10 @@ export function mount(tool) {
   });
   badges.push(headBadge, borderBadge);
 
+  const presets = presetBar(PRESETS, applyPreset);
+
   const rightBody = el("div", {}, [
+    presets.node,
     el("h3", { class: "pbid-group-title" }, tr("หัวอีเมล", "Email header")),
     jfield("title", tr("หัวเรื่อง", "Title"), textInput(head, "title")),
     jfield("subtitle", tr("คำบรรยายใต้หัวเรื่อง", "Subtitle"), textInput(head, "subtitle")),
@@ -222,7 +241,7 @@ export function mount(tool) {
   function textInput(obj, key) {
     const i = el("input", { type: "text" });
     i.value = obj[key] ?? "";
-    i.addEventListener("input", () => { obj[key] = i.value; render(); });
+    i.addEventListener("input", () => { obj[key] = i.value; presets.clearActive(); render(); });
     return i;
   }
   // ‼️ ทุกช่องสีในเว็บนี้ใช้ตัวเดียวกันจาก colorkit.js เพื่อให้ได้ทั้งจานสีสำเร็จ
@@ -232,6 +251,7 @@ export function mount(tool) {
     const p = colorPicker(obj[key], (hex) => {
       obj[key] = hex;
       badges.forEach((b) => b.update());
+      presets.clearActive();
       render();
     }, { swatches: swatches || SWATCHES.neutral });
     pickers[key] = p;
@@ -240,7 +260,7 @@ export function mount(tool) {
   function numInput(obj, key, min, max) {
     const i = el("input", { type: "number", min: String(min), max: String(max) });
     i.value = obj[key];
-    i.addEventListener("input", () => { obj[key] = i.value; render(); });
+    i.addEventListener("input", () => { obj[key] = i.value; presets.clearActive(); render(); });
     return i;
   }
   // สร้างช่องกรอกพร้อมลงทะเบียนปลายทางของการกระโดดในคราวเดียว
@@ -253,7 +273,7 @@ export function mount(tool) {
   function switchField(labelText, obj, key) {
     const input = el("input", { type: "checkbox" });
     input.checked = !!obj[key];
-    input.addEventListener("change", () => { obj[key] = input.checked; render(); });
+    input.addEventListener("change", () => { obj[key] = input.checked; presets.clearActive(); render(); });
     return el("div", { class: "field pbid-switch-field" }, [
       el("span", {}, labelText),
       el("label", { class: "pbid-switch" }, [input, el("span", { class: "pbid-switch-track" })]),
@@ -274,11 +294,11 @@ export function mount(tool) {
 
       const h = el("input", { type: "text", placeholder: tr("หัวตาราง", "Header") });
       h.value = c.header;
-      h.addEventListener("input", () => { c.header = h.value; render(); });
+      h.addEventListener("input", () => { c.header = h.value; presets.clearActive(); render(); });
 
       const v = el("input", { type: "text", placeholder: tr("item()?['ชื่อคีย์']", "item()?['keyName']") });
       v.value = c.value;
-      v.addEventListener("input", () => { c.value = v.value; render(); });
+      v.addEventListener("input", () => { c.value = v.value; presets.clearActive(); render(); });
 
       const card = el("div", { class: "pah-col" }, [
         el("div", { class: "pah-col-head" }, [h, up, down, del]),
@@ -480,6 +500,20 @@ export function mount(tool) {
     st.ok(tr(`ดาวน์โหลด ${name} แล้ว`, `Downloaded ${name}`));
   }
 
+  /* ใส่ค่าจากชุดพร้อมใช้ เริ่มจากค่าเริ่มต้นเสมอแล้วทับด้วยค่าของชุดนั้น
+     ถ้าไม่เริ่มใหม่ ค่าที่ชุดก่อนหน้าตั้งไว้จะค้างมาปนแบบที่ผู้ใช้ไม่ได้สั่ง */
+  function applyPreset(values) {
+    const base = SEED();
+    columns = base.columns;
+    model.source = base.source;
+    Object.assign(head, base.head, values.head || {});
+    Object.assign(look, base.look, values.look || {});
+    Object.assign(names, base.names, values.names || {});
+    rebuildPanels();
+    badges.forEach((b) => b.update());
+    st.ok(tr("ใช้ชุดที่เลือกแล้ว ปรับต่อได้ตามใจ", "Applied, tweak it from here"));
+  }
+
   function onReset() {
     const fresh = SEED();
     columns = fresh.columns;
@@ -502,6 +536,9 @@ export function mount(tool) {
   }
   function rebuildRight() {
     return [
+      // ‼️ ต้องคืนแถบชุดพร้อมใช้มาด้วย ไม่งั้นกดชุดแรกแล้วแถบหายไปทั้งแถบ
+      // เพราะการสร้างแผงใหม่ล้างลูกทั้งหมดของแผงขวาทิ้ง (เจอจริง 11/09/2026 ตอนเขียนเทส)
+      presets.node,
       el("h3", { class: "pbid-group-title" }, tr("หัวอีเมล", "Email header")),
       jfield("title", tr("หัวเรื่อง", "Title"), textInput(head, "title")),
       jfield("subtitle", tr("คำบรรยายใต้หัวเรื่อง", "Subtitle"), textInput(head, "subtitle")),

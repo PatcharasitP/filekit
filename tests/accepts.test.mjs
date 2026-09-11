@@ -6,6 +6,7 @@
  *
  * ตรวจแบบอ่านไฟล์ตรง ๆ ไม่ import — ทะเบียนพึ่ง localStorage ของเบราว์เซอร์อยู่ */
 import { readFileSync, readdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -293,6 +294,46 @@ ck(middotHits.length + htmlMiddot.length === 0,
   ck(bad.length === 0,
      `ห้ามมีกฎไหนตั้ง display ให้ [hidden] เป็นอย่างอื่นนอกจาก none (พบ ${bad.length})` +
      (bad.length ? "\n      " + bad.join("\n      ") : ""));
+}
+
+/* ‼️ ไวยากรณ์พังในโมดูลใดโมดูลหนึ่ง = ทั้งเว็บพังตอนโหลด แต่เทสที่อ่านไฟล์เป็นข้อความจับไม่ได้เลย
+   (11/09/2026 แทรกชื่อไฟล์ด้วย one-liner แล้วจุลภาคหาย เทสข้อความยังเขียวครบ
+    กว่าจะรู้ตัวคือตอนเทสออฟไลน์แดง 9 ข้อ ซึ่งใช้เวลาเป็นนาที)
+   ‼️ `node --check` ใช้ไม่ได้ ลองแล้วมันปล่อยผ่านไฟล์ที่มีสองสตริงติดกันในอาร์เรย์
+      (พิสูจน์แล้ว exit 0 ทั้งที่ไฟล์พังจริง) ต้อง parse เป็น ES module จริงเท่านั้นถึงจับได้
+   จึงยิงลูกที่มี flag ให้ตรวจทีเดียวทุกไฟล์ ตัวเทสเองยังเรียกด้วย `node tests/accepts.test.mjs` ตามปกติ */
+{
+  const files = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (e.name.endsWith(".js")) files.push(rel);
+    }
+  };
+  walk("src");
+  ck(files.length > 0, `หาโมดูลใน src/ เจอ (${files.length} ไฟล์ — ประชากรต้องไม่เป็นศูนย์)`);
+
+  const child = `
+    const { readFileSync } = await import("node:fs");
+    const { SourceTextModule } = await import("node:vm");
+    const bad = [];
+    for (const f of ${JSON.stringify(files)}) {
+      try { new SourceTextModule(readFileSync(${JSON.stringify(ROOT)} + "/" + f, "utf8")); }
+      catch (e) { bad.push(f + ": " + e.message); }
+    }
+    console.log(JSON.stringify(bad));
+  `;
+  const r = spawnSync(process.execPath, ["--experimental-vm-modules", "--input-type=module", "-e", child],
+                      { encoding: "utf8" });
+  let broken = null;
+  try { broken = JSON.parse((r.stdout || "").trim().split("\n").pop()); } catch { /* ตัวตรวจเองพัง */ }
+  ck(Array.isArray(broken), "ตัวตรวจไวยากรณ์ทำงานได้ (ถ้าข้อนี้แดง แปลว่าเครื่องตรวจพัง ไม่ใช่โค้ดพัง)");
+  if (Array.isArray(broken)) {
+    ck(broken.length === 0,
+       `ทุกโมดูลใน src/ ต้อง parse ผ่าน (พัง ${broken.length})` +
+       (broken.length ? "\n      " + broken.slice(0, 4).join("\n      ") : ""));
+  }
 }
 
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);

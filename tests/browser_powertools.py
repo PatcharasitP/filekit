@@ -114,6 +114,25 @@ with sync_playwright() as p:
     ck('ชื่อที่มีเว้นวรรคถูกครอบ #"..."', '#"SITE OWNER"' in m, True)
     ck("ชื่อภาษาไทยถูกครอบด้วย", '#"ตารางหลัก"' in m, True)
 
+    # ชุดพร้อมใช้ของเครื่องนี้เปลี่ยนโครงทั้งชุด ไม่ใช่แค่หน้าตา
+    pg.evaluate("localStorage.clear()")
+    pg.reload(wait_until="networkidle")
+    pg.wait_for_selector(".pqm-code", timeout=15000)
+    pg.wait_for_timeout(900)
+    ck("เริ่มด้วยสองแหล่ง", pg.locator(".pqm-src").count(), 2)
+    pg.get_by_role("button", name="สามแหล่ง").click()
+    pg.wait_for_timeout(700)
+    ck("ชุดสามแหล่ง เพิ่มแหล่งจริง", pg.locator(".pqm-src").count(), 3)
+    ck("แถบชุดยังอยู่ครบหลังสร้างแผงใหม่", pg.locator(".ps-chip").count(), 3)
+    pg.get_by_role("button", name="แหล่งเดียว key หลายชั้น").click()
+    pg.wait_for_timeout(700)
+    ck("ชุดแหล่งเดียว เหลือแหล่งเดียวจริง", pg.locator(".pqm-src").count(), 1)
+    ck("และ key กลายเป็นหลายชั้น",
+       pg.evaluate("""() => {
+         const l=[...document.querySelector('.pqm-code code').textContent.split('\\n')].find(x=>x.includes('Keys'));
+         return (l.match(/"/g) || []).length / 2;
+       }"""), 3)
+
     # ── ④ ชุดพร้อมใช้ของกราฟโดนัท ──────────────────────────────────────
     print("\n━━ ④ กราฟโดนัท Deneb ━━")
     open_tool(pg, "pbi-donut", "#pbid-chart svg")

@@ -1,6 +1,8 @@
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, download } from "../ui.js";
 import { tr } from "../i18n.js";
+import { presetBar, PRESETS_CSS } from "../presets.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 
 /* ‼️ เครื่องนี้ "สร้างโค้ดเรียกใช้" ไม่ได้เขียนฟังก์ชันขึ้นใหม่
  * ตัวฟังก์ชัน fnMultiSourceFallbackLookup มีอยู่จริงและผ่านเทส 40/40 มาแล้ว
@@ -46,6 +48,7 @@ const STYLE = `
 .pqm-from input{flex:1;min-width:0}
 .pqm-hint{font-size:12px;color:var(--text-mute);line-height:1.7;margin:6px 0 0}
 .pqm-add{margin-top:4px}
+${PRESETS_CSS}
 .pqm-warn{border:1px solid var(--line);border-left:3px solid var(--g-powerbi,var(--brand));
   border-radius:var(--r-sm);background:var(--bg-soft);padding:10px 12px;font-size:12.5px;
   color:var(--text);line-height:1.7;margin-bottom:12px}
@@ -93,6 +96,20 @@ export function mount(tool) {
   });
 
   // ── สถานะทั้งหมดของเครื่องมือ ─────────────────────────────────────
+  /* ‼️ ชุดพร้อมใช้ของเครื่องนี้คือ "รูปแบบการใช้งาน" ไม่ใช่หน้าตา
+     เพราะสิ่งที่คนติดคือไม่รู้ว่าโครง Sources ควรหน้าตายังไงในแต่ละสถานการณ์ */
+  const PRESETS = [
+    { id: "two", name: tr("สองแหล่ง", "Two sources"),
+      desc: tr("ค้นจากสัญญาใหม่ก่อน ไม่เจอค่อยไปดูระบบหลัง", "Look in the newer table first, fall back to the back office system"),
+      values: null },
+    { id: "three", name: tr("สามแหล่ง", "Three sources"),
+      desc: tr("เพิ่มแหล่งสำรองไว้ท้ายสุด", "Adds a third fallback at the end"),
+      values: "three" },
+    { id: "multikey", name: tr("แหล่งเดียว key หลายชั้น", "One source, layered keys"),
+      desc: tr("ตารางเดียวแต่รหัสมีหลายแบบ ลองทีละชั้นจนเจอ", "One table where the code comes in several forms, tried one layer at a time"),
+      values: "multikey" },
+  ];
+
   const seed = SEED();
   const main = seed.main;
   let sources = seed.sources;
@@ -101,6 +118,20 @@ export function mount(tool) {
   const options = { ...DEFAULTS, keepPerSource: false };
   let view = "query";
   let fnText = null;
+
+  /* ‼️ ต้องประกาศก่อนโค้ดที่สร้างแผง ไม่ใช่ใต้มัน
+     const ไม่ hoist วางผิดที่ได้ ReferenceError ทันที (พลาดครั้งที่ 4 แล้ว ดู PROVEN.md) */
+  const presets = presetBar(PRESETS, applyPreset);
+  const state = stateKit(tool.id, {
+    defaults: SEED(),
+    collect: () => ({ main: { ...main }, sources, payload, options: { ...options } }),
+    apply: (v) => {
+      if (v.main) Object.assign(main, v.main);
+      if (Array.isArray(v.sources)) sources = v.sources;
+      if (Array.isArray(v.payload)) payload = v.payload;
+      if (v.options) Object.assign(options, v.options);
+    },
+  });
 
   const codeEl = el("code", {});
   const warnEl = el("div", { class: "pqm-warn", hidden: true });
@@ -131,6 +162,7 @@ export function mount(tool) {
   const addRowBtn = button(tr("เพิ่มคอลัมน์ผลลัพธ์", "Add an output column"), { icon: "plus", ghost: true, onclick: addPayloadRow });
   const optionsEl = el("div", {});
   const rightBody = el("div", {}, [
+    presets.node,
     el("h3", { class: "pbid-group-title" }, tr("คอลัมน์ผลลัพธ์", "Output columns")),
     el("p", { class: "pqm-hint" }, tr(
       "ชื่อซ้ายคือชื่อคอลัมน์ที่จะได้ ช่องข้างในคือชื่อคอลัมน์จริงของแต่ละแหล่ง แหล่งไหนตั้งชื่อต่างกันก็กรอกต่างกันได้ ผลลัพธ์ยังลงคอลัมน์เดียวกัน เว้นว่างไว้ถ้าแหล่งนั้นไม่มีคอลัมน์นี้",
@@ -144,6 +176,7 @@ export function mount(tool) {
 
   const copyBtn = button(tr("คัดลอกโค้ด", "Copy code"), { icon: "copy", onclick: onCopy });
   const dlBtn = button(tr("ดาวน์โหลด .pq", "Download .pq"), { icon: "download", ghost: true, onclick: onDownload });
+  const shareBtn = button(tr("คัดลอกลิงก์ค่านี้", "Copy a link to these settings"), { icon: "copy", ghost: true, onclick: onShare });
   const resetBtn = button(tr("คืนค่าเริ่มต้น", "Reset to defaults"), { icon: "undo", ghost: true, onclick: onReset });
 
   const ws = workspace(tool, {
@@ -153,7 +186,7 @@ export function mount(tool) {
     },
     center: { title: tr("โค้ด Power Query", "Power Query code"), node: centerNode },
     right: { title: tr("ผลลัพธ์และตัวเลือก", "Output & options"), node: rightBody },
-    footer: [copyBtn, dlBtn, resetBtn, st.node],
+    footer: [copyBtn, dlBtn, shareBtn, resetBtn, st.node],
     note: tr(
       "วิธีใช้: สร้างคิวรีเปล่าใน Power Query แล้ววางโค้ดนี้ใน Advanced Editor ตัวฟังก์ชันต้องมีอยู่ในไฟล์ด้วย ถ้ายังไม่มีให้เปิดแท็บตัวฟังก์ชันแล้วสร้างเป็นคิวรีชื่อ fnMultiSourceFallbackLookup ก่อน",
       "How to use it: make a blank query in Power Query and paste this into the Advanced Editor. The function itself must exist in the file, so if it does not, open the function tab and create a query named fnMultiSourceFallbackLookup first"
@@ -162,10 +195,17 @@ export function mount(tool) {
   ws.wrap.prepend(styleEl);
   ws.showCanvas(true);
 
+  const restored = state.restore();
   buildSources();
   buildGrid();
   buildOptions();
   render();
+  if (restored) {
+    st.ok(state.hasLink()
+      ? tr("เปิดด้วยค่าที่มากับลิงก์", "Opened with the settings from the link")
+      : tr("ใช้ค่าที่คุณตั้งไว้ครั้งก่อน", "Using the settings you had last time"));
+    state.dropLinkParam();
+  }
 
   return ws.wrap;
 
@@ -175,6 +215,7 @@ export function mount(tool) {
     input.value = obj[key] ?? "";
     input.addEventListener("input", () => {
       obj[key] = input.value;
+      presets.clearActive();
       if (onInput) onInput();
       render();
     });
@@ -379,6 +420,7 @@ export function mount(tool) {
   }
 
   function render() {
+    state.save();
     if (view === "fn") return;
     codeEl.textContent = buildQuery();
     const msgs = warnings();
@@ -426,6 +468,38 @@ export function mount(tool) {
     st.ok(tr(`ดาวน์โหลด ${name} แล้ว`, `Downloaded ${name}`));
   }
 
+  /* ชุดพร้อมใช้ของเครื่องนี้เปลี่ยนโครง Sources ทั้งชุด จึงสร้างจาก SEED ใหม่ทุกครั้ง
+     แล้วต่อเติมตามรูปแบบที่เลือก ไม่ใช่แก้ของเดิมทับ */
+  function applyPreset(kind) {
+    const fresh = SEED();
+    main.query = fresh.main.query;
+    main.codeColumn = fresh.main.codeColumn;
+    sources = fresh.sources;
+    payload = fresh.payload;
+    Object.assign(options, DEFAULTS, { keepPerSource: false });
+
+    if (kind === "three") {
+      sources.push({ name: tr("แหล่งสำรอง", "Backup source"), table: "BACKUP_TABLE",
+                     keys: [main.codeColumn], label: "" });
+      for (const row of payload) row.from.push("");
+    } else if (kind === "multikey") {
+      const first = sources[0];
+      first.keys = [tr("รหัสหลัก", "MainCode"), tr("รหัสเดิม", "OldCode"), tr("รหัสสำรอง", "AltCode")];
+      sources = [first];
+      for (const row of payload) row.from = [row.from[0]];
+    }
+    rebuildAll();
+    st.ok(tr("ใช้ชุดที่เลือกแล้ว ปรับต่อได้ตามใจ", "Applied, tweak it from here"));
+  }
+
+  async function onShare() {
+    const link = state.shareLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
+  }
+
   function onReset() {
     const fresh = SEED();
     main.query = fresh.main.query;
@@ -434,6 +508,7 @@ export function mount(tool) {
     payload = fresh.payload;
     Object.assign(options, DEFAULTS, { keepPerSource: false });
     rebuildAll();
+    state.forget();
     st.ok(tr("คืนค่าเริ่มต้นแล้ว", "Reset to defaults"));
   }
 
@@ -445,6 +520,9 @@ export function mount(tool) {
         tr("ช่องเดียวใส่หลายรหัสคั่นด้วยตัวคั่นได้", "One cell may hold several codes separated by the separator")),
       leftBody.children[1]
     );
+    // ‼️ แผงขวาถูกสร้างใหม่ทั้งก้อนตอนคืนค่า แถบชุดต้องถูกใส่กลับด้วย
+    // ไม่งั้นกดชุดแรกแล้วแถบหายทั้งแถบ (บทเรียนจากเครื่องมืออีเมล 11/09/2026)
+    if (!rightBody.contains(presets.node)) rightBody.prepend(presets.node);
     buildSources(); buildGrid(); buildOptions();
     setView("query");
   }

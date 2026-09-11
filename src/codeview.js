@@ -72,7 +72,22 @@ function paintHtml(src) {
   }).join("");
 }
 
-const PAINT = { json: paintJson, m: paintM, html: paintHtml };
+/* ไฮไลต์ DAX แบบเบา
+ * ‼️ ทาสีรอบเดียวเหมือน paintM ด้วยเหตุผลเดียวกัน ห้ามอ่านสิ่งที่ตัวเองเพิ่งเขียน
+ * ลำดับในการสลับทางสำคัญ: คอมเมนต์ (ทั้ง // และ --) ต้องมาก่อนทุกอย่าง
+ * เพราะเครื่องหมายลบสองตัวของ DAX ชนกับตัวดำเนินการลบถ้าจับทีหลัง
+ * แล้วสตริง แล้วชื่อตาราง/คอลัมน์ในวงเล็บ สุดท้ายจึงเป็นชื่อฟังก์ชันกับคำสงวน */
+const DAX_TOKEN = /(\/\/[^\n]*|--[^\n]*)|("(?:""|[^"])*")|('[^'\n]*'|\[[^\]\n]*\])|\b(VAR|RETURN|DEFINE|EVALUATE|MEASURE|COLUMN|TABLE|ORDER|BY|START|AT|TRUE|FALSE|NOT|IN)\b|\b([A-Za-z][A-Za-z0-9_.]*)(?=\s*\()/g;
+function paintDax(src) {
+  return esc(src).replace(DAX_TOKEN, (m, cmt, str, ref, kw, fn) =>
+    cmt ? `<i class="cv-cmt">${cmt}</i>`
+    : str ? `<i class="cv-str">${str}</i>`
+    : ref ? `<i class="cv-key">${ref}</i>`
+    : kw ? `<i class="cv-kw">${kw}</i>`
+    : `<i class="cv-lit">${fn}</i>`);
+}
+
+const PAINT = { json: paintJson, m: paintM, html: paintHtml, dax: paintDax };
 
 /** ทาสีโค้ดหนึ่งก้อนแล้วคืน HTML ที่พร้อมยัดลง innerHTML
  *
@@ -83,7 +98,7 @@ const PAINT = { json: paintJson, m: paintM, html: paintHtml };
  * ‼️ ปลอดภัยต่อการคัดลอก: ทุกตัวทาสีเรียก esc() ก่อนเสมอ และห่อด้วย <i> ซึ่งไม่มีข้อความ
  *    ของตัวเอง ดังนั้น element.textContent หลังทาสี ยังเท่ากับโค้ดต้นฉบับเป๊ะ
  * @param {string} src โค้ดต้นฉบับ
- * @param {"json"|"m"|"html"} lang ภาษา · ไม่รู้จัก = คืนข้อความที่ esc แล้วเฉย ๆ */
+ * @param {"json"|"m"|"html"|"dax"} lang ภาษา · ไม่รู้จัก = คืนข้อความที่ esc แล้วเฉย ๆ */
 export function paintCode(src, lang) {
   return (PAINT[lang] || esc)(src || "");
 }

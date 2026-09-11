@@ -16,6 +16,8 @@ node tests/paint.test.mjs        # ตัวไฮไลต์โค้ด ท�
 
 node tests/samples.test.mjs      # กฎจุดกลางต้องบังคับถึงไฟล์ตัวอย่างด้วย ไม่ใช่แค่โค้ดใน src/
 
+node tests/matrixdax.test.mjs    # สูตร DAX ของ Matrix ต้องแปลงทุกชนิดเป็นข้อความ ยอด 0 ห้ามหาย
+
 # ② เบราว์เซอร์จริง — ต้องเปิดเซิร์ฟเวอร์ก่อน
 python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error
@@ -34,6 +36,7 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_dialogroute.py # กล่องดูไฟล์เต็มจอต้องปิดเองตอนสลับเครื่องมือ ไม่งั้นหน้าที่เหลือคลิกไม่ได้
 ../.venv/bin/python tests/browser_pdfpages.py  # ชิปไฟล์ PDF บอกจำนวนหน้า และห้ามลาก pdf.js 1.37 MB มาเพิ่มเพื่อการนี้
 ../.venv/bin/python tests/browser_codepaint.py # โค้ดของสามเสา Power ต้องมีสี คัดลอกสะอาด และคอนทราสต์ผ่านทั้งสองโหมด
+../.venv/bin/python tests/browser_matrixdetails.py # Matrix หลายชั้น ISINSCOPE ต้องผูกชั้นในสุด และชนิดที่เสี่ยงต้องถูกห่อ FORMAT
 ../.venv/bin/python tests/browser_a11y.py       # คีย์บอร์ด โฟกัส ป้ายกำกับ คอนทราสต์
 ../.venv/bin/python tests/browser_leak.py       # objectURL / listener / DOM / heap รั่ว (เปิด server เอง พอร์ต 8924)
 ../.venv/bin/python tests/browser_stress.py     # ทรมานด้วยเคสสุดโต่ง ไฟล์เสีย ไฟล์เยอะ กดรัว

@@ -210,6 +210,12 @@ export const TOOLS = [
     keys:"deneb bar vega แท่ง แนวนอน power bi custom visual กราฟ ranking จัดอันดับ target เป้าหมาย",
     next:["pbi-donut","pa-parse-json"] },
 
+  { id:"pbi-matrix-details", group:"powerbi", icon:"🧾", since:"2026-09-11", title:"รายละเอียดหลายคอลัมน์ในช่องเดียวของ Matrix",
+    desc:"ยุบหลายคอลัมน์ให้อยู่ในช่องเดียวของ Matrix โดยหัวแถวยังตรึงอยู่ที่เดิม แปลงทุกชนิดข้อมูลเป็นข้อความให้ก่อน ยอด 0 กับค่า FALSE จึงไม่หาย",
+    accepts:["xlsx","xls","xlsm","csv","txt"],
+    libs:["xlsx"], keys:"matrix dax measure text power bi ตรึงคอลัมน์ freeze รายละเอียด transaction details concatenatex sqlbi ยุบคอลัมน์ ข้อความในตาราง",
+    next:["pbi-bar","excel-to-pq"] },
+
   { id:"pa-parse-json", group:"powerautomate", icon:"🧩", since:"2026-09-11", title:"ตารางเป็น Schema ของ Parse JSON",
     desc:"อ่านทั้งคอลัมน์ก่อนตัดสินชนิด ช่องที่เคยว่างจริงจะประกาศ null ให้เอง กัน flow พังตอนเจอแถวว่าง",
     accepts:["xlsx","xls","xlsm","csv","txt"],
@@ -290,6 +296,7 @@ const EN_TOOLS = {
   "thai-name":        ["Split Thai name into columns", "Break a full name into title, first name and surname, ready to sort or mail-merge"],
   "thai-address":     ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
   "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
+  "pbi-matrix-details": ["Matrix transaction details in one column", "Fold several columns into a single matrix column while the row headers stay frozen, every data type is turned into text first so zeros and FALSE never vanish"],
   "pbi-bar":          ["Deneb horizontal bar chart", "Tweak the bars, value labels and target line live, with bar length always true to the real numbers, then copy the spec into Deneb"],
   "pbi-donut":        ["Deneb donut chart", "Tweak a live donut chart and see it change instantly, then copy the spec straight into Deneb"],
   "pa-parse-json":    ["Table to a Parse JSON schema", "Reads the whole column before deciding the type, so columns that really do go blank are declared nullable and your flow survives them"],

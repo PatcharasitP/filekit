@@ -1,5 +1,6 @@
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, segmented, dropzone, download } from "../ui.js";
+import { paintCode, CODE_TOKEN_CSS } from "../codeview.js";
 import { tr, pl } from "../i18n.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
@@ -59,7 +60,10 @@ const STYLE = `
   .pbid-switch{height:36px}
   .pbid-switch-track{top:6px;bottom:6px}
 }
-`;
+/* สีของโทเคนในกล่องโค้ด ยืมจาก codeview.js ที่พิสูจน์แล้วตอนทำกราฟ Deneb
+   ‼️ ไม่เอากล่องพับของ codeView() มาครอบ เพราะโค้ดที่นี่โชว์เต็มอยู่แล้ว
+      เอากล่องพับไปครอบของที่เห็นอยู่แล้ว = ถอยหลัง */
+`  + CODE_TOKEN_CSS;
 
 export function mount(tool) {
   const styleEl = el("style", { text: STYLE });
@@ -265,7 +269,7 @@ export function mount(tool) {
   function render() {
     if (!table) return;
     const data = tabs.value === "json" ? buildSample() : buildSchema();
-    codeEl.textContent = JSON.stringify(data, null, 4);
+    codeEl.innerHTML = paintCode(JSON.stringify(data, null, 4), "json");
     showWarnings();
   }
 

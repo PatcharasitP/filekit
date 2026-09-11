@@ -1,5 +1,6 @@
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, download } from "../ui.js";
+import { paintCode, CODE_TOKEN_CSS } from "../codeview.js";
 import { tr } from "../i18n.js";
 import { colorPicker, contrastBadge, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { jumpSystem, JUMPTO_CSS } from "../jumpto.js";
@@ -86,7 +87,10 @@ ${PRESETS_CSS}
   .pbid-switch{height:36px}
   .pbid-switch-track{top:6px;bottom:6px}
 }
-`;
+/* สีของโทเคนในกล่องโค้ด ยืมจาก codeview.js ที่พิสูจน์แล้วตอนทำกราฟ Deneb
+   ‼️ ไม่เอากล่องพับของ codeView() มาครอบ เพราะโค้ดที่นี่โชว์เต็มอยู่แล้ว
+      เอากล่องพับไปครอบของที่เห็นอยู่แล้ว = ถอยหลัง */
+`  + CODE_TOKEN_CSS;
 
 export function mount(tool) {
   const styleEl = el("style", { text: STYLE });
@@ -505,9 +509,9 @@ export function mount(tool) {
     if (view === "preview") {
       previewBox.innerHTML = previewHtml();
     } else if (view === "html") {
-      codeEl.textContent = buildHtml();
+      codeEl.innerHTML = paintCode(buildHtml(), "html");
     } else {
-      codeEl.textContent = JSON.stringify(buildJson(), null, 2);
+      codeEl.innerHTML = paintCode(JSON.stringify(buildJson(), null, 2), "json");
     }
   }
 

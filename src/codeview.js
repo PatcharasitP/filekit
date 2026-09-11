@@ -39,19 +39,54 @@ function paintJson(src) {
 }
 
 /* ไฮไลต์ภาษา M ของ Power Query แบบเบา
-   ‼️ ต้องจับคอมเมนต์กับสตริงก่อนคำสงวน ไม่งั้นคำสงวนที่อยู่ในคอมเมนต์จะโดนทาสี */
-const M_WORDS = /\b(let|in|each|if|then|else|try|otherwise|type|as|is|meta|and|or|not|true|false|null|error)\b/g;
+ *
+ * ‼️ ต้องทาสีให้จบใน regex เดียว ห้ามไล่ replace ทีละรอบเด็ดขาด
+ *    บทเรียนจริง 11/09/2026: เวอร์ชันแรกทาคอมเมนต์ก่อนแล้วค่อยทาสตริง
+ *    พอรอบสองมาถึง มันไปเจอ class="cv-cmt" ที่รอบแรกเพิ่งใส่ แล้วนับว่าเป็นสตริงของโค้ด
+ *    ได้ผลลัพธ์เป็น <i class=<i class="cv-str">"cv-cmt"</i>> ซึ่ง HTML พัง
+ *    เบราว์เซอร์กลืน <i class= ทิ้ง แล้วโชว์ "cv-cmt">// ... เป็นตัวหนังสือให้ผู้ใช้เห็น
+ *    (ไม่โผล่มาก่อนเพราะสเปก Deneb เป็น JSON จึงไม่เคยเดินผ่านทางนี้จนมีโค้ด M ที่มีคอมเมนต์)
+ *    การทาสีรอบเดียวไม่มีทางเกิดปัญหานี้ เพราะไม่เคยอ่านสิ่งที่ตัวเองเขียนออกไปแล้ว */
+const M_TOKEN = /(\/\/[^\n]*)|("(?:""|[^"])*")|\b(let|in|each|if|then|else|try|otherwise|type|as|is|meta|and|or|not|true|false|null|error)\b/g;
 function paintM(src) {
-  const out = esc(src)
-    .replace(/(\/\/[^\n]*)/g, '<i class="cv-cmt">$1</i>')
-    .replace(/("(?:""|[^"])*")/g, '<i class="cv-str">$1</i>');
-  // ทาคำสงวนเฉพาะส่วนที่ยังไม่ถูกทาสี กันทับซ้อนด้วยการข้ามช่วงที่อยู่ในแท็บ <i>
-  return out.split(/(<i class="cv-(?:cmt|str)">[\s\S]*?<\/i>)/).map((chunk, i) =>
-    i % 2 ? chunk : chunk.replace(M_WORDS, '<i class="cv-kw">$1</i>')
-  ).join("");
+  return esc(src).replace(M_TOKEN, (m, cmt, str, kw) =>
+    cmt ? `<i class="cv-cmt">${cmt}</i>`
+    : str ? `<i class="cv-str">${str}</i>`
+    : `<i class="cv-kw">${kw}</i>`);
 }
 
-const PAINT = { json: paintJson, m: paintM };
+/* ไฮไลต์ HTML แบบเบา สำหรับตารางที่เอาไปวางในก้อนส่งเมลของ flow
+   ‼️ ใช้กลวิธีเดียวกับ paintM คือทาคอมเมนต์ก่อน แล้ว split ข้ามช่วงที่ทาไปแล้ว
+      ไม่งั้นแท็กที่อยู่ในคอมเมนต์จะโดนทาซ้ำจนโครงสร้างพัง
+   ‼️ ทำงานบนข้อความที่ผ่าน esc() แล้ว แท็กจริงจึงอยู่ในรูป &lt;table&gt; ส่วน &lt;i&gt;
+      ที่เราแทรกเองเป็น < > จริง ๆ regex ที่มองหา &lt; จึงไม่ไปแตะของที่แทรกไปแล้ว */
+function paintHtml(src) {
+  const withCmt = esc(src).replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<i class="cv-cmt">$1</i>');
+  return withCmt.split(/(<i class="cv-cmt">[\s\S]*?<\/i>)/).map((chunk, i) => {
+    if (i % 2) return chunk;                       // ช่วงคอมเมนต์ที่ทาสีแล้ว ข้ามไป
+    return chunk.replace(/&lt;(\/?)([a-zA-Z][\w:-]*)([^&]*?)(\/?)&gt;/g, (m, slash, tag, attrs, selfClose) => {
+      const painted = attrs.replace(/([\w:-]+)(\s*=\s*)("[^"]*")/g,
+        '<i class="cv-key">$1</i>$2<i class="cv-str">$3</i>');
+      return `&lt;${slash}<i class="cv-kw">${tag}</i>${painted}${selfClose}&gt;`;
+    });
+  }).join("");
+}
+
+const PAINT = { json: paintJson, m: paintM, html: paintHtml };
+
+/** ทาสีโค้ดหนึ่งก้อนแล้วคืน HTML ที่พร้อมยัดลง innerHTML
+ *
+ * ‼️ แยกออกมาให้เครื่องมือที่ "โชว์โค้ดเต็มอยู่แล้ว" เรียกใช้ได้ โดยไม่ต้องเอากล่องพับ
+ *    ของ codeView() ไปครอบ เพราะการเอากล่องพับไปครอบของที่เห็นอยู่แล้ว = ถอยหลัง
+ *    (งานวิจัย 12 เว็บข้างบนบอกว่าอย่าซ่อนผลลัพธ์)
+ * ‼️ ผู้เรียกต้องใส่ CODE_TOKEN_CSS ลงในสไตล์ของโมดูลตัวเองด้วย ไม่งั้นได้แค่ตัวอักษรสีเดียว
+ * ‼️ ปลอดภัยต่อการคัดลอก: ทุกตัวทาสีเรียก esc() ก่อนเสมอ และห่อด้วย <i> ซึ่งไม่มีข้อความ
+ *    ของตัวเอง ดังนั้น element.textContent หลังทาสี ยังเท่ากับโค้ดต้นฉบับเป๊ะ
+ * @param {string} src โค้ดต้นฉบับ
+ * @param {"json"|"m"|"html"} lang ภาษา · ไม่รู้จัก = คืนข้อความที่ esc แล้วเฉย ๆ */
+export function paintCode(src, lang) {
+  return (PAINT[lang] || esc)(src || "");
+}
 
 /**
  * @param getCode  ฟังก์ชันคืนข้อความโค้ดปัจจุบัน เรียกตอนกางดูและตอน refresh
@@ -94,6 +129,37 @@ export function codeView({ getCode, lang = "json", title, openLabel }) {
   return { node: box, refresh };
 }
 
+/* ‼️ ก้อนนี้ต้องอยู่ "ก่อน" CODEVIEW_CSS เสมอ เพราะ const ไม่ยกค่าขึ้นไปข้างบน (TDZ)
+   ถ้าสลับที่กัน จะได้ ReferenceError ตอนโหลดโมดูล และทั้งเครื่องมือจอขาว
+   บั๊กชนิดนี้เกิดซ้ำในโปรเจกต์นี้มาแล้วหลายครั้ง */
+/** สีของโทเคนอย่างเดียว สำหรับเครื่องมือที่มีกล่องโค้ดของตัวเองอยู่แล้ว */
+export const CODE_TOKEN_CSS = `
+code i, pre i{font-style:normal}
+/* ‼️ สีโหมดสว่างวัดคอนทราสต์จริงบนพื้นกล่องโค้ดแล้วทุกตัว ต้องผ่าน 4.5:1 ของ WCAG AA
+   ค่าเดิมของ v75 ตกเกณฑ์ 2 ตัว ม่วง #8a3ffc ได้ 4.31:1 และส้ม #b3541e ได้ 4.30:1
+   ทำให้เข้มขึ้นโดยคงโทนเดิม ตอนนี้ผ่านทั้งบนพื้นเทาอ่อน efeeea และพื้นขาวล้วน
+   (tests/browser_codepaint.py วัดซ้ำทุกครั้ง จะได้ไม่ถอยหลังเงียบ ๆ อีก) */
+.cv-key{color:#0a6ebd}
+.cv-str{color:#0a7a4a}
+.cv-num{color:#a54a15}
+.cv-lit{color:#7c2fe0}
+.cv-kw{color:#7c2fe0;font-weight:700}
+.cv-cmt{color:var(--text-mute);font-style:italic}
+/* โหมดมืดต้องสว่างขึ้น ไม่งั้นสีเข้มบนพื้นเข้มอ่านไม่ออก */
+:root[data-theme="dark"] .cv-key{color:#6cb6ff}
+:root[data-theme="dark"] .cv-str{color:#5fd3a0}
+:root[data-theme="dark"] .cv-num{color:#ffa657}
+:root[data-theme="dark"] .cv-lit,:root[data-theme="dark"] .cv-kw{color:#c49bff}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .cv-key{color:#6cb6ff}
+  :root:not([data-theme="light"]) .cv-str{color:#5fd3a0}
+  :root:not([data-theme="light"]) .cv-num{color:#ffa657}
+  :root:not([data-theme="light"]) .cv-lit,
+  :root:not([data-theme="light"]) .cv-kw{color:#c49bff}
+}
+@media (pointer:coarse){ .cv-sum{min-height:44px;align-items:center} }
+`;
+
 export const CODEVIEW_CSS = `
 .cv{border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);
   overflow:hidden;margin-top:12px}
@@ -110,23 +176,4 @@ export const CODEVIEW_CSS = `
   font:12.5px/1.7 ui-monospace,'SF Mono',Menlo,Consolas,monospace;
   color:var(--text);white-space:pre;tab-size:2}
 .cv-pre i{font-style:normal}
-.cv-key{color:#0a6ebd}
-.cv-str{color:#0a7a4a}
-.cv-num{color:#b3541e}
-.cv-lit{color:#8a3ffc}
-.cv-kw{color:#8a3ffc;font-weight:700}
-.cv-cmt{color:var(--text-mute);font-style:italic}
-/* โหมดมืดต้องสว่างขึ้น ไม่งั้นสีเข้มบนพื้นเข้มอ่านไม่ออก */
-:root[data-theme="dark"] .cv-key{color:#6cb6ff}
-:root[data-theme="dark"] .cv-str{color:#5fd3a0}
-:root[data-theme="dark"] .cv-num{color:#ffa657}
-:root[data-theme="dark"] .cv-lit,:root[data-theme="dark"] .cv-kw{color:#c49bff}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .cv-key{color:#6cb6ff}
-  :root:not([data-theme="light"]) .cv-str{color:#5fd3a0}
-  :root:not([data-theme="light"]) .cv-num{color:#ffa657}
-  :root:not([data-theme="light"]) .cv-lit,
-  :root:not([data-theme="light"]) .cv-kw{color:#c49bff}
-}
-@media (pointer:coarse){ .cv-sum{min-height:44px;align-items:center} }
-`;
+` + CODE_TOKEN_CSS;

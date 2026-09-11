@@ -7,6 +7,7 @@
 
 import { el, dropzone, toolShell, statusBar, button, field, select, segmented,
          download, yieldToBrowser } from "../ui.js";
+import { paintCode, CODE_TOKEN_CSS } from "../codeview.js";
 import { readWorkbook, sheetToTable } from "../sheetpick.js";
 import { splitSheetsByVisibility } from "../xlsxutil.js";
 import { guessTableTypes } from "../pqtypes.js";
@@ -41,7 +42,10 @@ const STYLE = `
 .pq-teach code{font-family:ui-monospace,Consolas,monospace;background:var(--bg-soft);
   padding:1px 5px;border-radius:4px}
 .pq-teach ol{margin:8px 0 0 18px;line-height:1.75}
-`;
+/* สีของโทเคนในกล่องโค้ด ยืมจาก codeview.js ที่พิสูจน์แล้วตอนทำกราฟ Deneb
+   ‼️ ไม่เอากล่องพับของ codeView() มาครอบ เพราะโค้ดที่นี่โชว์เต็มอยู่แล้ว
+      เอากล่องพับไปครอบของที่เห็นอยู่แล้ว = ถอยหลัง */
+`  + CODE_TOKEN_CSS;
 
 // ‼️ แถวเยอะเกินไปทำให้ query เปิดช้ามากและวางไม่ไหว ตารางอ้างอิงที่ควรฝังใน query
 //    ปกติมีไม่กี่สิบแถว ตั้งค่าตั้งต้นไว้เตี้ย ๆ แล้วให้ผู้ใช้ขยายเองถ้าต้องการจริง
@@ -222,7 +226,7 @@ export function mount(tool) {
     const limit = +rowsSel.value || table.rows.length;
     const used = table.rows.slice(0, limit);
     const code = buildTableCode(cols, used, { nullable: true });
-    codeBox.textContent = shapeSel.value === "query" ? wrapAsQuery(code) : "= " + code;
+    codeBox.innerHTML = paintCode(shapeSel.value === "query" ? wrapAsQuery(code) : "= " + code, "m");
     codeBox.hidden = false;
     actions.hidden = false;
     const cut = table.rows.length - used.length;

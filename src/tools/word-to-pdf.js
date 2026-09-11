@@ -2,7 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
 import { loadLibs } from "../loader.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, textChunks } from "../thaifont.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 import { normalizeThaiPUA } from "../thai.js";
 
 const PAGE = { a4: "a4", letter: "letter" };
@@ -382,9 +382,9 @@ export function mount(tool) {
         (failed ? `, ล้มเหลว ${failed} ไฟล์` : "") +
         (warned ? `, จัดรูปแบบไม่ครบ ${warned} จุด` : "") +
         (tracked ? `, แก้ไขค้าง ${tracked} จุด` : ""),
-        `Done, ${made.length} files, ${pages} pages total` +
+        `Done, ${pl(made.length, "file", "files")}, ${pl(pages, "page", "pages")} total` +
         (failed ? `, ${failed} failed` : "") +
-        (warned ? `, ${warned} spots with incomplete formatting` : "") +
+        (warned ? `, ${pl(warned, "spot", "spots")} with incomplete formatting` : "") +
         (tracked ? `, ${tracked} unaccepted tracked change(s)` : "")));
 
       // เตือนอย่างเดียว ไม่แก้เนื้อหาให้เอง — ข้อความที่ยังไม่ accept ถูกแปลงลง PDF เหมือนข้อความ
@@ -412,7 +412,7 @@ export function mount(tool) {
         } }),
       ]));
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.pages} หน้า`, `${m.pages} pages`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.pages} หน้า`, `${pl(m.pages, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
         button(tr("ดาวน์โหลด", "Download"), { icon: "download", label: tr("ดาวน์โหลด", "Download"),  onclick: () => download(m.blob, m.name) }),
       ])));

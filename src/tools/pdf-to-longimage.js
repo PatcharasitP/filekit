@@ -10,7 +10,7 @@
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, parsePages, fmtBytes, yieldToBrowser } from "../ui.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 /* เพดานที่ปลอดภัยข้ามเบราว์เซอร์ (Safari บนมือถือต่ำสุด) — ต่ำกว่าเพดานจริงของ Chrome มาก
    แต่ยอมเสียหัวไว้ ดีกว่าได้ภาพดำสนิทโดยไม่มีอะไรฟ้อง */
@@ -122,7 +122,7 @@ export function mount(tool) {
       if (chunks.length > 1)
         plan.textContent = tr(
           `หน้าทั้งหมดต่อกันแล้วสูงเกินที่เบราว์เซอร์วาดไหว จึงแบ่งให้เป็น ${chunks.length} ภาพ`,
-          `Stacked together the pages exceed what a browser can draw, so this is split into ${chunks.length} images`);
+          `Stacked together the pages exceed what a browser can draw, so this is split into ${pl(chunks.length, "image", "images")}`);
 
       // ② วาดจริงทีละก้อน
       const base = stripExt(file.name);
@@ -177,7 +177,7 @@ export function mount(tool) {
           blob,
           name: tr(`${base}-ภาพยาว${suffix}.${ext}`, `${base}-long${suffix}.${ext}`),
           meta: tr(`${pages.length} หน้า, ${width}x${h} px, ${fmtBytes(blob.size)}`,
-                   `${pages.length} pages, ${width}x${h} px, ${fmtBytes(blob.size)}`),
+                   `${pl(pages.length, "page", "pages")}, ${width}x${h} px, ${fmtBytes(blob.size)}`),
         });
       }
       st.end();
@@ -186,10 +186,10 @@ export function mount(tool) {
 
       st.ok(st.cancelled
         ? tr(`หยุดตามที่สั่งแล้ว ได้ ${made.length} ภาพที่ทำเสร็จก่อนหยุด`,
-             `Stopped as asked, ${made.length} images finished before that`)
+             `Stopped as asked, ${pl(made.length, "image", "images")} finished before that`)
         : made.length === 1
-          ? tr(`ต่อ ${sizes.length} หน้าเป็นภาพเดียวเรียบร้อย`, `Stacked ${sizes.length} pages into one image`)
-          : tr(`ได้ ${made.length} ภาพ จาก ${sizes.length} หน้า`, `${made.length} images from ${sizes.length} pages`));
+          ? tr(`ต่อ ${sizes.length} หน้าเป็นภาพเดียวเรียบร้อย`, `Stacked ${pl(sizes.length, "page", "pages")} into one image`)
+          : tr(`ได้ ${made.length} ภาพ จาก ${sizes.length} หน้า`, `${pl(made.length, "image", "images")} from ${pl(sizes.length, "page", "pages")}`));
 
       for (const m of made) {
         results.appendChild(el("div", { class: "result" }, [

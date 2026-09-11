@@ -3,7 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, downloadButt
 import { useThaiFont, warmThaiFont, THAI_FONT, splitThaiTextToSize } from "../thaifont.js";
 import { smartDecode } from "../thai.js";
 import { splitSheetsByVisibility } from "../xlsxutil.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -88,7 +88,7 @@ export function mount(tool) {
           alternateRowStyles: { fillColor: [246, 248, 255] },
         });
         } finally { doc.splitTextToSize = nativeSplit; }
-        st.progress(((s + 1) / picked.length) * 100, tr(`(${s + 1}/${picked.length} ชีท)`, `(${s + 1}/${picked.length} sheets)`));
+        st.progress(((s + 1) / picked.length) * 100, tr(`(${s + 1}/${picked.length} ชีท)`, `(${s + 1}/${pl(picked.length, "sheet", "sheets")})`));
         await yieldToBrowser();
       }
       if (first) throw new Error(tr("ไม่พบข้อมูลในไฟล์นี้", "No data was found in this file"));
@@ -96,10 +96,10 @@ export function mount(tool) {
       const blob = doc.output("blob");
       st.progress(null);
       st.ok(tr(`แปลงสำเร็จ ${doc.getNumberOfPages()} หน้า, ${totalRows.toLocaleString("th-TH")} แถว`,
-               `Done, ${doc.getNumberOfPages()} pages, ${totalRows.toLocaleString("en-US")} rows`));
+               `Done, ${pl(doc.getNumberOfPages(), "page", "pages")}, ${pl(totalRows.toLocaleString("en-US"), "row", "rows")}`));
       const outName = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, tr(`${doc.getNumberOfPages()} หน้า`, `${doc.getNumberOfPages()} pages`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, outName), el("small", {}, tr(`${doc.getNumberOfPages()} หน้า`, `${pl(doc.getNumberOfPages(), "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, outName),
       ]));

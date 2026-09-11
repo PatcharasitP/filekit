@@ -7,7 +7,7 @@ import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
 import { el, $, $$, showVeil, filesFromClipboard } from "./dom.js";
 import { toolIcon } from "./icons.js";
-import { LANG, IS_EN, tr, setLang, applyStatic } from "./i18n.js";
+import { LANG, IS_EN, tr, setLang, applyStatic, pl } from "./i18n.js";
 
 const toolBox = $("#tool"), grids = $("#tools");
 const search = $("#q"), searchBox = $("#searchbox"), hits = $("#hits"), cats = $("#cats");
@@ -157,7 +157,7 @@ function dropThumb(file, allFiles) {
 
 function renderDropped(stageH) {
   const { files, tools, label } = dropped;
-  const what = files.length === 1 ? files[0].name : tr(`${files.length} ไฟล์`, `${files.length} files`);
+  const what = files.length === 1 ? files[0].name : tr(`${files.length} ไฟล์`, `${pl(files.length, "file", "files")}`);
   if (stageH) stageH.textContent = tools.length
     ? tr(`ไฟล์ของคุณใช้ได้กับ ${tools.length} เครื่องมือ`, `Your file works with ${tools.length} tools`)
     : tr("ยังไม่มีเครื่องมือที่รับไฟล์ชนิดนี้", "No tool takes this file type yet");

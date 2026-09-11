@@ -2,7 +2,7 @@ import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING } from "../pdfopen
 import { el, dropzone, statusBar, button, field, download,
          stripExt, parsePages, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
 import { workspace } from "../workspace.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 // ── สไตล์เฉพาะหน้านี้ — ห้ามแก้ assets/css/tool.css จึงฝังไว้ในโมดูลแทน (ตามแบบ pdf-pages.js) ──
 // ไม่มี pdfjs ให้ใช้ในเครื่องมือนี้ (ดู registry.js) จึงพรีวิวเป็น "กรอบเลขหน้าจำลอง" แทนภาพจริง
@@ -146,7 +146,7 @@ export function mount(tool) {
       let pages;
       try { pages = parsePages(rangeInput.value, total); }
       catch (e) { return { groups: [], error: e.message }; }
-      if (!pages.length) return { groups: [], error: tr(`ช่วงที่ระบุไม่มีหน้าในไฟล์นี้ (มี ${total} หน้า)`, `No pages match this range (file has ${total} pages)`) };
+      if (!pages.length) return { groups: [], error: tr(`ช่วงที่ระบุไม่มีหน้าในไฟล์นี้ (มี ${total} หน้า)`, `No pages match this range (file has ${pl(total, "page", "pages")})`) };
       return { groups: [pages], error: null };
     }
     if (modeSeg.value === "every") {
@@ -184,7 +184,7 @@ export function mount(tool) {
       el("div", { class: "sp-cluster-head" }, [
         el("span", { class: "sp-dot" }),
         el("span", { class: "sp-cluster-label" }, tr(`ไฟล์ ${meta.ordinal}`, `File ${meta.ordinal}`)),
-        el("span", { class: "sp-cluster-range" }, tr(`${range}, ${seg.pages.length} หน้า`, `${range}, ${seg.pages.length} pages`)),
+        el("span", { class: "sp-cluster-range" }, tr(`${range}, ${seg.pages.length} หน้า`, `${range}, ${pl(seg.pages.length, "page", "pages")}`)),
       ]),
       el("div", { class: "sp-tiles" }, seg.pages.map(pageTile)),
     ]);
@@ -247,7 +247,7 @@ export function mount(tool) {
     if (total > MAX_TILES) {
       centerNode.appendChild(el("div", { class: "status show info" },
         tr(`${total} หน้า มากเกินจะแสดงแผนผัง ดูรายชื่อไฟล์ในแผงขวาแทน`,
-           `${total} pages, too many to diagram. See the list on the right.`)));
+           `${pl(total, "page", "pages")}, too many to diagram. See the list on the right.`)));
       return;
     }
     const base = stripExt(file.name);
@@ -269,7 +269,7 @@ export function mount(tool) {
     else if (loadError) { summaryCount.textContent = loadError; summaryCount.classList.add("err"); }
     else if (loading || total == null) summaryCount.textContent = tr("กำลังวิเคราะห์ไฟล์…", "Analyzing file…");
     else if (error) { summaryCount.textContent = error; summaryCount.classList.add("err"); }
-    else summaryCount.textContent = tr(`จะได้ ${groups.length} ไฟล์`, `Will produce ${groups.length} files`);
+    else summaryCount.textContent = tr(`จะได้ ${groups.length} ไฟล์`, `Will produce ${pl(groups.length, "file", "files")}`);
 
     summaryList.innerHTML = "";
     if (file && !loadError && !loading && total != null && !error && groups.length) {
@@ -279,7 +279,7 @@ export function mount(tool) {
         summaryList.appendChild(el("div", { class: "sp-sumrow" }, [
           el("span", { class: "sp-dot", style: `--pc:var(${paletteVar(gi)})` }),
           el("span", { class: "sp-sumrow-name" }, nameFor(base, pages)),
-          el("span", { class: "sp-sumrow-n" }, tr(`${pages.length} หน้า`, `${pages.length} pages`)),
+          el("span", { class: "sp-sumrow-n" }, tr(`${pages.length} หน้า`, `${pl(pages.length, "page", "pages")}`)),
         ]));
       });
       if (groups.length > capped.length)
@@ -293,7 +293,7 @@ export function mount(tool) {
     else if (loadError) { toolbarStatus.textContent = loadError; toolbarStatus.classList.add("err"); }
     else if (loading) toolbarStatus.textContent = tr("กำลังวิเคราะห์ไฟล์…", "Analyzing file…");
     else if (error) { toolbarStatus.textContent = error; toolbarStatus.classList.add("err"); }
-    else toolbarStatus.textContent = tr(`จะได้ ${groups.length} ไฟล์`, `Will produce ${groups.length} files`);
+    else toolbarStatus.textContent = tr(`จะได้ ${groups.length} ไฟล์`, `Will produce ${pl(groups.length, "file", "files")}`);
   }
 
   async function run() {
@@ -325,12 +325,12 @@ export function mount(tool) {
       }
 
       st.progress(null);
-      st.ok(tr(`แยกได้ ${made.length} ไฟล์`, `Done, ${made.length} files`));
+      st.ok(tr(`แยกได้ ${made.length} ไฟล์`, `Done, ${pl(made.length, "file", "files")}`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       // ‼️ ชั้นที่ผู้ใช้ซ่อนไว้จะกลายเป็นมองเห็นได้ในไฟล์ผลลัพธ์ ต้องบอกก่อนไฟล์หลุดไป
       if (hiddenLayers) results.appendChild(el("div", { class: "note warn" }, HIDDEN_LAYERS_WARNING));
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.count} หน้า`, `${m.count} pages`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.count} หน้า`, `${pl(m.count, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),
         button(tr("ดาวน์โหลด", "Download"), { icon: "download", label: tr("ดาวน์โหลด", "Download"), onclick: () => download(m.blob, m.name) }),
       ])));

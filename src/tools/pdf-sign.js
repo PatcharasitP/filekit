@@ -3,7 +3,7 @@ import { uiIcon } from "../icons.js";
 import { workspace } from "../workspace.js";
 import { openPdf, passwordBox, loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { signaturePad, savedSignatures, saveSignature, removeSignature, imageToSignature } from "../signpad.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 // ── สไตล์เฉพาะของหน้านี้ — ฝังเองเพราะห้ามแก้ assets/css/tool.css ─────────────
 // (ฉีดครั้งเดียวด้วย id กันซ้ำ เผื่อผู้ใช้กด "ลองใหม่" แล้ว mount() ถูกเรียกซ้ำ)
@@ -180,7 +180,7 @@ export function mount(tool) {
       current = 1;
       showCanvas(true);
       await gotoPage(1);
-      st.ok(tr(`เปิดแล้ว ${pageCount} หน้า เลือกลายเซ็นแล้วคลิกวาง`, `Opened ${pageCount} pages. Pick a signature, then click to place`));
+      st.ok(tr(`เปิดแล้ว ${pageCount} หน้า เลือกลายเซ็นแล้วคลิกวาง`, `Opened ${pl(pageCount, "page", "pages")}. Pick a signature, then click to place`));
     } catch (e) {
       pdf = null; pageCount = 0;
       showCanvas(false);
@@ -344,7 +344,7 @@ export function mount(tool) {
 
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.ok(tr(`เซ็นแล้ว ${placed.length} จุด ใน ${new Set(placed.map((p) => p.page)).size} หน้า`,
-               `Signed ${placed.length} spots across ${new Set(placed.map((p) => p.page)).size} pages`));
+               `Signed ${pl(placed.length, "spot", "spots")} across ${pl(new Set(placed.map((p) => p.page)).size, "page", "pages")}`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(file.name) + tr("-เซ็นแล้ว.pdf", "-signed.pdf");
       results.appendChild(el("div", { class: "result" }, [

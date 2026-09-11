@@ -11,7 +11,7 @@ import { loadLibs } from "./loader.js";
 import { openPdf } from "./pdfopen.js";
 import { pageLines, guessColumns, rowToCells } from "./pdftext.js";
 import { ocrPdf, ocrImage, hasTextLayer } from "./ocr.js";
-import { tr } from "./i18n.js";
+import { tr, pl } from "./i18n.js";
 
 export const TABLE_SOURCES = {
   pdf: ["pdf"],
@@ -120,5 +120,5 @@ export async function extractTable(file, { onProgress } = {}) {
   if (kind === "word") return fromWord(file);
   if (kind === "image") return fromImage(file, onProgress);
   throw new Error(tr(`ยังอ่านตารางจากไฟล์ชนิด .${extOf(file.name)} ไม่ได้`,
-                     `Reading a table from .${extOf(file.name)} files isn't supported yet`));
+                     `Reading a table from .${pl(extOf(file.name), "file", "files")} isn't supported yet`));
 }

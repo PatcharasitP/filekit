@@ -11,7 +11,7 @@ import { openPdf, passwordBox, loadPdfLib } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 /* ความละเอียดตอนตรวจ — ต่ำพอให้เร็ว (ไฟล์ 100 หน้าไม่ค้าง) แต่พอเห็นตัวอักษรเล็ก */
 const SCAN_SCALE = 0.45;
@@ -167,7 +167,7 @@ export function mount(tool) {
     const keep = items.length - drop;
     summary.innerHTML = "";
     const chip = (cls, text) => summary.appendChild(el("span", { class: "stat " + cls }, text));
-    chip("ok", tr(`เก็บไว้ ${keep} หน้า`, `${keep} pages kept`));
+    chip("ok", tr(`เก็บไว้ ${keep} หน้า`, `${pl(keep, "page", "pages")} kept`));
     chip(drop ? "bad" : "dim", tr(`ตัดออก ${drop} หน้า`, `${drop} dropped`));
     go.disabled = !drop || !keep;
     if (!drop) st.info(tr("ไม่เจอหน้าว่างเลยที่ความเข้มงวดนี้ ลองเลือกเข้มงวดขึ้น",
@@ -200,7 +200,7 @@ export function mount(tool) {
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, tr(`${keep.length} หน้า จากเดิม ${items.length} หน้า`,
-                             `${keep.length} pages, down from ${items.length}`))]),
+                             `${pl(keep.length, "page", "pages")}, down from ${items.length}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

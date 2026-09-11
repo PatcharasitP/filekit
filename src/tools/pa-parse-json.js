@@ -1,6 +1,6 @@
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, segmented, dropzone, download } from "../ui.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
 
@@ -25,8 +25,8 @@ const STYLE = `
 .paj-col-name{font-weight:700;font-size:13px;color:var(--text);word-break:break-word;margin-bottom:6px}
 .paj-col-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 /* ‼️ วัดบนจอ 390x844 จริง: select สูง 19px และ label 'ว่างได้' สูง 21.9px ทั้งคู่เล็กกว่าเกณฑ์
-   นิ้วแตะ 36px ของ WCAG/Apple/Google · ตารางหลายคอลัมน์ = ซ้ำกันทุกแถวจนตกรวม 69 จุด
-   (จับได้จาก tests/browser_mobile.py ข้อ ④) · ขยายเฉพาะแนวตั้ง ไม่ขยับเลย์เอาต์แนวนอน */
+   นิ้วแตะ 36px ของ WCAG/Apple/Google, ตารางหลายคอลัมน์ = ซ้ำกันทุกแถวจนตกรวม 69 จุด
+   (จับได้จาก tests/browser_mobile.py ข้อ ④) ขยายเฉพาะแนวตั้ง ไม่ขยับเลย์เอาต์แนวนอน */
 .paj-col-row select{flex:1;min-width:120px;min-height:36px}
 .paj-null{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-mute);
   white-space:nowrap;min-height:36px}
@@ -209,7 +209,7 @@ export function mount(tool) {
       nullBox.addEventListener("change", () => { c.nullable = nullBox.checked; render(); });
 
       const seen = c.blanks
-        ? tr(`ว่าง ${c.blanks} แถวจาก ${c.blanks + c.filled}`, `${c.blanks} blank of ${c.blanks + c.filled} rows`)
+        ? tr(`ว่าง ${c.blanks} แถวจาก ${c.blanks + c.filled}`, `${c.blanks} blank of ${pl(c.blanks + c.filled, "row", "rows")}`)
         : tr(`มีค่าครบทุกแถว (${c.filled})`, `every row has a value (${c.filled})`);
       const eg = c.samples.length ? tr(` เช่น ${c.samples.join(", ")}`, ` e.g. ${c.samples.join(", ")}`) : "";
 
@@ -285,7 +285,7 @@ export function mount(tool) {
     if (nulls) {
       msgs.push(tr(
         `${nulls} คอลัมน์เคยว่างจริงในไฟล์นี้ จึงประกาศ null ไว้ให้ ถ้าเอาออก flow จะพังตอนเจอแถวว่าง`,
-        `${nulls} columns really do have blanks in this file, so they are declared nullable. Remove that and the flow breaks on the first blank row`
+        `${pl(nulls, "column", "columns")} really do have blanks in this file, so they are declared nullable. Remove that and the flow breaks on the first blank row`
       ));
     }
     warnEl.hidden = msgs.length === 0;

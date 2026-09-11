@@ -3,7 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
 import { readPlaceholders, mergeAll, buildRecords, negName, isNegName } from "../docxmerge.js";
 import { loadLibs } from "../loader.js";
 import { smartDecode } from "../thai.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -179,7 +179,7 @@ export function mount(tool) {
       if (!rows.length) throw new Error(tr("ไม่พบข้อมูล (ต้องมีหัวตาราง + 1 แถวข้อมูล)", "No data found (needs a header + 1 data row)"));
       columns = Object.keys(rows[0]);
       st.ok(tr(`อ่านข้อมูลได้ ${rows.length.toLocaleString("th-TH")} แถว, ${columns.length} คอลัมน์ จากชีท “${wb.SheetNames[0]}”`,
-        `Read ${rows.length.toLocaleString("en-US")} rows, ${columns.length} columns from sheet “${wb.SheetNames[0]}”`));
+        `Read ${pl(rows.length.toLocaleString("en-US"), "row", "rows")}, ${pl(columns.length, "column", "columns")} from sheet “${wb.SheetNames[0]}”`));
     } catch (e) {
       st.err(tr("อ่านไฟล์ข้อมูลไม่สำเร็จ: ", "Could not read the data file: ") + e.message);
     }
@@ -259,11 +259,11 @@ export function mount(tool) {
       );
     });
     let head = tr(`ตัวอย่างจากแถวแรกของข้อมูล จะสร้างทั้งหมด ${rows.length.toLocaleString("th-TH")} ไฟล์`,
-      `Preview from the first data row, will generate ${rows.length.toLocaleString("en-US")} files total`);
+      `Preview from the first data row, will generate ${pl(rows.length.toLocaleString("en-US"), "file", "files")} total`);
     if (modeSel.value === "group" && groupCol.value) {
       const n = new Set(rows.map((r) => String(r[groupCol.value] ?? ""))).size;
       head = tr(`จัดกลุ่มตามคอลัมน์ “${groupCol.value}” จะได้ ${n.toLocaleString("th-TH")} ไฟล์ จาก ${rows.length.toLocaleString("th-TH")} แถว`,
-        `Grouped by column “${groupCol.value}”, will produce ${n.toLocaleString("en-US")} files from ${rows.length.toLocaleString("en-US")} rows`);
+        `Grouped by column “${groupCol.value}”, will produce ${pl(n.toLocaleString("en-US"), "file", "files")} from ${pl(rows.length.toLocaleString("en-US"), "row", "rows")}`);
     }
     previewBox.append(el("p", { class: "mm-label" }, head), list);
   }
@@ -338,7 +338,7 @@ export function mount(tool) {
       st.progress(null);
       const totalSize = made.reduce((a, m) => a + m.blob.size, 0);
       st.ok(tr(`สร้างเอกสารสำเร็จ ${made.length.toLocaleString("th-TH")} ไฟล์, รวม ${fmtBytes(totalSize)}`,
-        `Done, ${made.length.toLocaleString("en-US")} files, ${fmtBytes(totalSize)} total`));
+        `Done, ${pl(made.length.toLocaleString("en-US"), "file", "files")}, ${fmtBytes(totalSize)} total`));
 
       if (made.length > 1) {
         results.appendChild(el("div", { class: "actions" }, [
@@ -347,7 +347,7 @@ export function mount(tool) {
             const [JSZipLib] = await loadLibs("jszip");
             const zip = new JSZipLib();
             made.forEach((m) => zip.file(m.name, m.blob));
-            download(await zip.generateAsync({ type: "blob" }), tr(`${base}-รวม ${made.length} ไฟล์.zip`, `${base}-combined ${made.length} files.zip`));
+            download(await zip.generateAsync({ type: "blob" }), tr(`${base}-รวม ${made.length} ไฟล์.zip`, `${base}-combined ${pl(made.length, "file", "files")}.zip`));
             st.ok(tr("ดาวน์โหลด ZIP แล้ว", "ZIP downloaded"));
           } }),
         ]));

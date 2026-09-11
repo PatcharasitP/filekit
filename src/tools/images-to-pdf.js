@@ -1,6 +1,6 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, segmented, eachFileConcurrent, failedBox, fmtBytes } from "../ui.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 const PAGE_SIZES = { auto: null, a4: [595.28, 841.89], letter: [612, 792] };
 
@@ -197,7 +197,7 @@ function stripJpegExif(u8) {
       st.ok(tr(`สร้าง PDF ${pages} หน้าเรียบร้อย`, `Done, created a ${pages}-page PDF`));
       const name = stripExt(files[0].name) + tr("-รูปภาพ.pdf", "-images.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages} หน้า`, `${pages} pages`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages} หน้า`, `${pl(pages, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

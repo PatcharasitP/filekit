@@ -1,7 +1,7 @@
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, parsePages, fmtBytes, yieldToBrowser, mapConcurrent } from "../ui.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -70,7 +70,7 @@ export function mount(tool) {
       pdf.destroy();
 
       st.progress(null);
-      st.ok(tr(`แปลงเสร็จ ${made.length} รูป`, `Done, ${made.length} images`));
+      st.ok(tr(`แปลงเสร็จ ${made.length} รูป`, `Done, ${pl(made.length, "image", "images")}`));
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button(tr("ดาวน์โหลด ZIP", "Download ZIP"), { icon: "zip",  onclick: async () => {
           st.info(tr("กำลังบีบเป็น ZIP…", "Zipping files…"));

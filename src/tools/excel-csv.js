@@ -2,7 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download, do
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
 import { smartDecode } from "../thai.js";
 import { splitSheetsByVisibility } from "../xlsxutil.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -95,11 +95,11 @@ export function mount(tool) {
         st.progress(null);
         st.ok(tr(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +
           (fixedEnc ? `, ซ่อมภาษาไทยที่เพี้ยนให้ ${fixedEnc} ไฟล์` : ""),
-          `Combined into Excel, ${wb.SheetNames.length} sheets` +
-          (fixedEnc ? `, fixed garbled Thai text in ${fixedEnc} files` : "")));
+          `Combined into Excel, ${pl(wb.SheetNames.length, "sheet", "sheets")}` +
+          (fixedEnc ? `, fixed garbled Thai text in ${pl(fixedEnc, "file", "files")}` : "")));
         const name = stripExt(files[0].name) + ".xlsx";
         results.appendChild(el("div", { class: "result" }, [
-          el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
+          el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${pl(wb.SheetNames.length, "sheet", "sheets")}`))]),
           el("span", { class: "r-size" }, fmtBytes(blob.size)),
           downloadButton(blob, name),
         ]));

@@ -3,7 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, downloadButt
 import { pageLines, guessColumns, rowToCells } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -54,7 +54,7 @@ export function mount(tool) {
         { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
       st.ok(tr(`อ่านด้วย OCR สำเร็จ ${rows.toLocaleString("th-TH")} แถว, ${wb.SheetNames.length} ชีท`,
-               `OCR done, ${rows.toLocaleString("en-US")} rows, ${wb.SheetNames.length} sheets`));
+               `OCR done, ${pl(rows.toLocaleString("en-US"), "row", "rows")}, ${pl(wb.SheetNames.length, "sheet", "sheets")}`));
       const name = stripExt(file.name) + ".xlsx";
       results.innerHTML = "";
       results.appendChild(el("div", { class: "result" }, [
@@ -125,7 +125,7 @@ export function mount(tool) {
       const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
       st.ok(tr(`แปลงสำเร็จ ${totalRows.toLocaleString("th-TH")} แถว, ${wb.SheetNames.length} ชีท`,
-               `Done, ${totalRows.toLocaleString("en-US")} rows, ${wb.SheetNames.length} sheets`));
+               `Done, ${pl(totalRows.toLocaleString("en-US"), "row", "rows")}, ${pl(wb.SheetNames.length, "sheet", "sheets")}`));
 
       const sample = (sheetMode.value === "single" ? all : XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 })).slice(0, 12);
       preview.hidden = false;
@@ -133,7 +133,7 @@ export function mount(tool) {
 
       const name = stripExt(file.name) + ".xlsx";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${wb.SheetNames.length} sheets`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${wb.SheetNames.length} ชีท`, `${pl(wb.SheetNames.length, "sheet", "sheets")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

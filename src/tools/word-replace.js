@@ -2,7 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtByte
 import { uiIcon } from "../icons.js";
 import { countMatches, replaceInDocx, makeRules } from "../docxreplace.js";
 import { loadLibs } from "../loader.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -88,7 +88,7 @@ export function mount(tool) {
       previewBox.append(
         el("div", { class: "status show " + (grand ? "info" : "err") },
           grand ? tr(`จะแทนที่ทั้งหมด ${grand.toLocaleString("th-TH")} จุด ใน ${files.length} ไฟล์`,
-                     `Will replace ${grand.toLocaleString("en-US")} matches across ${files.length} files`)
+                     `Will replace ${grand.toLocaleString("en-US")} matches across ${pl(files.length, "file", "files")}`)
                 : tr("ไม่พบคำที่ค้นหาเลย", "No matches found")),
         table);
     } catch (e) {
@@ -113,7 +113,7 @@ export function mount(tool) {
       if (!made.length) throw new Error(tr("แก้ไม่สำเร็จ ตรวจว่าเป็น .docx จริง", "Could not process. Check they're valid .docx files."));
       if (failed.length) results.appendChild(failedBox(failed));
       st.ok(tr(`แทนที่ ${total.toLocaleString("th-TH")} จุด ใน ${made.length} ไฟล์`,
-        `Replaced ${total.toLocaleString("en-US")} matches in ${made.length} files`));
+        `Replaced ${total.toLocaleString("en-US")} matches in ${pl(made.length, "file", "files")}`));
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {
           const [JSZipLib] = await loadLibs("jszip");

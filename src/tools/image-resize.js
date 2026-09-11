@@ -2,7 +2,7 @@ import { el, dropzone, statusBar, button, field, select, download,
          stripExt, fmtBytes, eachFileConcurrent, failedBox, registerCleanup } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 // สไตล์เฉพาะของแผงลอยเครื่องมือนี้ — ฝังในโมดูลเพราะห้ามแก้ assets/css/tool.css
 // (โมดูลนี้ import ครั้งเดียวต่อเซสชัน จึง <style> ไม่มีทางถูกแทรกซ้ำ)
@@ -230,7 +230,7 @@ export function mount(tool) {
 
   function renderGallery() {
     const files = dz.files;
-    galCount.textContent = files.length ? tr(`${files.length} ไฟล์`, `${files.length} files`) : "";
+    galCount.textContent = files.length ? tr(`${files.length} ไฟล์`, `${pl(files.length, "file", "files")}`) : "";
     gallery.innerHTML = "";
     files.forEach((f, i) => {
       const r = resultsByFile.get(f);
@@ -398,7 +398,7 @@ export function mount(tool) {
       const verdict = saved > 0 ? tr(`เล็กลง ${saved}%`, `${saved}% smaller`) : saved < 0 ? tr(`ใหญ่ขึ้น ${-saved}%`, `${-saved}% larger`) : tr("ขนาดเท่าเดิม", "Same size");
       const tail = keptCount ? tr(`, ${keptCount} ไฟล์คงต้นฉบับ (เล็กกว่าอยู่แล้ว)`, `, ${keptCount} kept original (already smaller)`) : "";
       st.ok(tr(`เสร็จ ${made.length} ไฟล์, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`,
-        `Done, ${made.length} files, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`));
+        `Done, ${pl(made.length, "file", "files")}, ${fmtBytes(before)} → ${fmtBytes(after)} (${verdict})${tail}`));
       lastMade = made;
       hideEl(zipBtn, made.length <= 1);
       hideEl(oneBtn, made.length !== 1);

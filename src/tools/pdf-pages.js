@@ -2,7 +2,7 @@ import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, openPdf, password
 import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 // สไตล์เสริมเฉพาะหน้านี้ — ห้ามแก้ assets/css/tool.css จึงฝังไว้ในโมดูลแทน
 const STYLE = `
@@ -124,7 +124,7 @@ export function mount(tool) {
       pdf.destroy();
       ws.setBusy(false);
       st.progress(null);
-      st.ok(tr(`โหลดแล้ว ${items.length} หน้า`, `Loaded ${items.length} pages`));
+      st.ok(tr(`โหลดแล้ว ${items.length} หน้า`, `Loaded ${pl(items.length, "page", "pages")}`));
       setLoaded(true);
       ws.showCanvas(true);
       render();
@@ -169,7 +169,7 @@ export function mount(tool) {
     });
     updateSummary();
     st.info(tr(`เหลือ ${items.filter((i) => !i.dropped).length}/${items.length} หน้า`,
-                `${items.filter((i) => !i.dropped).length}/${items.length} pages left`));
+                `${items.filter((i) => !i.dropped).length}/${pl(items.length, "page", "pages")} left`));
     syncToolbar();
   }
 
@@ -210,7 +210,7 @@ export function mount(tool) {
     selected = null;
     render();
     st.ok(tr(`ตั้งช่วง ${rangeInput.value} (${pages.length} หน้า)`,
-             `Set range ${rangeInput.value} (${pages.length} pages)`));
+             `Set range ${rangeInput.value} (${pl(pages.length, "page", "pages")})`));
   }
 
   let dragging = null;
@@ -259,13 +259,13 @@ export function mount(tool) {
         out.addPage(page);
       });
       const blob = new Blob([await out.save()], { type: "application/pdf" });
-      st.ok(tr(`บันทึกแล้ว ${keep.length} หน้า`, `Saved, ${keep.length} pages`));
+      st.ok(tr(`บันทึกแล้ว ${keep.length} หน้า`, `Saved, ${pl(keep.length, "page", "pages")}`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       // ‼️ ชั้นที่ผู้ใช้ซ่อนไว้จะกลายเป็นมองเห็นได้ในไฟล์ผลลัพธ์ ต้องบอกก่อนไฟล์หลุดไป
       if (hiddenLayers) results.appendChild(el("div", { class: "note warn" }, HIDDEN_LAYERS_WARNING));
       const name = stripExt(file.name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${keep.length} หน้า`, `${keep.length} pages`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${keep.length} หน้า`, `${pl(keep.length, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

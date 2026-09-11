@@ -1,7 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { readPptx } from "../pptx.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -41,7 +41,7 @@ export function mount(tool) {
     try {
       const { slides, hiddenCount } = await readPptx(file, {
         includeHidden: includeHiddenSlides,
-        onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${p.total} slides)`)),
+        onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${pl(p.total, "slide", "slides")})`)),
       });
 
       const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
@@ -96,7 +96,7 @@ export function mount(tool) {
       // นับของที่แปลงเป็นข้อความไม่ได้ เพื่อบอกผู้ใช้ตรง ๆ แทนที่จะให้หายไปเงียบ ๆ
       const skipped = slides.reduce((n, s) => n + (s.charts || 0) + (s.diagrams || 0), 0);
       st.ok(tr(`แปลงสำเร็จ ${slides.length} สไลด์, ${words.toLocaleString("th-TH")} ตัวอักษร`,
-        `Done, ${slides.length} slides, ${words.toLocaleString("en-US")} characters`) + (skipped
+        `Done, ${pl(slides.length, "slide", "slides")}, ${pl(words.toLocaleString("en-US"), "character", "characters")}`) + (skipped
         ? tr(` (มีกราฟ/แผนภาพ ${skipped} ชิ้นที่แปลงเป็นข้อความไม่ได้ ตารางถูกแปลงเป็นบรรทัดข้อความให้แล้ว)`,
              ` (${skipped} chart(s)/diagram(s) could not be turned into text; tables were converted into text lines)`)
         : ""));
@@ -105,7 +105,7 @@ export function mount(tool) {
 
       const name = stripExt(file.name) + ".docx";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์`, `${slides.length} slides`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์`, `${pl(slides.length, "slide", "slides")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

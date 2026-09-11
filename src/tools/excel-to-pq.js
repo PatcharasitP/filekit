@@ -12,7 +12,7 @@ import { splitSheetsByVisibility } from "../xlsxutil.js";
 import { guessTableTypes } from "../pqtypes.js";
 import { extractTable, kindOfFile } from "../tabledata.js";
 import { PQ_TYPES, buildTableCode, wrapAsQuery } from "../pqm.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 const STYLE = `
 /* ‼️ ตารางคอลัมน์กว้างเกินจอมือถือได้ง่ายมาก ต้องให้มันเลื่อนในกล่องของตัวเอง
@@ -188,7 +188,7 @@ export function mount(tool) {
     summary.append(
       el("div", {}, tr(`อ่านได้ ${table.rows.length.toLocaleString("th-TH")} แถว ${cols.length} คอลัมน์` +
                        (warnCount ? `, มี ${warnCount} คอลัมน์ที่ควรตรวจสอบก่อนใช้` : ", เดาชนิดได้ชัดเจนทุกคอลัมน์"),
-                       `${table.rows.length.toLocaleString("en-US")} rows, ${cols.length} columns` +
+                       `${pl(table.rows.length.toLocaleString("en-US"), "row", "rows")}, ${pl(cols.length, "column", "columns")}` +
                        (warnCount ? `, ${warnCount} column(s) worth checking` : ", every column inferred confidently"))),
       ...(hiddenNames.length
         ? [el("div", {}, tr(`ข้ามชีทที่ซ่อนไว้ ${hiddenNames.length} ชีท (${hiddenNames.join(", ")})`,
@@ -228,8 +228,8 @@ export function mount(tool) {
     const cut = table.rows.length - used.length;
     st.ok(tr(`สร้างโค้ดแล้ว ${used.length.toLocaleString("th-TH")} แถว` +
              (cut ? `, ตัดออก ${cut.toLocaleString("th-TH")} แถวตามที่ตั้งไว้` : ""),
-             `Code ready, ${used.length.toLocaleString("en-US")} rows` +
-             (cut ? `, ${cut.toLocaleString("en-US")} rows left out by your setting` : "")));
+             `Code ready, ${pl(used.length.toLocaleString("en-US"), "row", "rows")}` +
+             (cut ? `, ${pl(cut.toLocaleString("en-US"), "row", "rows")} left out by your setting` : "")));
   }
 
   async function copyCode() {

@@ -9,7 +9,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select,
          downloadButton, stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { readWorkbook, sheetToTable, cellText, autoWidths } from "../sheetpick.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 const BLANK_KEY = () => tr("(ไม่ระบุ)", "(Unspecified)");
 
@@ -152,10 +152,10 @@ export function mount(tool) {
     chips.innerHTML = "";
     const chip = (cls, text) => chips.appendChild(el("span", { class: "stat " + cls }, text));
     chip("ok", tr(`แยกได้ ${groups.size.toLocaleString()} กลุ่ม`, `${groups.size.toLocaleString()} groups`));
-    chip("dim", tr(`จาก ${table.rows.length.toLocaleString()} แถว`, `from ${table.rows.length.toLocaleString()} rows`));
+    chip("dim", tr(`จาก ${table.rows.length.toLocaleString()} แถว`, `from ${pl(table.rows.length.toLocaleString(), "row", "rows")}`));
     const blank = groups.get(BLANK_KEY());
     if (blank) chip("warn", tr(`ช่องว่าง ${blank.length.toLocaleString()} แถว`,
-                               `${blank.length.toLocaleString()} rows with an empty cell`));
+                               `${pl(blank.length.toLocaleString(), "row", "rows")} with an empty cell`));
 
     preview.innerHTML = "";
     const list = [...groups.entries()];
@@ -229,8 +229,8 @@ export function mount(tool) {
         if (!done) throw new Error(tr("ยังไม่ได้ชีทเลย", "No sheet was produced"));
         const blob = toBlob(out);
         const name = `${src}${tr("-แยกตามกลุ่ม.xlsx", "-split.xlsx")}`;
-        finish(blob, name, tr(`${done} ชีท`, `${done} sheets`),
-               tr(`ได้ไฟล์เดียว ${done} ชีท`, `One file with ${done} sheets`));
+        finish(blob, name, tr(`${done} ชีท`, `${pl(done, "sheet", "sheets")}`),
+               tr(`ได้ไฟล์เดียว ${done} ชีท`, `One file with ${pl(done, "sheet", "sheets")}`));
       } else {
         const zip = new JSZip();
         for (const [k, rows] of groups) {
@@ -243,11 +243,11 @@ export function mount(tool) {
         if (!done) throw new Error(tr("ยังไม่ได้ไฟล์เลย", "No file was produced"));
         const blob = await zip.generateAsync({ type: "blob" });
         const name = `${src}${tr("-แยกตามกลุ่ม.zip", "-split.zip")}`;
-        finish(blob, name, tr(`${done} ไฟล์`, `${done} files`),
+        finish(blob, name, tr(`${done} ไฟล์`, `${pl(done, "file", "files")}`),
                st.cancelled
                  ? tr(`หยุดตามที่สั่งแล้ว ได้ ${done} ไฟล์ที่ทำเสร็จก่อนหยุด`,
-                      `Stopped as asked, ${done} files finished before that`)
-                 : tr(`แยกได้ ${done} ไฟล์`, `Split into ${done} files`));
+                      `Stopped as asked, ${pl(done, "file", "files")} finished before that`)
+                 : tr(`แยกได้ ${done} ไฟล์`, `Split into ${pl(done, "file", "files")}`));
       }
     } catch (e) {
       st.end(); st.progress(null);

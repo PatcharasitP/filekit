@@ -3,7 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
 import { pageLines, lineText } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -41,7 +41,7 @@ export function mount(tool) {
       .join("\n\n");
     st.progress(null);
     st.ok(tr(`ดึงข้อความสำเร็จ ${bodyChars.toLocaleString("th-TH")} ตัวอักษร จาก ${pages.length} หน้า${note ? ", " + note : ""}`,
-             `Done, ${bodyChars.toLocaleString("en-US")} characters from ${pages.length} pages${note ? ", " + note : ""}`));
+             `Done, ${pl(bodyChars.toLocaleString("en-US"), "character", "characters")} from ${pl(pages.length, "page", "pages")}${note ? ", " + note : ""}`));
     preview.hidden = false;
     preview.textContent = text.slice(0, 4000) + (text.length > 4000 ? tr("\n\n… (แสดงตัวอย่าง 4,000 ตัวอักษรแรก)", "\n\n… (showing the first 4,000 characters)") : "");
     const name = stripExt(file.name) + ".txt";

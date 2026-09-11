@@ -1,7 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
 import { inspect, clean } from "../docxclean.js";
 import { loadLibs } from "../loader.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -66,8 +66,8 @@ export function mount(tool) {
     //    ไม่ใช่แค่โชว์ให้ตาเห็น (แถบสถานะอีกก้อนมี role นี้อยู่แล้ว ก้อนนี้เคยไม่มี)
     reportBox.append(el("div", { class: "status show " + (dirty ? "err" : "ok"), role: "status", "aria-live": "polite" },
       dirty
-        ? tr(`พบร่องรอยที่ควรล้างใน ${dirty} จาก ${reports.length} ไฟล์`, `Found traces to clean in ${dirty} of ${reports.length} files`)
-        : tr(`ตรวจแล้ว ${reports.length} ไฟล์ ไม่พบร่องรอยที่ต้องล้าง`, `Checked ${reports.length} files, nothing to clean`)));
+        ? tr(`พบร่องรอยที่ควรล้างใน ${dirty} จาก ${reports.length} ไฟล์`, `Found traces to clean in ${dirty} of ${pl(reports.length, "file", "files")}`)
+        : tr(`ตรวจแล้ว ${reports.length} ไฟล์ ไม่พบร่องรอยที่ต้องล้าง`, `Checked ${pl(reports.length, "file", "files")}, nothing to clean`)));
 
     reports.forEach(({ file, report: r }) => {
       const items = [];
@@ -116,7 +116,7 @@ export function mount(tool) {
       if (!made.length) throw new Error(tr("ล้างไม่สำเร็จสักไฟล์", "Could not clean any file"));
       if (failed.length) results.appendChild(failedBox(failed));
       st.ok(tr(`ล้างเสร็จ ${made.length} ไฟล์${failed.length ? `, ข้าม ${failed.length}` : ""}`,
-        `Done, cleaned ${made.length} files${failed.length ? `, skipped ${failed.length}` : ""}`));
+        `Done, cleaned ${pl(made.length, "file", "files")}${failed.length ? `, skipped ${failed.length}` : ""}`));
 
       if (made.length > 1) results.appendChild(el("div", { class: "actions" }, [
         button(tr("โหลดทั้งหมด (ZIP)", "Download all (ZIP)"), { icon: "zip",  onclick: async () => {

@@ -2,7 +2,7 @@ import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, segmented, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 // วาดข้อความลายน้ำลง canvas โปร่งใสแล้วฝังเป็นภาพ PNG
 // ทำแบบนี้เพื่อให้ "ข้อความไทยใช้ได้ทันที"โดยไม่ต้องฝังฟอนต์เข้า PDF
@@ -259,7 +259,7 @@ export function mount(tool) {
       meta = { pages: doc.getPageCount(), w: width, h: height };
       paper.style.aspectRatio = `${width} / ${height}`;
       metaLine.textContent = tr(`หน้า 1 ตัวอย่าง (${meta.pages} หน้า, ${Math.round(width)}×${Math.round(height)} pt)`,
-                                 `Page 1 preview (${meta.pages} pages, ${Math.round(width)}×${Math.round(height)} pt)`);
+                                 `Page 1 preview (${pl(meta.pages, "page", "pages")}, ${Math.round(width)}×${Math.round(height)} pt)`);
       ws.showCanvas(true);
       drawPreview();
     } catch (e) {
@@ -344,11 +344,11 @@ export function mount(tool) {
 
       const blob = new Blob([await doc.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(tr(`ใส่ลายน้ำครบ ${pages.length} หน้า`, `Watermark added, ${pages.length} pages`));
+      st.ok(tr(`ใส่ลายน้ำครบ ${pages.length} หน้า`, `Watermark added, ${pl(pages.length, "page", "pages")}`));
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       const name = stripExt(file.name) + tr("-ลายน้ำ.pdf", "-watermarked.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages.length} หน้า`, `${pages.length} pages`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${pages.length} หน้า`, `${pl(pages.length, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

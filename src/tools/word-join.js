@@ -2,7 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, downloadButt
          stripExt, fmtBytes } from "../ui.js";
 import { joinDocx } from "../docxjoin.js";
 import { inspect as inspectDocx, clean as cleanDocx } from "../docxclean.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -58,7 +58,7 @@ export function mount(tool) {
       st.progress(null);
       const total = parts.reduce((a, p) => a + p.paragraphs, 0);
       st.ok(tr(`รวมเสร็จ ${parts.length} ไฟล์, ${total.toLocaleString("th-TH")} ย่อหน้า`,
-        `Done, ${parts.length} files, ${total.toLocaleString("en-US")} paragraphs`)
+        `Done, ${pl(parts.length, "file", "files")}, ${pl(total.toLocaleString("en-US"), "paragraph", "paragraphs")}`)
         + (before.comments
           ? (keepComments.checked
             ? tr(` (มีคอมเมนต์จากไฟล์ต้นฉบับ ${before.comments} รายการ ยังคงอยู่ในไฟล์ที่ได้)`,
@@ -70,7 +70,7 @@ export function mount(tool) {
       const name = stripExt(files[0].name) + tr("-รวม.docx", "-merged.docx");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
-          el("small", {}, parts.map((p) => tr(`${p.name} (${p.paragraphs} ย่อหน้า)`, `${p.name} (${p.paragraphs} paragraphs)`)).join(", "))]),
+          el("small", {}, parts.map((p) => tr(`${p.name} (${p.paragraphs} ย่อหน้า)`, `${p.name} (${pl(p.paragraphs, "paragraph", "paragraphs")})`)).join(", "))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

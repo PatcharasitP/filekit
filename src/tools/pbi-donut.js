@@ -1,6 +1,6 @@
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, download } from "../ui.js";
-import { tr, IS_EN } from "../i18n.js";
+import { tr, IS_EN, pl } from "../i18n.js";
 import { colorPicker, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { presetBar, PRESETS_CSS } from "../presets.js";
 import { configSearch, CFGSEARCH_CSS } from "../cfgsearch.js";
@@ -774,7 +774,7 @@ export function mount(tool) {
       const g = guessColumns(table);
       catSel.value = String(g.catIdx);
       valSel.value = String(g.valIdx);
-      noteEl.textContent = tr(`อ่านได้ ${table.rows.length} แถว`, `${table.rows.length} rows read`);
+      noteEl.textContent = tr(`อ่านได้ ${table.rows.length} แถว`, `${pl(table.rows.length, "row", "rows")} read`);
     }
 
     function applyOwnData() {

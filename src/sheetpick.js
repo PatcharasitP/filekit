@@ -7,7 +7,7 @@ import { el } from "./dom.js";
 import { toolShell, statusBar, button, field, select, dropzone,
          download, stripExt, yieldToBrowser } from "./ui.js";
 import { smartDecode, ENC_LABEL } from "./thai.js";
-import { tr } from "./i18n.js";
+import { tr, pl } from "./i18n.js";
 
 const TEXTY = ["csv", "txt", "tsv"];
 
@@ -291,7 +291,7 @@ export function columnTool(tool, cfg) {
       if (stat.ok + stat.bad > rows.length)
         preview.appendChild(el("div", { class: "note" },
           tr(`แสดง ${rows.length}/${(stat.ok + stat.bad).toLocaleString()} แถว ดาวน์โหลดครบ`,
-             `Showing ${rows.length}/${(stat.ok + stat.bad).toLocaleString()} rows, download has all`)));
+             `Showing ${rows.length}/${pl((stat.ok + stat.bad).toLocaleString(), "row", "rows")}, download has all`)));
     }
     if (encNote) st.info(encNote); else st.clear();
   }
@@ -334,9 +334,9 @@ export function columnTool(tool, cfg) {
     }
     const L2 = cfg.labels || {};
     st.ok(tr(`บันทึกแล้ว: ${L2.ok || "แปลงสำเร็จ"} ${stat.ok.toLocaleString()} แถว`,
-             `Saved: ${L2.ok || "converted"} ${stat.ok.toLocaleString()} rows`) +
+             `Saved: ${L2.ok || "converted"} ${pl(stat.ok.toLocaleString(), "row", "rows")}`) +
           (stat.bad ? tr(`, ${L2.bad || "อ่านไม่ออก"} ${stat.bad.toLocaleString()} แถว`,
-                          `, ${L2.bad || "could not read"} ${stat.bad.toLocaleString()} rows`) : ""));
+                          `, ${L2.bad || "could not read"} ${pl(stat.bad.toLocaleString(), "row", "rows")}`) : ""));
   }
 
   return wrap;

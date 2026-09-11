@@ -2,7 +2,7 @@ import { detectType, wrongTypeMessage } from "./filetype.js";
 import { $, $$, el, showVeil, filesFromClipboard } from "./dom.js";
 import { byId } from "./registry.js";
 import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
-import { tr } from "./i18n.js";
+import { tr, pl } from "./i18n.js";
 
 /* ‼️ 09/09/2026 พี่ปอนด์ทักเอง: "ไฟล์ควรคลิกดูข้อมูลข้างในได้ไหม" — เดิมกดดูได้เฉพาะ
  * ภาพย่อของรูป ส่วนแถวไฟล์ Excel/Word กดไม่ได้เลย ทั้งที่คนหยิบผิดไฟล์บ่อยกว่ารูปด้วยซ้ำ
@@ -599,7 +599,7 @@ export function dropzone(opts = {}) {
    *  (ค่าถูกแคชไว้ ข้าม render รอบถัดไปจึงไม่กะพริบหายแล้วโผล่ใหม่) */
   function pageLabel(file) {
     const n = pageCounts.get(file);
-    return n == null ? "" : tr(`${n} หน้า`, n === 1 ? "1 page" : `${n} pages`);
+    return n == null ? "" : tr(`${n} หน้า`, n === 1 ? "1 page" : `${pl(n, "page", "pages")}`);
   }
 
   function revokeThumb(file) {
@@ -656,7 +656,7 @@ export function dropzone(opts = {}) {
     if (i === -1) return;
     const n = pageCounts.get(file);
     const slot = list.querySelector(`.file-row[data-i="${i}"] .f-pages`);
-    if (slot && n != null) slot.textContent = tr(`${n} หน้า`, n === 1 ? "1 page" : `${n} pages`);
+    if (slot && n != null) slot.textContent = tr(`${n} หน้า`, n === 1 ? "1 page" : `${pl(n, "page", "pages")}`);
   }
 
   /** วาดผลภาพย่อที่เพิ่งคำนวณเสร็จลงแถวปัจจุบันของไฟล์นี้ — ใช้ query สดเพราะ render() อาจสร้างแถวใหม่ไปแล้ว
@@ -806,7 +806,7 @@ export function dropzone(opts = {}) {
     });
     count.textContent = !files.length ? ""
       : tr(`${files.length} ไฟล์, รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}`,
-           `${files.length} files, ${fmtBytes(files.reduce((a, f) => a + f.size, 0))} total`);
+           `${pl(files.length, "file", "files")}, ${fmtBytes(files.reduce((a, f) => a + f.size, 0))} total`);
   }
 
   if (reorder) {
@@ -1057,13 +1057,13 @@ export function failedBox(failed) {
   if (!failed.length && !failed.stopped) return null;
   if (!failed.length) return el("div", { class: "fail-box" }, [
     el("strong", {}, tr(`หยุดตามที่สั่งแล้ว ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์ (ที่เสร็จแล้วดาวน์โหลดได้ตามปกติ)`,
-                        `Stopped as asked, ${failed.stopped} files left untouched (whatever finished is still yours to download)`)),
+                        `Stopped as asked, ${pl(failed.stopped, "file", "files")} left untouched (whatever finished is still yours to download)`)),
   ]);
   return el("div", { class: "fail-box" }, [
     el("strong", {}, tr(`ข้ามไป ${failed.length} ไฟล์ที่ทำงานด้วยไม่ได้ (ไฟล์อื่นเสร็จเรียบร้อยแล้ว)`,
-                        `Skipped ${failed.length} files this tool could not handle (the rest finished fine)`)),
+                        `Skipped ${pl(failed.length, "file", "files")} this tool could not handle (the rest finished fine)`)),
     el("ul", {}, failed.map((f) => el("li", {}, `${f.name}: ${f.why}`))),
     failed.stopped ? el("div", {}, tr(`หยุดตามที่สั่งแล้ว ยังไม่ได้ทำอีก ${failed.stopped} ไฟล์`,
-                                      `Stopped as asked, ${failed.stopped} files left untouched`)) : null,
+                                      `Stopped as asked, ${pl(failed.stopped, "file", "files")} left untouched`)) : null,
   ]);
 }

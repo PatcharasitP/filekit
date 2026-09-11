@@ -3,7 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, downloadButt
 import { pageLines, columnAwareLines } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -50,11 +50,11 @@ export function mount(tool) {
     const blob = await buildDocx(blocks);
     st.progress(null);
     st.ok(tr(`แปลงสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${blocks.length} หน้า${note ? ", " + note : ""}`,
-             `Done, ${chars.toLocaleString("en-US")} characters from ${blocks.length} pages${note ? ", " + note : ""}`));
+             `Done, ${pl(chars.toLocaleString("en-US"), "character", "characters")} from ${pl(blocks.length, "page", "pages")}${note ? ", " + note : ""}`));
     const name = stripExt(file.name) + ".docx";
     results.innerHTML = "";
     results.appendChild(el("div", { class: "result" }, [
-      el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${blocks.length} หน้า`, `${blocks.length} pages`))]),
+      el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${blocks.length} หน้า`, `${pl(blocks.length, "page", "pages")}`))]),
       el("span", { class: "r-size" }, fmtBytes(blob.size)),
       downloadButton(blob, name),
     ]));

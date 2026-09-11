@@ -12,7 +12,7 @@ import { loadPdfLib, ENCRYPTED_WARNING, friendlyPdfError } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 const THAI_DIGITS = "๐๑๒๓๔๕๖๗๘๙";
 const toThaiDigits = (s) => String(s).replace(/[0-9]/g, (d) => THAI_DIGITS[+d]);
@@ -186,9 +186,9 @@ export function mount(tool) {
 
     meta.textContent = numbered
       ? tr(`ใส่เลขให้ ${numbered} หน้า จากทั้งหมด ${pageCount} หน้า, เลข ${start} ถึง ${last}`,
-           `Numbering ${numbered} of ${pageCount} pages, ${start} to ${last}`)
+           `Numbering ${numbered} of ${pl(pageCount, "page", "pages")}, ${start} to ${last}`)
       : tr(`ไฟล์นี้มี ${pageCount} หน้า แต่ตั้งให้เริ่มที่หน้า ${from} จึงไม่มีหน้าไหนได้เลข`,
-           `This file has ${pageCount} pages but numbering starts on page ${from}, so no page gets a number`);
+           `This file has ${pl(pageCount, "page", "pages")} but numbering starts on page ${from}, so no page gets a number`);
     go.disabled = !numbered;
   }
 
@@ -271,11 +271,11 @@ export function mount(tool) {
       st.progress(null);
       st.ok(st.cancelled
         ? tr("หยุดตามที่สั่งแล้ว หน้าที่ใส่ไปแล้วยังอยู่ในไฟล์", "Stopped as asked. Pages already numbered are kept in the file")
-        : tr(`ใส่เลขหน้าให้ ${numbered} หน้าเรียบร้อย`, `Done, numbered ${numbered} pages`));
+        : tr(`ใส่เลขหน้าให้ ${numbered} หน้าเรียบร้อย`, `Done, numbered ${pl(numbered, "page", "pages")}`));
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, tr(`${pageCount} หน้า, เลข ${start} ถึง ${last}`,
-                             `${pageCount} pages, numbered ${start} to ${last}`))]),
+                             `${pl(pageCount, "page", "pages")}, numbered ${start} to ${last}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

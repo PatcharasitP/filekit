@@ -2,7 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, downloadButt
          stripExt, yieldToBrowser, segmented, fmtBytes } from "../ui.js";
 import { readPptx } from "../pptx.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, splitThaiTextToSize } from "../thaifont.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 // สัดส่วนหน้าสไลด์ (หน่วย pt) — 16:9 คือค่าเริ่มต้นของ PowerPoint ยุคปัจจุบัน
 const SIZES = { "16:9": [960, 540], "4:3": [720, 540] };
@@ -42,7 +42,7 @@ export function mount(tool) {
     try {
       const { slides, hiddenCount } = await readPptx(file, {
         includeHidden: includeHiddenSlides,
-        onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${p.total} slides)`)),
+        onProgress: (p) => st.progress((p.current / p.total) * 100, tr(`(${p.current}/${p.total} สไลด์)`, `(${p.current}/${pl(p.total, "slide", "slides")})`)),
       });
 
       st.info(tr("กำลังจัดหน้า PDF…", "Laying out the PDF…"));
@@ -112,13 +112,13 @@ export function mount(tool) {
       st.progress(null);
       // นับของที่แปลงเป็นข้อความไม่ได้ เพื่อบอกผู้ใช้ตรง ๆ แทนที่จะให้หายไปเงียบ ๆ
       const skipped = slides.reduce((n, s) => n + (s.charts || 0) + (s.diagrams || 0), 0);
-      st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done, ${slides.length} pages (1 slide = 1 page)`) + (skipped
+      st.ok(tr(`สร้าง PDF สำเร็จ ${slides.length} หน้า (1 สไลด์ = 1 หน้า)`, `Done, ${pl(slides.length, "page", "pages")} (1 slide = 1 page)`) + (skipped
         ? tr(` (มีกราฟ/แผนภาพ ${skipped} ชิ้นที่แปลงเป็นข้อความไม่ได้ ตารางถูกแปลงเป็นบรรทัดข้อความให้แล้ว)`,
              ` (${skipped} chart(s)/diagram(s) could not be turned into text; tables were converted into text lines)`)
         : ""));
       const name = stripExt(file.name) + ".pdf";
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์, ${ratio.value}`, `${slides.length} slides, ${ratio.value}`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${slides.length} สไลด์, ${ratio.value}`, `${pl(slides.length, "slide", "slides")}, ${ratio.value}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

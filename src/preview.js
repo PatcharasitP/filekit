@@ -10,7 +10,7 @@
 //    fps จริงแล้วว่าลื่นก่อนเอามาต่อ · signature เดิม viewFile(file) ยังใช้ได้ ไม่พัง
 // ─────────────────────────────────────────────────────────────────────────────
 import { el } from "./dom.js";
-import { tr } from "./i18n.js";
+import { tr, pl } from "./i18n.js";
 import { detectType } from "./filetype.js";
 import { fileKindIcon } from "./icons.js";
 import { normalizeThaiPUA } from "./thai.js";
@@ -149,11 +149,11 @@ async function renderSheet(file, d, expectedIdx) {
   const more = rows.length > MAX_ROWS + 1
     ? el("div", { class: "pv-doc-note" },
         tr(`แสดง ${MAX_ROWS} แถวแรกจากทั้งหมด ${rows.length - 1} แถว`,
-           `Showing the first ${MAX_ROWS} of ${rows.length - 1} rows`)) : null;
+           `Showing the first ${MAX_ROWS} of ${pl(rows.length - 1, "row", "rows")}`)) : null;
   const sheets = wb.SheetNames.length > 1
     ? el("div", { class: "pv-doc-note" },
         tr(`ชีทที่แสดง: ${name} (ไฟล์นี้มี ${wb.SheetNames.length} ชีท)`,
-           `Showing sheet: ${name} (this file has ${wb.SheetNames.length} sheets)`)) : null;
+           `Showing sheet: ${name} (this file has ${pl(wb.SheetNames.length, "sheet", "sheets")})`)) : null;
   d._stage.appendChild(el("div", { class: "pv-doc" }, [sheets, table, more]));
 }
 

@@ -1,7 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, parsePages, yieldToBrowser, segmented } from "../ui.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -41,7 +41,7 @@ export function mount(tool) {
     if (file.type.startsWith("image/")) return [{ label: file.name, url: URL.createObjectURL(file) }];
     const pdf = await openPdf(file, passwordBox(extra));
     const pages = parsePages(rangeInput.value || "1-", pdf.numPages);
-    if (!pages.length) throw new Error(tr(`ไฟล์มี ${pdf.numPages} หน้า ช่วงที่ระบุไม่ตรงหน้าใดเลย`, `File has ${pdf.numPages} pages, but the range matches none`));
+    if (!pages.length) throw new Error(tr(`ไฟล์มี ${pdf.numPages} หน้า ช่วงที่ระบุไม่ตรงหน้าใดเลย`, `File has ${pl(pdf.numPages, "page", "pages")}, but the range matches none`));
     const out = [];
     for (const p of pages) {
       const page = await pdf.getPage(p);
@@ -93,7 +93,7 @@ export function mount(tool) {
       const chars = text.replace(/\s/g, "").length;
       st.progress(null);
       if (!chars) { st.err(tr("ไม่พบตัวอักษร ลองเพิ่มความละเอียด", "No text found, try higher quality")); return; }
-      st.ok(tr(`อ่านสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${images.length} หน้า`, `Done, ${chars.toLocaleString("en-US")} characters from ${images.length} pages`));
+      st.ok(tr(`อ่านสำเร็จ ${chars.toLocaleString("th-TH")} ตัวอักษร จาก ${images.length} หน้า`, `Done, ${pl(chars.toLocaleString("en-US"), "character", "characters")} from ${pl(images.length, "page", "pages")}`));
       preview.hidden = false;
       preview.textContent = text.slice(0, 4000) + (text.length > 4000 ? tr("\n\n… (ตัวอย่าง 4,000 ตัวแรก)", "\n\n… (first 4,000 chars)") : "");
 

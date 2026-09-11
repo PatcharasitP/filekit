@@ -8,7 +8,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select,
          downloadButton, stripExt, yieldToBrowser, eachFile, failedBox, fmtBytes } from "../ui.js";
 import { readWorkbook, sheetToTable, cellText, autoWidths } from "../sheetpick.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const PREVIEW_ROWS = 8;
@@ -182,12 +182,12 @@ export function mount(tool) {
 
     chips.innerHTML = "";
     const chip = (cls, text) => chips.appendChild(el("span", { class: "stat " + cls }, text));
-    chip("ok", tr(`อ่านได้ ${read.length} ไฟล์`, `${read.length} files read`));
+    chip("ok", tr(`อ่านได้ ${read.length} ไฟล์`, `${pl(read.length, "file", "files")} read`));
     chip("dim", asSheets
-      ? tr(`จะได้ ${read.length} ชีท`, `${read.length} sheets`)
-      : tr(`รวม ${rows.length.toLocaleString()} แถว`, `${rows.length.toLocaleString()} rows total`));
-    if (!asSheets) chip("dim", tr(`${header.length} คอลัมน์`, `${header.length} columns`));
-    if (readFailed.length) chip("bad", tr(`ข้าม ${readFailed.length} ไฟล์`, `${readFailed.length} files skipped`));
+      ? tr(`จะได้ ${read.length} ชีท`, `${pl(read.length, "sheet", "sheets")}`)
+      : tr(`รวม ${rows.length.toLocaleString()} แถว`, `${pl(rows.length.toLocaleString(), "row", "rows")} total`));
+    if (!asSheets) chip("dim", tr(`${header.length} คอลัมน์`, `${pl(header.length, "column", "columns")}`));
+    if (readFailed.length) chip("bad", tr(`ข้าม ${readFailed.length} ไฟล์`, `${pl(readFailed.length, "file", "files")} skipped`));
 
     warnBox.innerHTML = "";
     const fb = failedBox(readFailed); if (fb) warnBox.appendChild(fb);
@@ -195,7 +195,7 @@ export function mount(tool) {
     const multi = read.filter((f) => f.others.length);
     if (multi.length) warnBox.appendChild(el("div", { class: "fail-box" }, [
       el("strong", {}, tr(`${multi.length} ไฟล์มีหลายชีท ใช้แค่ชีทแรกของแต่ละไฟล์`,
-                          `${multi.length} files have more than one sheet. Only the first sheet of each is used`)),
+                          `${pl(multi.length, "file", "files")} have more than one sheet. Only the first sheet of each is used`)),
       el("ul", {}, multi.map((f) => el("li", {},
         tr(`${f.name}: ใช้ชีท “${f.sheet}” ไม่ได้ใช้ ${f.others.join(", ")}`,
            `${f.name}: using sheet “${f.sheet}”, skipping ${f.others.join(", ")}`)))),
@@ -206,7 +206,7 @@ export function mount(tool) {
     if (issues.length && !asSheets && headSel.value === "yes") {
       warnBox.appendChild(el("div", { class: "fail-box" }, [
         el("strong", {}, tr(`หัวตารางของ ${issues.length} ไฟล์ไม่ตรงกับไฟล์แรก จับคู่ตามชื่อคอลัมน์ให้แล้ว ช่องที่ขาดเว้นว่างไว้`,
-                            `${issues.length} files have a different header. Matched by column name, missing cells left blank`)),
+                            `${pl(issues.length, "file", "files")} have a different header. Matched by column name, missing cells left blank`)),
         el("ul", {}, issues.map((x) => el("li", {}, [
           x.name + ": ",
           x.missing.length ? tr(`ขาด ${x.missing.join(", ")}`, `missing ${x.missing.join(", ")}`) : "",
@@ -243,7 +243,7 @@ export function mount(tool) {
       if (rows.length > PREVIEW_ROWS)
         preview.appendChild(el("div", { class: "note" },
           tr(`แสดง ${PREVIEW_ROWS} จาก ${rows.length.toLocaleString()} แถว ไฟล์ที่ได้มีครบ`,
-             `Showing ${PREVIEW_ROWS} of ${rows.length.toLocaleString()} rows, the file has all of them`)));
+             `Showing ${PREVIEW_ROWS} of ${pl(rows.length.toLocaleString(), "row", "rows")}, the file has all of them`)));
     }
 
     if (read.length === 1)
@@ -269,7 +269,7 @@ export function mount(tool) {
           XLSX.utils.book_append_sheet(out, ws, sheetName(stripExt(f.name), used));
           await yieldToBrowser();
         }
-        meta = tr(`${read.length} ชีท`, `${read.length} sheets`);
+        meta = tr(`${read.length} ชีท`, `${pl(read.length, "sheet", "sheets")}`);
       } else {
         const { header, rows } = build();
         if (!rows.length) throw new Error(tr("ไม่มีแถวข้อมูลให้รวม", "No data rows to merge"));
@@ -277,11 +277,11 @@ export function mount(tool) {
         ws["!cols"] = autoWidths(header, rows);
         XLSX.utils.book_append_sheet(out, ws, tr("รวมแล้ว", "Merged"));
         meta = tr(`${rows.length.toLocaleString()} แถว, ${header.length} คอลัมน์`,
-                  `${rows.length.toLocaleString()} rows, ${header.length} columns`);
+                  `${pl(rows.length.toLocaleString(), "row", "rows")}, ${pl(header.length, "column", "columns")}`);
       }
       const blob = new Blob([XLSX.write(out, { bookType: "xlsx", type: "array" })], { type: XLSX_MIME });
       const name = `${stripExt(read[0].name)}${tr("-รวมแล้ว.xlsx", "-merged.xlsx")}`;
-      st.ok(tr(`รวมเสร็จ จาก ${read.length} ไฟล์`, `Done, merged ${read.length} files`));
+      st.ok(tr(`รวมเสร็จ จาก ${read.length} ไฟล์`, `Done, merged ${pl(read.length, "file", "files")}`));
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, meta)]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),

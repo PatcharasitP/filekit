@@ -1,6 +1,6 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser, eachFileConcurrent, failedBox } from "../ui.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 const TYPES = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
 
@@ -63,7 +63,7 @@ export function mount(tool) {
       st.progress(null);
       if (!made.length) throw new Error(tr("แปลงไม่สำเร็จ ตรวจว่าเป็นรูปจริง", "Could not convert. Check they're valid images."));
       st.ok(tr(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? `, ข้าม ${failed.length} ไฟล์` : ""),
-        `Done, ${made.length} files` + (failed.length ? `, skipped ${failed.length}` : "")));
+        `Done, ${pl(made.length, "file", "files")}` + (failed.length ? `, skipped ${failed.length}` : "")));
       const fb = failedBox(failed); if (fb) results.appendChild(fb);
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),

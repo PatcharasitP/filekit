@@ -10,6 +10,8 @@ node tests/search.test.mjs
 
 node tests/resultsize.test.mjs   # ทุกแถวผลลัพธ์ต้องบอกขนาดไฟล์ที่ได้
 
+node tests/plural.test.mjs       # โหมด EN ต้องไม่มี "1 pages" (ไทยไม่มีพหูพจน์ คนเขียนจึงแปลตรงตัว)
+
 # ② เบราว์เซอร์จริง — ต้องเปิดเซิร์ฟเวอร์ก่อน
 python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error

@@ -23,6 +23,18 @@ export const IS_EN = LANG === "en";
  *  คำแปลอยู่ติดกับต้นฉบับในโค้ด แก้ที่เดียวเห็นทั้งคู่ · ไม่ส่ง en มา = ใช้ไทยทั้งสองภาษา */
 export function tr(th, en) { return IS_EN && en != null ? en : th; }
 
+/** จำนวน + คำนามอังกฤษที่ถูกพจน์ — ใช้ในฝั่ง en ของ tr() เท่านั้น
+ *
+ * ‼️ ทำไมต้องมี: ภาษาไทยไม่มีพหูพจน์ เขียน "1 หน้า" กับ "5 หน้า" เหมือนกัน
+ *    พอแปลตรงตัวเป็น `${n} pages` เลยได้ "1 pages" ซึ่งผิดไวยากรณ์
+ *    (เจอจริง 11/09/2026 ตอนตรวจโหมด EN ของ excel-to-pdf ที่ไฟล์ออกมาหน้าเดียว)
+ *
+ * รับค่าที่เป็นสตริงจัดรูปแล้วได้ด้วย เช่น "1,234" จาก toLocaleString
+ * (Number("1,234") = NaN ซึ่งไม่เท่ากับ 1 จึงได้พหูพจน์ ถูกต้อง)
+ * @param {number|string} n จำนวน
+ * @param {string} one คำนามเอกพจน์ · @param {string} many คำนามพหูพจน์ */
+export const pl = (n, one, many) => `${n} ${Number(n) === 1 ? one : many}`;
+
 /** สลับภาษาแล้วโหลดใหม่ทันที */
 export function setLang(v) {
   try { localStorage.setItem(KEY, v === "en" ? "en" : "th"); } catch (e) {}

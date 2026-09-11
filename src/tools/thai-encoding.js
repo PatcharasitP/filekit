@@ -3,7 +3,7 @@
 import { el } from "../dom.js";
 import { toolShell, statusBar, button, field, select, dropzone, download, stripExt, fmtBytes } from "../ui.js";
 import { analyzeBytes, decodeBytes, undoDoubleEncode, ENC_LABEL } from "../thai.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -43,9 +43,9 @@ export function mount(tool) {
     render();
     const fixable = items.filter((it) => needsFix(it)).length;
     if (!fixable) st.ok(tr(`ตรวจ ${items.length} ไฟล์ UTF-8 ถูกต้องแล้วทุกไฟล์`,
-                           `Checked ${items.length} files, all valid UTF-8`));
+                           `Checked ${pl(items.length, "file", "files")}, all valid UTF-8`));
     else st.info(tr(`ตรวจ ${items.length} ไฟล์ ต้องซ่อม ${fixable} ไฟล์`,
-                    `Checked ${items.length} files, ${fixable} need fixing`));
+                    `Checked ${pl(items.length, "file", "files")}, ${fixable} need fixing`));
   }
 
   const needsFix = (it) => {
@@ -106,7 +106,7 @@ export function mount(tool) {
         made.forEach((m) => zip.file(m.name, m.blob));
         download(await zip.generateAsync({ type: "blob" }), tr("ไฟล์ซ่อมแล้ว.zip", "fixed-files.zip"));
       } else made.forEach((m) => download(m.blob, m.name));
-      st.ok(tr(`บันทึกแล้ว ${made.length} ไฟล์ (UTF-8)`, `Saved ${made.length} files (UTF-8)`));
+      st.ok(tr(`บันทึกแล้ว ${made.length} ไฟล์ (UTF-8)`, `Saved ${pl(made.length, "file", "files")} (UTF-8)`));
     } catch (e) { st.err(tr("บันทึกไม่สำเร็จ: ", "Save failed: ") + (e.message || e)); }
   }
 

@@ -1,6 +1,6 @@
 import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, downloadButton, stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
-import { tr } from "../i18n.js";
+import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -43,13 +43,13 @@ export function mount(tool) {
       }
       const blob = new Blob([await out.save()], { type: "application/pdf" });
       st.progress(null);
-      st.ok(tr(`รวมเสร็จ ${out.getPageCount()} หน้า จาก ${files.length} ไฟล์`, `Done, ${out.getPageCount()} pages from ${files.length} files`));
+      st.ok(tr(`รวมเสร็จ ${out.getPageCount()} หน้า จาก ${files.length} ไฟล์`, `Done, ${pl(out.getPageCount(), "page", "pages")} from ${pl(files.length, "file", "files")}`));
       if (sawEncrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       // ‼️ ชั้นที่ผู้ใช้ซ่อนไว้จะกลายเป็นมองเห็นได้ในไฟล์ผลลัพธ์ ต้องบอกก่อนไฟล์หลุดไป
       if (sawHiddenLayers) results.appendChild(el("div", { class: "note warn" }, HIDDEN_LAYERS_WARNING));
       const name = stripExt(files[0].name) + tr("-รวม.pdf", "-merged.pdf");
       results.appendChild(el("div", { class: "result" }, [
-        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${out.getPageCount()} หน้า`, `${out.getPageCount()} pages`))]),
+        el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${out.getPageCount()} หน้า`, `${pl(out.getPageCount(), "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),
         downloadButton(blob, name),
       ]));

@@ -14,6 +14,8 @@ node tests/plural.test.mjs       # โหมด EN ต้องไม่มี "
 
 node tests/paint.test.mjs        # ตัวไฮไลต์โค้ด ทาสีถูก และคัดลอกแล้วได้ต้นฉบับเป๊ะ
 
+node tests/samples.test.mjs      # กฎจุดกลางต้องบังคับถึงไฟล์ตัวอย่างด้วย ไม่ใช่แค่โค้ดใน src/
+
 # ② เบราว์เซอร์จริง — ต้องเปิดเซิร์ฟเวอร์ก่อน
 python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error

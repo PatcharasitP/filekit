@@ -10,7 +10,7 @@
 //      + Payload เป็น record map: ผลลัพธ์ชื่อเดียว ↔ ชื่อคอลัมน์ต้นทางที่ต่างกันในแต่ละแหล่ง
 //
 //  PERFORMANCE (รองรับล้านแถว — ยึดบทเรียน fnFallbackLookup v3):
-//    • dict = Record.FromList → hash lookup O(1)/code · เก็บ dict ทุกชั้นใน "record"
+//    • dict = Record.FromList → hash lookup O(1)/code  เก็บ dict ทุกชั้นใน "record"
 //      (M memoize record field = build ครั้งเดียวแน่นอน)
 //      ‼️ ห้ามเก็บ dict ใน list จาก List.Transform — M ไม่ memoize สมาชิก list
 //         = rebuild ทุกแถว ช้าระดับแสนเท่า (บั๊กจริงที่ฆ่า fnCascadeLookup 23/07)
@@ -123,7 +123,7 @@ let
 
     blankMain = Record.FromList(List.Repeat({null}, List.Count(payloadNames)), payloadNames),
 
-    // ---- จับคู่ 1 เซลล์: ไล่แหล่ง → ไล่ key ในแหล่ง → ไล่ code · เจอแล้วหยุดทันที ----
+    // ---- จับคู่ 1 เซลล์: ไล่แหล่ง → ไล่ key ในแหล่ง → ไล่ code  เจอแล้วหยุดทันที ----
     matchOne = (codesText as nullable text) as record =>
         let
             codes = List.Select(

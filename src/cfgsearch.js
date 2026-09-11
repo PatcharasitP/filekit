@@ -32,7 +32,9 @@ const stripTone = (s) => s.replace(/[็-๎]/g, "");
 const norm = (s) => stripTone(String(s || "").toLowerCase().replace(/\s+/g, " ").trim());
 
 export function configSearch(cfg) {
-  const { scope, groupSel, fieldSel = ".field, [class*='-switch-field']", keep = [] } = cfg;
+  /* ‼️ ช่องอาจถูกห่อด้วย .dm-field (กล่องที่ติดป้ายว่าคุมพารามิเตอร์ไหน) อีกชั้น
+     ต้องเลือกกล่องห่อเป็นหน่วยของการซ่อน ไม่งั้นซ่อนช่องแล้วปุ่มคืนค่ายังลอยค้างอยู่ */
+  const { scope, groupSel, fieldSel = ".dm-field, .field, [class*='-switch-field']", keep = [] } = cfg;
 
   const input = el("input", {
     type: "search", class: "cfs-input", autocomplete: "off", spellcheck: "false",
@@ -82,7 +84,7 @@ export function configSearch(cfg) {
      ซึ่งทำงานบนข้อความต้นฉบับ ไม่ได้ตัดวรรณยุกต์ก่อน ตำแหน่งจึงตรงเสมอ
      (ตรวจโค้ดจริงแล้ว 11/09/2026 ไม่ได้เชื่อตามที่ใครบอก) */
   function paintLabel(field, rawQ) {
-    const span = field.querySelector(":scope > span");
+    const span = field.querySelector(":scope > span, :scope > .field > span, :scope > label > span");
     if (!span) return;
     if (span.dataset.cfsOrig === undefined) span.dataset.cfsOrig = span.textContent;
     const orig = span.dataset.cfsOrig;

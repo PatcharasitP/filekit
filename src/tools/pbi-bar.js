@@ -4,6 +4,7 @@ import { tr, IS_EN } from "../i18n.js";
 import { colorPicker, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { presetBar, PRESETS_CSS } from "../presets.js";
 import { configSearch, CFGSEARCH_CSS } from "../cfgsearch.js";
+import { dirtyMarks, DIRTYMARK_CSS } from "../dirtymark.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
@@ -90,6 +91,7 @@ const STYLE = `
 ${COLORKIT_CSS}
 ${PRESETS_CSS}
 ${CFGSEARCH_CSS}
+${DIRTYMARK_CSS}
 
 .pbib-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
 .pbib-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
@@ -171,6 +173,18 @@ export function mount(tool) {
 
   const presets = presetBar(PRESETS, applyPreset);
   let cfgSearch = null;   // ช่องค้นหาในแผงตั้งค่า สร้างหลังแผงมีเนื้อหาแล้ว
+  let dirty = null;       // ตัวบอกว่าช่องไหนถูกแก้จากค่าเริ่มต้น พร้อมปุ่มคืนค่าทีละช่อง
+
+  /* ห่อช่องด้วยกล่องที่ติดป้ายว่าคุมพารามิเตอร์ตัวไหน เพื่อให้ dirtymark รู้ว่า
+     จะเทียบกับค่าเริ่มต้นตัวไหน โดยไม่ต้องแก้ field() กลางที่ทุกเครื่องมือใช้ร่วมกัน
+     ‼️ ต้องห่อ ไม่ใช่ติดป้ายบนตัว field เอง เพราะ field เป็น <label> ที่ครอบช่องกรอกอยู่
+     ถ้าเอาปุ่มคืนค่าไปใส่ข้างใน ชื่อที่โปรแกรมอ่านหน้าจอได้ยินจะเปลี่ยนตามไปด้วย
+     (เจอจริงตอนทดสอบ 11/09/2026 หาช่องด้วยชื่อป้ายไม่เจออีกเลย) */
+  function mark(node, name) {
+    const wrap = el("div", { class: "dm-field" }, [node]);
+    wrap.dataset.param = name;
+    return wrap;
+  }
   const dsListEl = el("div", { class: "pbib-ds-list" });
   const rightBody = el("div", { class: "pbib-right" });
 
@@ -435,6 +449,7 @@ export function mount(tool) {
     presets.clearActive();
     paramValues[name] = value;
     state?.save();
+    dirty?.refresh();
     if (name === "maxBars") syncChartHeight();
     if (!view) return;
     view.signal(name, value);
@@ -571,7 +586,30 @@ export function mount(tool) {
       groupSel: ".pbib-group",
       keep: [presets.node],
     });
-    rightBody.prepend(cfgSearch.node);
+    /* ‼️ ต้องสร้างหลังกลุ่มครบแล้วเหมือนกัน เพราะมันเดินหา [data-param] ในแผง
+       ลำดับบนลงล่างคือ สรุปจำนวนที่แก้ แล้วค่อยช่องค้นหา */
+    dirty = dirtyMarks({
+      scope: rightBody, defaults,
+      values: () => paramValues,
+      onReset: (name) => resetOneParam(name),
+    });
+    rightBody.prepend(dirty.node, cfgSearch.node);
+    dirty.refresh();
+  }
+
+  /* คืนค่าเริ่มต้นเฉพาะช่องเดียว ไม่แตะช่องอื่น
+     ‼️ ต้องอัปเดตทั้งหน้าจอ กราฟ และตัวจำค่า ให้ครบเหมือนตอนผู้ใช้ปรับเอง
+     ไม่งั้นหน้าจอกับกราฟจะไม่ตรงกัน */
+  function resetOneParam(name) {
+    if (!(name in defaults)) return;
+    paramValues[name] = clone(defaults[name]);
+    controls[name]?.setUI(paramValues[name]);
+    presets.clearActive();
+    updateConditionalVisibility();
+    syncChartHeight();
+    if (view) { view.signal(name, paramValues[name]); scheduleRun(); }
+    state?.save();
+    dirty?.refresh();
   }
 
   // สร้างช่องปรับเฉพาะตอนสเปกมีตัวปรับชื่อนั้นจริง (สเปกเก่าไม่มี = ไม่ขึ้นปุ่ม ไม่พัง)
@@ -598,7 +636,7 @@ export function mount(tool) {
       setParam(name, v);
     });
     controls[name] = { setUI: (v) => { input.value = String(v); out.textContent = fmt(v); } };
-    return field(labelText, el("div", { class: "pbib-range-row" }, [input, out]), hint);
+    return mark(field(labelText, el("div", { class: "pbib-range-row" }, [input, out]), hint), name);
   }
 
   function selectField(labelText, name, options, onChange, hint) {
@@ -608,7 +646,7 @@ export function mount(tool) {
       if (onChange) onChange();
     });
     controls[name] = { setUI: (v) => { s.value = v; } };
-    return field(labelText, s, hint);
+    return mark(field(labelText, s, hint), name);
   }
 
   function textField(labelText, name, hint) {
@@ -616,7 +654,7 @@ export function mount(tool) {
     input.value = paramValues[name] ?? "";
     input.addEventListener("input", () => setParam(name, input.value));
     controls[name] = { setUI: (v) => { input.value = v ?? ""; } };
-    return field(labelText, input, hint);
+    return mark(field(labelText, input, hint), name);
   }
 
   // ‼️ ใช้ตัวเลือกสีกลางจาก colorkit.js เหมือนทุกเครื่องมือ จานสีเป็นชุดธีม Power BI
@@ -624,7 +662,7 @@ export function mount(tool) {
     const p = colorPicker(paramValues[name] || "#000000", (hex) => setParam(name, hex),
       { swatches: SWATCHES.powerbi, label: labelText });
     controls[name] = { setUI: (v) => p.setUI(v || "#000000") };
-    return field(labelText, p.node, hint);
+    return mark(field(labelText, p.node, hint), name);
   }
 
   function switchField(labelText, name) {
@@ -634,7 +672,7 @@ export function mount(tool) {
     const sw = el("label", { class: "pbib-switch" }, [input, track]);
     input.addEventListener("change", () => setParam(name, input.checked));
     controls[name] = { setUI: (v) => { input.checked = !!v; } };
-    return el("div", { class: "field pbib-switch-field" }, [el("span", {}, labelText), sw]);
+    return mark(el("div", { class: "field pbib-switch-field" }, [el("span", {}, labelText), sw]), name);
   }
 
   function paletteField(labelText, name, hint) {
@@ -645,7 +683,7 @@ export function mount(tool) {
       setParam(name, arr);
     });
     controls[name] = { setUI: (v) => { input.value = (v || []).join(", "); } };
-    return field(labelText, input, hint);
+    return mark(field(labelText, input, hint), name);
   }
 
   function listTextareaField(labelText, name, hint) {
@@ -656,7 +694,7 @@ export function mount(tool) {
       setParam(name, arr);
     });
     controls[name] = { setUI: (v) => { ta.value = (v || []).join("\n"); } };
-    return field(labelText, ta, hint);
+    return mark(field(labelText, ta, hint), name);
   }
 
   function objectTextareaField(labelText, name, hint) {
@@ -664,7 +702,7 @@ export function mount(tool) {
     ta.value = objToLines(paramValues[name] || {});
     ta.addEventListener("input", () => setParam(name, linesToObj(ta.value)));
     controls[name] = { setUI: (v) => { ta.value = objToLines(v || {}); } };
-    return field(labelText, ta, hint);
+    return mark(field(labelText, ta, hint), name);
   }
   function objToLines(obj) {
     return Object.entries(obj).map(([k, v]) => `${k} = ${v}`).join("\n");
@@ -953,6 +991,7 @@ export function mount(tool) {
   function pushAllParams() {
     for (const name of editable) controls[name]?.setUI(paramValues[name]);
     updateConditionalVisibility();
+    dirty?.refresh();
     syncChartHeight();
     if (view) {
       let v = view;

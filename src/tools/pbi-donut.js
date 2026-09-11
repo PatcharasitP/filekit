@@ -54,6 +54,9 @@ const STYLE = `
 .pbid-chart-box{position:relative;width:100%;min-height:380px;height:56vh;max-height:640px}
 .pbid-chart{width:100%;height:100%}
 .pbid-chart .vega-embed{width:100%;height:100%}
+.pbid-collapse{border:1px solid var(--line);border-left:3px solid var(--g-powerbi,var(--brand));
+  border-radius:var(--r-sm);background:var(--bg-soft);padding:9px 11px;font-size:12.5px;
+  color:var(--text);line-height:1.7;margin-top:10px}
 .pbid-chart-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   color:var(--text-mute);font-size:13.5px;text-align:center;padding:20px;line-height:1.7}
 
@@ -117,6 +120,10 @@ export function mount(tool) {
   let view = null;           // instance ของ vega view ที่กำลังรันอยู่ (ตั้งค่าได้ทันทีผ่าน .signal())
   let rafHandle = null;
   let exprInterpreter = null;  // ตัวแปลนิพจน์ของ Vega แบบไม่ใช้ eval (ดูเหตุผลใน embedChart)
+  // ‼️ กราฟยุบคำอธิบายเองเมื่อที่ไม่พอ ซึ่งถูกตามดีไซน์ แต่ผู้ใช้เห็นแค่ว่าเปิดสวิตช์แล้วไม่มีอะไรเกิดขึ้น
+  // (เจอกับตาบนเว็บจริง 11/09/2026 กล่องสูงกว่าตอนทดสอบ ฟอนต์เลยใหญ่ตาม แล้วยุบตัดเปอร์เซ็นต์ทิ้ง)
+  // กล่องนี้บอกให้รู้ว่าเกิดอะไรขึ้นและต้องทำยังไงถึงจะได้กลับมา
+  const collapseNote = el("div", { class: "pbid-collapse", hidden: true });
   const controls = {};       // name -> { setUI(value) } ใช้ sync UI ตอนสลับชุดข้อมูล/คืนค่าเริ่มต้น
   let editable = [];         // ตัวปรับที่ "มีอยู่จริง" ในสเปกที่โหลดมา (ผู้สมัคร ∩ spec.params)
   let ownBook = null;        // สมุดงานของผู้ใช้ที่เพิ่งอ่านเข้ามา (ยังไม่ได้เลือกคอลัมน์)
@@ -125,6 +132,7 @@ export function mount(tool) {
   const chartEl = el("div", { class: "pbid-chart", id: "pbid-chart" });
   const chartMsg = el("div", { class: "pbid-chart-msg" }, tr("กำลังเตรียมกราฟ…", "Preparing the chart…"));
   const chartBox = el("div", { class: "pbid-chart-box" }, [chartMsg, chartEl]);
+  const centerWrap = el("div", {}, [chartBox, collapseNote]);
 
   const dsListEl = el("div", { class: "pbid-ds-list" });
   const rightBody = el("div", { class: "pbid-right" });
@@ -159,7 +167,7 @@ export function mount(tool) {
       hint: tr("เลือกชุดตัวอย่าง หรือเปิดไฟล์ของคุณเอง", "Pick a sample set, or open your own file"),
     },
     center: {
-      title: tr("กราฟสด", "Live chart"), node: chartBox,
+      title: tr("กราฟสด", "Live chart"), node: centerWrap,
       empty: tr("กำลังเตรียมกราฟ…", "Preparing the chart…"),
     },
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
@@ -271,6 +279,43 @@ export function mount(tool) {
       actions: false, renderer: "svg", ast: true, expr: exprInterpreter,
     });
     view = result.view;
+    updateCollapseNote();
+  }
+
+  /* ── บอกผู้ใช้เมื่อกราฟยุบคำอธิบายเองเพราะที่ไม่พอ ─────────────────
+   * ‼️ ไม่เดาจากขนาดกล่อง แต่อ่าน __legendTier ที่สเปกคำนวณไว้จริง
+   * ไล่หา data source ที่มี field นี้เพราะชื่อหลังคอมไพล์ Vega-Lite เดาไม่ได้ */
+  // ‼️ ต้องใช้ view.data(ชื่อ) ไม่ใช่ getState() เพราะ getState คืน mark ที่วาดแล้ว ไม่ใช่แถวข้อมูล
+  // ชื่อ data source หลังคอมไพล์ Vega-Lite เป็น data_0, data_2, data_3 ซึ่งเดาไม่ได้ จึงไล่ทุกชื่อ
+  // (พิสูจน์ด้วยการส่องของจริง 11/09/2026 เจอ __legendTier ที่ data_3)
+  function readLegendTier() {
+    if (!view) return null;
+    try {
+      const names = Object.keys(view.getState({ data: () => true, signals: () => false, recurse: false }).data || {});
+      for (const n of names) {
+        const rows = view.data(n);
+        if (Array.isArray(rows) && rows.length && rows[0] && "__legendTier" in rows[0]) return rows[0].__legendTier;
+      }
+    } catch { /* อ่านไม่ได้ = เงียบไว้ ดีกว่าเตือนผิด */ }
+    return null;
+  }
+
+  function updateCollapseNote() {
+    const tier = readLegendTier();
+    const hidePos = paramValues.legendPosition === "none";
+    let msg = "";
+    if (!hidePos && tier === 2 && paramValues.showPercent) {
+      msg = tr("พื้นที่คำอธิบายไม่พอ กราฟจึงซ่อนเปอร์เซ็นต์ให้เอง ถ้าอยากให้กลับมา ลองย่อขนาดวง ลดขนาดตัวอักษรคำอธิบาย หรือทำให้วิชวลกว้างขึ้น",
+                "The legend ran out of room so the chart hid the percentages for you. To get them back, shrink the ring, reduce the legend text size, or make the visual wider");
+    } else if (!hidePos && tier === 3) {
+      msg = tr("พื้นที่คำอธิบายไม่พอ กราฟจึงเหลือไว้แค่ชื่อกลุ่ม ตัวเลขกับเปอร์เซ็นต์ถูกซ่อนให้เอง ลองย่อขนาดวงหรือทำให้วิชวลกว้างขึ้น",
+                "The legend ran out of room so only the group names are left, the numbers and percentages were hidden for you. Try shrinking the ring or widening the visual");
+    } else if (!hidePos && tier === 4) {
+      msg = tr("พื้นที่ไม่พอสำหรับคำอธิบายเลย กราฟจึงซ่อนทั้งก้อนแล้วย้ายไปแสดงเปอร์เซ็นต์บนชิ้นโดนัทแทน",
+                "There was no room for the legend at all, so it was hidden and the percentages moved onto the slices instead");
+    }
+    collapseNote.hidden = !msg;
+    collapseNote.textContent = msg;
   }
 
   /* ── ตัวช่วยข้อมูล ────────────────────────────────────────────────── */
@@ -324,7 +369,7 @@ export function mount(tool) {
     if (rafHandle) return;
     rafHandle = requestAnimationFrame(() => {
       rafHandle = null;
-      try { view.run(); } catch (e) { console.error(e); }
+      try { view.run(); updateCollapseNote(); } catch (e) { console.error(e); }
     });
   }
 
@@ -336,6 +381,7 @@ export function mount(tool) {
     const rows = withRuntimeFields(datasets[key].rows);
     const cs = window.vega.changeset().remove(() => true).insert(rows);
     view.change("dataset", cs).signal("centerCaption", paramValues.centerCaption).run();
+    updateCollapseNote();
   }
 
   /* ── แผงซ้าย: เลือกชุดข้อมูล ─────────────────────────────────────── */

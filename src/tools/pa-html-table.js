@@ -79,20 +79,22 @@ export function mount(tool) {
   const badges = [];    // ป้ายเตือนความต่างสี ต้อง update ทุกครั้งที่สีเปลี่ยน
 
   const SEED = () => ({
-    source: "body('GetData')?['firstTableRows']",
+    // ‼️ ค่าเริ่มต้นตั้งใจให้เป็นเรื่องที่คนทั่วไปอ่านแล้วเข้าใจทันที ไม่ใช่ข้อมูลงานของใครคนใดคนหนึ่ง
+    // ใช้ท่า SharePoint Get items ซึ่งเป็นทางที่คนเจอบ่อยที่สุด คีย์เป็นชื่อคอลัมน์ตรง ๆ ไม่มีวงเล็บครอบ
+    source: "body('GetItems')?['value']",
     columns: [
-      { header: "TASK_NO", value: "item()?['[TASK_NO]']" },
-      { header: "LOCATION_ID", value: "item()?['[LOCATION_ID]']" },
-      { header: "REGION", value: "item()?['[REGION]']" },
-      { header: "CONTRACT_END_DATE", value: "formatDateTime(item()?['[CONTRACT_END_DATE]'], 'dd/MM/yyyy')" },
-      { header: "DAYS LEFT", value: "item()?['[DAYS_LEFT]']" },
+      { header: tr("เลขที่ออเดอร์", "Order no"), value: "item()?['OrderNo']" },
+      { header: tr("ลูกค้า", "Customer"), value: "item()?['Customer']" },
+      { header: tr("สินค้า", "Product"), value: "item()?['Product']" },
+      { header: tr("กำหนดส่ง", "Due date"), value: "formatDateTime(item()?['DueDate'], 'dd/MM/yyyy')" },
+      { header: tr("ยอดเงิน", "Amount"), value: "item()?['Amount']" },
     ],
     head: {
-      title: tr("รายงานประจำวัน", "Daily report"),
-      subtitle: tr("สรุปงานที่ยังค้างอยู่", "Work still outstanding"),
+      title: tr("รายการรอจัดส่ง", "Orders waiting to ship"),
+      subtitle: tr("ออเดอร์ที่ยังไม่ได้ส่งของ", "Orders that have not gone out yet"),
       showCard: true,
-      cardValue: "length(body('GetData')?['firstTableRows'])",
-      cardLabel: tr("รายการทั้งหมด", "Total items"),
+      cardValue: "length(body('GetItems')?['value'])",
+      cardLabel: tr("ออเดอร์ทั้งหมด", "Total orders"),
       note: tr("อีเมลนี้ถูกส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับ", "This message was sent automatically, please do not reply"),
     },
     look: {
@@ -132,7 +134,8 @@ export function mount(tool) {
   const addColBtn = button(tr("เพิ่มคอลัมน์", "Add a column"), { icon: "plus", ghost: true, onclick: addColumn });
   const leftBody = el("div", {}, [
     field(tr("อาร์เรย์ต้นทาง", "Source array"), textInput(model, "source"),
-      tr("นิพจน์ที่คืนอาร์เรย์ ไม่ต้องใส่ @ นำหน้า", "An expression returning an array, no leading @ needed")),
+      tr("นิพจน์ที่คืนอาร์เรย์ ไม่ต้องใส่ @ นำหน้า  ถ้าดึงจาก Power BI ด้วย Run a query ชื่อคีย์จะมีวงเล็บเหลี่ยมครอบ เช่น item()?['[TASK_NO]']",
+         "An expression returning an array, no leading @ needed. If the data came from a Power BI query the keys carry square brackets, such as item()?['[TASK_NO]']")),
     el("h3", { class: "pbid-group-title", style: "margin:18px 0 8px" }, tr("คอลัมน์ในตาราง", "Table columns")),
     el("p", { class: "pah-hint" }, tr(
       "ช่องบนคือหัวตาราง ช่องล่างคือนิพจน์ของค่าในแต่ละแถว ไม่ต้องใส่ @ นำหน้า",

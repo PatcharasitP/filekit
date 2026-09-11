@@ -278,11 +278,13 @@ function paintThumb(row, entry) {
   else { box.classList.add("generic"); const ic = genericThumbIcon(entry.kind); if (ic) box.appendChild(ic); }
 }
 /** วาดหน้าแรกของ PDF ลง <canvas> เล็ก ๆ ด้วย pdf.js — เรียกเฉพาะตอน window.pdfjsLib โหลดอยู่แล้วเท่านั้น
- *  (เครื่องมือที่ไม่ได้ใช้ pdf.js จะไม่มีการโหลดเพิ่มเพื่อภาพย่อ — ผู้เรียกเป็นคนเช็คเงื่อนไขนี้ก่อน) */
+ *  (เครื่องมือที่ไม่ได้ใช้ pdf.js จะไม่มีการโหลดเพิ่มเพื่อภาพย่อ — ผู้เรียกเป็นคนเช็คเงื่อนไขนี้ก่อน)
+ *  คืน { canvas, pages } — แกะไฟล์รอบเดียวได้ทั้งภาพและจำนวนหน้า ไม่ต้องอ่านซ้ำ */
 async function renderPdfThumbCanvas(file) {
   try {
     const buf = await file.arrayBuffer();
     const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pages = doc.numPages;
     const page = await doc.getPage(1);
     const vp0 = page.getViewport({ scale: 1 });
     const scale = Math.min(88 / vp0.width, 112 / vp0.height) || 1; // ~2× ของกล่อง 44×56 ให้คมบนจอ retina
@@ -292,11 +294,39 @@ async function renderPdfThumbCanvas(file) {
     canvas.height = Math.max(1, Math.round(viewport.height));
     await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
     doc.destroy?.();
-    return canvas;
+    return { canvas, pages };
   } catch (e) {
     console.error(e); // ไฟล์ PDF เปิดไม่ได้ตอนทำภาพย่อ — ไม่ใช่เรื่องใหญ่ ตกไปใช้ไอคอนทั่วไปเงียบ ๆ
     return null;
   }
+}
+
+/** จำนวนหน้าของ PDF โดย "ไม่โหลดไลบรารีเพิ่มสักตัว" — ใช้เฉพาะตัวที่เครื่องมือนั้นดึงมาอยู่แล้ว
+ *
+ * ‼️ ทำไมไม่โหลด pdf.js มาให้ครบทุกเครื่องมือ: วัดจริงแล้ว pdf.min.js 312 KB + worker 1,061 KB
+ *    รวม 1.37 MB ซึ่งแพงเกินกว่าจะจ่ายเพื่อข้อมูลประดับ เว็บคู่แข่ง (iLovePDF ฯลฯ) โชว์ได้
+ *    เพราะเรนเดอร์ฝั่งเซิร์ฟเวอร์ ไม่ได้จ่ายค่านี้ที่เครื่องผู้ใช้ ของเราทำงานในเครื่องล้วน
+ *    จึงต้องใช้ของที่มีอยู่แล้วเท่านั้น
+ *
+ * เครื่องมือกลุ่มรวม/แยก/ลายน้ำ ใช้ pdf-lib อยู่แล้ว, กลุ่มแปลง/อ่าน ใช้ pdf.js อยู่แล้ว
+ * ทั้งสองทางบอกจำนวนหน้าได้ทั้งคู่ · ไม่มีสักตัว = คืน null แล้วไม่ต้องโชว์อะไร
+ * @returns {Promise<number|null>} */
+async function pdfPageCount(file) {
+  try {
+    if (window.PDFLib) {
+      // ‼️ ไฟล์ที่ตั้งรหัสไว้จะโยน error ถ้าไม่บอก ignoreEncryption — เราแค่ต้องการจำนวนหน้า
+      //    ไม่ได้จะแก้ไขอะไร อ่านผ่านไปได้
+      const doc = await window.PDFLib.PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+      return doc.getPageCount();
+    }
+    if (window.pdfjsLib) {
+      const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      const n = doc.numPages;
+      doc.destroy?.();
+      return n;
+    }
+  } catch { /* ไฟล์เสีย/ตั้งรหัสแน่นหนา — ไม่โชว์จำนวนหน้า ดีกว่าโชว์เลขผิด */ }
+  return null;
 }
 
 /* ── ช่องประกาศสถานะรายไฟล์ ─────────────────────────────────────────────
@@ -422,6 +452,8 @@ export function dropzone(opts = {}) {
   // ‼️ ภาพย่อคงอยู่ข้าม render() (คีย์ด้วยตัว File เอง) — ไม่งั้นทุกครั้งที่มีไฟล์เพิ่ม/ลบ/สลับลำดับ
   //    list.innerHTML="" ใน render() จะล้างภาพที่คำนวณไปแล้วทิ้ง ต้องมาคำนวณใหม่ทุกรอบ
   const thumbCache = new Map();  // File -> { kind, node, pending }
+  const pageCounts = new Map();  // File -> จำนวนหน้าของ PDF (คำนวณครั้งเดียวต่อไฟล์)
+  const pagePending = new Set(); // ไฟล์ที่กำลังนับหน้าอยู่ กันยิงซ้ำระหว่าง render รอบถัดไป
   const thumbUrls  = new Map();  // File -> objectURL ของรูป (เฉพาะรูป) — ต้อง revoke ตอนไฟล์หลุดจากลิสต์
   const states = new Map();      // File -> "working" | "done" | "error" (ไม่มีในทะเบียน = ยังไม่เริ่ม)
   const input = el("input", {
@@ -563,6 +595,13 @@ export function dropzone(opts = {}) {
   }
 
   /** เอา objectURL ของภาพย่อไฟล์นี้คืนหน่วยความจำ (ถ้ามี) — เรียกทุกครั้งที่ไฟล์หลุดจากลิสต์ */
+  /** ข้อความจำนวนหน้าของไฟล์นี้ถ้ารู้แล้ว — ยังไม่รู้ = ค่าว่าง ให้ paintPages เติมทีหลัง
+   *  (ค่าถูกแคชไว้ ข้าม render รอบถัดไปจึงไม่กะพริบหายแล้วโผล่ใหม่) */
+  function pageLabel(file) {
+    const n = pageCounts.get(file);
+    return n == null ? "" : tr(`${n} หน้า`, n === 1 ? "1 page" : `${n} pages`);
+  }
+
   function revokeThumb(file) {
     const u = thumbUrls.get(file);
     if (u) { URL.revokeObjectURL(u); thumbUrls.delete(file); }
@@ -587,11 +626,37 @@ export function dropzone(opts = {}) {
       img.src = url;
     } else if (entry.kind === "pdf" && window.pdfjsLib) {
       entry.pending = true;
-      renderPdfThumbCanvas(file).then((canvas) => {
+      renderPdfThumbCanvas(file).then((res) => {
         entry.pending = false;
-        if (canvas) { entry.node = canvas; rePaintIfPresent(file, entry); }
+        if (!res) return;
+        entry.node = res.canvas;
+        if (res.pages) { pageCounts.set(file, res.pages); paintPages(file); }
+        rePaintIfPresent(file, entry);
       });
     }
+  }
+
+  /** เติมจำนวนหน้าลงชิปไฟล์ PDF — งานเบื้องหลัง ไม่บล็อกการวาดแถว
+   *  ‼️ เริ่มก็ต่อเมื่อมีไลบรารีอยู่แล้ว (ดู pdfPageCount) และทำครั้งเดียวต่อไฟล์ */
+  function ensurePageCount(file) {
+    if (detectType(file) !== "pdf") return;
+    if (pageCounts.has(file) || pagePending.has(file)) return;
+    if (!window.PDFLib && !window.pdfjsLib) return;
+    pagePending.add(file);
+    pdfPageCount(file).then((n) => {
+      pagePending.delete(file);
+      if (n == null) return;
+      pageCounts.set(file, n);
+      paintPages(file);
+    });
+  }
+  /** วาดจำนวนหน้าลงแถวปัจจุบันของไฟล์นี้ — query สดเพราะ render() อาจสร้างแถวใหม่ไปแล้วระหว่างรอ */
+  function paintPages(file) {
+    const i = files.indexOf(file);
+    if (i === -1) return;
+    const n = pageCounts.get(file);
+    const slot = list.querySelector(`.file-row[data-i="${i}"] .f-pages`);
+    if (slot && n != null) slot.textContent = tr(`${n} หน้า`, n === 1 ? "1 page" : `${n} pages`);
   }
 
   /** วาดผลภาพย่อที่เพิ่งคำนวณเสร็จลงแถวปัจจุบันของไฟล์นี้ — ใช้ query สดเพราะ render() อาจสร้างแถวใหม่ไปแล้ว
@@ -620,7 +685,8 @@ export function dropzone(opts = {}) {
     ]);
     warn.appendChild(box);
   }
-  function remove(i) { revokeThumb(files[i]); states.delete(files[i]); files.splice(i, 1); render(); onChange(files); }
+  function remove(i) { revokeThumb(files[i]); pageCounts.delete(files[i]); pagePending.delete(files[i]);
+    states.delete(files[i]); files.splice(i, 1); render(); onChange(files); }
 
   /** ป้ายสถานะท้ายแถว — ยังไม่เริ่มทำ = ไม่ต้องมีป้าย (แถวเปล่าอ่านง่ายกว่าป้าย "รอ" เต็มจอ) */
   function stateBadge(st) {
@@ -714,10 +780,17 @@ export function dropzone(opts = {}) {
             onclick: async (e) => { e.stopPropagation();
               const m = await import("./preview.js"); m.viewFile(f, files); } }, [
           el("span", { class: "f-name" }, f.name),
-          el("span", { class: "f-size" }, fmtBytes(f.size)),
+          // ขนาดกับจำนวนหน้าอยู่บรรทัดเดียวกัน — .f-meta เป็นคอลัมน์ ถ้าแยก span จะกลายเป็นบรรทัดที่ 3
+          el("span", { class: "f-sub" }, [
+            el("span", { class: "f-size" }, fmtBytes(f.size)),
+            el("span", { class: "f-pages" }, pageLabel(f)),
+          ]),
         ]) : el("span", { class: "f-meta" }, [
           el("span", { class: "f-name" }, f.name),
-          el("span", { class: "f-size" }, fmtBytes(f.size)),
+          el("span", { class: "f-sub" }, [
+            el("span", { class: "f-size" }, fmtBytes(f.size)),
+            el("span", { class: "f-pages" }, pageLabel(f)),
+          ]),
         ]),
         stateBadge(states.get(f)),
         reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
@@ -729,6 +802,7 @@ export function dropzone(opts = {}) {
       ]);
       list.appendChild(row);
       if (thumbs) ensureThumb(f, row);   // วาดไอคอนทั่วไปทันที แล้วเติมภาพจริงทีหลังถ้าทำได้
+      ensurePageCount(f);                // จำนวนหน้าของ PDF เติมทีหลังเช่นกัน ไม่หน่วงการวาดแถว
     });
     count.textContent = !files.length ? ""
       : tr(`${files.length} ไฟล์, รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}`,

@@ -26,6 +26,7 @@ python3 -m http.server 8899 &
 
 ../.venv/bin/python tests/browser_viewer.py     # ตัวดูรูปเต็มจอ ปิดแล้วต้องไม่พาหลุดออกจากงาน
 ../.venv/bin/python tests/browser_dialogroute.py # กล่องดูไฟล์เต็มจอต้องปิดเองตอนสลับเครื่องมือ ไม่งั้นหน้าที่เหลือคลิกไม่ได้
+../.venv/bin/python tests/browser_pdfpages.py  # ชิปไฟล์ PDF บอกจำนวนหน้า และห้ามลาก pdf.js 1.37 MB มาเพิ่มเพื่อการนี้
 ../.venv/bin/python tests/browser_a11y.py       # คีย์บอร์ด โฟกัส ป้ายกำกับ คอนทราสต์
 ../.venv/bin/python tests/browser_leak.py       # objectURL / listener / DOM / heap รั่ว (เปิด server เอง พอร์ต 8924)
 ../.venv/bin/python tests/browser_stress.py     # ทรมานด้วยเคสสุดโต่ง ไฟล์เสีย ไฟล์เยอะ กดรัว

@@ -138,7 +138,12 @@
    ชื่อไฟล์จะเหลือที่ไม่ถึง 80px จนอ่านไม่ออก ("ตัวอย่า…") พอซ้อนบรรทัดชื่อได้เต็มความกว้างแถว */
 .f-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .f-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f-sub{display:flex;align-items:baseline;gap:8px;min-width:0}
 .f-size{color:var(--text-mute);font-size:12px;font-variant-numeric:tabular-nums}
+/* จำนวนหน้าของ PDF — เติมทีหลังแบบไม่บล็อก ระหว่างที่ยังไม่รู้ค่าต้องไม่กินที่เป็นช่องว่างลอย ๆ
+   (:empty ทำให้ไม่มีทั้งกล่องและ gap จนกว่าจะมีข้อความจริง) */
+.f-pages{color:var(--text-mute);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.f-pages:empty{display:none}
 
 /* ── ภาพย่อ + สถานะรายไฟล์ (ทำคู่ขนานกับ agent ที่แก้ ui.js — ชื่อ class ตามสัญญาคงที่) ── */
 .file-row .thumb{

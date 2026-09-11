@@ -3,6 +3,7 @@ import { el, statusBar, button, field, select, download } from "../ui.js";
 import { tr, IS_EN } from "../i18n.js";
 import { colorPicker, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { presetBar, PRESETS_CSS } from "../presets.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
 
@@ -121,6 +122,7 @@ export function mount(tool) {
   let defaults = {};         // ค่าตั้งต้นจาก spec.params (ไว้ใช้ตอนคืนค่าเริ่มต้น)
   let view = null;           // instance ของ vega view ที่กำลังรันอยู่ (ตั้งค่าได้ทันทีผ่าน .signal())
   let rafHandle = null;
+  let state = null;   // ตัวจำค่าและทำลิงก์แชร์ สร้างหลังรู้ค่าเริ่มต้นจากสเปกแล้ว
   let exprInterpreter = null;  // ตัวแปลนิพจน์ของ Vega แบบไม่ใช้ eval (ดูเหตุผลใน embedChart)
   // ‼️ กราฟยุบคำอธิบายเองเมื่อที่ไม่พอ ซึ่งถูกตามดีไซน์ แต่ผู้ใช้เห็นแค่ว่าเปิดสวิตช์แล้วไม่มีอะไรเกิดขึ้น
   // (เจอกับตาบนเว็บจริง 11/09/2026 กล่องสูงกว่าตอนทดสอบ ฟอนต์เลยใหญ่ตาม แล้วยุบตัดเปอร์เซ็นต์ทิ้ง)
@@ -178,6 +180,7 @@ export function mount(tool) {
     { icon: "download", ghost: true, onclick: () => onDownloadSample(XLSX_SAMPLE_URL, XLSX_SAMPLE_NAME) });
   const dlPbixBtn = button(tr("ดาวน์โหลด .pbix ตัวอย่าง", "Download sample .pbix"),
     { icon: "download", ghost: true, onclick: () => onDownloadSample(PBIX_SAMPLE_URL, PBIX_SAMPLE_NAME) });
+  const shareBtn = button(tr("คัดลอกลิงก์ค่านี้", "Copy a link to these settings"), { icon: "copy", ghost: true, onclick: onShare });
   const resetBtn = button(tr("คืนค่าเริ่มต้น", "Reset to defaults"), { icon: "undo", ghost: true, onclick: onReset });
 
   const ws = workspace(tool, {
@@ -190,7 +193,7 @@ export function mount(tool) {
       empty: tr("กำลังเตรียมกราฟ…", "Preparing the chart…"),
     },
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
-    footer: [copyBtn, dlBtn, dlXlsxBtn, dlPbixBtn, resetBtn, st.node],
+    footer: [copyBtn, dlBtn, dlXlsxBtn, dlPbixBtn, shareBtn, resetBtn, st.node],
     note: tr(
       "นำไปใช้ใน Deneb: ลากคอลัมน์หรือ measure ที่ต้องการเข้า field well แล้ว Rename for this visual เป็น Category กับ Value จากนั้นวางสเปกที่คัดลอกไว้ทับของเดิม",
       "To use in Deneb: drag the columns or measure you want into the field wells, Rename for this visual to Category and Value, then paste the copied spec over the existing one"
@@ -234,12 +237,31 @@ export function mount(tool) {
       // ‼️ ต้อง import หลังจาก window.vega พร้อมแล้วเท่านั้น (vega-util-shim.js ส่งต่อจาก bundle ตัวนั้น)
       ({ expressionInterpreter: exprInterpreter } = await import("../../vendor/vega-interpreter.esm.js"));
 
+      /* ‼️ ต้องสร้างหลังรู้ค่าเริ่มต้นจากสเปกจริงแล้วเท่านั้น ไม่งั้นเทียบ diff ไม่ได้
+         และต้องกู้ค่าก่อน buildRightPanel เพื่อให้ช่องกรอกวาดด้วยค่าที่กู้มาเลย */
+      state = stateKit(tool.id, {
+        defaults,
+        // คำใต้เลขกลางมาจากชุดข้อมูลที่เลือก ไม่ใช่ค่าที่ผู้ใช้ตั้งเอง จึงไม่เก็บลงลิงก์
+        skip: ["centerCaption"],
+        collect: () => paramValues,
+        apply: (vals) => {
+          for (const [k, v] of Object.entries(vals)) if (k in defaults) paramValues[k] = v;
+        },
+      });
+      const restored = state.restore();
+
       renderDatasetList();
       buildRightPanel();
       buildLearnBlock();
       wireOwnData();
       await embedChart();
 
+      if (restored) {
+        st.ok(state.hasLink()
+          ? tr("เปิดด้วยค่าที่มากับลิงก์", "Opened with the settings from the link")
+          : tr("ใช้ค่าที่คุณตั้งไว้ครั้งก่อน", "Using the settings you had last time"));
+        state.dropLinkParam();
+      }
       chartMsg.hidden = true;
     } catch (e) {
       console.error(e);
@@ -381,6 +403,7 @@ export function mount(tool) {
   function setParam(name, value) {
     presets.clearActive();
     paramValues[name] = value;
+    state?.save();
     if (!view) return;
     view.signal(name, value);
     scheduleRun();
@@ -876,7 +899,17 @@ export function mount(tool) {
       v.run();
       updateCollapseNote();
     }
+    state?.save();
     st.ok(tr("ใช้ชุดที่เลือกแล้ว ปรับต่อได้ตามใจ", "Applied, tweak it from here"));
+  }
+
+  async function onShare() {
+    const link = state?.shareLink();
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
   }
 
   function onReset() {
@@ -890,6 +923,7 @@ export function mount(tool) {
       for (const name of editable) v = v.signal(name, paramValues[name]);
       v.run();
     }
+    state?.forget();
     st.ok(tr("คืนค่าเริ่มต้นแล้ว", "Reset to defaults"));
   }
 }

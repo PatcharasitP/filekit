@@ -132,6 +132,58 @@ with sync_playwright() as p:
     ck("ชิปชุดโดนัทติดทีละอัน", pg.locator(".ps-chip.on").count(), 1)
     ck("กราฟยังวาดครบหลังใส่ชุด", pg.locator("#pbid-chart svg path").count(), 10)
 
+    # ── ⑤ จำค่าและแชร์ด้วยลิงก์ ─────────────────────────────────────────
+    print("\n━━ ⑤ จำค่าและแชร์ด้วยลิงก์ ━━")
+    # ‼️ ต้องล้างก่อนเปิดเครื่องมือ ไม่ใช่หลัง เพราะเครื่องมือกู้ค่าตั้งแต่ตอน mount
+    #    (ข้อ ④ กดชุดพร้อมใช้ไว้ ค่าจึงถูกจำไว้แล้ว ซึ่งเป็นพฤติกรรมที่ถูกของฟีเจอร์นี้)
+    # ‼️ และต้องรอให้การบันทึกที่ตั้งเวลาไว้จากข้อก่อนเขียนเสร็จก่อนล้าง
+    #    ไม่งั้นมันจะยิงหลังล้างแล้วเขียนค่าเก่ากลับมา (เจอจริงตอนเขียนเทสนี้)
+    pg.wait_for_timeout(700)
+    pg.evaluate("localStorage.clear()")
+    open_tool(pg, "pbi-donut", "#pbid-chart svg")
+    # ‼️ ล้างซ้ำแล้วโหลดใหม่ เพราะการล้างจากหน้าก่อนหน้าไม่ทันการกู้ค่าตอน mount รอบใหม่
+    #    (พิสูจน์แล้วว่าล้างได้จริง แต่ค่ายังกลับมา แปลว่าจังหวะไม่ทัน ไม่ใช่ล้างไม่ติด)
+    pg.evaluate("localStorage.clear()")
+    pg.reload(wait_until="networkidle")
+    pg.wait_for_selector("#pbid-chart svg", timeout=15000)
+    pg.wait_for_timeout(1500)
+    ck("เริ่มจากไม่มีค่าจำไว้", pg.evaluate("localStorage.getItem('filekit-state-pbi-donut')"), None)
+
+    # เปลี่ยนค่าหนึ่งตัวแล้วขอลิงก์ ดักตอนเขียนคลิปบอร์ดเพราะ headless อ่านกลับไม่ได้
+    pg.evaluate("""() => {
+      const s=[...document.querySelectorAll('.pbid-right select')].find(x=>[...x.options].some(o=>o.value==='bottom'));
+      s.value='bottom'; s.dispatchEvent(new Event('change',{bubbles:true}));
+    }""")
+    pg.wait_for_timeout(900)
+    link = pg.evaluate("""async () => {
+      let cap=null;
+      const orig=navigator.clipboard.writeText.bind(navigator.clipboard);
+      navigator.clipboard.writeText=(t)=>{cap=t;return orig(t).catch(()=>{});};
+      [...document.querySelectorAll('button')].find(b=>b.textContent.includes('คัดลอกลิงก์ค่านี้')).click();
+      await new Promise(r=>setTimeout(r,500));
+      return cap;
+    }""")
+    ck("ได้ลิงก์ที่มีค่าติดไปด้วย", isinstance(link, str) and "?s=" in link, True)
+    # ‼️ ลิงก์ต้องเก็บเฉพาะค่าที่เปลี่ยน ถ้าเก็บทั้งชุดจะยาวจนแชร์ไม่ไหว
+    ck("ลิงก์สั้นพอที่จะส่งให้คนอื่นได้ (ไม่เกิน 300 ตัวอักษร)", len(link or "") <= 300, True)
+
+    saved = pg.evaluate("localStorage.getItem('filekit-state-pbi-donut')")
+    ck("จำค่าไว้เฉพาะตัวที่เปลี่ยน", saved, '{"legendPosition":"bottom"}')
+
+    # เปิดลิงก์ในสภาพที่ไม่มีของจำไว้เลย ค่าต้องมาจากลิงก์ล้วน ๆ
+    pg.evaluate("localStorage.clear()")
+    pg.goto(link, wait_until="networkidle")
+    pg.wait_for_selector("#pbid-chart svg", timeout=15000)
+    pg.wait_for_timeout(2200)
+    ck("เปิดลิงก์แล้วได้ค่าตรงกับที่เจ้าของลิงก์ตั้งไว้",
+       pg.evaluate("""() => {
+         const s=[...document.querySelectorAll('.pbid-right select')].find(x=>[...x.options].some(o=>o.value==='bottom'));
+         return s && s.value;
+       }"""), "bottom")
+    ck("กราฟยังวาดครบหลังกู้ค่าจากลิงก์", pg.locator("#pbid-chart svg path").count(), 10)
+    # ‼️ ล้าง s ทิ้งหลังใช้ ไม่งั้นกดรีเฟรชแล้วเด้งกลับค่าของลิงก์ตลอด แก้ค่าเองไม่ได้
+    ck("ล้างค่าออกจากแถบที่อยู่หลังใช้แล้ว", pg.evaluate("location.search"), "")
+
     print("\n━━ console ━━")
     ck("ไม่มี error ใน console", len([e for e in errs if "favicon" not in e]), 0)
     b.close()

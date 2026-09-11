@@ -4,6 +4,7 @@ import { tr } from "../i18n.js";
 import { colorPicker, contrastBadge, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { jumpSystem, JUMPTO_CSS } from "../jumpto.js";
 import { presetBar, PRESETS_CSS } from "../presets.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 
 /* ‼️ ทำไมเครื่องนี้ถึงคุ้มค่าที่สุดในหมวด Power Automate
  * แอ็กชัน Create HTML table คืน HTML เปล่า ๆ ไม่มีสไตล์เลย และ Outlook เดสก์ท็อป
@@ -178,6 +179,21 @@ export function mount(tool) {
   });
   badges.push(headBadge, borderBadge);
 
+  /* ‼️ เทียบ diff ทีละก้อนบนสุด (head/look/names/columns) ไม่ได้เทียบรายช่อง
+     เปลี่ยนช่องเดียวก็เก็บทั้งก้อนนั้น แลกความยาวลิงก์นิดหน่อยกับโค้ดที่ง่ายกว่ามาก
+     วัดแล้วยังสั้นพอ เพราะแต่ละก้อนมีไม่กี่ค่า */
+  const state = stateKit(tool.id, {
+    defaults: SEED(),
+    collect: () => ({ source: model.source, columns, head: { ...head }, look: { ...look }, names: { ...names } }),
+    apply: (v) => {
+      if (v.source) model.source = v.source;
+      if (Array.isArray(v.columns)) columns = v.columns;
+      if (v.head) Object.assign(head, v.head);
+      if (v.look) Object.assign(look, v.look);
+      if (v.names) Object.assign(names, v.names);
+    },
+  });
+
   const presets = presetBar(PRESETS, applyPreset);
 
   const rightBody = el("div", {}, [
@@ -215,6 +231,7 @@ export function mount(tool) {
 
   const copyBtn = button(tr("คัดลอก", "Copy"), { icon: "copy", onclick: onCopy });
   const dlBtn = button(tr("ดาวน์โหลด", "Download"), { icon: "download", ghost: true, onclick: onDownload });
+  const shareBtn = button(tr("คัดลอกลิงก์ค่านี้", "Copy a link to these settings"), { icon: "copy", ghost: true, onclick: onShare });
   const resetBtn = button(tr("คืนค่าเริ่มต้น", "Reset to defaults"), { icon: "undo", ghost: true, onclick: onReset });
 
   const ws = workspace(tool, {
@@ -222,7 +239,7 @@ export function mount(tool) {
       hint: tr("ใช้ชื่อคีย์ตามที่ออกมาจากแอ็กชันก่อนหน้าจริง ๆ", "Use the key names exactly as the previous action returns them") },
     center: { title: tr("ผลลัพธ์", "Result"), node: centerNode },
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
-    footer: [copyBtn, dlBtn, resetBtn, st.node],
+    footer: [copyBtn, dlBtn, shareBtn, resetBtn, st.node],
     note: tr(
       "แท็บ JSON วางลง flow จะได้ทั้งก้อนพร้อมกันทีเดียว คัดลอกแล้วกดขวาบนพื้นที่ว่างในหน้าออกแบบ flow แล้วเลือก Paste ส่วนแท็บ HTML ไว้ใช้ตอนอยากวางเองในแอ็กชัน Compose ที่มีอยู่แล้ว  ‼️ ถ้า flow มีแอ็กชันชื่อเดียวกันอยู่ก่อน หน้าออกแบบจะเติมเลขต่อท้ายให้เอง เช่นกลายเป็น EmailHtmlTable 1 กรณีนั้นต้องเปิดแอ็กชันประกอบ HTML แล้วแก้ชื่อในนิพจน์ body(...) ให้ตรงกับชื่อใหม่ ไม่งั้นอีเมลจะดึงตารางของแอ็กชันเก่ามาแสดงแบบเงียบ ๆ วิธีกันคือตั้งชื่อในช่องชื่อแอ็กชันให้ไม่ซ้ำตั้งแต่แรก",
       "The JSON tab gives you the whole block at once, copy it then right click an empty spot in the flow designer and choose Paste. The HTML tab is for pasting by hand into a Compose action you already have.  If the flow already has actions with these names the designer appends a number, such as EmailHtmlTable 1. When that happens open the compose action and change the name inside body(...) to match, otherwise the email quietly shows the old table. Set unique action names up front to avoid it"
@@ -231,9 +248,17 @@ export function mount(tool) {
   ws.wrap.prepend(styleEl);
   ws.showCanvas(true);
 
+  const restored = state.restore();
+  if (restored) rebuildPanels();
   buildColumns();
   jump.attach(previewBox);
   setView("preview");
+  if (restored) {
+    st.ok(state.hasLink()
+      ? tr("เปิดด้วยค่าที่มากับลิงก์", "Opened with the settings from the link")
+      : tr("ใช้ค่าที่คุณตั้งไว้ครั้งก่อน", "Using the settings you had last time"));
+    state.dropLinkParam();
+  }
 
   return ws.wrap;
 
@@ -458,6 +483,7 @@ export function mount(tool) {
   }
 
   function render() {
+    state.save();
     const msgs = warnings();
     warnEl.hidden = msgs.length === 0;
     warnEl.textContent = msgs.join("  ");
@@ -514,6 +540,14 @@ export function mount(tool) {
     st.ok(tr("ใช้ชุดที่เลือกแล้ว ปรับต่อได้ตามใจ", "Applied, tweak it from here"));
   }
 
+  async function onShare() {
+    const link = state.shareLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
+  }
+
   function onReset() {
     const fresh = SEED();
     columns = fresh.columns;
@@ -523,6 +557,7 @@ export function mount(tool) {
     Object.assign(names, fresh.names);
     rebuildPanels();
     badges.forEach((b) => b.update());
+    state.forget();
     st.ok(tr("คืนค่าเริ่มต้นแล้ว", "Reset to defaults"));
   }
 

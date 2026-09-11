@@ -1,0 +1,1304 @@
+{
+ "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+ "width": "container",
+ "height": "container",
+ "padding": {
+  "left": 6,
+  "right": 6,
+  "top": 8,
+  "bottom": 8
+ },
+ "autosize": {
+  "type": "fit",
+  "contains": "padding"
+ },
+ "background": "transparent",
+ "usermeta": {
+  "deneb": {
+   "build": "1.9.1.0",
+   "metaVersion": 1,
+   "provider": "vegaLite",
+   "providerVersion": "6.4.0"
+  },
+  "information": {
+   "name": "SiteScope Dynamic Donut",
+   "description": "โดนัทหนึ่งวง reusable ข้ามไฟล์ field contract ตายตัวแค่ 2 ช่อง Category (nominal, ชื่อกลุ่ม) และ Value (quantitative, ค่าที่เอามาแบ่งวง) วิธีใช้กับไฟล์อื่น: ลากคอลัมน์/measure อะไรก็ได้เข้า field well ของ Deneb แล้ว Rename for this visual เป็น Category / Value ตามลำดับ สเปกจะทำงานทันที โดยไม่ต้องแก้โค้ด, % และยอดรวมคำนวณในสเปกเอง ไม่ต้องเตรียม measure % มาก่อน ‼️ ถ้า Value เป็น measure ที่บวกกันไม่ได้ (ค่าเฉลี่ย, อัตราส่วน, %) ให้ตั้ง centerMode = 'none' หรือ 'custom' ไม่งั้นเลขกลางวงจะเป็นผลรวมที่ไม่มีความหมาย",
+   "author": "ลุงเอ (Power BI + Deneb), งาน SiteScope_Donut",
+   "uuid": "b3f0e9a2-6c1d-4a2f-9a3e-2f6d9c1a7b4e",
+   "generated": "2026-09-10"
+  },
+  "dataset": [
+   {
+    "key": "Category",
+    "name": "Category",
+    "type": "text",
+    "kind": "column"
+   },
+   {
+    "key": "Value",
+    "name": "Value",
+    "type": "numeric",
+    "kind": "measure"
+   }
+  ],
+  "paramGuide": {
+   "centerCaption": "ข้อความเล็กใต้เลขกลางวง (โชว์เฉพาะ centerMode = sum) ใส่ข้อความอะไรก็ได้",
+   "centerMode": "โหมดเลขกลางวง: 'sum' = ผลรวมทุกชิ้นที่แสดง (ค่าเริ่มต้น), 'none' = ซ่อนเลขกลาง เหลือแต่วง, 'custom' = โชว์ข้อความจาก centerText แทน ‼️ ถ้า Value เป็น measure ที่บวกกันไม่ได้ (ค่าเฉลี่ย, อัตราส่วน, %) ให้เปลี่ยนเป็น none หรือ custom ไม่งั้นเลขกลางจะเป็นผลรวมที่ไม่มีความหมาย (เฉลี่ยบวกเฉลี่ย)",
+   "centerText": "ข้อความที่โชว์กลางวงเมื่อ centerMode = custom เท่านั้น",
+   "maxSlices": "จำนวนชิ้นสูงสุดที่แสดงแยกกัน ที่เหลือถูกยุบรวมเป็นชิ้นเดียวชื่อ 'อื่น ๆ' ปักท้ายสุดเสมอ",
+   "sortMode": "ลำดับชิ้น/legend: 'valueDesc' มากไปน้อย (ค่าเริ่มต้น), 'valueAsc' น้อยไปมาก, 'nameAsc' เรียงตามชื่อ, 'custom' ใช้ customOrder ทุกโหมด 'อื่น ๆ' ปักท้ายสุดเสมอ",
+   "customOrder": "array ชื่อกลุ่มตามลำดับที่ต้องการ ใช้เมื่อ sortMode = custom เท่านั้น เช่น [\"C\",\"A\",\"B\"] กลุ่มที่ไม่อยู่ในลิสต์นี้ต่อท้ายเรียงมากไปน้อย (ไม่หายไปเงียบ ๆ)",
+   "palette": "array สี hex ของตัวเอง ไล่ตามลำดับชิ้นหลัง sort เช่น [\"#C4262E\",\"#E8A33D\",\"#2B5F8E\"] ถ้าสีหมดก่อนกลุ่มหมดจะวนซ้ำ ปล่อยว่าง [] = ใช้สีตามธีมไฟล์แทน (ชั้น 3)",
+   "colorOverrides": "object ล็อกสีเจาะจงรายชื่อกลุ่ม ชนะทุกชั้น เช่น {\"A\":\"#1F4E79\"} กลุ่มที่ไม่ระบุตกไปใช้ palette/ธีมตามปกติ",
+   "otherColor": "สีของชิ้น 'อื่น ๆ' โดยเฉพาะ (ไม่ผ่าน palette/ธีม เว้นแต่ colorOverrides ระบุคีย์ 'อื่น ๆ' ไว้)",
+   "donutThickness": "‼️ เปลี่ยนความหมายแล้ว (10/09): ความหนาของวง เป็นสัดส่วนของรัศมี (0 ถึง 1) ไม่ใช่พิกเซลตายตัวอีกต่อไป เช่น 0.28 = วงหนา 28% ของรัศมีวงกลม ต้องเป็นสัดส่วนเพราะวงย่อขยายอัตโนมัติตามกล่อง visual จริง ถ้ายังเป็นพิกเซลตายตัวจะดูตันเป็นวงกลมทึบตอนวงเล็กลง",
+   "donutScale": "ตัวคูณขนาดวงเทียบกับ \"รัศมีใหญ่ที่สุดเท่าที่พื้นที่จริงเอื้อ\" (1.0 = เต็มพื้นที่พอดี) ‼️ ค่าเริ่มต้นตั้งไว้ที่ 0.67 (10/09 รอบ 6, หลังแก้สัดส่วนวง/ตัวอักษรแล้วพี่ปอนด์บอกวงยังใหญ่เกินไปแม้อัตราส่วนกับตัวอักษรจะถูกแล้ว): 0.67 ทำให้เส้นผ่านศูนย์กลางวงเหลือ ~70% ของขนาดเต็มที่ 1.0 (เล็กลงประมาณ 1 ใน 3 ตามที่ขอ) ทดสอบจริงยืนยันแล้วว่า legend ยังโชว์ % ครบตามปกติที่กล่องอ้างอิงและกล่องกลางๆ (พื้นที่เหลือเฟือมากขึ้นเมื่อวงเล็กลง) มากกว่า 0.67 = วงใหญ่ขึ้น, น้อยกว่า = เล็กลง ‼️ อัปเดต (10/09 รอบ 7): ตั้งแต่รอบนี้ขนาดตัวอักษร/ระยะห่างแถวของ legend ผูกกับความสูงที่มีจริงเป็นหลัก ไม่ได้ผูกกับรัศมีวงแบบเดิมอีกต่อไป (ดูคอมเมนต์ยาวใน layout_exprs()) ปรับ donutScale จึงแทบไม่กระทบขนาด legend เลย (มีผลทางอ้อมเล็กน้อยผ่านเพดานกันฟอนต์เทอะทะเท่านั้น ซึ่งไม่ค่อยทำงานที่ขนาดกล่องปกติ) แต่ยังกระทบความกว้างที่เหลือให้ legend ใช้ได้เหมือนเดิม (วงเล็กลง = legend มีที่ให้ใช้ในแนวนอนมากขึ้น)",
+   "showPercent": "true = โชว์ % ต่อท้ายจำนวนใน legend, false = โชว์แค่จำนวน (ไม่มีวงเล็บ)",
+   "legendLayout": "รูปแบบตัวเลขใน legend: 'inline' (ค่าเริ่มต้นใหม่ 10/09) = ก้อนเดียว '134 (70.5%)' ชิดขวา, 'columns' (แบบเดิม) = แยกคอลัมน์จำนวนกับ % คนละตำแหน่ง",
+   "cornerRadius": "ใหม่ (10/09): มุมโค้งมนปลายแต่ละชิ้น (พิกเซล) ทดสอบจริงที่กล่องเล็กสุด 320x240 กับชิ้นเล็กสุดในเคสทดสอบ (2.1% ของวง): ที่ 3 ยังเป็นรูปลิ่มชัดเจน ที่ 4-5 เริ่มดูเป็นแคปซูลมนแทนลิ่มแต่ยังมองเห็นชัด ‼️ เพดานที่แนะนำ = 4 (เกินกว่านี้รูปทรงเริ่มเพี้ยนที่กล่องเล็กมาก แม้จะยังไม่หายไปเลยก็ตาม)",
+   "padAngle": "ใหม่ (10/09): ช่องไฟระหว่างชิ้น (เรเดียน) ค่าแนะนำ 0.004-0.008 ‼️ อย่าตั้งเกิน 0.02 ไม่งั้นชิ้นเล็กสุด (2.1% = 0.132 เรเดียน) จะแคบลงจนสังเกตยาก",
+   "showSliceLabels": "ใหม่ (10/09): true = โชว์ % บนชิ้นโดนัท (ปิดไว้เป็นค่าเริ่มต้นกันรก) สีตัวอักษรเลือกอัตโนมัติตามความสว่างของสีชิ้น ชิ้นที่เล็กกว่า 4% ของวงจะไม่โชว์ป้ายอัตโนมัติ (แน่นเกินจะอ่านออก)",
+   "legendPosition": "ตำแหน่งคำอธิบาย (legend) เทียบกับวงโดนัท: 'right' (ค่าเริ่มต้น) ด้านขวา, 'left' ด้านซ้าย, 'top' ด้านบน, 'bottom' ด้านล่าง, 'none' ซ่อน legend ทั้งหมด (เปิดป้าย % บนชิ้นให้อัตโนมัติแทน วงได้พื้นที่เต็มกล่อง)",
+   "fontScale": "ตัวคูณขนาดตัวอักษรทุกก้อนพร้อมกัน ช่วง 0.6 ถึง 1.6 คูณทับขนาดที่คำนวณอัตโนมัติจากพื้นที่ตามปกติ (กลไกเดิมไม่เปลี่ยน) ค่าเริ่มต้น 1 = ไม่เปลี่ยนอะไรเลย",
+   "centerFontScale": "ตัวคูณเฉพาะตัวอักษรเลขกลางวงกับคำอธิบายใต้เลข ช่วง 0.5 ถึง 2.0 คูณทับ fontScale อีกชั้น ค่าเริ่มต้น 1",
+   "legendFontScale": "ตัวคูณเฉพาะตัวอักษรใน legend ช่วง 0.5 ถึง 2.0 คูณทับ fontScale อีกชั้น ค่าเริ่มต้น 1",
+   "sliceLabelFontScale": "ตัวคูณเฉพาะป้าย % บนชิ้นโดนัท ช่วง 0.5 ถึง 2.0 คูณทับ fontScale อีกชั้น ค่าเริ่มต้น 1"
+  },
+  "colorMode": "production: tier3 default ใช้ pbiColor(index) จริงตามธีมไฟล์"
+ },
+ "params": [
+  {
+   "name": "centerCaption",
+   "value": "ไซต์ทั้งหมด"
+  },
+  {
+   "name": "centerMode",
+   "value": "sum"
+  },
+  {
+   "name": "centerText",
+   "value": ""
+  },
+  {
+   "name": "maxSlices",
+   "value": 8
+  },
+  {
+   "name": "sortMode",
+   "value": "valueDesc"
+  },
+  {
+   "name": "customOrder",
+   "value": []
+  },
+  {
+   "name": "palette",
+   "value": []
+  },
+  {
+   "name": "colorOverrides",
+   "value": {}
+  },
+  {
+   "name": "otherColor",
+   "value": "#B3B0AD"
+  },
+  {
+   "name": "donutThickness",
+   "value": 0.28
+  },
+  {
+   "name": "donutScale",
+   "value": 0.67
+  },
+  {
+   "name": "showPercent",
+   "value": true
+  },
+  {
+   "name": "legendLayout",
+   "value": "inline"
+  },
+  {
+   "name": "cornerRadius",
+   "value": 3
+  },
+  {
+   "name": "padAngle",
+   "value": 0.006
+  },
+  {
+   "name": "showSliceLabels",
+   "value": false
+  },
+  {
+   "name": "legendPosition",
+   "value": "right"
+  },
+  {
+   "name": "fontScale",
+   "value": 1
+  },
+  {
+   "name": "centerFontScale",
+   "value": 1
+  },
+  {
+   "name": "legendFontScale",
+   "value": 1
+  },
+  {
+   "name": "sliceLabelFontScale",
+   "value": 1
+  },
+  {
+   "name": "legendWCeiling",
+   "expr": "width * 0.42"
+  },
+  {
+   "name": "zoneGap",
+   "expr": "16"
+  },
+  {
+   "name": "ringMargin",
+   "expr": "6"
+  },
+  {
+   "name": "legendHCeiling",
+   "expr": "height * 0.42"
+  },
+  {
+   "name": "isSideLegend",
+   "expr": "(legendPosition == 'left' || legendPosition == 'right')"
+  },
+  {
+   "name": "isBandLegend",
+   "expr": "(legendPosition == 'top' || legendPosition == 'bottom')"
+  },
+  {
+   "name": "isNoLegend",
+   "expr": "(legendPosition == 'none')"
+  },
+  {
+   "name": "legendFontScaleEff",
+   "expr": "fontScale * legendFontScale"
+  },
+  {
+   "name": "centerFontScaleEff",
+   "expr": "fontScale * centerFontScale"
+  },
+  {
+   "name": "sliceLabelScaleEff",
+   "expr": "fontScale * sliceLabelFontScale"
+  },
+  {
+   "name": "roughMaxRByWidth",
+   "expr": "isSideLegend ? (width - legendWCeiling - zoneGap) / 2 : width / 2"
+  },
+  {
+   "name": "roughMaxRByHeight",
+   "expr": "isBandLegend ? (height - legendHCeiling - zoneGap) / 2 : height / 2"
+  },
+  {
+   "name": "roughOuterR",
+   "expr": "max(10, donutScale * (min(roughMaxRByWidth, roughMaxRByHeight) - ringMargin))"
+  },
+  {
+   "name": "fontCeilingFromDiameter",
+   "expr": "2 * roughOuterR / 8"
+  }
+ ],
+ "data": {
+  "name": "dataset"
+ },
+ "transform": [
+  {
+   "calculate": "isValid(datum.Value) ? toNumber(datum.Value) : 0",
+   "as": "__value"
+  },
+  {
+   "window": [
+    {
+     "op": "rank",
+     "as": "__valueRank"
+    }
+   ],
+   "sort": [
+    {
+     "field": "__value",
+     "order": "descending"
+    }
+   ]
+  },
+  {
+   "calculate": "datum.__valueRank > maxSlices",
+   "as": "__isOther"
+  },
+  {
+   "calculate": "datum.__isOther ? 'อื่น ๆ' : datum.Category",
+   "as": "__groupKey"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "sum",
+     "field": "__value",
+     "as": "__groupValue"
+    }
+   ],
+   "groupby": [
+    "__groupKey"
+   ]
+  },
+  {
+   "window": [
+    {
+     "op": "rank",
+     "as": "__pickRank"
+    }
+   ],
+   "groupby": [
+    "__groupKey"
+   ],
+   "sort": [
+    {
+     "field": "__value",
+     "order": "descending"
+    }
+   ]
+  },
+  {
+   "filter": "datum.__pickRank == 1"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "sum",
+     "field": "__groupValue",
+     "as": "__totalValue"
+    }
+   ]
+  },
+  {
+   "calculate": "datum.__totalValue > 0 ? datum.__groupValue / datum.__totalValue : 0",
+   "as": "__pct"
+  },
+  {
+   "calculate": "format(datum.__groupValue, ',.0f')",
+   "as": "__countText"
+  },
+  {
+   "calculate": "format(datum.__pct, '.1%')",
+   "as": "__pctText"
+  },
+  {
+   "calculate": "showPercent ? datum.__pctText : ''",
+   "as": "__pctTextDisplay"
+  },
+  {
+   "calculate": "datum.__countText + (showPercent ? ' (' + datum.__pctText + ')' : '')",
+   "as": "__valueFullTextForWidth"
+  },
+  {
+   "calculate": "length(datum.__groupKey)",
+   "as": "__nameLen"
+  },
+  {
+   "calculate": "length(datum.__valueFullTextForWidth)",
+   "as": "__valueFullLen"
+  },
+  {
+   "calculate": "length(datum.__countText)",
+   "as": "__valueCountLen"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__nameLen",
+     "as": "__maxNameLen"
+    },
+    {
+     "op": "max",
+     "field": "__valueFullLen",
+     "as": "__maxValueFullLen"
+    },
+    {
+     "op": "max",
+     "field": "__valueCountLen",
+     "as": "__maxValueCountLen"
+    }
+   ]
+  },
+  {
+   "calculate": "indexof(customOrder, datum.__groupKey)",
+   "as": "__customIdx"
+  },
+  {
+   "calculate": "datum.__isOther ? '2' : (sortMode == 'custom' ? (datum.__customIdx >= 0 ? '0_' + format(datum.__customIdx, '020.4f') : '1_' + format(1e15 - datum.__groupValue, '020.4f')) : sortMode == 'nameAsc' ? '0_' + datum.__groupKey : sortMode == 'valueAsc' ? '0_' + format(datum.__groupValue, '020.4f') : '0_' + format(1e15 - datum.__groupValue, '020.4f'))",
+   "as": "__sortKey"
+  },
+  {
+   "window": [
+    {
+     "op": "row_number",
+     "as": "__legendRank"
+    },
+    {
+     "op": "sum",
+     "field": "__groupValue",
+     "as": "__cumValue"
+    }
+   ],
+   "sort": [
+    {
+     "field": "__sortKey",
+     "order": "ascending"
+    }
+   ],
+   "frame": [
+    null,
+    0
+   ]
+  },
+  {
+   "calculate": "datum.__totalValue > 0 ? (datum.__cumValue - datum.__groupValue) / datum.__totalValue * 2 * PI : 0",
+   "as": "__thetaStart"
+  },
+  {
+   "calculate": "datum.__totalValue > 0 ? datum.__cumValue / datum.__totalValue * 2 * PI : 0",
+   "as": "__thetaEnd"
+  },
+  {
+   "calculate": "(datum.__thetaStart + datum.__thetaEnd) / 2",
+   "as": "__thetaMid"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__legendRank",
+     "as": "__legendCount"
+    }
+   ]
+  },
+  {
+   "calculate": "max(datum.__legendCount, 1)",
+   "as": "__displayCount"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__groupValue",
+     "as": "__maxGroupValue"
+    },
+    {
+     "op": "argmax",
+     "field": "__groupValue",
+     "as": "__argmaxGroupRow"
+    }
+   ]
+  },
+  {
+   "calculate": "max(datum.__legendCount, 1)",
+   "as": "__legendRows"
+  },
+  {
+   "calculate": "height / (datum.__legendRows * 11.5)",
+   "as": "__heightFontSeed"
+  },
+  {
+   "calculate": "legendHCeiling / 11.5",
+   "as": "__heightFontSeedBand"
+  },
+  {
+   "calculate": "clamp(min(isBandLegend ? datum.__heightFontSeedBand : datum.__heightFontSeed, fontCeilingFromDiameter), 9, 26)",
+   "as": "__legendFontSizeAuto"
+  },
+  {
+   "calculate": "datum.__legendFontSizeAuto * legendFontScaleEff",
+   "as": "__legendFontSize"
+  },
+  {
+   "calculate": "datum.__legendFontSize * 1.6",
+   "as": "__legendRowH"
+  },
+  {
+   "calculate": "max(30, pow(datum.__legendFontSize * 0.7895, 2))",
+   "as": "__legendDotSize"
+  },
+  {
+   "calculate": "(datum.__legendFontSize * 0.3)",
+   "as": "__dotInset"
+  },
+  {
+   "calculate": "(datum.__legendFontSize * 1.3)",
+   "as": "__nameGap"
+  },
+  {
+   "calculate": "(datum.__maxNameLen * 0.62 * datum.__legendFontSize)",
+   "as": "__nameContentSlot"
+  },
+  {
+   "calculate": "max(datum.__legendFontSize * 0.5, 6)",
+   "as": "__colGap"
+  },
+  {
+   "calculate": "(datum.__maxValueFullLen * 0.60 * datum.__legendFontSize)",
+   "as": "__valueFullSlot"
+  },
+  {
+   "calculate": "(datum.__maxValueCountLen * 0.60 * datum.__legendFontSize)",
+   "as": "__valueCountSlot"
+  },
+  {
+   "calculate": "(datum.__legendFontSize * 0.4)",
+   "as": "__legendRightMargin"
+  },
+  {
+   "calculate": "(datum.__dotInset + datum.__nameGap + datum.__nameContentSlot + datum.__colGap + datum.__valueFullSlot + datum.__legendRightMargin)",
+   "as": "__tier1Req"
+  },
+  {
+   "calculate": "(datum.__dotInset + datum.__nameGap + datum.__nameContentSlot + datum.__colGap + datum.__valueCountSlot + datum.__legendRightMargin)",
+   "as": "__tier2Req"
+  },
+  {
+   "calculate": "(datum.__dotInset + datum.__nameGap + datum.__nameContentSlot + datum.__legendRightMargin)",
+   "as": "__tier3Req"
+  },
+  {
+   "calculate": "(datum.__tier1Req <= legendWCeiling ? 1 : datum.__tier2Req <= legendWCeiling ? 2 : datum.__tier3Req <= legendWCeiling ? 3 : 4)",
+   "as": "__legendTierSide"
+  },
+  {
+   "calculate": "max(1, floor(width / datum.__tier1Req))",
+   "as": "__itemsPerRow1"
+  },
+  {
+   "calculate": "max(1, floor(width / datum.__tier2Req))",
+   "as": "__itemsPerRow2"
+  },
+  {
+   "calculate": "max(1, floor(width / datum.__tier3Req))",
+   "as": "__itemsPerRow3"
+  },
+  {
+   "calculate": "ceil(datum.__legendRows / datum.__itemsPerRow1)",
+   "as": "__rows1"
+  },
+  {
+   "calculate": "ceil(datum.__legendRows / datum.__itemsPerRow2)",
+   "as": "__rows2"
+  },
+  {
+   "calculate": "ceil(datum.__legendRows / datum.__itemsPerRow3)",
+   "as": "__rows3"
+  },
+  {
+   "calculate": "datum.__rows1 * datum.__legendRowH",
+   "as": "__blockH1"
+  },
+  {
+   "calculate": "datum.__rows2 * datum.__legendRowH",
+   "as": "__blockH2"
+  },
+  {
+   "calculate": "datum.__rows3 * datum.__legendRowH",
+   "as": "__blockH3"
+  },
+  {
+   "calculate": "(datum.__blockH1 <= legendHCeiling ? 1 : datum.__blockH2 <= legendHCeiling ? 2 : datum.__blockH3 <= legendHCeiling ? 3 : 4)",
+   "as": "__legendTierBand"
+  },
+  {
+   "calculate": "isNoLegend ? 4 : (isBandLegend ? datum.__legendTierBand : datum.__legendTierSide)",
+   "as": "__legendTier"
+  },
+  {
+   "calculate": "(datum.__legendTier == 1 ? datum.__valueFullSlot : datum.__legendTier == 2 ? datum.__valueCountSlot : 0)",
+   "as": "__valueSlot"
+  },
+  {
+   "calculate": "(datum.__legendTier == 1 ? datum.__tier1Req : datum.__legendTier == 2 ? datum.__tier2Req : datum.__legendTier == 3 ? datum.__tier3Req : 0)",
+   "as": "__legendZoneWContent"
+  },
+  {
+   "calculate": "isSideLegend ? min(datum.__legendZoneWContent, legendWCeiling) : 0",
+   "as": "__legendZoneW"
+  },
+  {
+   "calculate": "(datum.__legendTier == 1 ? datum.__itemsPerRow1 : datum.__legendTier == 2 ? datum.__itemsPerRow2 : datum.__legendTier == 3 ? datum.__itemsPerRow3 : 1)",
+   "as": "__itemsPerRowChosen"
+  },
+  {
+   "calculate": "(datum.__legendTier == 1 ? datum.__rows1 : datum.__legendTier == 2 ? datum.__rows2 : datum.__legendTier == 3 ? datum.__rows3 : 1)",
+   "as": "__rowsChosen"
+  },
+  {
+   "calculate": "datum.__legendZoneWContent",
+   "as": "__itemContentWChosen"
+  },
+  {
+   "calculate": "datum.__rowsChosen * datum.__legendRowH",
+   "as": "__legendZoneHContent"
+  },
+  {
+   "calculate": "isBandLegend ? min(datum.__legendZoneHContent, legendHCeiling) : 0",
+   "as": "__legendZoneH"
+  },
+  {
+   "calculate": "(isSideLegend ? (width - datum.__legendZoneW - zoneGap) : width) / 2",
+   "as": "__maxRByWidth"
+  },
+  {
+   "calculate": "(isBandLegend ? (height - datum.__legendZoneH - zoneGap) : height) / 2",
+   "as": "__maxRByHeight"
+  },
+  {
+   "calculate": "max(10, donutScale * (min(datum.__maxRByWidth, datum.__maxRByHeight) - ringMargin))",
+   "as": "__outerR"
+  },
+  {
+   "calculate": "datum.__outerR * (1 - donutThickness)",
+   "as": "__innerR"
+  },
+  {
+   "calculate": "(datum.__outerR + datum.__innerR) / 2",
+   "as": "__labelRadius"
+  },
+  {
+   "calculate": "2 * datum.__outerR + (isSideLegend ? zoneGap + datum.__legendZoneW : 0)",
+   "as": "__contentW"
+  },
+  {
+   "calculate": "2 * datum.__outerR + (isBandLegend ? zoneGap + datum.__legendZoneH : 0)",
+   "as": "__contentH"
+  },
+  {
+   "calculate": "(width - datum.__contentW) / 2",
+   "as": "__contentX0"
+  },
+  {
+   "calculate": "(height - datum.__contentH) / 2",
+   "as": "__contentY0"
+  },
+  {
+   "calculate": "legendPosition == 'left' ? (datum.__contentX0 + datum.__legendZoneW + zoneGap + datum.__outerR) : (datum.__contentX0 + datum.__outerR)",
+   "as": "__donutX"
+  },
+  {
+   "calculate": "legendPosition == 'top' ? (datum.__contentY0 + datum.__legendZoneH + zoneGap + datum.__outerR) : (datum.__contentY0 + datum.__outerR)",
+   "as": "__donutY"
+  },
+  {
+   "calculate": "legendPosition == 'left' ? datum.__contentX0 : (datum.__contentX0 + 2 * datum.__outerR + zoneGap)",
+   "as": "__legendZoneX0"
+  },
+  {
+   "calculate": "legendPosition == 'top' ? datum.__contentY0 : (datum.__contentY0 + 2 * datum.__outerR + zoneGap)",
+   "as": "__legendZoneY0"
+  },
+  {
+   "calculate": "clamp(datum.__innerR * 0.42, 11, 44)",
+   "as": "__numberFontSizeAuto"
+  },
+  {
+   "calculate": "datum.__numberFontSizeAuto * centerFontScaleEff",
+   "as": "__numberFontSize"
+  },
+  {
+   "calculate": "clamp(datum.__innerR * 0.20, 8, 18)",
+   "as": "__captionFontSizeAuto"
+  },
+  {
+   "calculate": "datum.__captionFontSizeAuto * centerFontScaleEff",
+   "as": "__captionFontSize"
+  },
+  {
+   "calculate": "(datum.__numberFontSize * 1.15 + 4 + datum.__captionFontSize * 1.3) <= (2 * datum.__innerR - 10)",
+   "as": "__captionFits"
+  },
+  {
+   "calculate": "datum.__donutY - datum.__captionFontSize * 0.62 - 2",
+   "as": "__numberYWithCaption"
+  },
+  {
+   "calculate": "datum.__donutY + datum.__numberFontSize * 0.46 + 4",
+   "as": "__captionY"
+  },
+  {
+   "calculate": "clamp((datum.__outerR) * 0.09, 9, 20)",
+   "as": "__sliceLabelFontSizeAuto"
+  },
+  {
+   "calculate": "datum.__sliceLabelFontSizeAuto * sliceLabelScaleEff",
+   "as": "__sliceLabelFontSize"
+  },
+  {
+   "calculate": "datum.__legendZoneX0 + datum.__dotInset",
+   "as": "__legendXDotSide"
+  },
+  {
+   "calculate": "datum.__legendXDotSide + datum.__nameGap",
+   "as": "__legendXNameSide"
+  },
+  {
+   "calculate": "datum.__legendZoneX0 + datum.__legendZoneW - datum.__legendRightMargin",
+   "as": "__legendZoneRightEdge"
+  },
+  {
+   "calculate": "datum.__legendXNameSide + datum.__nameContentSlot + datum.__colGap + datum.__valueSlot",
+   "as": "__legendXValueTightSide"
+  },
+  {
+   "calculate": "min(datum.__legendZoneRightEdge, datum.__legendXValueTightSide)",
+   "as": "__legendXValueSide"
+  },
+  {
+   "calculate": "max(20, (datum.__legendXValueSide - datum.__valueSlot - datum.__colGap) - datum.__legendXNameSide)",
+   "as": "__nameSlotTier12"
+  },
+  {
+   "calculate": "max(20, datum.__legendZoneW - datum.__dotInset - datum.__nameGap - datum.__legendRightMargin)",
+   "as": "__nameSlotTier34"
+  },
+  {
+   "calculate": "(datum.__legendTier >= 3 ? datum.__nameSlotTier34 : datum.__nameSlotTier12)",
+   "as": "__nameSlotSide"
+  },
+  {
+   "calculate": "min(datum.__legendZoneRightEdge, datum.__legendXNameSide + datum.__nameContentSlot + datum.__colGap + datum.__legendFontSize * 2.5)",
+   "as": "__legendXCountSide"
+  },
+  {
+   "calculate": "floor((datum.__legendRank - 1) / datum.__itemsPerRowChosen)",
+   "as": "__rowIdx"
+  },
+  {
+   "calculate": "(datum.__rowIdx == datum.__rowsChosen - 1 ? (datum.__legendRows - datum.__itemsPerRowChosen * (datum.__rowsChosen - 1)) : datum.__itemsPerRowChosen)",
+   "as": "__itemsInThisRow"
+  },
+  {
+   "calculate": "(datum.__legendRank - 1) % datum.__itemsPerRowChosen",
+   "as": "__colIdx"
+  },
+  {
+   "calculate": "datum.__itemsInThisRow * datum.__itemContentWChosen",
+   "as": "__rowWidth"
+  },
+  {
+   "calculate": "width / 2 - datum.__rowWidth / 2",
+   "as": "__rowStartX"
+  },
+  {
+   "calculate": "datum.__rowStartX + datum.__colIdx * datum.__itemContentWChosen",
+   "as": "__itemAnchorX"
+  },
+  {
+   "calculate": "datum.__itemAnchorX + datum.__dotInset",
+   "as": "__legendXDotBand"
+  },
+  {
+   "calculate": "datum.__legendXDotBand + datum.__nameGap",
+   "as": "__legendXNameBand"
+  },
+  {
+   "calculate": "datum.__itemAnchorX + datum.__itemContentWChosen - datum.__legendRightMargin",
+   "as": "__legendXValueBand"
+  },
+  {
+   "calculate": "max(20, (datum.__legendXValueBand - datum.__valueSlot - datum.__colGap) - datum.__legendXNameBand)",
+   "as": "__nameSlotBandTier12"
+  },
+  {
+   "calculate": "max(20, datum.__itemContentWChosen - datum.__dotInset - datum.__nameGap - datum.__legendRightMargin)",
+   "as": "__nameSlotBandTier34"
+  },
+  {
+   "calculate": "(datum.__legendTier >= 3 ? datum.__nameSlotBandTier34 : datum.__nameSlotBandTier12)",
+   "as": "__nameSlotBand"
+  },
+  {
+   "calculate": "isBandLegend ? datum.__legendXDotBand : datum.__legendXDotSide",
+   "as": "__legendXDot"
+  },
+  {
+   "calculate": "isBandLegend ? datum.__legendXNameBand : datum.__legendXNameSide",
+   "as": "__legendXName"
+  },
+  {
+   "calculate": "isBandLegend ? datum.__legendXValueBand : datum.__legendXValueSide",
+   "as": "__legendXValue"
+  },
+  {
+   "calculate": "isBandLegend ? datum.__legendXValueBand : datum.__legendXCountSide",
+   "as": "__legendXCount"
+  },
+  {
+   "calculate": "isBandLegend ? datum.__legendXValueBand : datum.__legendZoneRightEdge",
+   "as": "__legendXPct"
+  },
+  {
+   "calculate": "isBandLegend ? datum.__nameSlotBand : datum.__nameSlotSide",
+   "as": "__nameSlot"
+  },
+  {
+   "calculate": "(datum.__donutY) + (datum.__legendRank - (datum.__legendCount + 1) / 2) * (datum.__legendRowH)",
+   "as": "__legendYSide"
+  },
+  {
+   "calculate": "(datum.__legendZoneY0) + (datum.__rowIdx + 0.5) * (datum.__legendRowH)",
+   "as": "__legendYBand"
+  },
+  {
+   "calculate": "isBandLegend ? datum.__legendYBand : datum.__legendYSide",
+   "as": "__legendY"
+  },
+  {
+   "calculate": "datum.__legendTier == 1 ? (showPercent ? datum.__countText + ' (' + datum.__pctText + ')' : datum.__countText) : datum.__legendTier == 2 ? datum.__countText : ''",
+   "as": "__inlineText"
+  },
+  {
+   "calculate": "legendLayout == 'inline' ? datum.__inlineText : ''",
+   "as": "__inlineTextDisplay"
+  },
+  {
+   "calculate": "(legendLayout == 'columns' && datum.__legendTier <= 2) ? datum.__countText : ''",
+   "as": "__countColumnDisplay"
+  },
+  {
+   "calculate": "(legendLayout == 'columns' && datum.__legendTier == 1) ? datum.__pctTextDisplay : ''",
+   "as": "__pctColumnDisplay"
+  },
+  {
+   "calculate": "((showSliceLabels || datum.__legendTier == 4) && datum.__pct >= 0.04) ? datum.__pctText : ''",
+   "as": "__sliceLabelText"
+  },
+  {
+   "window": [
+    {
+     "op": "rank",
+     "as": "__anyRank"
+    }
+   ],
+   "sort": [
+    {
+     "field": "__groupKey",
+     "order": "ascending"
+    }
+   ]
+  },
+  {
+   "calculate": "centerText",
+   "as": "__centerTextPass0"
+  },
+  {
+   "calculate": "replace(datum.__centerTextPass0, /\\{total\\}/g, format(datum.__totalValue, ',.0f'))",
+   "as": "__centerTextPass1"
+  },
+  {
+   "calculate": "replace(datum.__centerTextPass1, /\\{count\\}/g, format(datum.__displayCount, ',.0f'))",
+   "as": "__centerTextPass2"
+  },
+  {
+   "calculate": "replace(datum.__centerTextPass2, /\\{avg\\}/g, format(datum.__totalValue / datum.__displayCount, ',.0f'))",
+   "as": "__centerTextPass3"
+  },
+  {
+   "calculate": "replace(datum.__centerTextPass3, /\\{max\\}/g, format(datum.__maxGroupValue, ',.0f'))",
+   "as": "__centerTextPass4"
+  },
+  {
+   "calculate": "replace(datum.__centerTextPass4, /\\{maxName\\}/g, datum.__argmaxGroupRow.__groupKey)",
+   "as": "__centerTextResolved"
+  },
+  {
+   "calculate": "datum.__anyRank != 1 ? '' : (centerMode == 'sum' ? format(datum.__totalValue, ',.0f') : centerMode == 'custom' ? datum.__centerTextResolved : '')",
+   "as": "__centerNumberText"
+  },
+  {
+   "calculate": "datum.__anyRank != 1 ? '' : ((centerMode == 'sum' || centerMode == 'custom') && (datum.__captionFits) ? centerCaption : '')",
+   "as": "__centerCaptionText"
+  },
+  {
+   "calculate": "colorOverrides[datum.__groupKey] ? colorOverrides[datum.__groupKey] : (datum.__isOther ? otherColor : (length(palette) > 0 ? palette[(datum.__legendRank - 1) % length(palette)] : pbiColor(datum.__legendRank - 1)))",
+   "as": "__color"
+  },
+  {
+   "calculate": "luminance(datum.__color) >= 0.45 ? '#252423' : '#FFFFFF'",
+   "as": "__sliceLabelColor"
+  }
+ ],
+ "layer": [
+  {
+   "description": "โดนัท, 1 ชิ้นต่อ 1 กลุ่มสุดท้าย (หลังยุบ TopN + อื่น ๆ), รัศมีคำนวณจากพื้นที่โซนวงจริง (width/height ของกล่อง) คูณ donutScale, cornerRadius/padAngle ปรับได้จาก params",
+   "mark": {
+    "type": "arc",
+    "tooltip": true,
+    "cornerRadius": {
+     "expr": "cornerRadius"
+    },
+    "padAngle": {
+     "expr": "padAngle"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__donutX"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__donutY"
+     }
+    },
+    "theta": {
+     "field": "__thetaStart",
+     "type": "quantitative",
+     "stack": null,
+     "scale": {
+      "domain": [
+       0,
+       6.283185307179586
+      ],
+      "range": [
+       0,
+       6.283185307179586
+      ]
+     }
+    },
+    "theta2": {
+     "field": "__thetaEnd"
+    },
+    "radius": {
+     "value": {
+      "expr": "datum.__outerR"
+     }
+    },
+    "radius2": {
+     "value": {
+      "expr": "datum.__innerR"
+     }
+    },
+    "color": {
+     "field": "__color",
+     "type": "nominal",
+     "scale": null
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": 0.3
+     },
+     "value": 1
+    },
+    "tooltip": [
+     {
+      "field": "__groupKey",
+      "type": "nominal",
+      "title": "กลุ่ม"
+     },
+     {
+      "field": "__countText",
+      "type": "nominal",
+      "title": "จำนวน"
+     },
+     {
+      "field": "__pctText",
+      "type": "nominal",
+      "title": "สัดส่วน"
+     }
+    ]
+   }
+  },
+  {
+   "description": "ป้าย % บนชิ้น (showSliceLabels, ปิดไว้เป็นค่าเริ่มต้น), สีตัวอักษรอัตโนมัติตาม luminance ของสีชิ้น, ซ่อนอัตโนมัติเมื่อชิ้น < 4%",
+   "mark": {
+    "type": "text",
+    "align": "center",
+    "baseline": "middle",
+    "fontWeight": "bold"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__donutX"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__donutY"
+     }
+    },
+    "theta": {
+     "field": "__thetaMid",
+     "type": "quantitative",
+     "stack": null,
+     "scale": {
+      "domain": [
+       0,
+       6.283185307179586
+      ],
+      "range": [
+       0,
+       6.283185307179586
+      ]
+     }
+    },
+    "radius": {
+     "value": {
+      "expr": "datum.__labelRadius"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__sliceLabelFontSize"
+     }
+    },
+    "text": {
+     "field": "__sliceLabelText",
+     "type": "nominal"
+    },
+    "color": {
+     "field": "__sliceLabelColor",
+     "type": "nominal",
+     "scale": null
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": 0.3
+     },
+     "value": 1
+    }
+   }
+  },
+  {
+   "description": "เลขกลางวง, คำนวณเองจาก centerMode (sum/none/custom), ขนาดตัวอักษร+ตำแหน่งผูกกับรัศมีรูในจริง, ขยับกึ่งกลางรูพอดีเมื่อ caption ถูกซ่อน",
+   "mark": {
+    "type": "text",
+    "align": "center",
+    "baseline": "middle",
+    "fontWeight": "bold"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__donutX"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__centerCaptionText == '' ? (datum.__donutY) : (datum.__numberYWithCaption)"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__numberFontSize"
+     }
+    },
+    "text": {
+     "field": "__centerNumberText",
+     "type": "nominal"
+    },
+    "color": {
+     "value": "#252423"
+    }
+   }
+  },
+  {
+   "description": "คำอธิบายใต้เลขกลาง (โชว์เฉพาะ centerMode = sum), ขนาดตัวอักษรย่อ/ขยายตามวงด้วย",
+   "mark": {
+    "type": "text",
+    "align": "center",
+    "baseline": "middle",
+    "fontWeight": "bold"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__donutX"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__captionY"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__captionFontSize"
+     }
+    },
+    "text": {
+     "field": "__centerCaptionText",
+     "type": "nominal"
+    },
+    "color": {
+     "value": "#3B3A39"
+    }
+   }
+  },
+  {
+   "description": "legend จุดสี (แถวเรียงตาม __legendRank เดียวกับลำดับชิ้นในวง), ขนาด/ระยะห่างคำนวณจากพื้นที่โซน legend จริง (ไม่ผูกกับ donutScale), Y กึ่งกลางเทียบวง, ซ่อนทั้งหมด (opacity 0) เมื่อ legend_tier==4",
+   "mark": {
+    "type": "square"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendXDot"
+     }
+    },
+    "y": {
+     "field": "__legendY",
+     "type": "quantitative",
+     "scale": null,
+     "axis": null
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__legendDotSize"
+     }
+    },
+    "color": {
+     "field": "__color",
+     "type": "nominal",
+     "scale": null
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": {
+       "expr": "0.30 * ((datum.__legendTier == 4 ? 0 : 1))"
+      }
+     },
+     "value": {
+      "expr": "(datum.__legendTier == 4 ? 0 : 1)"
+     }
+    }
+   }
+  },
+  {
+   "description": "legend ชื่อกลุ่ม, limit กันชื่อยาวทับคอลัมน์ตัวเลขตอนกล่องแคบมาก (ตัดด้วยจุดไข่ปลา), limit tier-aware (ใหญ่ขึ้นเมื่อ tier>=3 ไม่มีตัวเลขมาแย่งที่แล้ว ตามที่พี่ปอนด์สั่งให้ตัดน้อยที่สุดเท่าที่พื้นที่เอื้อ)",
+   "mark": {
+    "type": "text",
+    "align": "left",
+    "baseline": "middle",
+    "limit": {
+     "expr": "max(20, (datum.__nameSlot) - 8)"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendXName"
+     }
+    },
+    "y": {
+     "field": "__legendY",
+     "type": "quantitative",
+     "scale": null,
+     "axis": null
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__legendFontSize"
+     }
+    },
+    "text": {
+     "field": "__groupKey",
+     "type": "nominal"
+    },
+    "color": {
+     "value": "#252423"
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": {
+       "expr": "0.30 * ((datum.__legendTier == 4 ? 0 : 1))"
+      }
+     },
+     "value": {
+      "expr": "(datum.__legendTier == 4 ? 0 : 1)"
+     }
+    }
+   }
+  },
+  {
+   "description": "legend รูปแบบ inline (ค่าเริ่มต้น), จำนวน+% ก้อนเดียวชิดขวา ซ่อนเมื่อ legendLayout='columns', จำนวน+% หรือแค่จำนวนหรือว่างเปล่าตาม legend_tier, limit กันยื่นทับชื่อเด็ดขาด",
+   "mark": {
+    "type": "text",
+    "align": "right",
+    "baseline": "middle",
+    "fontWeight": "bold",
+    "limit": {
+     "expr": "max(10, datum.__valueSlot)"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendXValue"
+     }
+    },
+    "y": {
+     "field": "__legendY",
+     "type": "quantitative",
+     "scale": null,
+     "axis": null
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__legendFontSize"
+     }
+    },
+    "text": {
+     "field": "__inlineTextDisplay",
+     "type": "nominal"
+    },
+    "color": {
+     "value": "#252423"
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": {
+       "expr": "0.30 * ((datum.__legendTier == 4 ? 0 : 1))"
+      }
+     },
+     "value": {
+      "expr": "(datum.__legendTier == 4 ? 0 : 1)"
+     }
+    }
+   }
+  },
+  {
+   "description": "legend จำนวน คอลัมน์แยก (legendLayout='columns' เท่านั้น), limit กันยื่นทับชื่อเด็ดขาดเหมือนโหมด inline",
+   "mark": {
+    "type": "text",
+    "align": "right",
+    "baseline": "middle",
+    "fontWeight": "bold",
+    "limit": {
+     "expr": "max(10, datum.__valueCountSlot)"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendXCount"
+     }
+    },
+    "y": {
+     "field": "__legendY",
+     "type": "quantitative",
+     "scale": null,
+     "axis": null
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__legendFontSize"
+     }
+    },
+    "text": {
+     "field": "__countColumnDisplay",
+     "type": "nominal"
+    },
+    "color": {
+     "value": "#252423"
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": {
+       "expr": "0.30 * ((datum.__legendTier == 4 ? 0 : 1))"
+      }
+     },
+     "value": {
+      "expr": "(datum.__legendTier == 4 ? 0 : 1)"
+     }
+    }
+   }
+  },
+  {
+   "description": "legend เปอร์เซ็นต์ คอลัมน์แยก (legendLayout='columns' เท่านั้น, ซ่อนได้ผ่าน showPercent เหมือนเดิม), limit กันยื่นทับ",
+   "mark": {
+    "type": "text",
+    "align": "right",
+    "baseline": "middle",
+    "limit": {
+     "expr": "max(10, (datum.__legendFontSize) * 4.5)"
+    }
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendXPct"
+     }
+    },
+    "y": {
+     "field": "__legendY",
+     "type": "quantitative",
+     "scale": null,
+     "axis": null
+    },
+    "size": {
+     "value": {
+      "expr": "datum.__legendFontSize"
+     }
+    },
+    "text": {
+     "field": "__pctColumnDisplay",
+     "type": "nominal"
+    },
+    "color": {
+     "value": "#605E5C"
+    },
+    "opacity": {
+     "condition": {
+      "test": {
+       "field": "__selected__",
+       "equal": "off"
+      },
+      "value": {
+       "expr": "0.30 * ((datum.__legendTier == 4 ? 0 : 1))"
+      }
+     },
+     "value": {
+      "expr": "(datum.__legendTier == 4 ? 0 : 1)"
+     }
+    }
+   }
+  }
+ ],
+ "config": {
+  "font": "Segoe UI, Leelawadee UI, Sarabun, Tahoma, sans-serif",
+  "view": {
+   "stroke": null
+  },
+  "background": "transparent"
+ }
+}

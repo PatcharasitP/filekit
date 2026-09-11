@@ -16,6 +16,11 @@ export const GROUPS = [
   { id: "ppt",      label: "PowerPoint",            short: "PowerPoint",  accent: "--g-ppt" },
   { id: "data",     label: "ตารางและข้อมูล",        short: "ตาราง",       accent: "--g-data" },
   { id: "thai",     label: "งานเอกสารไทย",          short: "งานไทย",      accent: "--g-thai" },
+  // ตระกูล Power Platform ใช้สีเดียวกันทั้งสามหมวด ตามกฎเดียวกับตระกูล PDF ที่ใช้ 3 หมวด 1 สี
+  // (เพิ่มสีใหม่ทุกครั้งที่เพิ่มหมวด = หน้าเดียวมีสิบสี ลายตาและจำไม่ได้)
+  { id: "powerbi",  label: "Power BI",              short: "Power BI",    accent: "--g-powerbi" },
+  { id: "powerquery", label: "Power Query",         short: "Power Query", accent: "--g-powerbi" },
+  { id: "powerautomate", label: "Power Automate Cloud", short: "Power Automate", accent: "--g-powerbi" },
 ];
 
 export const TOOLS = [
@@ -158,7 +163,7 @@ export const TOOLS = [
     desc:"ต่อแถวจากหลายไฟล์เป็นไฟล์เดียว จับคู่คอลัมน์ด้วยชื่อหัวตาราง ไม่ใช่ตำแหน่ง",
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"merge รวม ต่อ combine consolidate หลายไฟล์ สาขา excel", next:["excel-split","excel-to-pdf"] },
-  { id:"excel-to-pq", group:"data", icon:"🔤", title:"ตารางเป็นสูตร Power Query",
+  { id:"excel-to-pq", group:"powerquery", icon:"🔤", title:"ตารางเป็นสูตร Power Query",
     desc:"ลากไฟล์ Excel, PDF, Word หรือรูปถ่ายตารางเข้ามา ได้โค้ด #table พร้อมวาง กำหนดชนิดข้อมูลรายคอลัมน์ได้",
     accepts:["xlsx","csv","pdf","docx","image"],
     libs:["xlsx"], keys:"power query m code #table pq โค้ด สูตร excel ชนิดข้อมูล type int64 currency pdf word รูป ocr", next:["excel-split","thai-encoding"] },
@@ -192,6 +197,30 @@ export const TOOLS = [
     desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค", next:["word-mailmerge","thai-date"] },
+
+  { id:"pbi-donut", group:"powerbi", icon:"🍩", since:"2026-09-11", title:"กราฟโดนัท Deneb",
+    desc:"ปรับหน้าตากราฟโดนัทสด ๆ เห็นผลทันที แล้วคัดลอกสเปกไปวางใน Deneb ได้เลย",
+    libs:["vega","vegaLite","vegaEmbed"],
+    keys:"deneb donut vega โดนัท วงกลม power bi custom visual กราฟ pie พาย",
+    next:["pa-parse-json","excel-to-pq"] },
+
+  { id:"pa-parse-json", group:"powerautomate", icon:"🧩", since:"2026-09-11", title:"ตารางเป็น Schema ของ Parse JSON",
+    desc:"อ่านทั้งคอลัมน์ก่อนตัดสินชนิด ช่องที่เคยว่างจริงจะประกาศ null ให้เอง กัน flow พังตอนเจอแถวว่าง",
+    accepts:["xlsx","xls","xlsm","csv","txt"],
+    libs:["xlsx"], keys:"power automate flow parse json schema พาร์ส เจสัน โฟลว์ สคีมา อัตโนมัติ",
+    next:["excel-to-pq","pbi-donut"] },
+
+  { id:"pq-multisource-lookup", group:"powerquery", icon:"🧭", since:"2026-09-11", title:"สร้างสูตรค้นข้ามหลายแหล่ง",
+    desc:"ไล่หาจากหลายตารางตามลำดับ เจอแหล่งแรกแล้วหยุด ผลลัพธ์ลงคอลัมน์เดียวกันได้แม้แต่ละแหล่งตั้งชื่อคอลัมน์ต่างกัน",
+    libs:[],   // เครื่องนี้เขียนโค้ดล้วน ไม่ต้องใช้ไลบรารีนอกเลย
+    keys:"power query m lookup merge fallback multisource รวมแหล่ง ค้นข้าม vlookup ไล่หา cascade",
+    next:["excel-to-pq","pa-parse-json"] },
+
+  { id:"pa-html-table", group:"powerautomate", icon:"✉", since:"2026-09-11", title:"ตาราง HTML สำหรับอีเมลใน flow",
+    desc:"ปรับหน้าตาแล้วเห็นตัวอย่างอีเมลทันที ได้เส้นขอบครบทุกช่องแบบที่ Outlook เดสก์ท็อปยอมแสดง",
+    libs:[],
+    keys:"power automate flow email html table outlook อีเมล ตาราง เมล compose create html table",
+    next:["pa-parse-json","pq-multisource-lookup"] },
 ];
 
 
@@ -214,6 +243,9 @@ const EN_GROUPS = {
   "ppt":      ["PowerPoint", "PowerPoint"],
   "data":     ["Spreadsheets & data", "Data"],
   "thai":     ["Thai paperwork", "Thai"],
+  "powerbi":  ["Power BI", "Power BI"],
+  "powerquery": ["Power Query", "Power Query"],
+  "powerautomate": ["Power Automate Cloud", "Power Automate"],
 };
 
 const EN_TOOLS = {
@@ -252,6 +284,10 @@ const EN_TOOLS = {
   "thai-name":        ["Split Thai name into columns", "Break a full name into title, first name and surname, ready to sort or mail-merge"],
   "thai-address":     ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
   "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
+  "pbi-donut":        ["Deneb donut chart", "Tweak a live donut chart and see it change instantly, then copy the spec straight into Deneb"],
+  "pa-parse-json":    ["Table to a Parse JSON schema", "Reads the whole column before deciding the type, so columns that really do go blank are declared nullable and your flow survives them"],
+  "pq-multisource-lookup": ["Build a multi source lookup", "Search several tables in order and stop at the first hit, with results landing in one column even when each source names it differently"],
+  "pa-html-table":    ["HTML table for a flow email", "Style it and see the email straight away, with the per cell borders that Outlook desktop actually renders"],
 };
 
 if (LANG === "en") {

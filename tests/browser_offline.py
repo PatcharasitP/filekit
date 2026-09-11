@@ -131,8 +131,11 @@ def extract_version(sw_text):
 def extract_local_lib_files(loader_text):
     """สร้างค่าเทียบเท่า loader.js::localLibFiles() จากซอร์สโดยตรง (ไม่รัน JS จริง)"""
     files = set(re.findall(r'local:\s*"([^"]+)"', loader_text))
-    if re.search(r'global:\s*"pdfjsLib"', loader_text):
-        files.add("vendor/pdf.worker.min.js")
+    # ‼️ เดิมเทสฝังชื่อ pdf.worker.min.js ไว้เอง พอ loader เพิ่มไฟล์แถมตัวใหม่
+    #    เทสมองไม่เห็นแล้วรายงานว่าขาด ทั้งที่โค้ดจริงมีให้แล้ว (เจอจริง 11/09/2026)
+    #    ตอนนี้อ่าน extra: [...] ทุกก้อนจากซอร์สตรง ๆ ไม่ต้องรู้จักชื่อไฟล์ล่วงหน้า
+    for block in re.findall(r'extra:\s*\[(.*?)\]', loader_text, re.S):
+        files.update(re.findall(r'"([^"]+)"', block))
     return files
 
 

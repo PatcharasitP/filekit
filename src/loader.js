@@ -13,6 +13,7 @@ const REG = {
   pdfjs: {
     global: "pdfjsLib",
     local: "vendor/pdf.min.js",
+    extra: ["vendor/pdf.worker.min.js"],   // worker แยกไฟล์ ต้องมีตอนออฟไลน์ด้วย
     cdn: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
     ready(lib, base) {
       lib.GlobalWorkerOptions.workerSrc = base.startsWith("http")
@@ -61,6 +62,28 @@ const REG = {
     local: "vendor/tesseract.min.js",
     cdn: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
   },
+  // ‼️ ลำดับต้องเป็น vega → vega-lite → vega-embed เท่านั้น (embed ต้องการอีกสองตัวอยู่บน
+  // window ก่อนตัวมันเองรัน) ใช้ needs ไล่โซ่ให้อัตโนมัติ ไม่ต้องพึ่งลำดับที่ tool.js เรียก
+  vega: {
+    global: "vega",
+    local: "vendor/vega.min.js",
+    // ‼️ สองไฟล์นี้โหลดด้วย import() ไม่ใช่แท็ก script จึงไม่มี global ของตัวเอง
+    // แต่ขาดไม่ได้ ไม่มีแล้วกราฟ Deneb เรนเดอร์ไม่ได้เลยตอนออฟไลน์
+    extra: ["vendor/vega-interpreter.esm.js", "vendor/vega-util-shim.js"],
+    cdn: "https://cdnjs.cloudflare.com/ajax/libs/vega/6.4.0/vega.min.js",
+  },
+  vegaLite: {
+    global: "vegaLite",
+    needs: ["vega"],
+    local: "vendor/vega-lite.min.js",
+    cdn: "https://cdnjs.cloudflare.com/ajax/libs/vega-lite/6.4.3/vega-lite.min.js",
+  },
+  vegaEmbed: {
+    global: "vegaEmbed",
+    needs: ["vegaLite"],
+    local: "vendor/vega-embed.min.js",
+    cdn: "https://cdnjs.cloudflare.com/ajax/libs/vega-embed/7.2.0/vega-embed.min.js",
+  },
 };
 
 /** รายชื่อไฟล์ในเครื่อง (vendor/) ของทุกไลบรารี — ใช้ตอนเตรียมใช้งานออฟไลน์ */
@@ -68,7 +91,7 @@ export const localLibFiles = () => {
   const files = [];
   for (const spec of Object.values(REG)) {
     files.push(spec.local);
-    if (spec.global === "pdfjsLib") files.push("vendor/pdf.worker.min.js"); // worker แยกไฟล์
+    if (spec.extra) files.push(...spec.extra);
   }
   return files;
 };
@@ -102,6 +125,12 @@ const SRI = {
     "sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3",
   "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js":
     "sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F",
+  "https://cdnjs.cloudflare.com/ajax/libs/vega/6.4.0/vega.min.js":
+    "sha384-VKdcJr3ZaBIJMbVcopTAI/JEuUkSY6qnwVu9iLuw0DnQ9gQ1JjsfZJhXFQAgNi43",
+  "https://cdnjs.cloudflare.com/ajax/libs/vega-lite/6.4.3/vega-lite.min.js":
+    "sha384-9/70gNCfOu6G7xXvkdreMfuqAEsoaGJVXV2BN/JLRXkSmcGvnMqtsRx8HZtUWAvI",
+  "https://cdnjs.cloudflare.com/ajax/libs/vega-embed/7.2.0/vega-embed.min.js":
+    "sha384-l5WgDTucorQO8clo6JeifE4nfFGsdrY0Zdhvg6idhVrlT2cXjJQ7oMCiaQKzGYfh",
 };
 
 function injectScript(src) {

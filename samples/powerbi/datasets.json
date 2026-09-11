@@ -1,0 +1,96 @@
+{
+ "sales_channel": {
+  "title": "ยอดขายตามช่องทาง",
+  "title_en": "Sales by channel",
+  "caption": "ยอดขายรวม",
+  "caption_en": "Total sales",
+  "rows": [
+   {
+    "Category": "หน้าร้าน",
+    "Category_en": "Storefront",
+    "Value": 4820000
+   },
+   {
+    "Category": "ออนไลน์",
+    "Category_en": "Online",
+    "Value": 3150000
+   },
+   {
+    "Category": "ตัวแทนขาย",
+    "Category_en": "Resellers",
+    "Value": 1740000
+   },
+   {
+    "Category": "ขายส่ง",
+    "Category_en": "Wholesale",
+    "Value": 890000
+   }
+  ]
+ },
+ "dept_headcount": {
+  "title": "จำนวนพนักงานตามแผนก",
+  "title_en": "Headcount by department",
+  "caption": "พนักงานทั้งหมด",
+  "caption_en": "Total headcount",
+  "rows": [
+   {
+    "Category": "ผลิต",
+    "Category_en": "Production",
+    "Value": 128
+   },
+   {
+    "Category": "ขาย",
+    "Category_en": "Sales",
+    "Value": 64
+   },
+   {
+    "Category": "คลังสินค้า",
+    "Category_en": "Warehouse",
+    "Value": 41
+   },
+   {
+    "Category": "บัญชี",
+    "Category_en": "Accounting",
+    "Value": 18
+   },
+   {
+    "Category": "ไอที",
+    "Category_en": "IT",
+    "Value": 12
+   },
+   {
+    "Category": "บุคคล",
+    "Category_en": "People",
+    "Value": 9
+   }
+  ]
+ },
+ "ticket_status": {
+  "title": "สถานะงานที่แจ้งเข้ามา",
+  "title_en": "Tickets by status",
+  "caption": "งานทั้งหมด",
+  "caption_en": "Total tickets",
+  "rows": [
+   {
+    "Category": "กำลังทำ",
+    "Category_en": "In progress",
+    "Value": 87
+   },
+   {
+    "Category": "เสร็จแล้ว",
+    "Category_en": "Done",
+    "Value": 213
+   },
+   {
+    "Category": "รอตรวจ",
+    "Category_en": "In review",
+    "Value": 34
+   },
+   {
+    "Category": "ยังไม่เริ่ม",
+    "Category_en": "Not started",
+    "Value": 22
+   }
+  ]
+ }
+}

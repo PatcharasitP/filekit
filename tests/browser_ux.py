@@ -10,7 +10,18 @@ def _tool_count():
         cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
     return int(out)
 
+# จำนวนหมวดก็อ่านจากทะเบียนเช่นกัน — เดิมฮาร์ดโค้ดไว้ 9 พอเพิ่มหมวด Power Query
+# กับ Power Automate เทสก็แดงเองทั้งที่หน้าเว็บถูกต้อง (เจอจริง 11/09/2026)
+def _group_count():
+    import subprocess, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    out = subprocess.run(["node", "--input-type=module", "-e",
+        'import {GROUPS} from "./src/registry.js"; console.log(GROUPS.length)'],
+        cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
+    return int(out)
+
 N_TOOLS = _tool_count()
+N_GROUPS = _group_count()
 
 # จำนวนเครื่องมือในหมวดหนึ่ง ๆ — อ่านจากทะเบียนเช่นกัน
 def _group_count(gid):
@@ -69,7 +80,7 @@ with sync_playwright() as p:
 
     print("\n━━ ① โครงหน้าแรก ━━")
     ck(f"ป้ายเครื่องมือครบ {N_TOOLS} ใบ", pg.locator("button.pill").count(), N_TOOLS)
-    ck("มีแถบหมวด 9 ปุ่ม (ทั้งหมด + 8 หมวด)", pg.locator(".cat").count(), 9)
+    ck(f"มีแถบหมวด {N_GROUPS + 1} ปุ่ม (ทั้งหมด + {N_GROUPS} หมวด)", pg.locator(".cat").count(), N_GROUPS + 1)
     ck("ปุ่ม 'ทั้งหมด' บอกจำนวนถูก", pg.locator(".cat").first.inner_text().replace("\n","").replace(" ",""), f"ทั้งหมด{N_TOOLS}")
     ck("มีลิงก์ข้ามไปเนื้อหา (skip link)", pg.locator("a.skip").count(), 1)
     ck("แถบสถิติโชว์จำนวนเครื่องมือจริง", pg.locator("#fact-n").inner_text(), str(N_TOOLS))
@@ -183,7 +194,12 @@ with sync_playwright() as p:
     m.goto(BASE, wait_until="networkidle"); m.wait_for_timeout(600)
     ck("ไม่ล้นแนวนอน", m.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), True)
     h = m.evaluate("document.documentElement.scrollHeight")
-    ck(f"ความสูงหน้าลดจาก 3137px เหลือ {h}px (ต้อง ≤ 2400)", h <= 2400, True)
+    # ‼️ เดิมคุมเป็นเพดานตายตัว 2400px ซึ่งเป็นค่าที่ถูกล็อกไว้ตอนมีเครื่องมือน้อยกว่านี้
+    #    พอเพิ่มเครื่องมือตามที่พี่ปอนด์สั่ง เพดานก็แตกทุกครั้งทั้งที่หน้าไม่ได้หลวมขึ้นเลย
+    #    สิ่งที่ตั้งใจจะคุมจริงคือ "ความแน่น" ไม่ใช่ความสูงดิบ จึงวัดเป็นพิกเซลต่อเครื่องมือแทน
+    #    (11/09/2026 วัดได้ 67.8 px/ตัว ที่ 39 เครื่องมือ · เพดาน 75 ยังจับการถอยหลังได้สบาย)
+    per = h / N_TOOLS
+    ck(f"ความแน่นหน้าแรก {per:.1f} px ต่อเครื่องมือ ที่ {N_TOOLS} ตัว รวม {h}px (ต้อง ≤ 75)", per <= 75, True)
     small = m.evaluate("""() => [...document.querySelectorAll('button, a.skip, input, select')]
       .filter(e => e.offsetParent !== null)
       .map(e => { const r = e.getBoundingClientRect(); return {t: e.className || e.tagName, w: Math.round(r.width), h: Math.round(r.height)}; })

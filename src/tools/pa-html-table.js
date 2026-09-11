@@ -36,6 +36,11 @@ const STYLE = `
 .pah-tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .pah-preview{border:1px solid var(--line);border-radius:var(--r-sm);background:#ffffff;
   padding:18px;overflow:auto;max-height:min(58vh,560px)}
+/* ‼️ บนมือถือ 58vh = 490px จากจอ 844px คิดเป็น 58% กลายเป็น "กับดักสกอลล์ซ้อน"
+   คือมีช่องเลื่อนเล็ก ๆ ซ้อนอยู่ในหน้าที่เลื่อนได้อยู่แล้ว นิ้วปัดแล้วไม่รู้ว่าเลื่อนอันไหน
+   (จับได้จาก tests/browser_mobile.py ข้อ ③ เกณฑ์ต้อง >= 70% ของความสูงจอ)
+   จอเล็กจึงยืดให้สูงพอจนไม่ใช่กับดัก ส่วนจอใหญ่คงเดิมเพราะมีที่ให้เห็นบริบทรอบ ๆ อยู่แล้ว */
+@media (max-width:640px){ .pah-preview{max-height:78vh} }
 .pah-preview *{max-width:100%}
 .pah-col{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);padding:9px 11px;margin-bottom:8px}
 .pah-col-head{display:flex;align-items:center;gap:6px;margin-bottom:7px}
@@ -44,6 +49,10 @@ const STYLE = `
   width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px}
 .pah-mini:hover:not(:disabled){border-color:var(--g-powerbi,var(--brand))}
 .pah-mini:disabled{opacity:.35;cursor:default}
+/* ‼️ นิ้วแตะต้องการ 36x36px (WCAG 2.5.8 / Apple HIG / Material) แต่ปุ่มไอคอนพวกนี้กว้าง 26px
+   วัดบนจอ 390x844 จริงแล้วตกเกณฑ์ทุกใบ (tests/browser_mobile.py ข้อ ④)
+   ขยายเฉพาะอุปกรณ์สัมผัส เมาส์บนจอใหญ่คงขนาดกระชับเหมือนเดิม */
+@media (pointer:coarse){ .pah-mini{width:36px;height:36px} }
 .pah-mini.danger:hover:not(:disabled){border-color:#d64550;color:#d64550}
 .pah-hint{font-size:12px;color:var(--text-mute);line-height:1.7;margin:6px 0 0}
 .pah-warn{border:1px solid var(--line);border-left:3px solid var(--g-powerbi,var(--brand));
@@ -71,6 +80,12 @@ ${PRESETS_CSS}
 .pbid-switch input:checked + .pbid-switch-track{background:var(--g-powerbi,var(--brand))}
 .pbid-switch input:checked + .pbid-switch-track::after{transform:translateX(18px)}
 .pbid-switch input:focus-visible + .pbid-switch-track{outline:2px solid var(--brand);outline-offset:2px}
+/* ‼️ สวิตช์สูง 24px เตี้ยกว่าเกณฑ์นิ้วแตะ 36px — ยืดกรอบที่กดได้เป็น 36 แต่คงรางสูง 24 เท่าเดิม
+   โดยดันขอบบนล่างเข้ามา 6px (ทับ inset:0 ของราง) หน้าตาจึงไม่เปลี่ยน แค่กดโดนง่ายขึ้น */
+@media (pointer:coarse){
+  .pbid-switch{height:36px}
+  .pbid-switch-track{top:6px;bottom:6px}
+}
 `;
 
 export function mount(tool) {

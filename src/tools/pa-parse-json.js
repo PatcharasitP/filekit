@@ -24,8 +24,13 @@ const STYLE = `
 .paj-col{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);padding:9px 11px}
 .paj-col-name{font-weight:700;font-size:13px;color:var(--text);word-break:break-word;margin-bottom:6px}
 .paj-col-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.paj-col-row select{flex:1;min-width:120px}
-.paj-null{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-mute);white-space:nowrap}
+/* ‼️ วัดบนจอ 390x844 จริง: select สูง 19px และ label 'ว่างได้' สูง 21.9px ทั้งคู่เล็กกว่าเกณฑ์
+   นิ้วแตะ 36px ของ WCAG/Apple/Google · ตารางหลายคอลัมน์ = ซ้ำกันทุกแถวจนตกรวม 69 จุด
+   (จับได้จาก tests/browser_mobile.py ข้อ ④) · ขยายเฉพาะแนวตั้ง ไม่ขยับเลย์เอาต์แนวนอน */
+.paj-col-row select{flex:1;min-width:120px;min-height:36px}
+.paj-null{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-mute);
+  white-space:nowrap;min-height:36px}
+.paj-null input[type="checkbox"]{width:18px;height:18px;flex:none}
 .paj-seen{font-size:12px;color:var(--text-mute);margin-top:5px;line-height:1.6}
 .paj-warn{border:1px solid var(--line);border-left:3px solid var(--g-powerbi,var(--brand));
   border-radius:var(--r-sm);background:var(--bg-soft);padding:10px 12px;font-size:12.5px;
@@ -48,6 +53,12 @@ const STYLE = `
 .pbid-switch input:checked + .pbid-switch-track{background:var(--g-powerbi,var(--brand))}
 .pbid-switch input:checked + .pbid-switch-track::after{transform:translateX(18px)}
 .pbid-switch input:focus-visible + .pbid-switch-track{outline:2px solid var(--brand);outline-offset:2px}
+/* ‼️ สวิตช์สูง 24px เตี้ยกว่าเกณฑ์นิ้วแตะ 36px — ยืดกรอบที่กดได้เป็น 36 แต่คงรางสูง 24 เท่าเดิม
+   โดยดันขอบบนล่างเข้ามา 6px (ทับ inset:0 ของราง) หน้าตาจึงไม่เปลี่ยน แค่กดโดนง่ายขึ้น */
+@media (pointer:coarse){
+  .pbid-switch{height:36px}
+  .pbid-switch-track{top:6px;bottom:6px}
+}
 `;
 
 export function mount(tool) {

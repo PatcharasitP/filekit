@@ -36,6 +36,10 @@ const STYLE = `
   width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px}
 .pqm-mini:hover:not(:disabled){border-color:var(--g-powerbi,var(--brand))}
 .pqm-mini:disabled{opacity:.35;cursor:default}
+/* ‼️ นิ้วแตะต้องการ 36x36px (WCAG 2.5.8 / Apple HIG / Material) แต่ปุ่มไอคอนพวกนี้กว้าง 26px
+   วัดบนจอ 390x844 จริงแล้วตกเกณฑ์ทุกใบ (tests/browser_mobile.py ข้อ ④)
+   ขยายเฉพาะอุปกรณ์สัมผัส เมาส์บนจอใหญ่คงขนาดกระชับเหมือนเดิม */
+@media (pointer:coarse){ .pqm-mini{width:36px;height:36px} }
 .pqm-mini.danger:hover:not(:disabled){border-color:#d64550;color:#d64550}
 
 .pqm-grid{display:flex;flex-direction:column;gap:8px}
@@ -69,6 +73,12 @@ ${PRESETS_CSS}
 .pbid-switch input:checked + .pbid-switch-track{background:var(--g-powerbi,var(--brand))}
 .pbid-switch input:checked + .pbid-switch-track::after{transform:translateX(18px)}
 .pbid-switch input:focus-visible + .pbid-switch-track{outline:2px solid var(--brand);outline-offset:2px}
+/* ‼️ สวิตช์สูง 24px เตี้ยกว่าเกณฑ์นิ้วแตะ 36px — ยืดกรอบที่กดได้เป็น 36 แต่คงรางสูง 24 เท่าเดิม
+   โดยดันขอบบนล่างเข้ามา 6px (ทับ inset:0 ของราง) หน้าตาจึงไม่เปลี่ยน แค่กดโดนง่ายขึ้น */
+@media (pointer:coarse){
+  .pbid-switch{height:36px}
+  .pbid-switch-track{top:6px;bottom:6px}
+}
 `;
 
 export function mount(tool) {

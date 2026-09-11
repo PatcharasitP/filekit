@@ -407,7 +407,7 @@ export function mount(tool) {
           ? tr(" (บีบโดยไม่วาดใหม่ ข้อความยังค้นหาและคัดลอกได้เหมือนเดิม)",
                " (compressed without redrawing, so text is still searchable and copyable)")
           : hadText
-          ? tr(" (ไฟล์นี้เคยค้นหาข้อความได้ หลังบีบอัดจะกลายเป็นภาพ ค้นหาหรือคัดลอกข้อความไม่ได้แล้ว ถ้าต้องใช้ข้อความ ให้เก็บไฟล์เดิมไว้ด้วย)",
+          ? tr(" (ไฟล์นี้เคยค้นหาข้อความได้ หลังบีบอัดกลายเป็นภาพ ค้นหาไม่ได้แล้ว ถ้าต้องใช้ให้เก็บไฟล์เดิมไว้)",
                " (this file had searchable text; compressing turns every page into an image, so text can no longer be searched or copied. Keep the original if you need the text.)")
           : "";
         st.ok(tr(`เล็กลง ${Math.round(diff * 100)}%, ${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`,

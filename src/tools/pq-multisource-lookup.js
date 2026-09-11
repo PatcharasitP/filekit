@@ -165,8 +165,8 @@ export function mount(tool) {
     presets.node,
     el("h3", { class: "pbid-group-title" }, tr("คอลัมน์ผลลัพธ์", "Output columns")),
     el("p", { class: "pqm-hint" }, tr(
-      "ชื่อซ้ายคือชื่อคอลัมน์ที่จะได้ ช่องข้างในคือชื่อคอลัมน์จริงของแต่ละแหล่ง แหล่งไหนตั้งชื่อต่างกันก็กรอกต่างกันได้ ผลลัพธ์ยังลงคอลัมน์เดียวกัน เว้นว่างไว้ถ้าแหล่งนั้นไม่มีคอลัมน์นี้",
-      "The name on the left is the column you get. Inside are the real column names in each source, so sources that name it differently still land in one column. Leave it empty when a source does not have it"
+      "ชื่อซ้ายคือคอลัมน์ที่จะได้ ข้างในคือชื่อจริงของแต่ละแหล่ง เว้นว่างถ้าแหล่งนั้นไม่มี",
+      "The left name is the column you get, inside are the real names per source. Leave one empty when it has none"
     )),
     gridEl,
     el("div", { class: "pqm-add" }, [addRowBtn]),
@@ -188,8 +188,8 @@ export function mount(tool) {
     right: { title: tr("ผลลัพธ์และตัวเลือก", "Output & options"), node: rightBody },
     footer: [copyBtn, dlBtn, shareBtn, resetBtn, st.node],
     note: tr(
-      "วิธีใช้: สร้างคิวรีเปล่าใน Power Query แล้ววางโค้ดนี้ใน Advanced Editor ตัวฟังก์ชันต้องมีอยู่ในไฟล์ด้วย ถ้ายังไม่มีให้เปิดแท็บตัวฟังก์ชันแล้วสร้างเป็นคิวรีชื่อ fnMultiSourceFallbackLookup ก่อน",
-      "How to use it: make a blank query in Power Query and paste this into the Advanced Editor. The function itself must exist in the file, so if it does not, open the function tab and create a query named fnMultiSourceFallbackLookup first"
+      "วางในคิวรีเปล่าผ่าน Advanced Editor ไฟล์ต้องมีคิวรี fnMultiSourceFallbackLookup ด้วย",
+      "Paste into a blank query via the Advanced Editor. The file also needs a query named fnMultiSourceFallbackLookup"
     ),
   });
   ws.wrap.prepend(styleEl);

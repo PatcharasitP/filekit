@@ -12,9 +12,11 @@ node tests/search.test.mjs
 python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error
 ../.venv/bin/python tests/browser_ux.py         # หน้าแรก ค้นหา ธีม คีย์บอร์ด คอนทราสต์ มือถือ
+../.venv/bin/python tests/browser_findability.py # เปิดหน้าแรกแล้วต้องเห็นเครื่องมือและหมวดครบ ไม่ต้องเลื่อนหา
 ../.venv/bin/python tests/browser_thai.py       # ชุดเครื่องมือไทย ตรวจค่าจริงในตาราง
 ../.venv/bin/python tests/browser_mailmerge.py  # ขั้นตอนล็อก/ปลดล็อก + ฟอร์มตรงแนว
 ../.venv/bin/python tests/browser_batch.py      # ไฟล์เสียปนมาแล้วไฟล์อื่นต้องรอด
+../.venv/bin/python tests/browser_pbibar.py     # กราฟแท่ง Deneb วัดความยาวแท่งจากพิกัดจริงในเบราว์เซอร์
 
 ../.venv/bin/python tests/browser_viewer.py     # ตัวดูรูปเต็มจอ ปิดแล้วต้องไม่พาหลุดออกจากงาน
 ../.venv/bin/python tests/browser_a11y.py       # คีย์บอร์ด โฟกัส ป้ายกำกับ คอนทราสต์

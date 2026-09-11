@@ -158,8 +158,8 @@ export function mount(tool) {
   const addColBtn = button(tr("เพิ่มคอลัมน์", "Add a column"), { icon: "plus", ghost: true, onclick: addColumn });
   const leftBody = el("div", {}, [
     field(tr("อาร์เรย์ต้นทาง", "Source array"), textInput(model, "source"),
-      tr("นิพจน์ที่คืนอาร์เรย์ ไม่ต้องใส่ @ นำหน้า  ถ้าดึงจาก Power BI ด้วย Run a query ชื่อคีย์จะมีวงเล็บเหลี่ยมครอบ เช่น item()?['[TASK_NO]']",
-         "An expression returning an array, no leading @ needed. If the data came from a Power BI query the keys carry square brackets, such as item()?['[TASK_NO]']")),
+      tr("นิพจน์ที่คืนอาร์เรย์ ไม่ต้องใส่ @ นำหน้า  คีย์จาก Power BI มีวงเล็บเหลี่ยมครอบ เช่น item()?['[ID]']",
+         "An expression returning an array, no leading @. Power BI keys carry square brackets, like item()?['[ID]']")),
     el("h3", { class: "pbid-group-title", style: "margin:18px 0 8px" }, tr("คอลัมน์ในตาราง", "Table columns")),
     el("p", { class: "pah-hint" }, tr(
       "ช่องบนคือหัวตาราง ช่องล่างคือนิพจน์ของค่าในแต่ละแถว ไม่ต้องใส่ @ นำหน้า",
@@ -241,8 +241,8 @@ export function mount(tool) {
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
     footer: [copyBtn, dlBtn, shareBtn, resetBtn, st.node],
     note: tr(
-      "แท็บ JSON วางลง flow จะได้ทั้งก้อนพร้อมกันทีเดียว คัดลอกแล้วกดขวาบนพื้นที่ว่างในหน้าออกแบบ flow แล้วเลือก Paste ส่วนแท็บ HTML ไว้ใช้ตอนอยากวางเองในแอ็กชัน Compose ที่มีอยู่แล้ว  ‼️ ถ้า flow มีแอ็กชันชื่อเดียวกันอยู่ก่อน หน้าออกแบบจะเติมเลขต่อท้ายให้เอง เช่นกลายเป็น EmailHtmlTable 1 กรณีนั้นต้องเปิดแอ็กชันประกอบ HTML แล้วแก้ชื่อในนิพจน์ body(...) ให้ตรงกับชื่อใหม่ ไม่งั้นอีเมลจะดึงตารางของแอ็กชันเก่ามาแสดงแบบเงียบ ๆ วิธีกันคือตั้งชื่อในช่องชื่อแอ็กชันให้ไม่ซ้ำตั้งแต่แรก",
-      "The JSON tab gives you the whole block at once, copy it then right click an empty spot in the flow designer and choose Paste. The HTML tab is for pasting by hand into a Compose action you already have.  If the flow already has actions with these names the designer appends a number, such as EmailHtmlTable 1. When that happens open the compose action and change the name inside body(...) to match, otherwise the email quietly shows the old table. Set unique action names up front to avoid it"
+      "คัดลอกแท็บ JSON กดขวาในหน้าออกแบบ flow เลือก Paste  ชื่อซ้ำจะถูกเติมเลข ต้องแก้ใน body(...) ตาม",
+      "Copy the JSON tab and Paste it in the flow designer. Duplicate names get a number, so update body(...) to match"
     ),
   });
   ws.wrap.prepend(styleEl);
@@ -464,7 +464,7 @@ export function mount(tool) {
     const html = buildHtml();
     if (html.includes('\\"') || html.includes("\\'")) {
       msgs.push(tr(
-        "พบ backslash หน้าเครื่องหมายคำพูด Power Automate ไม่ตีความว่าเป็น escape มันจะหลุดเป็นตัวอักษรจริงแล้วสไตล์พังเงียบ",
+        "backslash หน้าเครื่องหมายคำพูดไม่ใช่ escape ใน Power Automate จะหลุดเป็นตัวอักษรจริง สไตล์พังเงียบ",
         "Found a backslash before a quote. Power Automate does not treat it as an escape, it leaks through as a real character and the styling breaks silently"
       ));
     }

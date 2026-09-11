@@ -106,7 +106,7 @@ export function mount(tool) {
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
     footer: [copyBtn, dlBtn, st.node],
     note: tr(
-      "วิธีใช้: ใน Power Automate เพิ่มแอ็กชัน Parse JSON วางเนื้อหาช่อง Content เป็นข้อมูลของคุณ แล้วกดปุ่ม Use sample payload to generate schema เพียงเพื่อเปิดช่อง Schema จากนั้นวางโค้ดจากที่นี่ทับลงไปตรง ๆ",
+      "เพิ่มแอ็กชัน Parse JSON ชี้ช่อง Content ไปที่ข้อมูลของคุณ แล้ววางโค้ดนี้ลงช่อง Schema",
       "How to use it: in Power Automate add a Parse JSON action, point Content at your data, then paste the code from here straight into the Schema box"
     ),
   });
@@ -266,14 +266,14 @@ export function mount(tool) {
     const spaced = cols.filter((c) => c.name !== c.name.trim());
     if (spaced.length) {
       msgs.push(tr(
-        `ชื่อคอลัมน์ ${spaced.length} ช่องมีเว้นวรรคติดหัวหรือท้ายอยู่ ตามองไม่เห็นแต่ชื่อคีย์จะไม่ตรงกับที่พิมพ์ใน expression`,
+        `ชื่อคอลัมน์ ${spaced.length} ช่องมีเว้นวรรคหัวหรือท้าย ตามองไม่เห็น แต่คีย์จะไม่ตรงกับที่พิมพ์ใน expression`,
         `${spaced.length} column names have a leading or trailing space, invisible to the eye but the key will not match what you type in an expression`
       ));
     }
     const nulls = cols.filter((c) => c.nullable).length;
     if (nulls) {
       msgs.push(tr(
-        `${nulls} คอลัมน์เคยมีค่าว่างจริงในไฟล์นี้ จึงประกาศเป็น null ได้ไว้ให้แล้ว ถ้าเอาออก flow จะพังทันทีที่เจอแถวว่าง`,
+        `${nulls} คอลัมน์เคยว่างจริงในไฟล์นี้ จึงประกาศ null ไว้ให้ ถ้าเอาออก flow จะพังตอนเจอแถวว่าง`,
         `${nulls} columns really do have blanks in this file, so they are declared nullable. Remove that and the flow breaks on the first blank row`
       ));
     }

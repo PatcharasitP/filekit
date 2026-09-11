@@ -298,8 +298,11 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   --line:#2e3542; --line-soft:#272d38;
   --text:#f0f1f3; --text-dim:#a8adb8; --text-mute:#8f97a6; --brand:#8aa3ff;
   position:relative; isolation:isolate; overflow:hidden; color:var(--text);
-  margin:var(--sp4) 0 var(--sp6); border-radius:28px;
-  padding:clamp(30px,4.4vw,52px) clamp(20px,4vw,48px) clamp(28px,3.6vw,42px);
+  margin:var(--sp2) 0 var(--sp3); border-radius:28px;
+  /* ‼️ วัดจริง 11/09/2026 ของเดิมดันเครื่องมือตัวแรกไปอยู่ที่ 832px บนจอสูง 950
+     คนเปิดมาเห็นเครื่องมือแค่ 9 จาก 40 ทั้งที่เขามาเพื่อหาเครื่องมือ ไม่ได้มาอ่านหัวเรื่อง
+     ย่อระยะขอบและตัวอักษรลง โดยยังคงหน้าตาเดิมไว้ทุกอย่าง */
+  padding:clamp(20px,2.4vw,30px) clamp(20px,4vw,48px) clamp(16px,2vw,22px);
   background:#0b0d11;
   box-shadow:0 34px 70px -30px rgba(6,8,14,.6), inset 0 1px 0 0 rgba(255,255,255,.055);
 }
@@ -317,9 +320,10 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   gap:clamp(18px,3vw,38px); align-items:center}
 .kicker{display:inline-flex; align-items:center; gap:10px; margin-bottom:var(--sp4);
   font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--text-mute)}
+.kicker{margin-bottom:var(--sp3)}
 .kicker s{display:block; width:26px; height:1px; background:var(--line); text-decoration:none}
 .hero h1{
-  font-size:clamp(27px,4.6vw,52px); margin:0 0 14px; font-weight:700;
+  font-size:clamp(24px,3vw,36px); margin:0 0 9px; font-weight:700;
   /* บีบระยะตัวอักษร -3.4% ตามที่วัดจากเว็บชั้นนำ — ใช้กับไทยได้ ทดสอบแล้วสระไม่ชนกัน
      แต่ line-height ห้ามต่ำกว่า 1.3 เด็ดขาด (ที่ 1.0 สระบน-ล่างล้นกล่อง 6px ชนบรรทัดบน) */
   letter-spacing:calc(1em * -0.034);
@@ -327,12 +331,15 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 }
 .hero h1 em{font-style:normal; color:#79808e}
 :root[lang="en"] .hero h1{max-width:24ch}
-.hero p{margin:0; max-width:52ch; color:var(--text-dim); font-size:15.5px; line-height:1.8}
-.hero .searchwrap{margin:var(--sp5) 0 0; max-width:520px}
-.facts{display:flex; flex-wrap:wrap; gap:clamp(18px,3vw,36px); margin-top:var(--sp5)}
-.fact span{display:block; font-size:10.5px; font-weight:700; letter-spacing:.16em;
+.hero p{margin:0; max-width:52ch; color:var(--text-dim); font-size:15px; line-height:1.65}
+.hero .searchwrap{margin:var(--sp3) 0 0; max-width:520px}
+/* ‼️ ตัวเลข 3 ก้อนนี้บอกจุดยืนของเว็บ (ไม่อัปโหลด ฟรี) จึงไม่ตัดทิ้ง
+   แต่เดิมวางเป็นก้อนใหญ่กิน 78px ทั้งที่คนเปิดมาเพื่อหาเครื่องมือ ย่อเป็นบรรทัดเดียวแทน */
+.facts{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 22px; margin-top:var(--sp3)}
+.fact{display:flex; align-items:baseline; gap:6px}
+.fact span{font-size:10.5px; font-weight:700; letter-spacing:.13em;
   text-transform:uppercase; color:var(--text-mute)}
-.fact b{display:block; font-size:22px; font-weight:700; line-height:1.5; color:var(--text);
+.fact b{font-size:15px; font-weight:700; line-height:1.5; color:var(--text);
   letter-spacing:calc(1em * -0.02)}
 .badges{display:flex;gap:var(--sp2);flex-wrap:wrap;margin-top:var(--sp4)}
 .badge{
@@ -441,13 +448,14 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 
 /* ---------- แถบหมวด ---------- */
 .cats{
-  display:flex; gap:var(--sp2); overflow-x:auto; scrollbar-width:none;
+  /* ‼️ เดิมเลื่อนแนวนอน ทำให้หมวด Power Automate หลุดออกนอกจอตั้งแต่เปิดมา
+     และบนมือถือหายไปถึง 8 หมวด รวม Power BI กับ Power Query ที่ใช้บ่อยที่สุด
+     คนไม่เลื่อนแถบที่ไม่รู้ว่าเลื่อนได้ จึงเปลี่ยนเป็นตัดบรรทัดให้เห็นครบทุกหมวด */
+  display:flex; flex-wrap:wrap; gap:var(--sp2);
   padding:var(--sp2) 2px var(--sp3); margin:0 -2px;
-  scroll-snap-type:x proximity;
 }
-.cats::-webkit-scrollbar{display:none}
 .cat{
-  flex:none; scroll-snap-align:start; cursor:pointer; white-space:nowrap;
+  flex:none; cursor:pointer; white-space:nowrap;
   border:1px solid var(--line); background:var(--card); color:var(--text-dim);
   border-radius:999px; padding:7px 14px; font-size:13px; font-weight:600; min-height:36px;
   box-shadow:0 1px 2px rgba(0,0,0,.05);
@@ -465,7 +473,7 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 
 /* ── แผงเข้มที่ใส่ป้ายเครื่องมือ ── */
 .stage{
-  margin-top:var(--sp5); border-radius:26px; padding:30px clamp(16px,3vw,34px) 34px;
+  margin-top:var(--sp3); border-radius:26px; padding:18px clamp(16px,3vw,34px) 30px;
   background:linear-gradient(152deg,var(--stage),var(--stage-2));
   box-shadow:0 30px 60px -26px rgba(8,10,16,.45), inset 0 1px 0 0 rgba(255,255,255,.05);
 }
@@ -565,10 +573,19 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .btn-soft:hover{background:var(--card-hi)}
 
 @media (max-width:620px){
-  .hero{border-radius:20px; margin-inline:-4px; padding:26px 16px 28px}
+  .hero{border-radius:20px; margin-inline:-4px; padding:20px 16px 20px}
   .hero .searchwrap{max-width:none}
-  .facts{gap:22px}
-  .fact b{font-size:19px}
+  .facts{gap:6px 16px}
+  .fact b{font-size:14px}
+  .fact span{font-size:9.5px; letter-spacing:.1em}
+  /* ‼️ 12 หมวดตัดบรรทัดบนจอ 390px กินไป 178px หรือ 21% ของจอ ย่อชิปลงให้เหลือราวครึ่งเดียว
+     ตัวเลขนับยังอยู่ครบเพราะบอกได้ว่าหมวดไหนมีของเยอะ ซึ่งช่วยตัดสินใจว่าจะกดอันไหน */
+  .cats{gap:5px; padding:var(--sp1) 2px var(--sp2)}
+  /* ‼️ ย่อได้แค่ "แคบลง" ห้าม "เตี้ยลง" ต่ำกว่า 36px เพราะเป็นเกณฑ์เป้าการแตะบนจอสัมผัส
+     ลดความสูงแล้วเทส browser_ux จับได้ทันที (12 ปุ่ม) จึงคงความสูงไว้แล้วลดแค่ด้านกว้าง */
+  .cat{padding:4px 9px; font-size:12px; border-radius:9px}
+  .cat b{margin-inline-start:4px; font-size:10.5px}
+  .stage{margin-top:var(--sp2)}
   /* ป้ายบนมือถือ: ให้เรียง 2 ต่อแถวและยอมให้ข้อความขึ้นบรรทัดใหม่
      ถ้าปล่อยเป็น nowrap ป้ายชื่อยาวจะกินเต็มแถว → หน้ายาวกว่ากริดการ์ดเดิมเสียอีก */
   .stage{padding:22px 14px 26px;border-radius:20px;margin-inline:-4px}

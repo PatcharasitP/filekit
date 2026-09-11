@@ -177,7 +177,7 @@ export function mount(tool) {
   const ownBlock = el("div", { class: "pbib-own" }, [
     el("h3", { class: "pbib-own-title" }, tr("ใช้ข้อมูลของคุณเอง", "Use your own data")),
     el("p", { class: "pbib-own-hint" }, tr(
-      "เปิดไฟล์ Excel หรือ CSV แล้วเลือกว่าคอลัมน์ไหนคือชื่อกลุ่ม คอลัมน์ไหนคือค่า ถ้ามีคอลัมน์เป้าหมายก็เลือกเพิ่มได้ ชื่อกลุ่มที่ซ้ำกันจะถูกรวมยอดให้เอง",
+      "เปิดไฟล์ Excel หรือ CSV แล้วเลือกคอลัมน์ชื่อกลุ่มกับค่า มีเป้าหมายเลือกเพิ่มได้ ชื่อซ้ำรวมยอดให้เอง",
       "Open an Excel or CSV file, then pick which column is the category and which is the value. Add a target column if you have one. Repeated categories are summed for you"
     )),
     fileInput, ownPick,
@@ -206,8 +206,8 @@ export function mount(tool) {
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
     footer: [copyBtn, dlBtn, dlCsvBtn, shareBtn, resetBtn, st.node],
     note: tr(
-      "นำไปใช้ใน Deneb: ลากคอลัมน์หรือ measure ที่ต้องการเข้า field well แล้ว Rename for this visual เป็น Category กับ Value จากนั้นวางสเปกที่คัดลอกไว้ทับของเดิม ถ้าจะใช้เส้นเป้าหมายให้ลากอีก measure เข้าไปแล้วตั้งชื่อว่า Target",
-      "To use in Deneb: drag the columns or measure you want into the field wells, Rename for this visual to Category and Value, then paste the copied spec over the existing one. For the target line, drag one more measure in and name it Target"
+      "ใน Deneb ลาก field เข้า well แล้ว Rename เป็น Category, Value, Target จากนั้นวางสเปกทับของเดิม",
+      "In Deneb drag fields into the wells, rename them Category, Value, Target, then paste the spec over the old one"
     ),
   });
   ws.wrap.prepend(styleEl);
@@ -373,14 +373,14 @@ export function mount(tool) {
     const eff = readRowField("__effLabelMode");
     if (paramValues.valueLabel === "outside" && eff === "inside") {
       msgs.push(tr(
-        "ที่ทางขวาไม่พอสำหรับป้ายตัวเลข กราฟจึงย้ายป้ายเข้าไปในแท่งให้เอง ถ้าอยากให้กลับออกมา ลองทำให้วิชวลกว้างขึ้นหรือลดขนาดตัวอักษรป้าย",
+        "ที่ทางขวาไม่พอ กราฟจึงย้ายป้ายเข้าไปในแท่งให้เอง ลองทำให้วิชวลกว้างขึ้นหรือลดขนาดตัวอักษรป้าย",
         "There wasn't room on the right for the value labels, so the chart moved them inside the bars. To bring them back out, widen the visual or reduce the label text size"
       ));
     }
     if (paramValues.targetMode !== "none" && !hasTargetCol) {
       msgs.push(tr(
-        "ชุดข้อมูลนี้ไม่มีคอลัมน์ Target เส้นและสีเป้าหมายจึงยังไม่แสดง ลองสลับไปชุดยอดขายตามช่องทาง หรือเลือกคอลัมน์เป้าหมายตอนเปิดไฟล์ของคุณเอง",
-        "This data has no Target column, so the target line and colors have nothing to draw. Try the sales by channel set, or pick a target column when you open your own file"
+        "ชุดนี้ไม่มีคอลัมน์ Target เส้นและสีเป้าหมายจึงยังไม่แสดง ลองชุดยอดขายตามช่องทางดู",
+        "No Target column in this data, so the line and colors have nothing to draw. Try the sales by channel set"
       ));
     }
     noteEl.hidden = msgs.length === 0;
@@ -859,7 +859,7 @@ export function mount(tool) {
                            "Measure examples for the Value and Target fields")),
       el("div", { class: "pbib-learn-body" }, [
         el("p", { class: "pbib-learn-lead" }, tr(
-          "กราฟรับ 2 ช่องบังคับคือ Category กับ Value และรับ Target เพิ่มได้อีก 1 ช่องแบบไม่บังคับ ช่อง Value จะใส่คอลัมน์หรือ measure อะไรก็ได้ กราฟคิดสัดส่วนกับการยุบกลุ่มให้เองจากค่าที่ได้",
+          "กราฟรับ Category กับ Value เป็นช่องบังคับ Target ไม่บังคับ ช่อง Value ใส่คอลัมน์หรือ measure ก็ได้",
           "The chart takes two required fields, Category and Value, plus an optional Target. Value accepts any column or measure, and the chart works out the shares and the collapsing from it"
         )),
         ...items.map(card),

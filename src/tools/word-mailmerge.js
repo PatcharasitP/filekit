@@ -110,12 +110,12 @@ export function mount(tool) {
   syncLocks();          // เรียกหลังประกาศ sampleBox แล้วเท่านั้น — ไม่งั้นชนกับ TDZ ของ const
 
   body.appendChild(el("div", { class: "note" },
-    tr("พิมพ์ตัวยึดในไฟล์ Word เช่น {{คำนำหน้า}}{{ชื่อ}} แล้วจับคู่คอลัมน์ Excel สร้างเอกสารทีละแถว รองรับหัว-ท้ายกระดาษ",
+    tr("พิมพ์ตัวยึดใน Word เช่น {{คำนำหน้า}}{{ชื่อ}} แล้วจับคู่คอลัมน์ Excel สร้างเอกสารทีละแถว",
     "Type placeholders like {{Title}}{{Name}} in Word, then match Excel columns. One document per row. Headers/footers supported")));
 
   body.appendChild(el("div", { class: "note" },
-    tr("เงื่อนไข: {{#โบนัส}}…{{/โบนัส}} + Excel ใส่ TRUE/FALSE (หรือ ใช่/ไม่ใช่, มี/ไม่มี), ตรงข้าม {{#ไม่โบนัส}}…{{/ไม่โบนัส}} ไม่ต้องเพิ่มคอลัมน์",
-    "Condition: {{#Bonus}}…{{/Bonus}} + Excel TRUE/FALSE (ใช่/ไม่ใช่, มี/ไม่มี work too), Opposite: {{#notBonus}}…{{/notBonus}}, no extra column")));
+    tr("เงื่อนไข {{#โบนัส}}…{{/โบนัส}} คู่กับ Excel ที่ใส่ TRUE/FALSE, ตรงข้ามใช้ {{#ไม่โบนัส}}",
+    "Condition {{#Bonus}}…{{/Bonus}} with TRUE/FALSE in Excel, opposite {{#notBonus}}")));
 
   body.appendChild(el("div", { class: "note" },
     tr("ตารางรายการ: ใส่ {{#รายการ}} ที่ช่องแรกและ {{/รายการ}} ที่ช่องสุดท้ายของแถว",

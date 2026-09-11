@@ -170,7 +170,7 @@ export function mount(tool) {
   const ownBlock = el("div", { class: "pbid-own" }, [
     el("h3", { class: "pbid-own-title" }, tr("ใช้ข้อมูลของคุณเอง", "Use your own data")),
     el("p", { class: "pbid-own-hint" }, tr(
-      "เปิดไฟล์ Excel หรือ CSV แล้วเลือกว่าคอลัมน์ไหนคือชื่อกลุ่ม คอลัมน์ไหนคือค่า ชื่อกลุ่มที่ซ้ำกันจะถูกรวมยอดให้เอง",
+      "เปิดไฟล์ Excel หรือ CSV แล้วเลือกคอลัมน์ชื่อกลุ่มกับคอลัมน์ค่า ชื่อซ้ำรวมยอดให้เอง",
       "Open an Excel or CSV file, then pick which column is the category and which is the value. Repeated categories are summed for you"
     )),
     fileInput, ownPick,
@@ -201,8 +201,8 @@ export function mount(tool) {
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
     footer: [copyBtn, dlBtn, dlXlsxBtn, dlPbixBtn, shareBtn, resetBtn, st.node],
     note: tr(
-      "นำไปใช้ใน Deneb: ลากคอลัมน์หรือ measure ที่ต้องการเข้า field well แล้ว Rename for this visual เป็น Category กับ Value จากนั้นวางสเปกที่คัดลอกไว้ทับของเดิม",
-      "To use in Deneb: drag the columns or measure you want into the field wells, Rename for this visual to Category and Value, then paste the copied spec over the existing one"
+      "ใน Deneb: ลาก field เข้า field well, Rename เป็น Category กับ Value แล้ววางสเปกทับของเดิม",
+      "In Deneb: drag fields into the field wells, rename them Category and Value, then paste the spec over the old one"
     ),
   });
   ws.wrap.prepend(styleEl);
@@ -352,11 +352,11 @@ export function mount(tool) {
     const hidePos = paramValues.legendPosition === "none";
     let msg = "";
     if (!hidePos && tier === 2 && paramValues.showPercent) {
-      msg = tr("พื้นที่คำอธิบายไม่พอ กราฟจึงซ่อนเปอร์เซ็นต์ให้เอง ถ้าอยากให้กลับมา ลองย่อขนาดวง ลดขนาดตัวอักษรคำอธิบาย หรือทำให้วิชวลกว้างขึ้น",
+      msg = tr("พื้นที่คำอธิบายไม่พอ กราฟจึงซ่อนเปอร์เซ็นต์ให้เอง ลองย่อขนาดวงหรือทำให้วิชวลกว้างขึ้น",
                 "The legend ran out of room so the chart hid the percentages for you. To get them back, shrink the ring, reduce the legend text size, or make the visual wider");
     } else if (!hidePos && tier === 3) {
-      msg = tr("พื้นที่คำอธิบายไม่พอ กราฟจึงเหลือไว้แค่ชื่อกลุ่ม ตัวเลขกับเปอร์เซ็นต์ถูกซ่อนให้เอง ลองย่อขนาดวงหรือทำให้วิชวลกว้างขึ้น",
-                "The legend ran out of room so only the group names are left, the numbers and percentages were hidden for you. Try shrinking the ring or widening the visual");
+      msg = tr("พื้นที่ไม่พอ กราฟจึงเหลือไว้แค่ชื่อกลุ่ม ลองย่อขนาดวงหรือทำให้วิชวลกว้างขึ้น",
+                "No room for the legend, so only group names are left. Try shrinking the ring or widening the visual");
     } else if (!hidePos && tier === 4) {
       msg = tr("พื้นที่ไม่พอสำหรับคำอธิบายเลย กราฟจึงซ่อนทั้งก้อนแล้วย้ายไปแสดงเปอร์เซ็นต์บนชิ้นโดนัทแทน",
                 "There was no room for the legend at all, so it was hidden and the percentages moved onto the slices instead");
@@ -472,7 +472,7 @@ export function mount(tool) {
       (centerTextWrap = textField(tr("ข้อความกลางวง (กำหนดเอง)", "Custom center text"), "centerText",
         supportsTokens
           ? tr(
-              "แทรกตัวเลขอัตโนมัติได้ด้วย {total} ผลรวม, {count} จำนวนกลุ่ม, {avg} ค่าเฉลี่ย, {max} ค่าสูงสุด, {maxName} ชื่อกลุ่มที่มากที่สุด เช่นพิมพ์ว่า ยอดรวม {total}",
+              "ใส่ตัวเลขได้ด้วย {total} ผลรวม, {count} กลุ่ม, {avg} เฉลี่ย, {max} สูงสุด, {maxName} ชื่อกลุ่ม",
               "You can drop numbers in with {total}, {count}, {avg}, {max} and {maxName}, for example type: Total {total}"
             )
           : tr("ใช้เมื่อเลือกเลขกลางวง = ข้อความเอง", "Used when the center number is set to custom text"))),
@@ -829,8 +829,8 @@ export function mount(tool) {
       el("summary", {}, tr("ตัวอย่างการเขียน measure สำหรับช่อง Value", "Measure examples for the Value field")),
       el("div", { class: "pbid-learn-body" }, [
         el("p", { class: "pbid-learn-lead" }, tr(
-          "กราฟรับแค่ 2 ช่องคือ Category กับ Value ช่อง Value จะใส่คอลัมน์หรือ measure อะไรก็ได้ แล้วกราฟจะคิดเปอร์เซ็นต์กับเลขกลางวงให้เองจากค่าที่ได้ ไม่ต้องสร้าง measure เปอร์เซ็นต์แยก",
-          "The chart takes only two fields, Category and Value. Value accepts any column or measure, and the chart works out the percentages and the centre number from it, so no separate percentage measure is needed"
+          "กราฟรับแค่ Category กับ Value ช่อง Value ใส่คอลัมน์หรือ measure ก็ได้ เปอร์เซ็นต์คิดให้เอง",
+          "The chart takes just Category and Value. Value accepts any column or measure, percentages are worked out for you"
         )),
         ...items.map(card),
       ]),

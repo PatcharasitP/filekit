@@ -16,6 +16,7 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_affordance.py  # ปุ่มลงมือทำต้องกดไม่ได้ตอนยังไม่มีไฟล์ และกลับมากดได้เมื่อพร้อม
 ../.venv/bin/python tests/browser_configpanel.py # ช่องค้นหาในแผงตั้งค่า กรองแล้วเลื่อนน้อยลง ล้างแล้วกลับมาเท่าเดิมเป๊ะ
 ../.venv/bin/python tests/browser_dirtymark.py  # บอกว่าช่องไหนถูกแก้จากค่าเริ่มต้น และคืนค่าทีละช่องได้
+../.venv/bin/python tests/browser_codeview.py   # โค้ดที่จะคัดลอกต้องเห็นได้ก่อนกด และเปลี่ยนตามค่าจริง
 ../.venv/bin/python tests/browser_thai.py       # ชุดเครื่องมือไทย ตรวจค่าจริงในตาราง
 ../.venv/bin/python tests/browser_mailmerge.py  # ขั้นตอนล็อก/ปลดล็อก + ฟอร์มตรงแนว
 ../.venv/bin/python tests/browser_batch.py      # ไฟล์เสียปนมาแล้วไฟล์อื่นต้องรอด

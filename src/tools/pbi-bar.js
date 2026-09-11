@@ -5,6 +5,7 @@ import { colorPicker, SWATCHES, COLORKIT_CSS } from "../colorkit.js";
 import { presetBar, PRESETS_CSS } from "../presets.js";
 import { configSearch, CFGSEARCH_CSS } from "../cfgsearch.js";
 import { dirtyMarks, DIRTYMARK_CSS } from "../dirtymark.js";
+import { codeView, CODEVIEW_CSS } from "../codeview.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
@@ -92,6 +93,7 @@ ${COLORKIT_CSS}
 ${PRESETS_CSS}
 ${CFGSEARCH_CSS}
 ${DIRTYMARK_CSS}
+${CODEVIEW_CSS}
 
 .pbib-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
 .pbib-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
@@ -173,6 +175,7 @@ export function mount(tool) {
 
   const presets = presetBar(PRESETS, applyPreset);
   let cfgSearch = null;   // ช่องค้นหาในแผงตั้งค่า สร้างหลังแผงมีเนื้อหาแล้ว
+  let specView = null;   // กล่องแสดงสเปกที่ผู้ใช้จะคัดลอกไปใช้
   let dirty = null;       // ตัวบอกว่าช่องไหนถูกแก้จากค่าเริ่มต้น พร้อมปุ่มคืนค่าทีละช่อง
 
   /* ห่อช่องด้วยกล่องที่ติดป้ายว่าคุมพารามิเตอร์ตัวไหน เพื่อให้ dirtymark รู้ว่า
@@ -274,6 +277,15 @@ export function mount(tool) {
 
       renderDatasetList();
       buildRightPanel();
+      /* ‼️ กล่องแสดงสเปกที่จะคัดลอก วิจัย 11/09/2026 เปิดดู 12 เว็บที่ทำงานแบบเดียวกัน
+         ไม่มีเว็บไหนซ่อนผลลัพธ์ไว้หลังปุ่มคัดลอกเลยสักที่ ของเราเคยไม่แสดงสเปก 26KB เลย
+         ผู้ใช้จึงกดคัดลอกโดยไม่รู้ว่าได้อะไรไป */
+      specView = codeView({
+        lang: "json",
+        title: tr("สเปกที่จะคัดลอก", "The spec you will copy"),
+        getCode: () => (originalSpec ? JSON.stringify(buildExportSpec(), null, 2) : ""),
+      });
+      centerWrap.appendChild(specView.node);
       buildLearnBlock();
       wireOwnData();
       syncChartHeight();
@@ -450,6 +462,7 @@ export function mount(tool) {
     paramValues[name] = value;
     state?.save();
     dirty?.refresh();
+    specView?.refresh();
     if (name === "maxBars") syncChartHeight();
     if (!view) return;
     view.signal(name, value);
@@ -992,6 +1005,7 @@ export function mount(tool) {
     for (const name of editable) controls[name]?.setUI(paramValues[name]);
     updateConditionalVisibility();
     dirty?.refresh();
+    specView?.refresh();
     syncChartHeight();
     if (view) {
       let v = view;

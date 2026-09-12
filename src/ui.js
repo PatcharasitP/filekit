@@ -1,6 +1,7 @@
 import { detectType, wrongTypeMessage, typeLabel } from "./filetype.js";
 import { $, $$, el, showVeil, filesFromClipboard } from "./dom.js";
 import { byId, GROUPS } from "./registry.js";
+import { TOOL_IO } from "./toolio.js";
 import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
 import { tr, pl } from "./i18n.js";
 
@@ -83,7 +84,7 @@ export function toolShell(tool) {
   const wrap = el("div", { style: `--ac:var(${GROUP_ACCENT[tool.group] || "--brand"})` }, [
     el("div", { class: "tool-head" }, [
       el("div", { class: "tool-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
-      el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc), toolMeta(tool)]),
+      el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc), toolMeta(tool), toolExample(tool)]),
     ]),
     body,
     toolFaq(tool),
@@ -117,6 +118,7 @@ export function toolRail(tool) {
     ]),
     el("p", { class: "rail-desc" }, tool.desc),
     toolMeta(tool),
+    toolExample(tool),
     railCopyMd(tool),
     el("nav", { class: "rail-jump", "aria-label": tr("ข้ามไปยังส่วน", "Jump to a section") },
       jump.map(([id, label]) => el("a", { href: `#${id}`, onclick: (e) => {
@@ -154,6 +156,44 @@ const BASE_FAQ = () => [
    tr("ไม่ต้องทั้งสองอย่าง ใช้ได้ไม่จำกัดจำนวนครั้ง และไม่มีโฆษณา",
       "Neither. Use it as many times as you like, with no ads.")],
 ];
+
+/** แถบ "ใส่อะไรเข้าไป ได้อะไรออกมา" จากการรันจริงด้วยไฟล์ตัวอย่าง
+ *
+ * ‼️ ที่มา thepexcel มีหัวข้อ Examples ทุกหน้า เป็นคู่ "สูตร → ผลลัพธ์"
+ *    โดยกล่องผลลัพธ์ถูกทำให้เด่นกว่ากล่องขาเข้า ของเราใช้ไวยากรณ์เดียวกัน
+ *    และใช้ชิ้นส่วนหน้าตาชุดเดียวกับฉาก hero ของหน้าแรก
+ *
+ * ‼️ ตัวเลขทุกตัวมาจากการรันเครื่องมือจริง (ดู src/toolio.js) ไม่ใช่กรอกมือ
+ *    เครื่องมือที่ไม่มีข้อมูล = ไม่แสดงอะไรเลย ดีกว่าเดาแล้วโชว์ของผิด
+ * ‼️ วางไว้ "เหนือ" แผงงานเสมอ ห้ามอยู่ใต้แผง เพราะจะไปยืดหางหน้าจนปุ่มลงมือทำ
+ *    หลุดจอบนมือถือ (บทเรียนจาก FAQ รอบก่อน tests/browser_mobile.py จับได้ 53 จุด) */
+export function toolExample(tool) {
+  const io = TOOL_IO[tool.id];
+  if (!io) return null;
+  /* ‼️ ข้อมูลใน toolio.js เป็นความจริงดิบ ห้ามแก้ที่นั่น การย่อให้พอดีบรรทัดทำที่นี่
+     ① meta ที่เป็น "รายชื่อไฟล์ต้นทาง" ไม่ได้บอกว่าเครื่องมือทำอะไรให้ และยาวมาก
+        (word-join คืนชื่อไฟล์ทั้งหมดพร้อมจำนวนย่อหน้า เกิน 90 ตัวอักษร) ตัดทิ้งทั้งก้อน
+     ② ที่เหลือถ้ายังยาวเกินบรรทัด ตัดท้ายด้วยจุดสามจุด
+        เคยปล่อยยาวแล้ว browser_mobile ข้อ ① จับได้ว่าล้นจอ 390px 2 จุด */
+  const tidy = (m) => {
+    if (!m || /\.\w{2,5}\b/.test(m)) return "";
+    return m.length > 30 ? m.slice(0, 28).replace(/[\s,]+$/, "") + "\u2026" : m;
+  };
+  const inTxt = [io.inSize, tidy(io.inMeta)].filter(Boolean).join(", ");
+  const outTxt = [io.outSize, tidy(io.outMeta)].filter(Boolean).join(", ");
+  return el("div", { class: "tex" }, [
+    el("span", { class: "tex-lb" }, tr("ลองแล้วได้แบบนี้", "A real run looks like this")),
+    el("span", { class: "tex-box" }, [
+      el("b", {}, tr(pl(io.n, "ไฟล์", "ไฟล์"), pl(io.n, "file", "files"))),
+      el("span", {}, inTxt),
+    ]),
+    el("span", { class: "tex-arw", "aria-hidden": "true" }, "\u2192"),
+    el("span", { class: "tex-box tex-out" }, [
+      el("b", {}, "." + io.outExt),
+      el("span", {}, outTxt),
+    ]),
+  ]);
+}
 
 /** ปุ่มคัดลอกหน้านี้เป็น Markdown สำหรับเอาไปวางคุยกับ AI ต่อ
  *

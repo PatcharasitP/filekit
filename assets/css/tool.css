@@ -564,6 +564,34 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .rail-desc{margin:0 0 10px; font-size:12.5px; line-height:1.7; color:var(--text-dim)}
 .tool-rail .tool-meta{margin-top:0}
 .tool-rail .tm-chip{font-size:11px}
+/* ── แถบ "ลองแล้วได้แบบนี้" (ตัวเลขจากการรันจริง) ────────────────────────
+   ไวยากรณ์ "เข้า → ออก" ชุดเดียวกับฉาก hero ของหน้าแรก
+   ‼️ กล่องผลลัพธ์เด่นกว่ากล่องขาเข้า เหมือนที่ thepexcel ตีกรอบกล่อง RESULT ให้ต่างจาก FORMULA */
+.tex{display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-top:10px}
+.tex-lb{font-size:11.5px; font-weight:700; color:var(--text-mute); line-height:1.5;
+  letter-spacing:.02em; white-space:nowrap}
+/* ‼️ ห้ามใช้ --bg-soft หรือ --line ตรง ๆ ที่นี่
+   .tool-head ทับเฉพาะ --text กับ --text-dim ให้เป็นสีสว่างสำหรับพื้นเข้มของมัน
+   แต่ไม่ได้ทับ --bg-soft ผลคือได้ตัวหนังสือขาวบนพื้นขาว มองไม่เห็นเลย (เจอจริงตอนทดสอบ)
+   ใช้สีที่ผสมจาก --text แทน จึงปรับตามบริบทเองทั้งในหัวเรื่องเข้มและในรางซ้าย */
+.tex-box{display:inline-flex; align-items:baseline; gap:6px; padding:5px 10px;
+  border:1px solid color-mix(in srgb,var(--text) 22%,transparent); border-radius:var(--r-sm);
+  background:color-mix(in srgb,var(--text) 7%,transparent);
+  font-size:11.5px; line-height:1.6; color:var(--text-dim); white-space:nowrap}
+.tex-box b{font-size:12px; font-weight:800; color:var(--text)}
+.tex-arw{color:var(--text-mute); font-size:13px; line-height:1}
+.tex-out{border-color:color-mix(in srgb,var(--ac,var(--brand)) 52%,transparent);
+  border-inline-start:3px solid var(--ac,var(--brand))}
+/* ‼️ ลองให้ตัวอักษรเป็นสีประจำตระกูลแล้ว วัดได้ 4.35:1 บนพื้นเข้มของหัวเรื่อง ต่ำกว่าเกณฑ์ 4.5
+   และสีแต่ละตระกูลก็ต่างกัน จะไล่จูนทีละสีให้ผ่านทุกบริบทเป็นงานที่ผิดตั้งแต่ต้น
+   ให้ตัวอักษรใช้สีข้อความปกติซึ่งผ่านโดยโครงสร้างเสมอ แล้วปล่อยให้ "แถบขอบซ้าย"
+   เป็นตัวบอกตระกูลแทน ซึ่งเป็นของตกแต่งไม่ใช่ข้อความ จึงไม่ติดเกณฑ์คอนทราสต์ */
+.tex-out b{color:var(--text)}
+/* รางซ้ายแคบ ให้ตกบรรทัดแทนการบีบ */
+.tool-rail .tex{flex-direction:column; align-items:stretch; gap:5px; margin-top:10px}
+.tool-rail .tex-arw{align-self:center}
+@media (max-width:640px){ .tex-lb{width:100%} }
+
 /* ปุ่มคัดลอกเป็น Markdown สำหรับเอาไปคุยกับ AI ต่อ (แนวคิดจาก thepexcel 12/09/2026) */
 .rail-md-wrap{margin-top:12px; padding-top:10px; border-top:1px solid var(--line-soft)}
 .rail-md{width:100%; display:flex; align-items:center; justify-content:center; gap:7px;

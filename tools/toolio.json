@@ -1,0 +1,864 @@
+{
+ "th": {
+  "pdf-pages": {
+   "id": "pdf-pages",
+   "btn": "บันทึก",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-จัดหน้าใหม่.pdf",
+     "size": "25 KB",
+     "meta": "3 หน้า"
+    }
+   ]
+  },
+  "pdf-merge": {
+   "id": "pdf-merge",
+   "btn": "รวมไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    },
+    {
+     "name": "ตัวอย่าง-ใบปะหน้าเอกสาร.pdf",
+     "size": "25 KB",
+     "meta": "2 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-รวม.pdf",
+     "size": "47 KB",
+     "meta": "5 หน้า"
+    }
+   ]
+  },
+  "pdf-split": {
+   "id": "pdf-split",
+   "btn": "แยกไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-หน้า1-3.pdf",
+     "size": "25 KB",
+     "meta": "3 หน้า"
+    }
+   ]
+  },
+  "pdf-compress": {
+   "id": "pdf-compress",
+   "btn": "บีบอัดไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-บีบอัด.pdf",
+     "size": "",
+     "meta": "28 KB → 25 KB, ระดับปานกลาง"
+    }
+   ]
+  },
+  "pdf-watermark": {
+   "id": "pdf-watermark",
+   "btn": "ใส่ลายน้ำ",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-ลายน้ำ.pdf",
+     "size": "46 KB",
+     "meta": "3 หน้า"
+    }
+   ]
+  },
+  "pdf-page-numbers": {
+   "id": "pdf-page-numbers",
+   "btn": "ใส่เลขหน้า",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-มีเลขหน้า.pdf",
+     "size": "26 KB",
+     "meta": "3 หน้า, เลข 1 ถึง 3"
+    }
+   ]
+  },
+  "pdf-to-images": {
+   "id": "pdf-to-images",
+   "btn": "แปลงเป็นรูป",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-หน้า01.png",
+     "size": "100 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-หน้า02.png",
+     "size": "101 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-หน้า03.png",
+     "size": "101 KB",
+     "meta": ""
+    }
+   ]
+  },
+  "pdf-to-longimage": {
+   "id": "pdf-to-longimage",
+   "btn": "ต่อเป็นภาพยาว",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-ภาพยาว.jpg",
+     "size": "183 KB",
+     "meta": "3 หน้า, 1071x4561 px, 183 KB"
+    }
+   ]
+  },
+  "pdf-to-word": {
+   "id": "pdf-to-word",
+   "btn": "แปลงเป็น Word",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.docx",
+     "size": "8.4 KB",
+     "meta": "3 หน้า"
+    }
+   ]
+  },
+  "pdf-to-excel": {
+   "id": "pdf-to-excel",
+   "btn": "แปลงเป็น Excel",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 หน้า"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.xlsx",
+     "size": "21 KB",
+     "meta": "3 ชีท"
+    }
+   ]
+  },
+  "word-to-pdf": {
+   "id": "word-to-pdf",
+   "btn": "แปลงเป็น PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา.docx",
+     "size": "37 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx",
+     "size": "37 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา.pdf",
+     "size": "36 KB",
+     "meta": "1 หน้า"
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน.pdf",
+     "size": "39 KB",
+     "meta": "1 หน้า"
+    }
+   ]
+  },
+  "excel-to-pdf": {
+   "id": "excel-to-pdf",
+   "btn": "แปลงเป็น PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.pdf",
+     "size": "74 KB",
+     "meta": "1 หน้า"
+    }
+   ]
+  },
+  "images-to-pdf": {
+   "id": "images-to-pdf",
+   "btn": "สร้างไฟล์ PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1.jpg",
+     "size": "23 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รูปภาพ-2.png",
+     "size": "21 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1-รูปภาพ.pdf",
+     "size": "44 KB",
+     "meta": "2 หน้า"
+    }
+   ]
+  },
+  "image-convert": {
+   "id": "image-convert",
+   "btn": "แปลงไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1.jpg",
+     "size": "23 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รูปภาพ-2.png",
+     "size": "21 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1.jpg",
+     "size": "",
+     "meta": "23 KB → 27 KB"
+    },
+    {
+     "name": "ตัวอย่าง-รูปภาพ-2.jpg",
+     "size": "",
+     "meta": "21 KB → 28 KB"
+    }
+   ]
+  },
+  "word-join": {
+   "id": "word-join",
+   "btn": "รวมไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา.docx",
+     "size": "37 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx",
+     "size": "37 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา-รวม.docx",
+     "size": "38 KB",
+     "meta": "ตัวอย่าง-ใบเสนอราคา.docx (19 ย่อหน้า), ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx (25 ย่อหน้า)"
+    }
+   ]
+  },
+  "powerpoint-to-word": {
+   "id": "powerpoint-to-word",
+   "btn": "แปลงเป็น Word",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.pptx",
+     "size": "31 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.docx",
+     "size": "7.9 KB",
+     "meta": "4 สไลด์"
+    }
+   ]
+  },
+  "powerpoint-to-pdf": {
+   "id": "powerpoint-to-pdf",
+   "btn": "สร้างไฟล์ PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.pptx",
+     "size": "31 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.pdf",
+     "size": "38 KB",
+     "meta": "4 สไลด์, 16:9"
+    }
+   ]
+  },
+  "excel-csv": {
+   "id": "excel-csv",
+   "btn": "แปลงไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-ข้อมูลพนักงาน.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.csv",
+     "size": "3.4 KB",
+     "meta": ""
+    }
+   ]
+  },
+  "excel-split": {
+   "id": "excel-split",
+   "btn": "แยกไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา-แยกตามกลุ่ม.zip",
+     "size": "42 KB",
+     "meta": "2 ไฟล์"
+    }
+   ]
+  },
+  "excel-merge": {
+   "id": "excel-merge",
+   "btn": "รวมไฟล์",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-ข้อมูลพนักงาน.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา-รวมแล้ว.xlsx",
+     "size": "32 KB",
+     "meta": "9 แถว, 45 คอลัมน์"
+    }
+   ]
+  }
+ },
+ "en": {
+  "pdf-pages": {
+   "id": "pdf-pages",
+   "btn": "Save",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-edited.pdf",
+     "size": "25 KB",
+     "meta": "3 pages"
+    }
+   ]
+  },
+  "pdf-merge": {
+   "id": "pdf-merge",
+   "btn": "Merge",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    },
+    {
+     "name": "ตัวอย่าง-ใบปะหน้าเอกสาร.pdf",
+     "size": "25 KB",
+     "meta": "2 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-merged.pdf",
+     "size": "47 KB",
+     "meta": "5 pages"
+    }
+   ]
+  },
+  "pdf-split": {
+   "id": "pdf-split",
+   "btn": "Split file",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-page1-3.pdf",
+     "size": "25 KB",
+     "meta": "3 pages"
+    }
+   ]
+  },
+  "pdf-compress": {
+   "id": "pdf-compress",
+   "btn": "Compress file",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-compressed.pdf",
+     "size": "",
+     "meta": "28 KB → 25 KB, Medium level"
+    }
+   ]
+  },
+  "pdf-watermark": {
+   "id": "pdf-watermark",
+   "btn": "Add watermark",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-watermarked.pdf",
+     "size": "47 KB",
+     "meta": "3 pages"
+    }
+   ]
+  },
+  "pdf-page-numbers": {
+   "id": "pdf-page-numbers",
+   "btn": "Add page numbers",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-numbered.pdf",
+     "size": "26 KB",
+     "meta": "3 pages, numbered 1 to 3"
+    }
+   ]
+  },
+  "pdf-to-images": {
+   "id": "pdf-to-images",
+   "btn": "Convert to images",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-page01.png",
+     "size": "100 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-page02.png",
+     "size": "101 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-page03.png",
+     "size": "101 KB",
+     "meta": ""
+    }
+   ]
+  },
+  "pdf-to-longimage": {
+   "id": "pdf-to-longimage",
+   "btn": "Stitch into one long image",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน-long.jpg",
+     "size": "183 KB",
+     "meta": "3 pages, 1071x4561 px, 183 KB"
+    }
+   ]
+  },
+  "pdf-to-word": {
+   "id": "pdf-to-word",
+   "btn": "Convert to Word",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.docx",
+     "size": "8.4 KB",
+     "meta": "3 pages"
+    }
+   ]
+  },
+  "pdf-to-excel": {
+   "id": "pdf-to-excel",
+   "btn": "Convert to Excel",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.pdf",
+     "size": "28 KB",
+     "meta": "3 pages"
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รายงานประจำเดือน.xlsx",
+     "size": "21 KB",
+     "meta": "3 sheets"
+    }
+   ]
+  },
+  "word-to-pdf": {
+   "id": "word-to-pdf",
+   "btn": "Convert to PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา.docx",
+     "size": "37 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx",
+     "size": "37 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา.pdf",
+     "size": "36 KB",
+     "meta": "1 page"
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน.pdf",
+     "size": "39 KB",
+     "meta": "1 page"
+    }
+   ]
+  },
+  "excel-to-pdf": {
+   "id": "excel-to-pdf",
+   "btn": "Convert to PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.pdf",
+     "size": "74 KB",
+     "meta": "1 page"
+    }
+   ]
+  },
+  "images-to-pdf": {
+   "id": "images-to-pdf",
+   "btn": "Create PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1.jpg",
+     "size": "23 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รูปภาพ-2.png",
+     "size": "21 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1-images.pdf",
+     "size": "44 KB",
+     "meta": "2 pages"
+    }
+   ]
+  },
+  "image-convert": {
+   "id": "image-convert",
+   "btn": "Convert files",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1.jpg",
+     "size": "23 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-รูปภาพ-2.png",
+     "size": "21 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-รูปภาพ-1.jpg",
+     "size": "",
+     "meta": "23 KB → 27 KB"
+    },
+    {
+     "name": "ตัวอย่าง-รูปภาพ-2.jpg",
+     "size": "",
+     "meta": "21 KB → 28 KB"
+    }
+   ]
+  },
+  "word-join": {
+   "id": "word-join",
+   "btn": "Merge files",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา.docx",
+     "size": "37 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx",
+     "size": "37 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา-merged.docx",
+     "size": "38 KB",
+     "meta": "ตัวอย่าง-ใบเสนอราคา.docx (19 paragraphs), ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx (25 paragraphs)"
+    }
+   ]
+  },
+  "word-clean": {
+   "id": "word-clean",
+   "btn": "Clean",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา.docx",
+     "size": "37 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx",
+     "size": "37 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ใบเสนอราคา-cleaned.docx",
+     "size": "",
+     "meta": "37 KB → 37 KB"
+    },
+    {
+     "name": "ตัวอย่าง-หนังสือแจ้งผลประเมิน-cleaned.docx",
+     "size": "",
+     "meta": "37 KB → 37 KB"
+    }
+   ]
+  },
+  "powerpoint-to-word": {
+   "id": "powerpoint-to-word",
+   "btn": "Convert to Word",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.pptx",
+     "size": "31 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.docx",
+     "size": "7.9 KB",
+     "meta": "4 slides"
+    }
+   ]
+  },
+  "powerpoint-to-pdf": {
+   "id": "powerpoint-to-pdf",
+   "btn": "Create PDF",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.pptx",
+     "size": "31 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-นำเสนอบริษัท.pdf",
+     "size": "38 KB",
+     "meta": "4 slides, 16:9"
+    }
+   ]
+  },
+  "excel-csv": {
+   "id": "excel-csv",
+   "btn": "Convert file",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-ข้อมูลพนักงาน.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.csv",
+     "size": "3.4 KB",
+     "meta": ""
+    }
+   ]
+  },
+  "excel-split": {
+   "id": "excel-split",
+   "btn": "Split the file",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา-split.zip",
+     "size": "42 KB",
+     "meta": "2 files"
+    }
+   ]
+  },
+  "excel-merge": {
+   "id": "excel-merge",
+   "btn": "Merge the files",
+   "ins": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    },
+    {
+     "name": "ตัวอย่าง-ข้อมูลพนักงาน.xlsx",
+     "size": "6.3 KB",
+     "meta": ""
+    }
+   ],
+   "outs": [
+    {
+     "name": "ตัวอย่าง-ข้อมูลใบเสนอราคา-merged.xlsx",
+     "size": "32 KB",
+     "meta": "9 rows, 45 columns"
+    }
+   ]
+  }
+ }
+}

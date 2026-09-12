@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/powerbi-desktop-samples/main/Report%20Theme%20JSON%20Schema/reportThemeSchema-2.157.json",
+  "name": "FileKit Jewel",
+  "dataColors": [
+    "#AA1155",
+    "#BB6600",
+    "#005500",
+    "#008888",
+    "#7755CC"
+  ],
+  "background": "#FBFAF7",
+  "secondaryBackground": "#f0efec",
+  "foreground": "#221F1B",
+  "firstLevelElements": "#221F1B",
+  "secondLevelElements": "#63615d",
+  "thirdLevelElements": "#cbcac7",
+  "fourthLevelElements": "#63615d",
+  "tableAccent": "#cbcac7",
+  "good": "#1F8A50",
+  "neutral": "#6C7A8D",
+  "bad": "#C4321F",
+  "maximum": "#1F8A50",
+  "minimum": "#C4321F",
+  "null": "#cbcac7",
+  "textClasses": {
+    "callout": {
+      "fontSize": 45,
+      "fontFace": "Segoe UI"
+    },
+    "title": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI"
+    },
+    "header": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI"
+    },
+    "label": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI"
+    }
+  }
+}

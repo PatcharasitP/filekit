@@ -110,9 +110,9 @@ export const TOOLS = [
     libs:["pdflib"], keys:"image jpg png รูป รวม pdf", next:["pdf-compress","pdf-watermark"] },
 
   { id:"image-convert",group:"image", icon:"🔄", title:"แปลงชนิดไฟล์รูป",
-    desc:"สลับระหว่าง PNG, JPG, WEBP พร้อมปรับคุณภาพ",
+    desc:"สลับระหว่าง PNG, JPG, WEBP พร้อมปรับคุณภาพ และทำไฟล์ .ico สำหรับใช้เป็น favicon ของเว็บ",
     accepts:["image"],
-    libs:["jszip"], keys:"png jpg webp แปลง รูป convert", next:["image-resize","images-to-pdf"] },
+    libs:["jszip"], keys:"png jpg webp แปลง รูป convert ico favicon ไอคอน ไอคอนเว็บ", next:["image-resize","images-to-pdf"] },
 
   { id:"image-resize",group:"image", icon:"📐", title:"ย่อและบีบอัดรูปภาพ",
     desc:"ย่อขนาดและลดน้ำหนักไฟล์รูปทีละหลายไฟล์ เห็นขนาดก่อนกับหลัง",
@@ -288,7 +288,7 @@ const EN_TOOLS = {
   "word-to-pdf":      ["Word → PDF", "Convert DOCX to PDF with full Thai support, several files at a time"],
   "excel-to-pdf":     ["Excel → PDF", "Lay every sheet out as a table in a PDF"],
   "images-to-pdf":    ["Images → PDF", "Combine many images into one PDF, page size fitted automatically"],
-  "image-convert":    ["Convert image format", "Move between PNG, JPG, WEBP and set the quality"],
+  "image-convert":    ["Convert image format", "Move between PNG, JPG, WEBP and set the quality, or build a .ico file to use as your site favicon"],
   "image-resize":     ["Resize & compress images", "Shrink dimensions and file size in bulk. See before and after"],
   "word-join":        ["Merge Word files", "Join several documents into one, images intact, drag to reorder"],
   "word-replace":     ["Find & replace in bulk", "Change the same wording across many files: a company name or a year, all at once"],

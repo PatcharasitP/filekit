@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/powerbi-desktop-samples/main/Report%20Theme%20JSON%20Schema/reportThemeSchema-2.157.json",
+  "name": "FileKit Dark Canvas",
+  "dataColors": [
+    "#FFBB99",
+    "#889933",
+    "#66DDDD",
+    "#2299DD",
+    "#CC7799"
+  ],
+  "background": "#1A1D23",
+  "secondaryBackground": "#25282e",
+  "foreground": "#F2F4F7",
+  "firstLevelElements": "#F2F4F7",
+  "secondLevelElements": "#b1b4b7",
+  "thirdLevelElements": "#4a4c52",
+  "fourthLevelElements": "#b1b4b7",
+  "tableAccent": "#4a4c52",
+  "good": "#1F8A50",
+  "neutral": "#6C7A8D",
+  "bad": "#C4321F",
+  "maximum": "#1F8A50",
+  "minimum": "#C4321F",
+  "null": "#4a4c52",
+  "textClasses": {
+    "callout": {
+      "fontSize": 45,
+      "fontFace": "Segoe UI"
+    },
+    "title": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI"
+    },
+    "header": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI"
+    },
+    "label": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI"
+    }
+  }
+}

@@ -17,6 +17,7 @@
 
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, download } from "../ui.js";
+import { uiIcon } from "../icons.js";
 import { paintCode, CODE_TOKEN_CSS } from "../codeview.js";
 import { tr, pl } from "../i18n.js";
 
@@ -55,6 +56,63 @@ const GIFTS = () => [
             "Add a Deneb visual, drop your fields into Values, then paste this into the Specification tab"),
     tool: "pbi-donut",
   },
+  {
+    file: "samples/powerquery/fnThaiDateTable.pq",
+    lang: "m",
+    group: tr("Power Query", "Power Query"),
+    title: tr("ตารางปฏิทินไทย พร้อมปีงบประมาณ", "Thai date table with fiscal year"),
+    what: tr("ได้ครบทั้ง พ.ศ. ชื่อเดือนไทย ปีงบที่เริ่มเดือนไหนก็ได้ และคอลัมน์เรียงเดือนที่ทำให้กราฟไม่เรียงผิด",
+             "Buddhist years, Thai month names, a fiscal year starting any month, and a sort column so charts never sort months alphabetically"),
+    how: tr("วางเป็น Blank Query แล้วเรียกใช้ว่า fnThaiDateTable(#date(2023,1,1), #date(2026,12,31), 10) จากนั้นคลิกขวาที่ตารางใน Power BI แล้วเลือก Mark as date table",
+            "Paste as a Blank Query, then call fnThaiDateTable(#date(2023,1,1), #date(2026,12,31), 10) and mark the result as a date table in Power BI"),
+    tool: "pq-multisource-lookup",
+    proof: tr("ยิงผ่าน Power Query engine ของ Excel จริงแล้ว ตรงทุกค่าใน 14 คอลัมน์ x 6 วันที่ที่เป็นจุดเปลี่ยน",
+              "Run through Excel's real Power Query engine, every value matches across 14 columns and 6 boundary dates"),
+  },
+  /* ‼️ ไฟล์ธีมสามชุดนี้สร้างด้วยโค้ดตัวเดียวกับเครื่องมือสร้างธีม ไม่ได้เขียนมือ
+     แก้ชุดสีในเครื่องมือเมื่อไหร่ ต้องสร้างไฟล์ใหม่ด้วย (tests/freebies.test.mjs บังคับไว้)
+     ‼️ เขียนแยกทีละใบ ไม่ใช้ลูป เพราะเทสอ่านรายชื่อไฟล์จากซอร์สด้วย regex
+        ถ้าใช้ template literal เทสจะมองไม่เห็นแล้วนับของแจกขาด
+     ‼️ มีแต่ชุดของกลาง ไม่มีธีมขององค์กรใดในนี้ */
+  {
+    file: "samples/powerbi/theme-terra.json",
+    lang: "json",
+    group: tr("Power BI", "Power BI"),
+    title: tr("ธีม Power BI ดินเผา", "Power BI theme, Terracotta"),
+    what: tr("ชุดสี 5 สีที่วัดแล้วว่าคนตาบอดสีแยกออกครบทุกสี และทุกสีอ่านออกบนพื้นหลังของมันเอง",
+             "Five colours measured to stay apart for colour blind viewers, each readable on its own background"),
+    how: tr("ใน Power BI Desktop ไปที่แท็บ View แล้ว Themes แล้ว Browse for themes แล้วเลือกไฟล์นี้",
+            "In Power BI Desktop open the View tab, Themes, Browse for themes and pick this file"),
+    tool: "pbi-theme",
+    proof: tr("ระยะห่างสีต่ำสุด 18.33 และผ่าน schema 2.157 ของ Microsoft",
+              "Minimum colour distance 18.33, valid against Microsoft schema 2.157"),
+  },
+  {
+    file: "samples/powerbi/theme-jewel.json",
+    lang: "json",
+    group: tr("Power BI", "Power BI"),
+    title: tr("ธีม Power BI อัญมณี", "Power BI theme, Jewel"),
+    what: tr("ชุดสี 5 สีที่วัดแล้วว่าคนตาบอดสีแยกออกครบทุกสี และทุกสีอ่านออกบนพื้นหลังของมันเอง",
+             "Five colours measured to stay apart for colour blind viewers, each readable on its own background"),
+    how: tr("ใน Power BI Desktop ไปที่แท็บ View แล้ว Themes แล้ว Browse for themes แล้วเลือกไฟล์นี้",
+            "In Power BI Desktop open the View tab, Themes, Browse for themes and pick this file"),
+    tool: "pbi-theme",
+    proof: tr("ระยะห่างสีต่ำสุด 15.74 และผ่าน schema 2.157 ของ Microsoft",
+              "Minimum colour distance 15.74, valid against Microsoft schema 2.157"),
+  },
+  {
+    file: "samples/powerbi/theme-night.json",
+    lang: "json",
+    group: tr("Power BI", "Power BI"),
+    title: tr("ธีม Power BI จอมืด", "Power BI theme, Dark canvas"),
+    what: tr("ชุดสี 5 สีที่วัดแล้วว่าคนตาบอดสีแยกออกครบทุกสี และทุกสีอ่านออกบนพื้นหลังของมันเอง",
+             "Five colours measured to stay apart for colour blind viewers, each readable on its own background"),
+    how: tr("ใน Power BI Desktop ไปที่แท็บ View แล้ว Themes แล้ว Browse for themes แล้วเลือกไฟล์นี้",
+            "In Power BI Desktop open the View tab, Themes, Browse for themes and pick this file"),
+    tool: "pbi-theme",
+    proof: tr("ระยะห่างสีต่ำสุด 15.79 และผ่าน schema 2.157 ของ Microsoft",
+              "Minimum colour distance 15.79, valid against Microsoft schema 2.157"),
+  },
 ];
 
 const STYLE = `
@@ -70,6 +128,12 @@ const STYLE = `
 .gf-title{margin:0 0 6px; font-size:15px; font-weight:800; line-height:1.5; color:var(--text)}
 /* ‼️ ตัวอักษรสำหรับ "อ่าน" ใหญ่และโปร่งกว่าตัวอักษรของหน้าจอ (วัดจาก thepexcel 19.2px/1.7) */
 .gf-what{margin:0 0 8px; font-size:14.5px; line-height:1.75; color:var(--text-dim)}
+.gf-proof{margin:6px 0 0; display:flex; gap:6px; align-items:flex-start;
+  font-size:12px; line-height:1.7; color:var(--g-data)}
+/* ‼️ เคยใช้อักขระ U+2713 ซึ่งฟอนต์ไทยบางตัวไม่มี แล้วขึ้นเป็นกล่องสี่เหลี่ยม
+   (tests/browser_noemoji.py จับได้ 12/09/2026) เปลี่ยนเป็นไอคอนเส้นที่วาดเอง */
+.gf-tick{flex:none; width:13px; height:13px; margin-top:3px; stroke:currentColor;
+  stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round}
 .gf-how{margin:0; font-size:13px; line-height:1.7; color:var(--text-mute);
   padding-inline-start:11px; border-inline-start:2px solid var(--line)}
 .gf-act{display:flex; gap:8px; flex-wrap:wrap; padding:0 16px 14px}
@@ -149,6 +213,11 @@ export function mount(tool) {
         el("h2", { class: "gf-title" }, g.title),
         el("p", { class: "gf-what" }, g.what),
         el("p", { class: "gf-how" }, g.how),
+        /* ‼️ บอกด้วยว่าของชิ้นนี้ถูกพิสูจน์มายังไง เพราะของแจกที่ไม่มีหลักฐาน
+           ก็เป็นแค่ไฟล์ที่ใครก็เขียนได้ สิ่งที่ทำให้มันมีค่าคือการที่มันถูกทดสอบจริง */
+        g.proof ? el("p", { class: "gf-proof" }, [
+          uiIcon("check", "gf-tick"), g.proof,
+        ]) : null,
       ]),
       el("div", { class: "gf-act" }, [
         g.copyBtn, g.dlBtn,

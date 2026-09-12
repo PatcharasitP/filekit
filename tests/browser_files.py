@@ -347,7 +347,9 @@ def case_image_convert(pg):
     goto(pg, "image-convert")
     pg.set_input_files("input[type=file]", str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.locator("select").select_option("webp")
+    # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
+    #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
+    pg.locator(".panel select").first.select_option("webp")
     pg.get_by_role("button", name="แปลงไฟล์").click()
     pg.wait_for_selector(".results .result", timeout=20_000)
     out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "imgconvert_out.webp")

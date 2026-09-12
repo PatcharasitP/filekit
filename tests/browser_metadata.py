@@ -387,7 +387,9 @@ def main():
             print("\n── powerpoint-to-word: สไลด์ที่ซ่อน + โน้ตผู้บรรยาย default ──")
             pg.goto("about:blank"); pg.goto(f"{base}/#/powerpoint-to-word", wait_until="networkidle")
             pg.wait_for_selector(".dz")
-            sel = pg.locator("select").first
+            # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
+            #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
+            sel = pg.locator(".panel select").first
             pg.locator(".dz input[type=file]").first.set_input_files(str(pptx1))
             pg.wait_for_timeout(1200)
             ck("powerpoint-to-word: ค่าเริ่มต้นตัวเลือกโน้ต = ไม่เอา (เอาเฉพาะเนื้อสไลด์)", sel.input_value(), "no")
@@ -469,8 +471,14 @@ def main():
             press(pg, "^แปลงเป็น PDF$")
             pg.wait_for_timeout(3500)
             warn_wp = pg.locator(".note.warn")
-            warn_wp_text = warn_wp.first.inner_text() if warn_wp.count() else ""
-            ck("word-to-pdf: banner เตือนขึ้นจริงพร้อมจำนวน 1 จุด", ("1 จุด" in warn_wp_text and "ยังไม่ยอมรับ" in warn_wp_text), True)
+            # ‼️ เครื่องมือนี้ขึ้นได้หลาย banner (ฟอนต์ไทยรุ่นเก่า + แก้ไขค้าง)
+            #    เดิมอ่านแค่ใบแรกซึ่งอาจเป็นคนละใบกับที่ตรวจ ต้องรวมทุกใบ
+            warn_wp_text = " ".join(warn_wp.all_inner_texts()) if warn_wp.count() else ""
+            # ‼️ ข้อความ banner ถูกย่อไปตั้งแต่ commit 78fd857 (ย่อข้อความที่ยาวเกินกฎ)
+            #    จาก "ยังไม่ยอมรับ" เป็น "แก้ไขค้าง" แต่เทสยังเทียบคำเดิม จึงแดงค้างมาตั้งแต่นั้น
+            #    เกณฑ์ยังเหมือนเดิมทุกอย่าง คือต้องบอกจำนวนจุด และต้องบอกว่าข้อความนั้นจะติดไปใน PDF
+            ck("word-to-pdf: banner เตือนขึ้นจริงพร้อมจำนวน 1 จุด",
+               ("1 จุด" in warn_wp_text and "แก้ไขค้าง" in warn_wp_text and "PDF" in warn_wp_text), True)
             out_wp = DL / "word-to-pdf.pdf"
             dl_click(pg, out_wp, timeout=30000)
             txt_wp = "\n".join(fitz.open(out_wp)[i].get_text() for i in range(fitz.open(out_wp).page_count))

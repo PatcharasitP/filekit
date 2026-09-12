@@ -287,7 +287,9 @@ def test_image_resize(pg):
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(400)
     # โหมด "กำหนดความกว้าง" — ต้องเลือกโหมดก่อน เพราะเปลี่ยนโหมดจะรีเซ็ตค่าช่องกรอกกลับเป็นค่าเริ่มต้นเสมอ
-    pg.locator("select").first.select_option("width")
+    # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
+    #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
+    pg.locator(".panel select").first.select_option("width")
     pg.locator("input[type=number]").fill("300")
     pg.wait_for_timeout(400)
     pg.locator("button.btn", has_text="ย่อและบีบอัด").click()

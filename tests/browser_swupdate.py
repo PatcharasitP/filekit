@@ -203,9 +203,15 @@ with sync_playwright() as p:
             pg.goto(f"{base_a}/#/{tool}", wait_until="networkidle", timeout=20000)
             pg.wait_for_selector(".dz, .tool-head", timeout=15000)
         s2 = snap(pg, "หลังเปิด 2 เครื่องมือ (ออนไลน์)")
-        libs_keys = [k for k in s2["cacheNames"] if k.endswith("-libs")]
+        # ‼️ ชื่อแคชไลบรารีเปลี่ยนจาก `${VERSION}-libs` เป็น `filekit-libs-v1` เมื่อ 13/09/2026
+        #    เพราะชื่อเดิมผูกกับเวอร์ชันแอป ทุก deploy จึงทิ้งไลบรารี 5.9 MB แล้วโหลดใหม่
+        #    (พี่ปอนด์ทักว่าเปลี่ยนภาษาแล้วหมุนนาน ซึ่งมาจากเรื่องนี้)
+        #    เทสจึงต้องหาด้วยคำว่า lib ไม่ใช่ลงท้าย -libs และต้องยืนยันว่า **ไม่มี** เวอร์ชันในชื่อ
+        libs_keys = [k for k in s2["cacheNames"] if "lib" in k]
         ck("(ก) เปิดเครื่องมือแล้วมี LIBS cache เกิดขึ้น (isLib branch ทำงานจริง)",
            len(libs_keys) >= 1, f"cacheNames={s2['cacheNames']}")
+        ck("(ก) ชื่อแคชไลบรารีต้องไม่ผูกกับเวอร์ชันแอป ไม่งั้นทุก deploy จะทิ้งไลบรารีทิ้ง",
+           all(not k.startswith("filekit-v") for k in libs_keys), f"libs={libs_keys}")
 
         # ── ปิด context (จำลองปิดเบราว์เซอร์) แล้วตัดเน็ตจริงตอนเปิดใหม่ ──
         ctx.close()

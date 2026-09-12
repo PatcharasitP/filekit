@@ -359,44 +359,62 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
    ‼️ ห้ามใส่ filter / opacity / overflow / mask ที่ตัว .hero-obj เด็ดขาด
       คุณสมบัติพวกนี้บังคับให้เบราว์เซอร์ "แบน" ฉาก 3 มิติทิ้งทันที (flatten preserve-3d)
       ใส่ที่แผ่นกระดาษแต่ละแผ่นได้ เพราะมันเป็นใบสุดท้ายของกิ่ง */
-/* ‼️ ฉากขวาของ hero = ตัวเว็บย่อส่วน ไม่ใช่ภาพประกอบ
-   แนวคิดจาก thepexcel.com ที่เอาวิชาที่สอนมาเรนเดอร์เป็นภาพ hero (ตาราง Excel ที่สูตรทำงานจริง)
-   ของเราจึงเป็น "ไฟล์ถูกรวมแล้วได้ผลลัพธ์" ด้วยชิ้นส่วนหน้าตาชุดเดียวกับในเครื่องมือจริง
-   ‼️ HTML กับ CSS ล้วน ไม่มีสคริปต์ ไม่มีรูป ไม่มี request เพิ่ม
-   ‼️ ใช้ --stage ซึ่งเป็นแผงเข้มที่สีเดียวกันทั้งสองโหมด ฉากนี้จึงหน้าตาเท่ากันทั้งโหมดสว่างและมืด */
-.hero-obj{position:relative; display:flex; flex-direction:column; justify-content:center;
-  gap:7px; padding:14px; border-radius:var(--r);
-  background:var(--stage); border:1px solid var(--stage-line);
-  box-shadow:0 18px 40px rgba(0,0,0,.34)}
-.hd-bar{display:flex; align-items:center; gap:8px; padding-bottom:10px;
-  border-bottom:1px solid var(--stage-line)}
-.hd-tag{font-size:12px; font-weight:700; color:#f0f1f3; letter-spacing:.01em}
-.hd-safe{margin-inline-start:auto; font-size:11px; font-weight:700; color:var(--g-data);
-  border:1px solid color-mix(in srgb,var(--g-data) 42%,transparent);
-  border-radius:999px; padding:2px 9px; white-space:nowrap}
-.hd-row{display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:var(--r-sm);
-  background:var(--stage-2); border:1px solid var(--stage-line); min-width:0}
-.hd-row b{flex:1; min-width:0; font-size:12.5px; font-weight:600; color:#e7e9ee;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.45}
-.hd-row span,.hd-row em{font-style:normal; font-size:11.5px; color:var(--stage-dim);
-  font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.45}
-.hd-ic{flex:none; width:16px; height:20px; border-radius:3px; background:#f0f1f3;
-  box-shadow:inset -5px 5px 0 -4px var(--stage-2)}
-/* ลูกศรลง คือขั้นตอน "ลงมือทำ" ระหว่างไฟล์เข้ากับไฟล์ออก */
-.hd-arrow{display:flex; justify-content:center; padding:1px 0}
-.hd-arrow span{width:2px; height:16px; background:var(--stage-line); position:relative}
-.hd-arrow span::after{content:""; position:absolute; left:50%; bottom:0; width:7px; height:7px;
-  border-right:2px solid var(--stage-line); border-bottom:2px solid var(--stage-line);
-  transform:translateX(-50%) rotate(45deg)}
-/* ‼️ แถวผลลัพธ์ต้องเด่นกว่าแถวไฟล์เข้า เหมือนที่ thepexcel ตีกรอบทองรอบแถวที่สูตรหาเจอ
-   ของเราใช้เส้นข้างสีประจำตระกูล PDF แทนสีเน้น เพราะธีมเราเป็นขาวดำ ไม่มีสีเน้นเดี่ยว */
-.hd-out{background:#232a34; border-color:color-mix(in srgb,var(--g-pdf) 40%,var(--stage-line));
-  border-inline-start:3px solid var(--g-pdf)}
-.hd-out b{color:#fff; font-weight:700}
-/* ‼️ พื้นกล่องนี้ (#232a34) สว่างกว่าแถบรอบ ๆ ส้ม #e8613c จึงเหลือ 4.27:1
-   ใช้ส้มที่อ่อนลงอีกขั้นเฉพาะจุดนี้ วัดได้ 5.20:1 */
-.hd-out em{color:#ee7a56; font-weight:700}
+/* ‼️ ปึกกระดาษไอโซเมตริกนี้เคยถูกถอดออกไปครั้งหนึ่ง ตอนถอดโครง thepexcel มา (v83)
+   ฟ้าเปลี่ยนเป็นฉากย่อส่วนที่สาธิตการรวมไฟล์ เพราะ hero ของเขาเรนเดอร์วิชาที่สอนออกมาเป็นภาพ
+   แต่พี่ปอนด์ดูของจริงแล้วบอกว่าของเดิมสวยกว่า จึงเอากลับมา 12/09/2026
+   ‼️ บทเรียน: เอาแนวคิดของเว็บอื่นมาใช้ ไม่ได้แปลว่าต้องทิ้งของเดิมที่ดีอยู่แล้ว
+      ส่วนหน้าที่ "บอกความจริงที่ตรวจสอบได้" ยังอยู่ครบในแถวสถิติใต้ช่องค้นหา
+      (จำนวนเครื่องมือ, ไฟล์ที่ถูกอัปโหลด 0, ฟรี) ซึ่งเป็นตัวเลขจริงที่เทสคุมอยู่ */
+.hero-obj{position:relative; height:clamp(190px,22vw,290px); display:grid; place-items:center;
+  perspective:1200px; perspective-origin:52% 42%;
+  transform:rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));
+  transition:transform 280ms var(--ease)}
+.hero-obj::before{content:""; position:absolute; width:86%; aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(circle, rgba(150,170,255,.28), rgba(150,170,255,0) 66%)}
 
+.sheet{position:absolute; width:clamp(126px,14.5vw,202px); aspect-ratio:170/222; border-radius:13px;
+  transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z,0));
+  /* ‼️ ย้อมความมืดด้วยชั้นพื้นหลังทับ ไม่ใช่ filter:brightness()
+     เพราะ filter บังคับให้เบราว์เซอร์สร้างชั้นวาดแยกให้ทุกแผ่น (7 แผ่น = 7 ชั้น)
+     วัดแล้วต่างกันจริงในงบ FCP ที่เหลือน้อยอยู่แล้ว */
+  background:linear-gradient(rgba(4,6,10,var(--dim,0)), rgba(4,6,10,var(--dim,0))),
+             linear-gradient(147deg,#fff 0%,#e8edf7 24%,#b4bfd6 52%,#dbe1ee 68%,#fbfcff 100%);
+  box-shadow:0 24px 44px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.95)}
+/* 6 แผ่นชิดกันทีละ 4px อ่านเป็น "ก้อนตัน" ไม่ใช่แผ่นลอย ๆ ห่างกัน
+   ไล่ความสว่างลงไปเรื่อย ๆ ทำให้ตาอ่านออกว่าซ้อนกันอยู่จริง */
+.sheet:nth-of-type(1){--z:0px;  --dim:.52}
+.sheet:nth-of-type(2){--z:4px;  --dim:.44}
+.sheet:nth-of-type(3){--z:8px;  --dim:.35}
+.sheet:nth-of-type(4){--z:12px; --dim:.26}
+.sheet:nth-of-type(5){--z:16px; --dim:.17}
+.sheet:nth-of-type(6){--z:20px; --dim:.09}
+
+/* แผ่นบนสุดลอยแยกจากปึก — เล่าเรื่อง "ดึงเอกสารออกมาทำงาน" ในภาพเดียว */
+.sheet.lead{overflow:hidden; animation:fk-lift 7s var(--ease) infinite;
+  /* เส้นแสงรับขอบ + แสงสะท้อนสีฟ้าจากฉากมาโดนขอบล่าง — ทำให้ผิวอ่านเป็นโลหะไม่ใช่กระดาษด้าน */
+  box-shadow:0 26px 48px rgba(0,0,0,.55),
+             inset 0 1.5px 0 rgba(255,255,255,1),
+             inset 1.5px 0 0 rgba(255,255,255,.7),
+             inset -1.5px -1.5px 0 rgba(150,170,255,.5)}
+@keyframes fk-lift{
+  0%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(42px)}
+  50%    {transform:rotateX(56deg) rotateZ(-41deg) translateZ(58px)}
+}
+/* แสงกวาดผิว — ต้องประกาศชนิดตัวแปรด้วย @property ก่อน ไม่งั้น CSS ไล่ค่าไม่ได้ มันจะกระโดด
+   ‼️ ไล่เฉพาะบนแผ่นเดียวขนาดเล็ก เพราะการไล่ gradient คือการ "ระบายใหม่ทุกเฟรม" ไม่ใช่แค่ขยับ */
+@property --sw{syntax:"<percentage>"; inherits:false; initial-value:-32%}
+.sheet.lead::after{content:""; position:absolute; inset:-45%;
+  background:linear-gradient(112deg, transparent calc(var(--sw) - 13%),
+    rgba(255,255,255,.9) var(--sw), transparent calc(var(--sw) + 13%));
+  animation:fk-sweep 6s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes fk-sweep{0%,64%{--sw:-32%} 100%{--sw:132%}}
+.sheet .lines{position:absolute; inset-inline:15% 17%; top:27%; height:25%; border-radius:2px;
+  background:repeating-linear-gradient(180deg, rgba(38,50,84,.22) 0 3px, transparent 3px 13px)}
+/* เงาสัมผัสพื้น — วงรีแบนแคบใต้ฐาน ต่างจากเงาฟุ้งรอบตัวที่ทำให้ของดู "ลอย" */
+.fk-contact{position:absolute; width:clamp(150px,17vw,232px); aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(0,0,0,.66) 0%, rgba(0,0,0,.5) 26%,
+    rgba(0,0,0,.28) 48%, rgba(0,0,0,.1) 66%, transparent 80%);
+  transform:rotateX(56deg) rotateZ(-38deg) translateZ(-26px) scale(1.08,.7)}
 @media (prefers-reduced-motion: reduce){ .sheet.lead,.sheet.lead::after{animation:none} }
 
 /* เกรนละเอียดทับทั้งฉาก — SVG ฝังใน CSS ราว 380 ไบต์ ไม่มี request เพิ่มสักอัน
@@ -744,12 +762,12 @@ body.tool #home{display:none}
              ทำด้วย HTML กับ CSS ล้วน ไม่มีสคริปต์ ไม่มีรูป เหมือนของเขา
              aria-hidden เพราะข้อมูลในนี้เป็นตัวอย่างสมมติ ถ้าให้โปรแกรมอ่านหน้าจอประกาศ
              จะเข้าใจผิดว่ามีไฟล์อยู่จริง ส่วนใจความได้จากหัวเรื่องกับคำโปรยอยู่แล้ว -->
+        <!-- ปึกกระดาษไอโซเมตริก วาดด้วย CSS ล้วน (ดู .hero-obj) — เป็นของตกแต่ง ไม่ต้องอ่าน -->
         <div class="hero-obj" aria-hidden="true">
-          <div class="hd-bar"><span class="hd-tag" data-en="Merge PDF">รวมไฟล์ PDF</span><span class="hd-safe" data-en="On your device">ในเครื่องคุณ</span></div>
-          <div class="hd-row"><i class="hd-ic"></i><b data-en="monthly-report.pdf">รายงานประจำเดือน.pdf</b><span>28 KB</span><em data-en="3 pages">3 หน้า</em></div>
-          <div class="hd-row"><i class="hd-ic"></i><b data-en="cover-sheet.pdf">ใบปะหน้าเอกสาร.pdf</b><span>25 KB</span><em data-en="2 pages">2 หน้า</em></div>
-          <div class="hd-arrow"><span></span></div>
-          <div class="hd-row hd-out"><i class="hd-ic"></i><b data-en="monthly-report-merged.pdf">รายงานประจำเดือน-รวม.pdf</b><span>47 KB</span><em data-en="5 pages">5 หน้า</em></div>
+          <div class="fk-contact"></div>
+          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
+          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
+          <div class="sheet lead"><i class="lines"></i></div>
         </div>
       </div>
       <div class="hero-grain" aria-hidden="true"></div>

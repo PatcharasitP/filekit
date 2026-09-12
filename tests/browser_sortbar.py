@@ -96,25 +96,23 @@ with sync_playwright() as p:
     ck("⑤ รีโหลดแล้วยังจำตัวเรียงที่เลือกไว้",
        any(x["on"] and x["v"] == "recent" for x in btns(pg)), str(btns(pg)))
 
-    # ⑥ ‼️ ฉาก hero ต้องไม่โกหก
-    hero = pg.evaluate("""() => {
-        const rows = [...document.querySelectorAll('.hero-obj .hd-row')];
-        return rows.map(r => ({
-            name: r.querySelector('b').textContent,
-            size: r.querySelector('span').textContent,
-            pages: r.querySelector('em').textContent,
-            out: r.classList.contains('hd-out') }));
+    # ⑥ ‼️ แถวสถิติใต้ช่องค้นหาต้องไม่โกหก
+    #
+    # ‼️ เดิมข้อนี้ตรวจฉากย่อส่วนที่สาธิตการรวมไฟล์ (.hd-row) ว่าจำนวนหน้าบวกกันได้จริง
+    #    ฉากนั้นถูกถอดออก 12/09/2026 เพราะพี่ปอนด์ดูของจริงแล้วบอกว่าปึกกระดาษของเดิมสวยกว่า
+    #    หน้าที่ "บอกความจริงที่ตรวจสอบได้" จึงย้ายมาอยู่ที่แถวสถิติซึ่งมีอยู่แล้ว
+    #    ข้อนี้ยังตรวจเรื่องเดียวกัน คือเว็บต้องไม่โชว์ตัวเลขที่ไม่ตรงความจริง
+    # ‼️ ต้องเป็น raw string เพราะ \b ในสตริงธรรมดาของ Python คือ backspace ไม่ใช่ขอบเขตคำของ regex
+    #    (เขียนผิดครั้งแรกแล้วเทสแดงทั้งที่หน้าเว็บถูก)
+    facts = pg.evaluate(r"""() => {
+        const n = document.getElementById('fact-n');
+        return { shown: n ? n.textContent.trim() : null,
+                 tools: document.querySelectorAll('.pill').length,
+                 zero: [...document.querySelectorAll('.fact')].some(e => /\b0\b/.test(e.textContent)) };
     }""")
-    num = lambda s: int(re.search(r"(\d+)", s).group(1))
-    ins = [h for h in hero if not h["out"]]
-    outs = [h for h in hero if h["out"]]
-    ck(f"⑥ ฉาก hero มีไฟล์เข้า {len(ins)} และไฟล์ออก {len(outs)}", len(ins) >= 2 and len(outs) == 1, str(hero))
-    if ins and outs:
-        ck(f"⑥ จำนวนหน้าต้องบวกกันได้จริง ({' + '.join(h['pages'] for h in ins)} = {outs[0]['pages']})",
-           sum(num(h["pages"]) for h in ins) == num(outs[0]["pages"]),
-           f"เข้า {[h['pages'] for h in ins]} ออก {outs[0]['pages']}")
-        ck(f"⑥ ไฟล์ที่ได้ต้องไม่ใหญ่กว่าไฟล์เข้ารวมกัน ({outs[0]['size']})",
-           num(outs[0]["size"]) <= sum(num(h["size"]) for h in ins))
+    ck(f"⑥ จำนวนเครื่องมือที่โชว์ ตรงกับจำนวนที่วาดจริง ({facts['shown']} เทียบ {facts['tools']})",
+       facts["shown"] is not None and int(facts["shown"]) >= facts["tools"] and facts["tools"] > 0, str(facts))
+    ck("⑥ ยังประกาศว่าไฟล์ที่ถูกอัปโหลดเป็นศูนย์", facts["zero"], str(facts))
 
     ck("ไม่มี error หลุดออกมาตลอดทั้งชุด", not errs, str(errs[:2]))
     br.close()

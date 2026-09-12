@@ -210,6 +210,11 @@ export const TOOLS = [
     keys:"deneb bar vega แท่ง แนวนอน power bi custom visual กราฟ ranking จัดอันดับ target เป้าหมาย",
     next:["pbi-donut","pa-parse-json"] },
 
+  { id:"freebies", group:"powerbi", icon:"🎁", since:"2026-09-12", title:"ของสำเร็จรูปแจกฟรี",
+    desc:"สเปก Deneb และฟังก์ชัน Power Query ที่เว็บนี้ใช้อยู่จริง หยิบไปใช้ต่อได้เลย ไม่ต้องเปิดเครื่องมือทีละตัว",
+    libs:[], keys:"แจก ฟรี ของแถม สำเร็จรูป template deneb spec m code power query ดาวน์โหลด ก๊อปไปใช้ freebies gift",
+    next:["pbi-bar","pq-multisource-lookup"] },
+
   { id:"pbi-matrix-details", group:"powerbi", icon:"🧾", since:"2026-09-12", title:"รายละเอียดหลายคอลัมน์ในช่องเดียวของ Matrix",
     desc:"ยุบหลายคอลัมน์ให้อยู่ในช่องเดียวของ Matrix โดยหัวแถวยังตรึงอยู่ที่เดิม แปลงทุกชนิดข้อมูลเป็นข้อความให้ก่อน ยอด 0 กับค่า FALSE จึงไม่หาย",
     accepts:["xlsx","xls","xlsm","csv","txt"],
@@ -296,6 +301,7 @@ const EN_TOOLS = {
   "thai-name":        ["Split Thai name into columns", "Break a full name into title, first name and surname, ready to sort or mail-merge"],
   "thai-address":     ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
   "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
+  "freebies":         ["Ready made files, free to take", "Deneb specs and a Power Query function this site actually uses, take them as they are without opening each tool"],
   "pbi-matrix-details": ["Matrix transaction details in one column", "Fold several columns into a single matrix column while the row headers stay frozen, every data type is turned into text first so zeros and FALSE never vanish"],
   "pbi-bar":          ["Deneb horizontal bar chart", "Tweak the bars, value labels and target line live, with bar length always true to the real numbers, then copy the spec into Deneb"],
   "pbi-donut":        ["Deneb donut chart", "Tweak a live donut chart and see it change instantly, then copy the spec straight into Deneb"],

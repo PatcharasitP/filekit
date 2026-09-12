@@ -748,6 +748,11 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 }
 .ws-grid.no-left{grid-template-columns:minmax(0,1fr) minmax(230px,290px)}
 .ws-grid.no-right{grid-template-columns:minmax(210px,250px) minmax(0,1fr)}
+/* ‼️ ไม่มีแผงข้างทั้งสองด้าน (หน้าที่เป็นเนื้อหาล้วน เช่นของแจก)
+   เดิมตกไปโดนกฎ no-left ที่ยังจองที่ให้แผงขวา เนื้อหาจึงถูกบีบเหลือ 230px
+   บนจอ 1440px แล้วเหลือพื้นที่ว่างครึ่งจอ (เจอจริงตอนทำหน้าของแจก)
+   จำกัดความกว้างไว้เท่ากับคอลัมน์อ่านสบายตา ไม่ปล่อยยาวเต็มจอ */
+.ws-grid.no-left.no-right{grid-template-columns:minmax(0,min(760px,100%)); justify-content:center}
 .ws-grid.busy{opacity:.6; pointer-events:none}
 
 .ws-panel{

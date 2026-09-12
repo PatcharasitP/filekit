@@ -564,6 +564,16 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .rail-desc{margin:0 0 10px; font-size:12.5px; line-height:1.7; color:var(--text-dim)}
 .tool-rail .tool-meta{margin-top:0}
 .tool-rail .tm-chip{font-size:11px}
+/* ปุ่มคัดลอกเป็น Markdown สำหรับเอาไปคุยกับ AI ต่อ (แนวคิดจาก thepexcel 12/09/2026) */
+.rail-md-wrap{margin-top:12px; padding-top:10px; border-top:1px solid var(--line-soft)}
+.rail-md{width:100%; display:flex; align-items:center; justify-content:center; gap:7px;
+  min-height:36px; padding:7px 10px; cursor:pointer; font:inherit; font-size:12.5px;
+  font-weight:700; line-height:1.5; border-radius:8px;
+  color:var(--text-dim); background:transparent; border:1px dashed var(--line)}
+.rail-md:hover{color:var(--text); border-color:var(--text-mute); border-style:solid}
+.rail-md:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.rail-md .ico-svg{width:15px; height:15px; flex:none}
+.rail-md-st{display:block; margin-top:6px; font-size:11.5px; line-height:1.6; color:var(--g-data)}
 .rail-jump{display:flex; flex-direction:column; gap:2px; margin-top:12px;
   padding-top:10px; border-top:1px solid var(--line-soft)}
 .rail-jump a{display:block; padding:7px 8px; border-radius:8px; text-decoration:none;

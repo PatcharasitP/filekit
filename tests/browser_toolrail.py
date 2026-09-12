@@ -96,6 +96,39 @@ with sync_playwright() as p:
     ck("⑥ กดแล้วกางออกได้",
        pg.evaluate("() => [...document.querySelectorAll('.faq-i')].filter(e => e.open).length") == 1)
 
+    # ⑦ ‼️ คัดลอกเป็น Markdown ต้องได้ของจริง และต้องแนบโค้ดเมื่อหน้ามีโค้ดเท่านั้น
+    ctx2 = br.new_context(viewport={"width": 1920, "height": 950},
+                          permissions=["clipboard-read", "clipboard-write"])
+    pg2 = ctx2.new_page()
+    pg2.on("pageerror", lambda e: errs.append(str(e)))
+    pg2.goto(f"{BASE}/#/{TOOL}", wait_until="networkidle")
+    pg2.wait_for_timeout(1200)
+    pg2.evaluate("() => document.querySelector('.rail-md').click()")
+    pg2.wait_for_timeout(700)
+    md = pg2.evaluate("() => navigator.clipboard.readText()")
+    ck("⑦ คัดลอกเป็น Markdown ได้ และขึ้นต้นด้วยหัวเรื่อง",
+       md.startswith("# ") and len(md) > 80, md[:60])
+    for need in ("หมวด:", "รับไฟล์:", f"#/{TOOL}"):
+        ck(f"⑦ Markdown มี {need}", need in md, md[:160])
+    ck("⑦ เครื่องมือที่ยังไม่มีโค้ดบนจอ ต้องไม่มีหัวข้อโค้ดเปล่า ๆ",
+       "```" not in md, md[-120:])
+
+    # เครื่องมือสายโค้ด ต้องแนบโค้ดจริงมาด้วย
+    pg2.goto("about:blank")
+    pg2.goto(f"{BASE}/#/excel-to-pq", wait_until="networkidle")
+    pg2.wait_for_timeout(1000)
+    pg2.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+    pg2.wait_for_timeout(4200)
+    pg2.evaluate("() => document.querySelector('.rail-md').click()")
+    pg2.wait_for_timeout(700)
+    md2 = pg2.evaluate("() => navigator.clipboard.readText()")
+    onscreen = pg2.evaluate("() => { const e = document.querySelector('.pq-code'); return e ? e.textContent.trim() : ''; }")
+    ck(f"⑦ เครื่องมือสายโค้ด ต้องแนบโค้ดมาด้วย ({len(md2)} ตัวอักษร)",
+       "```" in md2 and len(md2) > 400, md2[:120])
+    ck("⑦ ‼️ โค้ดใน Markdown ต้องตรงกับโค้ดที่อยู่บนจอจริง",
+       bool(onscreen) and onscreen in md2, f"บนจอ {len(onscreen)} ตัวอักษร")
+    ctx2.close()
+
     ck("ไม่มี error หลุดออกมาตลอดทั้งชุด", not errs, str(errs[:2]))
     br.close()
 

@@ -117,6 +117,7 @@ export function toolRail(tool) {
     ]),
     el("p", { class: "rail-desc" }, tool.desc),
     toolMeta(tool),
+    railCopyMd(tool),
     el("nav", { class: "rail-jump", "aria-label": tr("ข้ามไปยังส่วน", "Jump to a section") },
       jump.map(([id, label]) => el("a", { href: `#${id}`, onclick: (e) => {
         /* ‼️ href แบบ #id ชนกับ router ที่อ่าน hash เป็นชื่อเครื่องมือ
@@ -153,6 +154,63 @@ const BASE_FAQ = () => [
    tr("ไม่ต้องทั้งสองอย่าง ใช้ได้ไม่จำกัดจำนวนครั้ง และไม่มีโฆษณา",
       "Neither. Use it as many times as you like, with no ads.")],
 ];
+
+/** ปุ่มคัดลอกหน้านี้เป็น Markdown สำหรับเอาไปวางคุยกับ AI ต่อ
+ *
+ * ‼️ ที่มา thepexcel มีปุ่ม "Copy as Markdown" กับลิงก์ .md ลอยอยู่มุมขวาล่างทุกหน้า
+ *    (ผ่าเว็บ 12/09/2026) เพราะคนเอาเนื้อหาไปถาม AI ต่อกันเป็นปกติแล้ว
+ *    ของเราได้เปรียบตรงที่เครื่องมือสายโค้ดสร้างโค้ดจริงอยู่บนหน้า
+ *    จึงแนบโค้ดที่ได้ไปด้วย ซึ่งตรงกับที่พี่ปอนด์วางไว้ว่า "ได้ Code ไปใช้งานแบบ Dynamic"
+ *
+ * ‼️ แนบโค้ดเฉพาะตอนที่มีโค้ดอยู่บนจอจริง ๆ ไม่ใช่เดาว่าเครื่องมือนี้น่าจะมี
+ *    ไม่งั้นจะได้ Markdown ที่มีหัวข้อ "โค้ดที่ได้" แต่ข้างในว่างเปล่า */
+export function railCopyMd(tool) {
+  const st = el("span", { class: "rail-md-st", role: "status", "aria-live": "polite" });
+  const btn = el("button", {
+    class: "rail-md", type: "button",
+    onclick: async () => {
+      const md = toolMarkdown(tool);
+      try {
+        await navigator.clipboard.writeText(md);
+        st.textContent = tr(`คัดลอกแล้ว ${md.split("\n").length} บรรทัด`,
+                            `Copied ${pl(md.split("\n").length, "line", "lines")}`);
+      } catch {
+        st.textContent = tr("คัดลอกไม่สำเร็จ", "Could not copy");
+      }
+      setTimeout(() => { st.textContent = ""; }, 4000);
+    },
+  }, [uiIcon("copy", "ico-svg"), tr("คัดลอกเป็น Markdown", "Copy as Markdown")]);
+  return el("div", { class: "rail-md-wrap" }, [btn, st]);
+}
+
+/** ข้อความ Markdown ของหน้าเครื่องมือนี้ — แยกออกมาเพื่อให้เทสเรียกตรงได้ */
+export function toolMarkdown(tool) {
+  const g = GROUPS.find((x) => x.id === tool.group);
+  const unknown = typeLabel("");
+  const kinds = [...new Set((tool.accepts || []).map(typeLabel))].filter((x) => x && x !== unknown);
+  const L = [];
+  L.push(`# ${tool.title}`, "");
+  if (tool.desc) L.push(tool.desc, "");
+  if (g) L.push(tr(`- หมวด: ${g.label}`, `- Category: ${g.label}`));
+  if (kinds.length) L.push(tr(`- รับไฟล์: ${kinds.join(", ")}`, `- Takes: ${kinds.join(", ")}`));
+  L.push(tr("- ทำงานในเบราว์เซอร์ ไฟล์ไม่ถูกอัปโหลดไปไหน",
+            "- Runs in the browser, files are never uploaded"));
+  L.push(`- ${location.origin}${location.pathname}#/${tool.id}`, "");
+
+  /* โค้ดที่อยู่บนจอตอนนี้ เอาก้อนที่ยาวที่สุดซึ่งเป็นผลลัพธ์หลักของหน้าเสมอ
+     ‼️ ต้องเลือกที่ <pre> ไม่ใช่ <pre code> เพราะเครื่องมือในเว็บนี้ใส่โค้ดสองแบบ
+        บางตัวมี <code> ซ้อนข้างใน บางตัวใส่ลง <pre> ตรง ๆ (เจอจริงตอนทดสอบ
+        excel-to-pq ที่ได้ Markdown ไม่มีโค้ดติดมาเลย) */
+  const blocks = [...document.querySelectorAll("pre")]
+    .filter((e) => e.offsetParent && (e.textContent || "").trim().length > 40)
+    .map((e) => e.textContent);
+  if (blocks.length) {
+    const code = blocks.sort((a, b) => b.length - a.length)[0];
+    L.push(tr("## โค้ดที่ได้จากหน้านี้", "## Code from this page"), "",
+           "```", code.trimEnd(), "```", "");
+  }
+  return L.join("\n");
+}
 
 /** ส่วนคำถามที่เจอบ่อย ท้ายหน้าเครื่องมือ
  *  ‼️ ถอดจาก thepexcel ที่ใส่ FAQ ไว้ทุกหน้าอ้างอิง เพราะคำถามเดิม ๆ ถูกถามซ้ำทุกวัน

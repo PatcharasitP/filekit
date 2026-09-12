@@ -340,6 +340,9 @@ const mounting = new Map();             // เครื่องมือที�
 const MAX_CACHED = 6;
 /* พักเครื่องมือที่กำลังจะถูกซ่อน — คืนหน่วยความจำภาพย่อทันที (ไฟล์ยังอยู่ครบ)
  * เรียกก่อนล้าง #tool ทุกครั้ง · ui.js โหลดแล้วแน่นอนถ้ามีเครื่องมือเปิดอยู่ ถ้ายังไม่มีก็ไม่มีอะไรให้พัก */
+/** ก้อนนี้เป็นลูกตัวเดียวของกล่องเครื่องมืออยู่แล้วหรือยัง */
+const placed = (node) => toolBox.firstChild === node && toolBox.childNodes.length === 1;
+
 function sleepCurrent() {
   const showing = toolBox.firstElementChild;
   if (!showing || !mounted.size) return;
@@ -377,17 +380,22 @@ async function go(id, push = true) {
   swap(() => {
     document.body.classList.add("tool");
     document.title = `${tool.title} - FileKit`;
-    sleepCurrent();
-    toolBox.innerHTML = "";
     const cached = mounted.get(id);
     // ย้ายไปท้ายคิว = "เพิ่งใช้ล่าสุด" ตัวที่ไม่ได้แตะนานสุดจึงถูกถอดออกก่อนตอนแคชเต็ม
     if (cached) {
       mounted.delete(id); mounted.set(id, cached);
-      toolBox.appendChild(cached);
+      // ‼️ ถ้ามันวางอยู่ถูกที่แล้ว ห้ามถอดออกแล้วใส่กลับ
+      //    go() ถูกเรียก 2 รอบต่อการเปลี่ยนหน้า 1 ครั้งเสมอ (ดูหมายเหตุข้างล่าง)
+      //    รอบสองเคยล้าง toolBox ทิ้งแล้วต่อก้อนเดิมกลับเข้าไปใหม่ ซึ่ง
+      //    ‼️ ทำให้โฟกัสของคนที่ใช้คีย์บอร์ดหลุดกลับไปที่ body กลางคัน
+      //    (วัดจริงบนเว็บจริง 12/09/2026 หลุด 1 ใน 3 ครั้ง เห็น focusout พร้อมกับก้อนถูกถอด)
+      //    และเป็นการรื้อ DOM ทั้งเครื่องมือทิ้งเปล่า ๆ ทุกครั้งที่เปลี่ยนหน้า
+      if (!placed(cached)) { sleepCurrent(); toolBox.replaceChildren(cached); }
       import("./ui.js").then((m) => m.wakeTree(cached)).catch(() => {});   // วาดภาพย่อกลับมา
       return;
     }
-    toolBox.appendChild(el("div", { class: "loading" }, [
+    sleepCurrent();
+    toolBox.replaceChildren(el("div", { class: "loading" }, [
       el("div", { class: "spinner" }), el("div", {}, tr("กำลังเตรียมเครื่องมือ…", "Preparing the tool…")),
     ]));
   });
@@ -410,8 +418,7 @@ async function go(id, push = true) {
       job.catch(() => {}).finally(() => mounting.delete(id));
     }
     const node = await job;
-    toolBox.innerHTML = "";
-    toolBox.appendChild(node);
+    if (!placed(node)) toolBox.replaceChildren(node);   // เหตุผลเดียวกับใน swap() ข้างบน
     await trimMounted(id);
   } catch (err) {
     console.error(err);

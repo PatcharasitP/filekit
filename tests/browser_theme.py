@@ -150,6 +150,52 @@ with sync_playwright() as pw:
     ck("บอกผู้ใช้ตรง ๆ ว่า visualStyles เดิมไม่ถูกนำมาด้วย", "visualStyles" in msg, msg)
     os.remove(fp)
 
+    # ── ⑧.5 ของที่ลอกมาจาก datatraining.io ───────────────────────────
+    print("\n⑧.5 แนวคิดที่ยกมาจาก datatraining.io")
+    pg.locator(".ws-left .th-sw", has_text="ดินเผา").click()
+    pg.wait_for_timeout(500)
+    # ‼️ ไอเดียหลักของเขา ทั้งแผงใส่สีของธีมที่กำลังสร้าง
+    ac_before = pg.evaluate("getComputedStyle(document.querySelector('.ws-grid').parentElement.parentElement).getPropertyValue('--ac').trim()")
+    pg.locator(".ws-left .th-sw", has_text="True Corporation").click()
+    pg.wait_for_timeout(600)
+    ac_after = pg.evaluate("getComputedStyle(document.querySelector('.ws-grid').parentElement.parentElement).getPropertyValue('--ac').trim()")
+    ck(f"เปลี่ยนชุดสีแล้วสีประจำแผงเปลี่ยนตามธีมที่กำลังสร้าง ({ac_before} เป็น {ac_after})",
+       ac_before != ac_after and ac_after.startswith("#"), f"{ac_before} -> {ac_after}")
+    ck("ชุดของแบรนด์โหลดสีมาครบ 8 สี ไม่ถูกตัดเหลือ 5",
+       pg.locator(".ws-right .ck-hex").count() == 13, pg.locator(".ws-right .ck-hex").count())
+    # ‼️ ชุดแบรนด์ต้องถูกรายงานตามจริง ไม่ใช่ปล่อยผ่านเพราะเป็นของบริษัท
+    pg.locator('.seg input[value="check"]').check(); pg.wait_for_timeout(500)
+    brand_txt = " ".join(pg.locator(".th-warn").all_inner_texts())
+    ck("ชุดแบรนด์ถูกเตือนเรื่องคอนทราสต์ตามที่วัดได้จริง", "ต่ำกว่าเกณฑ์" in brand_txt, brand_txt[:130])
+    ck("ชุดแบรนด์ถูกเตือนว่าแยกออกแค่ 5 สีแรก", "แยกออกแค่ 5" in brand_txt, brand_txt[:170])
+    pg.locator(".ws-left .th-sw", has_text="ดินเผา").click(); pg.wait_for_timeout(400)
+
+    pg.locator('.seg input[value="prev"]').check(); pg.wait_for_timeout(500)
+    # แถบเลื่อนคู่ช่องตัวเลข
+    bars = pg.locator(".th-num input[type=range]")
+    ck("มีแถบเลื่อนคู่กับช่องตัวเลขทั้งกว้างและสูง", bars.count() == 2, bars.count())
+    pg.locator(".ws-right .th-sw", has_text="2560 x 1440").click(); pg.wait_for_timeout(400)
+    ck("ลากแถบเลื่อนกับพิมพ์เลขผูกกันสองทาง",
+       bars.nth(0).input_value() == "2560" and bars.nth(1).input_value() == "1440",
+       [bars.nth(0).input_value(), bars.nth(1).input_value()])
+    # กล่องสัดส่วนผืนผ้าใบต้องตรงอัตราส่วนจริง
+    bx = pg.locator(".th-cvbox").bounding_box()
+    ratio = bx["width"] / bx["height"]
+    ck(f"กล่องพรีวิวผืนผ้าใบตรงสัดส่วนจริง 2560:1440 = 1.78 (วัดได้ {ratio:.2f})", abs(ratio - 2560 / 1440) < 0.08, ratio)
+    pg.locator(".ws-right .th-sw", has_text="1920 x 1080").click(); pg.wait_for_timeout(400)
+    # แถบล่างบอกตัวเลขสดที่ใช้คำนวณจริง
+    facts = pg.locator(".th-facts").inner_text()
+    ck(f"แถบล่างบอกพื้นที่ผืนผ้าใบที่ใช้คำนวณจริง ({facts})", "2,073,600" in facts, facts)
+    # รายงานจำลองต้องมีของครบ ไม่ใช่แค่แท่งกราฟ
+    for sel, name in [(".th-cards .th-card", "การ์ด KPI"), (".th-brow", "แถวเทียบเป้าหมาย"),
+                      (".th-spark", "กราฟเส้น"), (".th-ptbl tr", "ตาราง"), (".th-bar", "แท่งทุกชุดข้อมูล")]:
+        ck(f"รายงานจำลองมี{name}", pg.locator(sel).count() >= 1, pg.locator(sel).count())
+    sp = pg.locator(".th-spark").bounding_box()
+    ck(f"กราฟเส้นเรนเดอร์จริง ไม่ใช่กล่องเปล่า ({sp['width']:.0f}x{sp['height']:.0f})", sp["width"] > 50 and sp["height"] > 30, sp)
+    ck("กราฟเส้นวาดเส้นกับจุดจริง",
+       pg.evaluate("document.querySelectorAll('.th-spark path').length") == 2
+       and pg.evaluate("document.querySelectorAll('.th-spark circle').length") == 12)
+
     # ── ⑨ แผงขวาต้องไม่ล้น ────────────────────────────────────────────
     print("\n⑨ แผงขวาไม่ล้นออกด้านข้าง")
     ov = pg.evaluate("""() => {

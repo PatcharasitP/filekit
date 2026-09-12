@@ -89,9 +89,14 @@ for (const p of PALETTES()) {
   ck(r >= 4.5, `${p.name}: ตัวอักษรรอง ${s.fg2} บนพื้น ${p.bg} ได้ ${r.toFixed(2)} ผ่านเกณฑ์ 4.5`);
 }
 
-/* ── ⑤ ‼️ ชุดสีที่เราแจก ต้องอ่านออกจริงและคนตาบอดสีแยกออกจริง ───────── */
-console.log("\n⑤ ชุดสีของกลางทุกชุด");
-for (const p of PALETTES()) {
+/* ── ⑤ ‼️ ชุดสีที่เราออกแบบเอง ต้องอ่านออกจริงและคนตาบอดสีแยกออกจริง ───── */
+console.log("\n⑤ ชุดสีของกลาง (ชุดที่เราออกแบบเอง จึงต้องผ่านทุกเกณฑ์)");
+const NEUTRAL = PALETTES().filter((p) => p.kind === "neutral");
+const BRAND = PALETTES().filter((p) => p.kind === "brand");
+ck(NEUTRAL.length >= 3, `มีชุดของกลางอย่างน้อย 3 ชุด (มี ${NEUTRAL.length})`);
+ck(PALETTES().every((p) => p.kind === "neutral" || p.kind === "brand"),
+   "ทุกชุดต้องระบุว่าเป็นของกลางหรือของแบรนด์ ไม่ปล่อยให้กำกวม");
+for (const p of NEUTRAL) {
   const low = p.colors.map((c) => contrast(c, p.bg)).filter((x) => x < 3);
   ck(low.length === 0, `${p.name}: ทุกสีบนพื้นหลังได้คอนทราสต์ถึง 3 (ต่ำกว่าเกณฑ์ ${low.length} สี)`);
   const res = checkPalette(p.colors);
@@ -102,6 +107,37 @@ for (const p of PALETTES()) {
   ck(p.colors.length === 5, `${p.name}: มี 5 สี ตามเพดานที่ TH3 พิสูจน์ไว้`);
 }
 ck(new Set(PALETTES().map((p) => p.id)).size === PALETTES().length, "ชุดสีไม่มี id ซ้ำ");
+
+/* ── ⑤.5 ‼️ ชุดสีของแบรนด์ ห้ามถูกแก้ให้ผ่านเกณฑ์ แต่ต้องถูกรายงานตามจริง ────
+ *
+ * ‼️ ข้อนี้จงใจ assert "ตกเกณฑ์" ไม่ใช่ "ผ่านเกณฑ์" เพราะสีแบรนด์คือข้อกำหนดที่
+ *    คนทำรายงานเปลี่ยนเองไม่ได้ ถ้าวันหนึ่งมีคนไปขยับสีให้ผ่าน ๆ ข้อนี้จะแดง
+ *    ซึ่งถูกต้องแล้ว เพราะนั่นแปลว่าเราแอบแก้สีของบริษัทคนอื่น
+ * ‼️ ค่าที่ล็อกไว้มาจากการวัดจริงเมื่อ 12/09/2026 ไม่ใช่ตัวเลขที่คิดขึ้นเอง */
+console.log("\n⑤.5 ชุดสีของแบรนด์ (ต้องคงสีเดิมไว้ และต้องถูกรายงานตามจริง)");
+const T = BRAND.find((p) => p.id === "true");
+ck(!!T, "มีชุดของ True Corporation อยู่ในรายการ");
+if (T) {
+  ck(T.colors.join(",") === ["#E4002B","#1A1A2E","#0052CC","#00A550","#F5A623","#9B51E0","#6C7A8D","#17A2B8"].join(","),
+     "สีทั้ง 8 ตรงกับไฟล์ธีมต้นฉบับทุกตัว ไม่มีใครไปแก้ให้ผ่านเกณฑ์");
+  ck(T.bg === "#F5F7FA" && T.fg === "#1A1A2E", "พื้นหลังกับตัวอักษรตรงกับไฟล์ต้นฉบับ");
+  const low = T.colors.filter((c) => contrast(c, T.bg) < 3);
+  ck(low.length === 2 && low.includes("#F5A623") && low.includes("#17A2B8"),
+     `วัดได้ว่ามี 2 สีที่คอนทราสต์ต่ำกว่าเกณฑ์จริง คือ #F5A623 กับ #17A2B8 (วัดได้ ${low.join(", ")})`);
+  ck(Math.abs(contrast("#F5A623", T.bg) - 1.89) < 0.02, `#F5A623 บนพื้นได้ 1.89 (วัดได้ ${contrast("#F5A623", T.bg).toFixed(2)})`);
+  const res = checkPalette(T.colors);
+  ck(res.maxSafe === 5, `แยกออกได้ 5 สีแรกจาก 8 พอดีกับเพดานที่ TH3 พิสูจน์ไว้ (วัดได้ ${res.maxSafe})`);
+  ck(res.worst === "tritanopia", `ภาวะที่แย่ที่สุดคือ tritanopia (วัดได้ ${res.worst})`);
+  const gt = worstDelta(["#00A550", "#17A2B8"]);
+  ck(gt < 4, `เขียวกับฟ้าของแบรนด์กลืนกันจริง ΔE ${gt.toFixed(2)} ต่ำกว่า 4`);
+  /* ‼️ กับดัก TH1 ที่อยู่ในไฟล์ต้นฉบับ: tableAccent เป็นสีแบรนด์แดง ซึ่งเป็นสีกริดตาราง
+     และสี data bar ด้วย เครื่องมือของเราต้องไม่ทำตามนั้น ต้องออกเป็นสีเส้นเสมอ */
+  const bt = buildTheme(derive({ name: "t", w: 1920, h: 1080, font: "Segoe UI",
+    colors: T.colors.slice(), bg: T.bg, fg: T.fg, good: T.good, neutral: T.neutral, bad: T.bad }));
+  ck(bt.tableAccent !== "#E4002B" && !bt.dataColors.includes(bt.tableAccent),
+     "ไฟล์ที่เราออกไม่เอากับดัก tableAccent เป็นสีแบรนด์แดงของไฟล์ต้นฉบับมาด้วย (TH1)");
+  ck(bt.dataColors.length === 8, "สีชุดข้อมูลออกครบทั้ง 8 สี ไม่ถูกตัดทิ้ง");
+}
 
 /* ── ⑥ เพดาน 5 สี ยืนยันจากแหล่งอิสระ ───────────────────────────────── */
 console.log("\n⑥ เพดานจำนวนสี");

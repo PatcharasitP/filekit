@@ -51,25 +51,42 @@ const CANVAS_PRESETS = [
   ["2560 x 1440", 2560, 1440], ["900 x 1600", 900, 1600],
 ];
 
-/* ชุดสีของกลาง ‼️ ไม่ได้เลือกด้วยสายตา แต่ค้นมาด้วยโปรแกรมแล้ววัดจริงทุกชุด
-   เงื่อนไขที่ทุกชุดต้องผ่านพร้อมกัน
+/* ชุดสี ‼️ ของกลางไม่ได้เลือกด้วยสายตา แต่ค้นมาด้วยโปรแกรมแล้ววัดจริงทุกชุด
+   เงื่อนไขที่ชุดของกลางต้องผ่านพร้อมกัน
      ① คอนทราสต์ของทุกสีบนพื้นหลังของชุดนั้น >= 3 (สีทึบขนาดใหญ่ ตาม WCAG 1.4.11)
      ② ΔE00 ของทุกคู่ ในทุกภาวะตาบอดสีและในสายตาปกติ >= 15
         (เกณฑ์เตือนของ checkPalette คือ 10 จึงเผื่อไว้อีกครึ่งหนึ่ง)
      ③ เฉดสีในสายตาปกติห่างกัน >= 55 องศา ข้อนี้เป็นเรื่องความงามล้วน
         เพราะตัวหาค่าดีที่สุดเชิงตัวเลขชอบเลือกม่วงสองเฉดในชุดเดียว ซึ่งแยกออกจริง
         แต่คนสายตาปกติเห็นแล้วรู้สึกว่าชุดนี้ไม่ได้ถูกออกแบบมา
-   ‼️ จงใจให้ชุดละ 5 สี ไม่ใช่ 8 ตามเพดานที่ TH3 พิสูจน์ไว้
+   ‼️ จงใจให้ชุดของกลางชุดละ 5 สี ตามเพดานที่ TH3 พิสูจน์ไว้
       วัดชุด Okabe-Ito ซึ่งเป็นชุดมาตรฐานสำหรับคนตาบอดสีโดยเฉพาะแล้ว 12/09/2026
       ครบ 8 สีเมื่อไรก็มีคู่ที่ ΔE เหลือ 8.2 (ส้มกับม่วงชมพู) เป็นการยืนยันเพดานนั้นซ้ำ
+
+   ‼️‼️ kind: "brand" คือสีจริงขององค์กร ซึ่ง **ห้ามแก้ให้ผ่านเกณฑ์**
+      สีแบรนด์เป็นข้อกำหนดที่คนทำรายงานเปลี่ยนเองไม่ได้ หน้าที่ของเครื่องมือนี้
+      ไม่ใช่ทำให้มันดูผ่าน แต่คือบอกตามตรงว่าจุดไหนมีปัญหาและให้ทางออก
+      ชุดแบรนด์จึงไม่ต้องผ่านเงื่อนไข ① ② ③ แต่ต้องถูกแผงตรวจสีรายงานตามจริงเสมอ
    ‼️ ค่าที่วัดได้จริงถูกล็อกไว้ใน tests/theme.test.mjs แก้สีแล้วเทสจะแดงทันที */
 export const PALETTES = () => [
-  { id: "terra", name: tr("ดินเผา", "Terracotta"),
+  { id: "terra", kind: "neutral", name: tr("ดินเผา", "Terracotta"),
     colors: ["#DD7755", "#556600", "#0099AA", "#3355BB", "#884466"], bg: "#FFFFFF", fg: "#1B2430" },
-  { id: "jewel", name: tr("อัญมณี", "Jewel tones"),
+  { id: "jewel", kind: "neutral", name: tr("อัญมณี", "Jewel tones"),
     colors: ["#AA1155", "#BB6600", "#005500", "#008888", "#7755CC"], bg: "#FBFAF7", fg: "#221F1B" },
-  { id: "night", name: tr("จอมืด", "Dark canvas"),
+  { id: "night", kind: "neutral", name: tr("จอมืด", "Dark canvas"),
     colors: ["#FFBB99", "#889933", "#66DDDD", "#2299DD", "#CC7799"], bg: "#1A1D23", fg: "#F2F4F7" },
+
+  /* สีแบรนด์จริงของ True Corporation คัดมาจาก References/Themes/TrueCorp_PowerBI_Theme.json
+     ‼️ ลอกมาเฉพาะ "สี" ไม่เอาก้อน visualStyles 16 KB ในไฟล์ต้นฉบับมาด้วย
+        เพราะเครื่องมือนี้ไม่ได้ออก visualStyles อยู่แล้ว (ดูเหตุผลที่ buildTheme)
+     ‼️ ผลที่วัดได้จริงด้วย src/cvd.js เมื่อ 12/09/2026 ซึ่งเครื่องมือจะแสดงให้ผู้ใช้เห็นเอง
+        คอนทราสต์บนพื้น #F5F7FA: #F5A623 ได้ 1.89 และ #17A2B8 ได้ 2.84 ทั้งคู่ต่ำกว่าเกณฑ์ 3
+        ตาบอดสี: แยกออกแค่ 5 สีแรกจาก 8 คู่ที่แย่สุดคือเขียว #00A550 กับฟ้า #17A2B8
+                 เหลือ ΔE 3.12 ในภาวะ tritanopia ซึ่งแทบเป็นสีเดียวกัน
+        ชุดย่อย 5 สีที่ดีที่สุดในนี้คือสีที่ 1, 2, 3, 4, 7 ได้ ΔE ต่ำสุด 10.52 */
+  { id: "true", kind: "brand", name: tr("True Corporation", "True Corporation"),
+    colors: ["#E4002B", "#1A1A2E", "#0052CC", "#00A550", "#F5A623", "#9B51E0", "#6C7A8D", "#17A2B8"],
+    bg: "#F5F7FA", fg: "#1A1A2E", good: "#00A550", neutral: "#6C7A8D", bad: "#E4002B" },
 ];
 
 const STYLE = `
@@ -81,7 +98,9 @@ const STYLE = `
 .th-sw[aria-pressed="true"]{border-color:var(--ac,var(--brand)); box-shadow:inset 0 0 0 1px var(--ac,var(--brand))}
 .th-grid-sm{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
 .th-dots{display:flex; gap:2px; flex:none}
-.th-dots i{width:9px; height:15px; border-radius:2px}
+.th-dots i{width:9px; height:15px; border-radius:2px; flex:0 1 9px; min-width:4px}
+.th-swname{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.th-brandhead{grid-column:1/-1; margin:10px 0 0; font-size:11.5px; line-height:1.7; color:var(--text-mute)}
 .th-sec{margin:16px 0 8px; font-size:11.5px; font-weight:700; letter-spacing:.09em;
   text-transform:uppercase; color:var(--text-mute); line-height:1.5}
 .th-note{font-size:12px; color:var(--text-mute); margin:6px 0 0; line-height:1.7}
@@ -97,7 +116,28 @@ const STYLE = `
 /* พรีวิวรายงานจำลอง ทำด้วย CSS ล้วน ไม่มีไลบรารีกราฟ */
 .th-prev{border:1px solid var(--line); border-radius:var(--r-sm); overflow:hidden}
 .th-canvas{padding:16px; display:flex; flex-direction:column; gap:12px}
-.th-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:10px}
+.th-rhead{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.th-chips{display:flex; gap:5px; margin-inline-start:auto}
+.th-chips span{padding:2px 9px; border-radius:999px; border:1px solid; line-height:1.6}
+.th-delta{display:block; line-height:1.6}
+.th-cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(208px,1fr)); gap:10px}
+.th-vis{border:1px solid; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; min-width:0}
+.th-bars2{display:flex; flex-direction:column; gap:6px}
+.th-brow{display:flex; align-items:center; gap:8px}
+.th-blab{flex:0 0 62px; line-height:1.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.th-btrack{position:relative; flex:1; height:13px; border-radius:3px; overflow:hidden; min-width:0}
+.th-btrack i{position:absolute; inset-block:0; inset-inline-start:0; border-radius:3px}
+.th-btrack u{position:absolute; inset-block:-1px; width:2px; text-decoration:none}
+.th-bval{flex:0 0 34px; text-align:end; line-height:1.6}
+.th-spark{width:100%; height:78px; display:block}
+.th-axis{display:flex; justify-content:space-between; line-height:1.6}
+.th-ptbl{width:100%; border-collapse:collapse}
+.th-ptbl td{border-bottom:1px solid; padding:4px 2px; line-height:1.7}
+.th-ptbl td:last-child{width:58%}
+.th-dbar{position:relative; display:flex; align-items:center; gap:6px}
+.th-dbar i{height:12px; border-radius:2px; opacity:.8; flex:none}
+
+.th-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(98px,1fr)); gap:10px}
 .th-card{border-radius:8px; padding:10px 12px; border:1px solid rgba(128,128,128,.22)}
 .th-card b{display:block; line-height:1.35}
 .th-card span{display:block; line-height:1.6; opacity:.8}
@@ -116,6 +156,21 @@ const STYLE = `
 .th-tbl th{background:var(--bg-soft); font-weight:700}
 .th-bad{color:var(--err); font-weight:700} .th-good{color:var(--g-data); font-weight:700}
 .th-open{margin-top:2px}
+.th-list{margin:0; padding-inline-start:18px; font-size:12px; line-height:1.8; color:var(--text-dim)}
+.th-list li{margin-bottom:2px}
+.th-facts{font-size:11.5px; color:var(--text-mute); line-height:1.7; margin-inline-start:auto;
+  text-align:end; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+@media (max-width:640px){ .th-facts{display:none} }
+/* ช่องตัวเลขคู่แถบเลื่อน ลอกจาก datatraining.io */
+.th-num{margin-top:8px}
+.th-num input[type=range]{width:100%; margin-top:2px; accent-color:var(--ac,var(--brand)); height:20px}
+.th-cvwrap{display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px;
+  border:1px solid var(--line); border-radius:var(--r-sm); background:var(--bg-soft)}
+.th-cvlabel{font-size:11.5px; color:var(--text-mute); line-height:1.6; flex:none}
+.th-cvprev{flex:1; display:grid; place-items:center; min-height:96px}
+.th-cvbox{border:1.5px solid var(--ac,var(--brand)); border-radius:3px; display:grid; place-items:center;
+  background:var(--card)}
+.th-cvbox span{font-size:10px; color:var(--text-dim); line-height:1.4; white-space:nowrap}
 .th-more{border:1px solid var(--line); border-radius:var(--r-sm); padding:0 10px; margin-top:6px}
 .th-more>summary{cursor:pointer; padding:9px 2px; font-size:12.5px; font-weight:700;
   line-height:1.6; color:var(--text-dim)}
@@ -233,12 +288,51 @@ export function mount(tool) {
     el("p", { class: "th-note" },
       tr("ไฟล์ถูกอ่านในเครื่องคุณ ไม่ถูกส่งไปที่ไหน ธีมขององค์กรจึงเอามาแก้ตรงนี้ได้",
          "The file is read on your device and never uploaded, so a company theme is safe to edit here")),
+    /* ‼️ ของ datatraining.io มีการ์ด "What is it?" บอกล่วงหน้าว่าไฟล์ที่ได้มีอะไรบ้าง
+       ซึ่งลดความลังเลก่อนกดจริง ของเราย่อเหลือรายการสั้น ๆ เพราะหัวเครื่องมือกับ
+       คำถามที่เจอบ่อยเล่าเรื่องที่เหลือไว้แล้ว จะเขียนซ้ำก็รกเปล่า ๆ */
+    el("h3", { class: "th-sec" }, tr("ไฟล์ที่ได้มีอะไรบ้าง", "What you get")),
+    el("ul", { class: "th-list" }, [
+      tr("ขนาดตัวอักษร 4 คลาสหลัก คำนวณจากขนาดผืนผ้าใบ", "Four core text classes sized from your canvas"),
+      tr("สีชุดข้อมูล พื้นหลัง ตัวอักษร และสีบอกสถานะ", "Data colours, background, text and status colours"),
+      tr("สีกริดตารางที่ไม่ไปทับสีแบรนด์", "A table grid colour that does not hijack your brand colour"),
+      tr("ตรงตาม schema 2.157 ที่ Power BI ใช้จริง", "Valid against the schema 2.157 Power BI actually uses"),
+    ].map((t) => el("li", {}, t))),
   ]);
 
   /* ── แผงขวา: ปรับแต่ง ──────────────────────────────────────────────── */
   const nameIn = el("input", { type: "text", value: state.name });
+  /* ‼️ ช่องตัวเลขคู่กับแถบเลื่อน ลอกมาจาก datatraining.io ซึ่งทำแบบนี้ทุกช่อง
+     พิมพ์เลขเป๊ะ ๆ ได้ และลากหาค่าคร่าว ๆ ได้ในที่เดียวกัน ไม่ต้องเลือกอย่างใดอย่างหนึ่ง
+     ‼️ ผูกสองทาง ลากแถบแล้วเลขเปลี่ยน พิมพ์เลขแล้วแถบเลื่อนตาม */
   const wIn = el("input", { type: "number", value: String(state.w), min: "320", max: "6000" });
   const hIn = el("input", { type: "number", value: String(state.h), min: "240", max: "6000" });
+  /* ‼️ ห้ามส่ง value เข้าไปพร้อม min กับ max ใน el()
+     el() ไล่ตั้ง attribute ตามลำดับที่เขียน ตอนที่ตั้ง value ช่วงของ input range
+     ยังเป็นค่าตั้งต้น 0 ถึง 100 อยู่ ค่า 1920 จึงถูกบีบเหลือ 100 แล้วพอ min มาทีหลัง
+     ก็ถูกดันไปเป็น min แทน ผลคือแถบเลื่อนไปกองซ้ายสุดทั้งที่ตัวเลขข้าง ๆ เป็น 1920
+     (tests/browser_theme.py ข้อ ⑧.5 จับได้ 12/09/2026) ต้องตั้งช่วงให้เสร็จก่อนแล้วค่อยใส่ค่า */
+  const rangeIn = (min, max, val, label) => {
+    const n = el("input", { type: "range", min: String(min), max: String(max), step: "10", "aria-label": label });
+    n.value = String(val);
+    return n;
+  };
+  const wBar = rangeIn(320, 3840, state.w, tr("เลื่อนปรับความกว้าง", "Drag to set width"));
+  const hBar = rangeIn(240, 3840, state.h, tr("เลื่อนปรับความสูง", "Drag to set height"));
+  const sizeField = (label, box, bar) => el("div", { class: "th-num" }, [
+    field(label, box), bar,
+  ]);
+  /* กล่องพรีวิวผืนผ้าใบตามสัดส่วนจริง ของเขามีแล้วเห็นภาพดีมาก
+     ‼️ ย่อให้อยู่ในกรอบ 132x92 เสมอ ด้านที่ยาวกว่าเป็นตัวกำหนด */
+  const cvPrev = el("div", { class: "th-cvprev" });
+  function drawCanvasPrev() {
+    const maxW = 132, maxH = 92;
+    const k = Math.min(maxW / state.w, maxH / state.h);
+    cvPrev.innerHTML = "";
+    cvPrev.appendChild(el("div", { class: "th-cvbox",
+      style: `width:${Math.max(18, Math.round(state.w * k))}px; height:${Math.max(14, Math.round(state.h * k))}px` },
+      [el("span", {}, `${state.w} x ${state.h}`)]));
+  }
   const fontSel = select([["Segoe UI", "Segoe UI"], ["Arial", "Arial"], ["Tahoma", "Tahoma"],
                           ["Sarabun", "Sarabun"], ["Calibri", "Calibri"]], state.font);
   const sizeNote = el("p", { class: "th-note" });
@@ -249,8 +343,11 @@ export function mount(tool) {
     field(tr("ชื่อธีม", "Theme name"), nameIn),
     el("h3", { class: "th-sec" }, tr("ขนาดผืนผ้าใบ", "Canvas size")),
     cvBox,
-    el("div", { class: "th-two" }, [
-      field(tr("กว้าง", "Width"), wIn), field(tr("สูง", "Height"), hIn),
+    sizeField(tr("กว้าง", "Width"), wIn, wBar),
+    sizeField(tr("สูง", "Height"), hIn, hBar),
+    el("div", { class: "th-cvwrap" }, [
+      el("span", { class: "th-cvlabel" }, tr("สัดส่วนจริง", "True proportion")),
+      cvPrev,
     ]),
     sizeNote,
     field(tr("ฟอนต์หลัก", "Primary font"), fontSel),
@@ -261,6 +358,11 @@ export function mount(tool) {
   ]);
 
   /* ── ตรงกลาง ───────────────────────────────────────────────────────── */
+  /* ‼️ ของเขาโชว์ "Canvas: 1920x1080 • Area: 2073600 px²" ที่แถบล่างตลอดเวลา
+     ซึ่งพื้นที่คือตัวเลขที่เขาใช้คิดขนาดตัวอักษรจริง การโชว์ตัวตั้งต้นของการคำนวณ
+     ทำให้คนเข้าใจว่าทำไมตัวอักษรถึงเปลี่ยน ไม่ใช่เดาว่าเครื่องมือทำอะไรอยู่ */
+  const facts = el("div", { class: "th-facts" });
+
   const tabs = segmented([
     ["prev", tr("พรีวิวรายงาน", "Report preview")],
     ["check", tr("ตรวจสี", "Colour check")],
@@ -280,6 +382,10 @@ export function mount(tool) {
     footer: [
       button(tr("คัดลอก JSON", "Copy JSON"), { icon: "copy", onclick: onCopy }),
       button(tr("ดาวน์โหลด .json", "Download .json"), { icon: "download", ghost: true, onclick: onDownload }),
+      /* ‼️ ของ datatraining.io มีปุ่ม Reset ที่แถบล่างตลอดเวลา ซึ่งจำเป็นกับเครื่องมือ
+         ที่มีตัวเลือกเยอะ เพราะปรับไปหลายจุดแล้วอยากกลับไปตั้งต้น ไม่ต้องรีเฟรชหน้า */
+      button(tr("เริ่มใหม่", "Reset"), { icon: "undo", ghost: true, onclick: onReset }),
+      facts,
       st.node,
     ],
     /* ‼️ ข้อความนี้ถูกจำกัดความยาว ทั้งเว็บมีข้อความไทยเกิน 100 ตัวอักษรได้ไม่เกิน 4 ก้อน
@@ -292,8 +398,10 @@ export function mount(tool) {
   ws.wrap.prepend(el("style", { text: STYLE }));
   ws.showCanvas(true);
 
-  buildPalettes(); buildCanvas(); buildBase(); buildData();
+  buildPalettes(); buildCanvas(); buildBase(); buildData(); drawCanvasPrev();
   for (const c of [nameIn, wIn, hIn]) c.addEventListener("input", readInputs);
+  wBar.addEventListener("input", () => { wIn.value = wBar.value; readInputs(); });
+  hBar.addEventListener("input", () => { hIn.value = hBar.value; readInputs(); });
   fontSel.addEventListener("change", readInputs);
   tabs.addEventListener("change", render);
   render();
@@ -303,17 +411,26 @@ export function mount(tool) {
   function buildPalettes() {
     palBox.innerHTML = "";
     for (const p of PALETTES()) {
+      /* ‼️ ชุดของแบรนด์ต้องแยกให้เห็นว่าเราไม่ได้ตรวจผ่านให้ เป็นสีจริงที่เปลี่ยนไม่ได้ */
+      if (p.kind === "brand" && !palBox.querySelector(".th-brandhead")) {
+        palBox.appendChild(el("p", { class: "th-brandhead" },
+          tr("ชุดของแบรนด์ ใช้สีจริงตามที่องค์กรกำหนด กดแล้วดูแท็บตรวจสีได้เลย",
+             "Brand palettes use the colours the organisation set, check the Colour check tab")));
+      }
       palBox.appendChild(el("button", {
         class: "th-sw", type: "button", "aria-pressed": String(p.colors.join() === state.colors.join()),
         onclick: () => {
-          state.colors = p.colors.slice(); state.bg = p.bg; state.fg = p.fg; derive(state);
+          state.colors = p.colors.slice(); state.bg = p.bg; state.fg = p.fg;
+          /* ชุดของแบรนด์พก good/neutral/bad มาเองจากไฟล์ธีมจริง ชุดของกลางใช้ค่ากลาง */
+          for (const k of ["good", "neutral", "bad"]) if (p[k]) state[k] = p[k];
+          derive(state);
           buildPalettes(); buildBase(); buildData(); render();
           st.ok(tr(`ใช้ชุด ${p.name} แล้ว`, `Using ${p.name}`));
         },
       }, [
         el("span", { class: "th-dots", "aria-hidden": "true" },
           p.colors.map((c) => el("i", { style: `background:${c}` }))),
-        p.name,
+        el("span", { class: "th-swname" }, p.name),
       ]));
     }
   }
@@ -323,7 +440,7 @@ export function mount(tool) {
     for (const [label, w, h] of CANVAS_PRESETS) {
       cvBox.appendChild(el("button", {
         class: "th-sw", type: "button", "aria-pressed": String(state.w === w && state.h === h),
-        onclick: () => { state.w = w; state.h = h; wIn.value = w; hIn.value = h; buildCanvas(); render(); },
+        onclick: () => { wIn.value = w; hIn.value = h; readInputs(); },
       }, label));
     }
   }
@@ -368,16 +485,36 @@ export function mount(tool) {
     state.w = Math.max(320, Math.min(6000, +wIn.value || 1920));
     state.h = Math.max(240, Math.min(6000, +hIn.value || 1080));
     state.font = fontSel.value;
+    wBar.value = String(Math.min(3840, state.w));
+    hBar.value = String(Math.min(3840, state.h));
     buildCanvas(); render();
   }
 
   /* ── วาดผลลัพธ์ ────────────────────────────────────────────────────── */
+  /* ‼️ ไอเดียที่ดีที่สุดของ datatraining.io: ทั้งหน้าเปลี่ยนสีตามธีมที่ผู้ใช้กำลังสร้าง
+     ของเขาเปลี่ยนทั้งแถบหัวและแถบล่างเป็นสีของชุดที่เลือก ทำให้เห็นผลในขนาดที่ใหญ่กว่า
+     กล่องพรีวิวเล็ก ๆ · ของเราใช้ตัวแปร --ac ที่ FileKit มีอยู่แล้วเป็นสีประจำเครื่องมือ
+     จึงเปลี่ยนแค่ตัวเดียวแล้วชิป ปุ่มที่เลือก และเส้นเน้นทั้งหน้าเปลี่ยนตามทันที
+     ‼️ ต้องเลือกสีที่คอนทราสต์พอบนพื้นของ FileKit เอง ไม่ใช่บนพื้นของธีมที่กำลังทำ
+        สีแรกของชุดอาจสว่างจนอ่านไม่ออกบนพื้นขาวของเรา จึงไล่หาตัวแรกที่ผ่าน 3:1 ทั้งสองโหมด */
+  function paintAccent() {
+    const onLight = (c) => contrast(c, "#f6f5f3");
+    const onDark = (c) => contrast(c, "#101216");
+    const ok = state.colors.find((c) => onLight(c) >= 3 && onDark(c) >= 3);
+    ws.wrap.style.setProperty("--ac", ok || state.colors[0] || "var(--brand)");
+  }
+
   function render() {
+    paintAccent();
     const v = tabs.value;
     prevBox.hidden = v !== "prev";
     checkBox.hidden = v !== "check";
     codeBox.hidden = v !== "json";
+    drawCanvasPrev();
     const s = textScale(state.w, state.h), sz = textSizes(state.w, state.h);
+    facts.textContent = tr(
+      `ผืนผ้าใบ ${state.w} x ${state.h}, พื้นที่ ${(state.w * state.h).toLocaleString("th-TH")} px², สี ${state.colors.length} สี`,
+      `Canvas ${state.w} x ${state.h}, area ${(state.w * state.h).toLocaleString("en-US")} px², ${state.colors.length} colours`);
     sizeNote.textContent = tr(
       `ตัวอักษรถูกปรับเป็น ${Math.round(s * 100)}% ของขนาดมาตรฐาน ตัวเลขในการ์ด ${sz.callout}pt ป้าย ${sz.label}pt`,
       `Text scaled to ${Math.round(s * 100)}%, card callout ${sz.callout}pt, labels ${sz.label}pt`);
@@ -392,28 +529,116 @@ export function mount(tool) {
       node --check กับการ import เฉย ๆ ไม่เจอ เพราะบั๊กเกิดตอนรัน mount() เท่านั้น) */
   function json() { return JSON.stringify(buildTheme(state), null, 2); }
 
+  /* รายงานจำลอง ทำด้วย CSS ล้วน ไม่มีไลบรารีกราฟ
+   *
+   * ‼️ ของเดิมมีแค่การ์ด 3 ใบกับแท่ง 7 แท่ง ซึ่งน้อยเกินกว่าจะเห็นผลจริงของชุดสี
+   *    ของ datatraining.io มีแถบข้าง การ์ด KPI ที่มีบรรทัดเทียบ กราฟแท่งแนวนอนพร้อมหมุดเป้าหมาย
+   *    กราฟเส้นมีป้ายตัวเลข และตาราง ทำให้เห็นว่าสีทำงานยังไงในทุกบริบทที่รายงานจริงมี
+   * ‼️ ตัวเลขทุกตัวเป็นข้อมูลสมมติของกลาง ไม่ใช่ข้อมูลงานจริงของใคร
+   * ‼️ ทุกชิ้นใช้สีจาก state ตรง ๆ ไม่มีสีตายตัว เพราะจุดประสงค์คือเห็นผลของธีม
+   */
   function drawPreview(sz) {
-    const { bg, fg, fg2, bg2, colors, font } = state;
+    const { bg, fg, fg2, bg2, line, colors, font, good, bad } = state;
     const px = (pt) => Math.round(pt * 1.333);     // pt เป็น px โดยประมาณ ใช้ในพรีวิวเท่านั้น
-    const card = (label, val) => el("div", { class: "th-card", style: `background:${bg2}` }, [
-      el("b", { style: `color:${fg}; font-size:${Math.round(px(sz.callout) * 0.45)}px; font-family:${font}` }, val),
-      el("span", { style: `color:${fg2}; font-size:${px(sz.label)}px; font-family:${font}` }, label),
+    const F = (size, extra = "") => `font-family:${font}; font-size:${px(size)}px; ${extra}`;
+    const c = (i) => colors[i % colors.length];
+
+    const kpi = (label, val, delta, up) => el("div", { class: "th-card", style: `background:${bg2}; border-color:${line}` }, [
+      el("span", { style: `color:${fg2}; ${F(sz.label)}` }, label),
+      el("b", { style: `color:${fg}; ${F(sz.callout * 0.42, "font-weight:700")}` }, val),
+      el("span", { class: "th-delta", style: `color:${up ? good : bad}; ${F(sz.label)}` },
+        (up ? "\u25B2 " : "\u25BC ") + delta),
     ]);
-    const bars = [62, 88, 45, 74, 96, 58, 81];
+
+    /* กราฟแท่งแนวนอนพร้อมหมุดเป้าหมาย แบบที่รายงานจริงใช้กันมากที่สุด */
+    const barRow = (name, pct, target, i) => el("div", { class: "th-brow" }, [
+      el("span", { class: "th-blab", style: `color:${fg2}; ${F(sz.label)}` }, name),
+      el("span", { class: "th-btrack", style: `background:${mix(line, bg, 0.45)}` }, [
+        el("i", { style: `width:${pct}%; background:${c(i)}` }),
+        el("u", { style: `inset-inline-start:${target}%; background:${fg}` }),
+      ]),
+      el("span", { class: "th-bval", style: `color:${fg}; ${F(sz.label, "font-weight:700")}` }, pct + "%"),
+    ]);
+
+    /* กราฟเส้นมีป้ายตัวเลข วาดด้วย SVG เพราะเส้นเฉียงทำด้วย CSS ไม่ได้ */
+    const pts = [22, 31, 27, 44, 39, 58, 52, 71, 66, 84, 78, 96];
+    const w = 300, h = 78, stepX = w / (pts.length - 1);
+    const path = pts.map((v, i) => `${i ? "L" : "M"}${(i * stepX).toFixed(1)},${(h - (v / 100) * h).toFixed(1)}`).join(" ");
+    /* ‼️ el() ใช้ document.createElement ซึ่งสร้าง SVG ไม่ได้ ต้องใช้ createElementNS
+       ถ้าใช้ el("svg", ...) จะได้ก้อนที่ไม่เรนเดอร์อะไรเลยและไม่มี error ให้เห็น
+       (เจอกับตาตอนดูพรีวิวจริง 12/09/2026 กราฟเส้นหายไปทั้งกล่อง) */
+    const spark = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    spark.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    spark.setAttribute("preserveAspectRatio", "none");
+    spark.setAttribute("aria-hidden", "true");
+    spark.setAttribute("class", "th-spark");
+    spark.innerHTML =
+      `<path d="${path} L${w},${h} L0,${h} Z" fill="${c(0)}" opacity=".14"/>` +
+      `<path d="${path}" fill="none" stroke="${c(0)}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>` +
+      pts.map((v, i) => `<circle cx="${(i * stepX).toFixed(1)}" cy="${(h - (v / 100) * h).toFixed(1)}" r="2.6" fill="${c(0)}"/>`).join("");
+
+    /* ตารางเล็ก ๆ เพื่อให้เห็นสีเส้นกริดกับ data bar ซึ่งมาจาก tableAccent (TH1) */
+    const tblRow = (n, v, pct, i) => el("tr", {}, [
+      el("td", { style: `color:${fg}; border-color:${line}; ${F(sz.label)}` }, n),
+      el("td", { style: `border-color:${line}; ${F(sz.label)}` }, [
+        el("span", { class: "th-dbar" }, [
+          el("i", { style: `width:${pct}%; background:${mix(line, bg, 0)}` }),
+          el("b", { style: `color:${fg}; ${F(sz.label, "font-weight:700")}` }, v),
+        ]),
+      ]),
+    ]);
+
     prevBox.innerHTML = "";
     prevBox.appendChild(el("div", { class: "th-canvas", style: `background:${bg}` }, [
-      el("div", { style: `color:${fg}; font-weight:700; line-height:1.5; font-size:${px(sz.title)}px; font-family:${font}` },
-        tr("ยอดขายรายภาค", "Sales by region")),
-      el("div", { class: "th-cards" }, [
-        card(tr("ยอดรวม", "Total"), "12.4M"),
-        card(tr("เทียบปีก่อน", "vs last year"), "+8.2%"),
-        card(tr("ลูกค้าใหม่", "New customers"), "1,284"),
+      /* หัวรายงาน กับชิปตัวกรอง */
+      el("div", { class: "th-rhead" }, [
+        el("div", { style: `color:${fg}; ${F(sz.title, "font-weight:700")}` }, tr("ยอดขายรายภาค", "Sales by region")),
+        el("div", { class: "th-chips" }, ["2024", "2025", "2026"].map((y, i) =>
+          el("span", { style: `${F(sz.label)}; color:${i === 2 ? bg : fg2}; background:${i === 2 ? c(3) : "transparent"}; border-color:${line}` }, y))),
       ]),
-      el("div", { class: "th-bars" }, bars.map((h, i) =>
-        el("div", { class: "th-bar", style: `height:${h}%; background:${colors[i % colors.length]}` }))),
-      el("div", { class: "th-legend", style: `color:${fg2}; font-size:${px(sz.label)}px; font-family:${font}` },
-        colors.map((c, i) => el("span", {}, [el("i", { style: `background:${c}` }),
-          tr(`ชุดที่ ${i + 1}`, `Series ${i + 1}`)]))),
+      /* การ์ด KPI */
+      el("div", { class: "th-cards" }, [
+        kpi(tr("ยอดรวม", "Total"), "12.4M", "8.2%", true),
+        kpi(tr("จำนวนออร์เดอร์", "Orders"), "5,120", "3.1%", true),
+        kpi(tr("กำไรขั้นต้น", "Gross margin"), "31.4%", "1.8%", false),
+        kpi(tr("ลูกค้าใหม่", "New customers"), "1,284", "12.0%", true),
+      ]),
+      /* สองคอลัมน์ กราฟแท่ง กับ กราฟเส้น */
+      el("div", { class: "th-cols" }, [
+        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
+          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` }, tr("เทียบเป้าหมาย", "Against target")),
+          el("div", { class: "th-bars2" },
+            [[tr("เหนือ", "North"), 78, 70], [tr("กลาง", "Central"), 92, 70], [tr("ใต้", "South"), 54, 70],
+             [tr("ตะวันออก", "East"), 66, 70], [tr("ตะวันตก", "West"), 41, 70]]
+              .map(([n, v, t], i) => barRow(n, v, t, i))),
+        ]),
+        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
+          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` }, tr("แนวโน้มรายเดือน", "Monthly trend")),
+          spark,
+          el("div", { class: "th-axis", style: `color:${fg2}; ${F(sz.label)}` },
+            [tr("ม.ค.", "Jan"), tr("เม.ย.", "Apr"), tr("ก.ค.", "Jul"), tr("ต.ค.", "Oct"), tr("ธ.ค.", "Dec")]
+              .map((m) => el("span", {}, m))),
+        ]),
+      ]),
+      /* ตาราง กับ แท่งของทุกชุดข้อมูล */
+      el("div", { class: "th-cols" }, [
+        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
+          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` }, tr("สินค้าขายดี", "Top products")),
+          el("table", { class: "th-ptbl" }, [el("tbody", {},
+            [[tr("สินค้า ก", "Product A"), "4,820", 100], [tr("สินค้า ข", "Product B"), "3,140", 65],
+             [tr("สินค้า ค", "Product C"), "2,010", 42], [tr("สินค้า ง", "Product D"), "980", 20]]
+              .map(([n, v, pct], i) => tblRow(n, v, pct, i)))]),
+        ]),
+        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
+          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` },
+            tr(`ชุดข้อมูลทั้ง ${colors.length} สี`, `All ${colors.length} series`)),
+          el("div", { class: "th-bars" }, colors.map((col, i) =>
+            el("div", { class: "th-bar", style: `height:${[62, 88, 45, 74, 96, 58, 81, 69][i % 8]}%; background:${col}` }))),
+          el("div", { class: "th-legend", style: `color:${fg2}; ${F(sz.label)}` },
+            colors.map((col, i) => el("span", {}, [el("i", { style: `background:${col}` }),
+              tr(`ชุดที่ ${i + 1}`, `Series ${i + 1}`)]))),
+        ]),
+      ]),
     ]));
   }
 
@@ -510,6 +735,19 @@ export function mount(tool) {
   async function onCopy() {
     try { await navigator.clipboard.writeText(json()); st.ok(tr("คัดลอกแล้ว", "Copied")); }
     catch { st.err(tr("คัดลอกไม่สำเร็จ กดดาวน์โหลดแทนได้", "Could not copy, download instead")); }
+  }
+
+  function onReset() {
+    const p = PALETTES()[0];
+    Object.assign(state, { name: "FileKit Theme", w: 1920, h: 1080, font: "Segoe UI",
+      colors: p.colors.slice(), bg: p.bg, fg: p.fg,
+      good: "#1F8A50", neutral: "#6C7A8D", bad: "#C4321F" });
+    derive(state);
+    nameIn.value = state.name; wIn.value = state.w; hIn.value = state.h; fontSel.value = state.font;
+    wBar.value = String(state.w); hBar.value = String(state.h);
+    tabs.value = "prev";
+    buildPalettes(); buildCanvas(); buildBase(); buildData(); render();
+    st.ok(tr("กลับไปค่าตั้งต้นแล้ว", "Back to the starting values"));
   }
 
   function onDownload() {

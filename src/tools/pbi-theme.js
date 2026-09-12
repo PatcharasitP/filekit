@@ -39,7 +39,7 @@ const CVD_NAME = {
   tritanopia: () => tr("ตาบอดสีน้ำเงิน (tritanopia)", "Blue blind (tritanopia)"),
 };
 const cvdName = (t) => (CVD_NAME[t] ? CVD_NAME[t]() : t);
-import { tr, pl } from "../i18n.js";
+import { tr, pl, IS_EN } from "../i18n.js";
 
 /* ขนาดตัวอักษรฐานที่ผืนผ้าใบ 1920x1080 เป็นค่าที่ Power BI ใช้เป็นค่าตั้งต้นอยู่แล้ว
    ประกาศแค่ 4 คลาสหลักตาม TH1 อีก 10 คลาสสืบทอดจากสี่ตัวนี้เอง ไม่ต้องเขียนซ้ำ */
@@ -113,39 +113,95 @@ const STYLE = `
   border-radius:var(--r-sm); background:var(--bg-soft); padding:10px 12px; font-size:12.5px;
   line-height:1.7; color:var(--text); margin-bottom:10px}
 .th-warn.th-ok{border-inline-start-color:var(--g-data)}
-/* พรีวิวรายงานจำลอง ทำด้วย CSS ล้วน ไม่มีไลบรารีกราฟ */
-.th-prev{border:1px solid var(--line); border-radius:var(--r-sm); overflow:hidden}
-.th-canvas{padding:16px; display:flex; flex-direction:column; gap:12px}
+/* ── พรีวิวรายงาน ── ถอดผังมาจาก Color Preview ของ datatraining.io
+   ‼️ เต็มความกว้างของแผง ไม่อยู่ในคอลัมน์กลางอีกแล้ว การ์ดจึงมีที่พอไม่ตัดคำ */
+.th-prevwrap{margin-top:var(--sp4)}
+.th-prevhead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+.th-prevhead h2{margin:0; font-size:15px; font-weight:800; line-height:1.5; color:var(--text)}
+.th-prevhead span{font-size:12px; line-height:1.7; color:var(--text-mute)}
+.th-prev{border:1px solid var(--line); border-radius:var(--r); overflow:hidden;
+  box-shadow:0 10px 28px -18px rgba(0,0,0,.45)}
+.th-report{display:flex; min-height:300px}
+/* แถบข้างไล่สี มีจุดไอคอนจาง ๆ แบบของเขา */
+.th-side{flex:0 0 34px; display:flex; flex-direction:column; align-items:center; gap:16px; padding-top:18px}
+.th-side i{width:13px; height:13px; border-radius:3px; background:rgba(255,255,255,.42)}
+.th-canvas{flex:1; min-width:0; padding:16px 18px 18px; display:flex; flex-direction:column; gap:12px}
 .th-rhead{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
-.th-chips{display:flex; gap:5px; margin-inline-start:auto}
-.th-chips span{padding:2px 9px; border-radius:999px; border:1px solid; line-height:1.6}
-.th-delta{display:block; line-height:1.6}
-.th-cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(208px,1fr)); gap:10px}
-.th-vis{border:1px solid; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; min-width:0}
-.th-bars2{display:flex; flex-direction:column; gap:6px}
-.th-brow{display:flex; align-items:center; gap:8px}
-.th-blab{flex:0 0 62px; line-height:1.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.th-btrack{position:relative; flex:1; height:13px; border-radius:3px; overflow:hidden; min-width:0}
-.th-btrack i{position:absolute; inset-block:0; inset-inline-start:0; border-radius:3px}
-.th-btrack u{position:absolute; inset-block:-1px; width:2px; text-decoration:none}
-.th-bval{flex:0 0 34px; text-align:end; line-height:1.6}
-.th-spark{width:100%; height:78px; display:block}
+.th-chips{display:flex; gap:6px; margin-inline-start:auto}
+.th-chips span{padding:3px 11px; border-radius:5px; border:1px solid; line-height:1.6}
+/* ผังหลัก: การ์ด 4 ใบ + ผังแยกส่วนขวา, สองกราฟกลาง, กราฟเส้นกว้าง + แท่งแนวตั้ง */
+.th-grid{display:grid; gap:10px; grid-template-columns:repeat(4,1fr) 1.25fr}
+.th-cards{grid-column:span 4; display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+.th-vis{grid-column:span 2; border:1px solid; border-radius:8px; padding:11px 13px;
+  display:flex; flex-direction:column; gap:9px; min-width:0}
+/* ‼️ สองกฎนี้ต้องอยู่ **หลัง** .th-vis เพราะความจำเพาะเท่ากัน ตัวที่เขียนทีหลังชนะ
+   เขียนไว้ก่อนแล้ว grid-column:span 2 ของ .th-vis ทับทิ้ง ผังเลยเพี้ยนทั้งหน้า */
+.th-tall{grid-column:5; grid-row:1 / span 2}
+.th-wide{grid-column:span 3}
+/* ‼️ ขยายช่องไฟกับตัวพิมพ์ใหญ่ ใช้ได้กับอังกฤษเท่านั้น
+   ภาษาไทยไม่มีตัวพิมพ์ใหญ่ และการขยายช่องไฟทำให้สระกับวรรณยุกต์ดูลอยออกจากตัว */
+.th-vt{line-height:1.5}
+.th-en .th-vt{letter-spacing:.04em; text-transform:uppercase}
+@media (max-width:900px){
+  .th-grid{grid-template-columns:repeat(2,1fr)}
+  .th-cards{grid-column:span 2; grid-template-columns:repeat(2,1fr)}
+  .th-tall,.th-wide,.th-vis{grid-column:span 2; grid-row:auto}
+}
+/* การ์ด KPI: ชื่อ ตัวเลข แล้วสองบรรทัดเทียบ */
+.th-card{border-radius:8px; padding:11px 13px; border:1px solid; min-width:0;
+  display:flex; flex-direction:column; gap:3px}
+.th-ct{line-height:1.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.th-card b{line-height:1.25; letter-spacing:-.01em}
+.th-cd{margin-top:5px; display:flex; flex-direction:column; gap:2px}
+.th-cdrow{display:flex; align-items:center; gap:6px; line-height:1.6}
+.th-cdrow i{font-style:normal; flex:none}
+.th-cdrow u{margin-inline-start:auto; text-decoration:none}
+.th-cdrow s{text-decoration:none; font-size:7px; line-height:1}
+/* แท่งแนวนอนพร้อมป้ายเงินในแท่ง */
+.th-bb{display:flex; flex-direction:column; gap:3px}
+.th-bbh{position:relative; display:flex; align-items:center; gap:7px; line-height:1.6}
+.th-range{position:absolute; top:50%; width:34px; height:1px}
+.th-range i{display:block; height:1px; width:100%; position:relative}
+.th-range i::before,.th-range i::after{content:""; position:absolute; top:-3px; width:1px; height:7px; background:inherit}
+.th-range i::before{inset-inline-start:0} .th-range i::after{inset-inline-end:0}
+.th-bbt{position:relative; height:15px; border-radius:3px; overflow:hidden}
+.th-bbt i{position:absolute; inset-block:0; inset-inline-start:0; border-radius:3px}
+.th-bbt b{position:absolute; top:50%; transform:translateY(-50%); line-height:1; white-space:nowrap}
+/* แท่งเทียบเป้าหมาย */
+.th-tg{display:flex; align-items:center; gap:8px}
+.th-tg>span:first-child{flex:0 0 66px; line-height:1.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.th-tgt{position:relative; flex:1; height:11px; border-radius:2px; overflow:hidden; min-width:0}
+.th-tgt i{position:absolute; inset-block:0; inset-inline-start:0; border-radius:2px}
+.th-tgt u{position:absolute; inset-block:-2px; width:0; border-inline-start:1px dashed; text-decoration:none}
+.th-tg>b{flex:0 0 34px; text-align:end; line-height:1.6}
+/* ผังแยกส่วน */
+.th-tree{display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:center}
+.th-col{display:flex; flex-direction:column; gap:9px; min-width:0}
+/* เส้นเชื่อมบาง ๆ ระหว่างชั้น ให้อ่านออกว่าชั้นขวาแตกมาจากชั้นซ้าย */
+.th-tree>.th-col:last-child{position:relative; padding-inline-start:10px}
+.th-tree>.th-col:last-child::before{content:""; position:absolute; inset-block:12%; inset-inline-start:0;
+  width:1px; background:var(--tl)}
+.th-nd{display:flex; flex-direction:column; gap:1px; min-width:0}
+.th-nd i{height:5px; border-radius:2px; margin-bottom:3px}
+.th-nd span,.th-nd em{line-height:1.5; font-style:normal; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+/* กราฟพื้นที่ */
+.th-area{width:100%; height:auto; display:block}
 .th-axis{display:flex; justify-content:space-between; line-height:1.6}
-.th-ptbl{width:100%; border-collapse:collapse}
-.th-ptbl td{border-bottom:1px solid; padding:4px 2px; line-height:1.7}
-.th-ptbl td:last-child{width:58%}
-.th-dbar{position:relative; display:flex; align-items:center; gap:6px}
-.th-dbar i{height:12px; border-radius:2px; opacity:.8; flex:none}
-
-.th-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(98px,1fr)); gap:10px}
-.th-card{border-radius:8px; padding:10px 12px; border:1px solid rgba(128,128,128,.22)}
-.th-card b{display:block; line-height:1.35}
-.th-card span{display:block; line-height:1.6; opacity:.8}
-.th-bars{display:flex; align-items:flex-end; gap:10px; height:112px; padding-top:6px}
-.th-bar{flex:1; border-radius:3px 3px 0 0; min-width:10px}
-.th-legend{display:flex; flex-wrap:wrap; gap:10px}
+/* แท่งแนวตั้งพร้อมแกนค่า */
+.th-cc{display:flex; gap:8px; align-items:stretch; min-height:118px}
+.th-ccb{flex:1; display:flex; align-items:flex-end; gap:7px; min-width:0}
+.th-ccol{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; height:100%;
+  justify-content:flex-end; min-width:0}
+.th-ccol em{font-style:normal; line-height:1.4; white-space:nowrap}
+.th-ccol i{width:100%; max-width:26px; border-radius:2px 2px 0 0}
+/* ‼️ line-height 1.4 กับ overflow:hidden ตัดหางตัวอักษรที่ยื่นลงล่าง (y, g, p) ทิ้ง
+   เห็นเป็น "Stationerv" แทน "Stationery" ต้องเผื่อความสูงให้หาง */
+.th-ccol span{line-height:1.7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%}
+.th-ccy{flex:0 0 30px; display:flex; flex-direction:column; justify-content:space-between;
+  border-inline-start:1px solid; padding-inline-start:5px; line-height:1.4; text-align:end}
+.th-legend{display:flex; flex-wrap:wrap; gap:10px; padding-top:2px}
 .th-legend span{display:inline-flex; align-items:center; gap:5px; line-height:1.7}
-.th-legend i{width:10px; height:10px; border-radius:2px; flex:none}
+.th-legend i{width:9px; height:9px; border-radius:2px; flex:none}
 .th-cvd{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:10px; margin-top:10px}
 .th-cvdbox{border:1px solid var(--line); border-radius:var(--r-sm); padding:9px 10px}
 .th-cvdbox b{display:block; font-size:11.5px; margin-bottom:6px; line-height:1.6; color:var(--text-dim)}
@@ -245,6 +301,9 @@ export function buildTheme(o) {
     textClasses,
   };
 }
+
+/** บีบค่าให้อยู่ในช่วงที่กำหนด ใช้กันตัวอักษรในพรีวิวล้นการ์ด */
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
 /** ผสมสองสีตามสัดส่วน ใช้ปั้นสีรองกับสีเส้นจากสีหลักที่ผู้ใช้เลือก */
 export function mix(a, b, ratio) {
@@ -363,17 +422,30 @@ export function mount(tool) {
      ทำให้คนเข้าใจว่าทำไมตัวอักษรถึงเปลี่ยน ไม่ใช่เดาว่าเครื่องมือทำอะไรอยู่ */
   const facts = el("div", { class: "th-facts" });
 
+  /* ‼️ พรีวิวรายงานถูกย้ายออกจากแท็บตรงกลาง ไปเป็นแถบเต็มความกว้างใต้แผงทั้งสาม
+     ที่มา: พี่ปอนด์เทียบกับ datatraining.io แล้วบอกว่าพรีวิวของเขาสวยและมืออาชีพกว่า
+     วัดแล้วเจอต้นเหตุจริง คอลัมน์กลางของเรากว้าง 494px การ์ด KPI จึงเหลือใบละ 108px
+     ชื่อ "จำนวนออร์เดอร์" เลยตัดคำกลางคำเป็น "จำนวนออร์เด" ขึ้นบรรทัดใหม่ "อร์"
+     ของเขาวาง Color Preview เป็น section เต็มความกว้างแยกจากแผงตั้งค่า การ์ดจึงมีที่พอ
+     ย้ายมาแล้วได้ความกว้าง ~1060px การ์ดใบละ ~250px เท่าของเขา */
   const tabs = segmented([
-    ["prev", tr("พรีวิวรายงาน", "Report preview")],
     ["check", tr("ตรวจสี", "Colour check")],
     ["json", tr("ไฟล์ธีม", "Theme file")],
-  ], "prev");
+  ], "check");
   tabs.classList.add("th-tabs");
-  const prevBox = el("div", { class: "th-prev" });
   const checkBox = el("div", {});
   const codeEl = el("code", {});
   const codeBox = el("pre", { class: "th-code" }, [codeEl]);
-  const center = el("div", {}, [tabs, prevBox, checkBox, codeBox]);
+  const center = el("div", {}, [tabs, checkBox, codeBox]);
+
+  const prevBox = el("div", { class: "th-prev" });
+  const prevSection = el("section", { class: "th-prevwrap" }, [
+    el("div", { class: "th-prevhead" }, [
+      el("h2", {}, tr("พรีวิวรายงาน", "Report preview")),
+      el("span", {}, tr("รายงานสมมติที่ทาสีตามธีมที่กำลังสร้าง", "A mock report painted with the theme you are building")),
+    ]),
+    prevBox,
+  ]);
 
   const ws = workspace(tool, {
     left: { title: tr("เริ่มจาก", "Start from"), node: left },
@@ -396,6 +468,7 @@ export function mount(tool) {
     ),
   });
   ws.wrap.prepend(el("style", { text: STYLE }));
+  ws.body.insertBefore(prevSection, ws.body.querySelector(".ws-footer"));
   ws.showCanvas(true);
 
   buildPalettes(); buildCanvas(); buildBase(); buildData(); drawCanvasPrev();
@@ -507,7 +580,6 @@ export function mount(tool) {
   function render() {
     paintAccent();
     const v = tabs.value;
-    prevBox.hidden = v !== "prev";
     checkBox.hidden = v !== "check";
     codeBox.hidden = v !== "json";
     drawCanvasPrev();
@@ -518,8 +590,8 @@ export function mount(tool) {
     sizeNote.textContent = tr(
       `ตัวอักษรถูกปรับเป็น ${Math.round(s * 100)}% ของขนาดมาตรฐาน ตัวเลขในการ์ด ${sz.callout}pt ป้าย ${sz.label}pt`,
       `Text scaled to ${Math.round(s * 100)}%, card callout ${sz.callout}pt, labels ${sz.label}pt`);
-    if (v === "prev") drawPreview(sz);
-    else if (v === "check") drawCheck();
+    drawPreview(sz);                       // อยู่นอกแท็บแล้ว วาดทุกครั้ง
+    if (v === "check") drawCheck();
     else codeEl.innerHTML = paintCode(json(), "json");
   }
 
@@ -529,115 +601,158 @@ export function mount(tool) {
       node --check กับการ import เฉย ๆ ไม่เจอ เพราะบั๊กเกิดตอนรัน mount() เท่านั้น) */
   function json() { return JSON.stringify(buildTheme(state), null, 2); }
 
-  /* รายงานจำลอง ทำด้วย CSS ล้วน ไม่มีไลบรารีกราฟ
+  /* รายงานจำลอง ทำด้วย CSS กับ SVG ล้วน ไม่มีไลบรารีกราฟ
    *
-   * ‼️ ของเดิมมีแค่การ์ด 3 ใบกับแท่ง 7 แท่ง ซึ่งน้อยเกินกว่าจะเห็นผลจริงของชุดสี
-   *    ของ datatraining.io มีแถบข้าง การ์ด KPI ที่มีบรรทัดเทียบ กราฟแท่งแนวนอนพร้อมหมุดเป้าหมาย
-   *    กราฟเส้นมีป้ายตัวเลข และตาราง ทำให้เห็นว่าสีทำงานยังไงในทุกบริบทที่รายงานจริงมี
+   * ‼️ ผังนี้ถอดมาจาก Color Preview ของ datatraining.io ตามที่พี่ปอนด์สั่ง
+   *    (เปิดของจริงดูแล้ว 13/09/2026) ของเขามี แถบข้างไล่สี, หัวรายงานตัวพิมพ์ใหญ่,
+   *    การ์ด KPI ที่มีสองบรรทัดเทียบ, แท่งแนวนอนมีป้ายเงินในแท่ง, แท่งเทียบเป้าหมาย,
+   *    ผังแยกส่วน, กราฟพื้นที่มีป้ายทุกจุด และกราฟแท่งแนวตั้งมีแกนค่า
+   *
+   * ‼️ ขนาดตัวอักษรในพรีวิว **ไม่ใช่** ขนาดจริงหน่วย pt ของธีม
+   *    เพราะนี่คือรายงานย่อส่วน ถ้าเรนเดอร์ตาม pt จริง ตัวเลขจะล้นการ์ด
+   *    (ของเดิมทำแบบนั้นแล้วคำว่า "จำนวนออร์เดอร์" ตัดกลางคำ พี่ปอนด์ทักมา)
+   *    แต่ยังคง **สัดส่วนระหว่างคลาส** ไว้ครบ ถ้าธีมตั้ง callout ใหญ่ขึ้น
+   *    ตัวเลขในพรีวิวก็ใหญ่ขึ้นตามสัดส่วนเดิม ขนาดจริงหน่วย pt บอกไว้ใต้ช่องขนาดผืนผ้าใบแล้ว
    * ‼️ ตัวเลขทุกตัวเป็นข้อมูลสมมติของกลาง ไม่ใช่ข้อมูลงานจริงของใคร
-   * ‼️ ทุกชิ้นใช้สีจาก state ตรง ๆ ไม่มีสีตายตัว เพราะจุดประสงค์คือเห็นผลของธีม
    */
   function drawPreview(sz) {
     const { bg, fg, fg2, bg2, line, colors, font, good, bad } = state;
-    const px = (pt) => Math.round(pt * 1.333);     // pt เป็น px โดยประมาณ ใช้ในพรีวิวเท่านั้น
-    const F = (size, extra = "") => `font-family:${font}; font-size:${px(size)}px; ${extra}`;
+    /* สัดส่วนอิงค่าตั้งต้นของ Power BI (callout 45, title 12, header 12, label 10)
+       แล้วคูณกับขนาดฐานของพรีวิวซึ่งเลือกให้พอดีกับความกว้าง ~1060px */
+    const S = {
+      callout: clamp(26 * (sz.callout / 45), 15, 40),
+      title: clamp(15 * (sz.title / 12), 11, 22),
+      header: clamp(11 * (sz.header / 12), 9, 16),
+      label: clamp(10.5 * (sz.label / 10), 8.5, 15),
+    };
+    const F = (k, extra = "") => `font-family:${font}; font-size:${S[k].toFixed(1)}px; ${extra}`;
     const c = (i) => colors[i % colors.length];
-
-    const kpi = (label, val, delta, up) => el("div", { class: "th-card", style: `background:${bg2}; border-color:${line}` }, [
-      el("span", { style: `color:${fg2}; ${F(sz.label)}` }, label),
-      el("b", { style: `color:${fg}; ${F(sz.callout * 0.42, "font-weight:700")}` }, val),
-      el("span", { class: "th-delta", style: `color:${up ? good : bad}; ${F(sz.label)}` },
-        (up ? "\u25B2 " : "\u25BC ") + delta),
+    const soft = (hex, amt) => mix(hex, bg, amt);
+    const panel = (title, kids, cls = "") => el("div", { class: "th-vis " + cls,
+      style: `background:${bg2}; border-color:${line}` }, [
+      el("div", { class: "th-vt", style: `color:${soft(fg, .18)}; ${F("header", "font-weight:700")}` }, title),
+      ...kids,
     ]);
 
-    /* กราฟแท่งแนวนอนพร้อมหมุดเป้าหมาย แบบที่รายงานจริงใช้กันมากที่สุด */
-    const barRow = (name, pct, target, i) => el("div", { class: "th-brow" }, [
-      el("span", { class: "th-blab", style: `color:${fg2}; ${F(sz.label)}` }, name),
-      el("span", { class: "th-btrack", style: `background:${mix(line, bg, 0.45)}` }, [
-        el("i", { style: `width:${pct}%; background:${c(i)}` }),
-        el("u", { style: `inset-inline-start:${target}%; background:${fg}` }),
-      ]),
-      el("span", { class: "th-bval", style: `color:${fg}; ${F(sz.label, "font-weight:700")}` }, pct + "%"),
+    /* ── การ์ด KPI: ชื่อบน ตัวเลขกลาง แล้วสองบรรทัดเทียบแบบของเขา ─────── */
+    const kpi = (label, val, rows) => el("div", { class: "th-card", style: `background:${bg2}; border-color:${line}` }, [
+      el("span", { class: "th-ct", style: `color:${fg2}; ${F("label")}` }, label),
+      el("b", { style: `color:${fg}; ${F("callout", "font-weight:600")}` }, val),
+      el("div", { class: "th-cd" }, rows.map(([k, v, up]) => el("div", { class: "th-cdrow" }, [
+        el("i", { style: `color:${fg2}; ${F("label")}` }, k),
+        el("u", { style: `color:${up ? good : bad}; ${F("label", "font-weight:700")}` }, v),
+        el("s", { style: `color:${up ? good : bad}` }, up ? "▲" : "▼"),
+      ]))),
     ]);
 
-    /* กราฟเส้นมีป้ายตัวเลข วาดด้วย SVG เพราะเส้นเฉียงทำด้วย CSS ไม่ได้ */
-    const pts = [22, 31, 27, 44, 39, 58, 52, 71, 66, 84, 78, 96];
-    const w = 300, h = 78, stepX = w / (pts.length - 1);
-    const path = pts.map((v, i) => `${i ? "L" : "M"}${(i * stepX).toFixed(1)},${(h - (v / 100) * h).toFixed(1)}`).join(" ");
-    /* ‼️ el() ใช้ document.createElement ซึ่งสร้าง SVG ไม่ได้ ต้องใช้ createElementNS
-       ถ้าใช้ el("svg", ...) จะได้ก้อนที่ไม่เรนเดอร์อะไรเลยและไม่มี error ให้เห็น
-       (เจอกับตาตอนดูพรีวิวจริง 12/09/2026 กราฟเส้นหายไปทั้งกล่อง) */
-    const spark = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    spark.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    spark.setAttribute("preserveAspectRatio", "none");
-    spark.setAttribute("aria-hidden", "true");
-    spark.setAttribute("class", "th-spark");
-    spark.innerHTML =
-      `<path d="${path} L${w},${h} L0,${h} Z" fill="${c(0)}" opacity=".14"/>` +
-      `<path d="${path}" fill="none" stroke="${c(0)}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>` +
-      pts.map((v, i) => `<circle cx="${(i * stepX).toFixed(1)}" cy="${(h - (v / 100) * h).toFixed(1)}" r="2.6" fill="${c(0)}"/>`).join("");
-
-    /* ตารางเล็ก ๆ เพื่อให้เห็นสีเส้นกริดกับ data bar ซึ่งมาจาก tableAccent (TH1) */
-    const tblRow = (n, v, pct, i) => el("tr", {}, [
-      el("td", { style: `color:${fg}; border-color:${line}; ${F(sz.label)}` }, n),
-      el("td", { style: `border-color:${line}; ${F(sz.label)}` }, [
-        el("span", { class: "th-dbar" }, [
-          el("i", { style: `width:${pct}%; background:${mix(line, bg, 0)}` }),
-          el("b", { style: `color:${fg}; ${F(sz.label, "font-weight:700")}` }, v),
+    /* ── แท่งแนวนอนพร้อมป้ายเงินในแท่ง และเส้นบอกช่วงด้านบน ─────────── */
+    const bigBar = (name, delta, pct, money, i) => el("div", { class: "th-bb" }, [
+      el("div", { class: "th-bbh" }, [
+        el("span", { style: `color:${fg}; ${F("label", "font-weight:600")}` }, name),
+        el("span", { style: `color:${good}; ${F("label")}` }, delta),
+        el("span", { class: "th-range", style: `inset-inline-start:${Math.min(92, pct + 6)}%` }, [
+          el("i", { style: `background:${soft(fg, .55)}` }),
         ]),
       ]),
+      el("div", { class: "th-bbt", style: `background:${soft(line, .3)}` }, [
+        el("i", { style: `width:${pct}%; background:${c(i)}` }),
+        el("b", { style: `inset-inline-end:calc(${100 - pct}% + 6px); color:${bg}; ${F("label", "font-weight:700")}` }, money),
+      ]),
+    ]);
+
+    /* ── แท่งเทียบเป้าหมาย มีเส้นประเป้าและ % ด้านขวา ────────────────── */
+    const tgt = (name, pct, i) => el("div", { class: "th-tg" }, [
+      el("span", { style: `color:${fg2}; ${F("label")}` }, name),
+      el("span", { class: "th-tgt", style: `background:${soft(line, .3)}` }, [
+        el("i", { style: `width:${pct}%; background:${c(i)}` }),
+        el("u", { style: `inset-inline-start:82%; border-color:${soft(fg, .5)}` }),
+      ]),
+      el("b", { style: `color:${fg}; ${F("label", "font-weight:700")}` }, pct + "%"),
+    ]);
+
+    /* ── ผังแยกส่วน สองชั้น มีเส้นเชื่อม ───────────────────────────── */
+    const node = (name, val, w) => el("div", { class: "th-nd" }, [
+      el("i", { style: `width:${w}%; background:${c(2)}` }),
+      el("span", { style: `color:${fg}; ${F("label", "font-weight:600")}` }, name),
+      el("em", { style: `color:${fg2}; ${F("label")}` }, val),
+    ]);
+
+    /* ── กราฟพื้นที่ มีจุดและป้ายตัวเลขทุกเดือน ───────────────────── */
+    const pts = [19, 24, 52, 40, 58, 41, 39, 32, 76, 61, 81, 98];
+    const W = 560, H = 96, PX = 16, PY = 16;
+    const mx = Math.max(...pts), sx = (W - PX * 2) / (pts.length - 1);
+    const xy = pts.map((v, i) => [PX + i * sx, PY + (H - PY * 2) * (1 - v / mx)]);
+    const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const area = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    area.setAttribute("viewBox", `0 0 ${W} ${H + 14}`);
+    area.setAttribute("class", "th-area");
+    area.setAttribute("aria-hidden", "true");
+    area.innerHTML =
+      `<path d="${d} L${xy[xy.length - 1][0]},${H} L${xy[0][0]},${H} Z" fill="${c(0)}" opacity=".13"/>` +
+      `<path d="${d}" fill="none" stroke="${c(0)}" stroke-width="1.6" stroke-linejoin="round"/>` +
+      xy.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2" fill="${c(0)}"/>`).join("") +
+      xy.map(([x, y], i) => `<text x="${x.toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle" ` +
+        `font-family="${font}" font-size="7.6" fill="${fg2}">${(pts[i] * 1.2).toFixed(0)}K</text>`).join("");
+
+    /* ── แท่งแนวตั้งมีป้ายบนแท่งและแกนค่าด้านขวา ───────────────────── */
+    const cols = [[tr("เครื่องเขียน", "Stationery"), 96], [tr("ไฟฟ้า", "Electronics"), 82],
+                  [tr("ของใช้บ้าน", "Home"), 48], [tr("เสื้อผ้า", "Apparel"), 26], [tr("อื่น ๆ", "Others"), 16]];
+    const colChart = el("div", { class: "th-cc" }, [
+      el("div", { class: "th-ccb" }, cols.map(([n, v], i) => el("div", { class: "th-ccol" }, [
+        el("em", { style: `color:${fg2}; ${F("label")}` }, (v * 17).toLocaleString()),
+        el("i", { style: `height:${v}%; background:${c(3)}` }),
+        el("span", { style: `color:${fg2}; ${F("label")}` }, n),
+      ]))),
+      el("div", { class: "th-ccy", style: `color:${fg2}; ${F("label")}; border-color:${soft(line, .3)}` },
+        ["$60K", "$40K", "$20K", "$0K"].map((t) => el("span", {}, t))),
     ]);
 
     prevBox.innerHTML = "";
-    prevBox.appendChild(el("div", { class: "th-canvas", style: `background:${bg}` }, [
-      /* หัวรายงาน กับชิปตัวกรอง */
-      el("div", { class: "th-rhead" }, [
-        el("div", { style: `color:${fg}; ${F(sz.title, "font-weight:700")}` }, tr("ยอดขายรายภาค", "Sales by region")),
-        el("div", { class: "th-chips" }, ["2024", "2025", "2026"].map((y, i) =>
-          el("span", { style: `${F(sz.label)}; color:${i === 2 ? bg : fg2}; background:${i === 2 ? c(3) : "transparent"}; border-color:${line}` }, y))),
-      ]),
-      /* การ์ด KPI */
-      el("div", { class: "th-cards" }, [
-        kpi(tr("ยอดรวม", "Total"), "12.4M", "8.2%", true),
-        kpi(tr("จำนวนออร์เดอร์", "Orders"), "5,120", "3.1%", true),
-        kpi(tr("กำไรขั้นต้น", "Gross margin"), "31.4%", "1.8%", false),
-        kpi(tr("ลูกค้าใหม่", "New customers"), "1,284", "12.0%", true),
-      ]),
-      /* สองคอลัมน์ กราฟแท่ง กับ กราฟเส้น */
-      el("div", { class: "th-cols" }, [
-        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
-          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` }, tr("เทียบเป้าหมาย", "Against target")),
-          el("div", { class: "th-bars2" },
-            [[tr("เหนือ", "North"), 78, 70], [tr("กลาง", "Central"), 92, 70], [tr("ใต้", "South"), 54, 70],
-             [tr("ตะวันออก", "East"), 66, 70], [tr("ตะวันตก", "West"), 41, 70]]
-              .map(([n, v, t], i) => barRow(n, v, t, i))),
+    prevBox.appendChild(el("div", { class: "th-report" + (IS_EN ? " th-en" : ""), style: `background:${bg}` }, [
+      /* แถบข้างไล่สี แบบเดียวกับของเขา */
+      el("div", { class: "th-side", style: `background:linear-gradient(${c(3)}, ${c(2)})` },
+        [0, 1, 2].map(() => el("i", {}))),
+      el("div", { class: "th-canvas" }, [
+        el("div", { class: "th-rhead" }, [
+          el("div", { style: `color:${fg}; ${F("title", "font-weight:700" + (IS_EN ? "; letter-spacing:.06em" : ""))}` },
+            tr("วิเคราะห์ยอดขาย", "SALES ANALYSIS")),
+          el("div", { class: "th-chips" }, ["2024", "2025", "2026"].map((y, i) =>
+            el("span", { style: `${F("label")}; color:${i === 2 ? fg : soft(fg, .45)}; border-color:${i === 2 ? fg : line}` }, y))),
         ]),
-        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
-          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` }, tr("แนวโน้มรายเดือน", "Monthly trend")),
-          spark,
-          el("div", { class: "th-axis", style: `color:${fg2}; ${F(sz.label)}` },
-            [tr("ม.ค.", "Jan"), tr("เม.ย.", "Apr"), tr("ก.ค.", "Jul"), tr("ต.ค.", "Oct"), tr("ธ.ค.", "Dec")]
-              .map((m) => el("span", {}, m))),
+        el("div", { class: "th-grid" }, [
+          el("div", { class: "th-cards" }, [
+            kpi(tr("ยอดขาย", "Sales"), "620K", [["ΔB", "-16.0%", false], ["ΔFC", "-1.0%", false]]),
+            kpi(tr("จำนวนชิ้น", "Quantity"), "11K", [["ΔB", "+13.6%", true], ["ΔFC", "+20.5%", true]]),
+            kpi(tr("อัตรากำไร", "Profit margin"), "13.7%", [["ΔB", "+25.0%", true], ["ΔFC", "+22.0%", true]]),
+            kpi(tr("ส่วนลดเฉลี่ย", "Avg discount"), "15.0%", [["ΔB", "-17.1%", false], ["ΔFC", "-17.4%", false]]),
+          ]),
+          panel(tr("ผังแยกตามหมวด", "Breakdown by category"), [
+            el("div", { class: "th-tree", style: `--tl:${soft(line, .1)}` }, [
+              el("div", { class: "th-col" }, [node(tr("รวมทั้งหมด", "Total"), "11,052", 100)]),
+              el("div", { class: "th-col" }, [node(tr("เครื่องเขียน", "Stationery"), "7,117", 92),
+                                              node(tr("เฟอร์นิเจอร์", "Furniture"), "2,234", 34),
+                                              node(tr("เทคโนโลยี", "Technology"), "1,701", 24)]),
+            ]),
+          ], "th-tall"),
+          panel(tr("ยอดขาย เทียบปีก่อน", "Sales, vs last year"),
+            [[tr("ภาคกลาง", "Central"), "+43.6%", 62, "150,983"], [tr("ภาคตะวันออก", "East"), "+16.0%", 82, "184,332"],
+             [tr("ภาคใต้", "South"), "+29.8%", 38, "95,405"], [tr("ภาคตะวันตก", "West"), "+32.5%", 74, "189,589"]]
+              .map(([n, dl, pc, m], i) => bigBar(n, dl, pc, m, i))),
+          panel(tr("เทียบเป้าหมายรายทีม", "Against target, by team"),
+            [[tr("ทีมอัลฟา", "Alfa"), 51], [tr("ทีมบราโว", "Bravo"), 45], [tr("ทีมชาร์ลี", "Charlie"), 27],
+             [tr("ทีมเดลตา", "Delta"), 39], [tr("ทีมอิคโค", "Echo"), 90]].map(([n, v], i) => tgt(n, v, i))),
+          panel(tr("ยอดขายรายเดือน", "Sales over time"), [
+            area,
+            el("div", { class: "th-axis", style: `color:${fg2}; ${F("label")}` },
+              [tr("ม.ค.", "Jan"), tr("มี.ค.", "Mar"), tr("พ.ค.", "May"), tr("ก.ค.", "Jul"),
+               tr("ก.ย.", "Sep"), tr("พ.ย.", "Nov")].map((m) => el("span", {}, m))),
+          ], "th-wide"),
+          panel(tr("จำนวนที่ขายได้", "Quantity sold"), [colChart]),
         ]),
-      ]),
-      /* ตาราง กับ แท่งของทุกชุดข้อมูล */
-      el("div", { class: "th-cols" }, [
-        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
-          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` }, tr("สินค้าขายดี", "Top products")),
-          el("table", { class: "th-ptbl" }, [el("tbody", {},
-            [[tr("สินค้า ก", "Product A"), "4,820", 100], [tr("สินค้า ข", "Product B"), "3,140", 65],
-             [tr("สินค้า ค", "Product C"), "2,010", 42], [tr("สินค้า ง", "Product D"), "980", 20]]
-              .map(([n, v, pct], i) => tblRow(n, v, pct, i)))]),
-        ]),
-        el("div", { class: "th-vis", style: `background:${bg2}; border-color:${line}` }, [
-          el("div", { style: `color:${fg}; ${F(sz.header, "font-weight:700")}` },
-            tr(`ชุดข้อมูลทั้ง ${colors.length} สี`, `All ${colors.length} series`)),
-          el("div", { class: "th-bars" }, colors.map((col, i) =>
-            el("div", { class: "th-bar", style: `height:${[62, 88, 45, 74, 96, 58, 81, 69][i % 8]}%; background:${col}` }))),
-          el("div", { class: "th-legend", style: `color:${fg2}; ${F(sz.label)}` },
-            colors.map((col, i) => el("span", {}, [el("i", { style: `background:${col}` }),
-              tr(`ชุดที่ ${i + 1}`, `Series ${i + 1}`)]))),
-        ]),
+        /* แถบสีของชุดข้อมูลทั้งหมด ให้เห็นทุกสีพร้อมกันแม้กราฟจะใช้ไม่ครบ */
+        el("div", { class: "th-legend", style: `color:${fg2}; ${F("label")}` },
+          colors.map((col, i) => el("span", {}, [el("i", { style: `background:${col}` }),
+            tr(`ชุดที่ ${i + 1}`, `Series ${i + 1}`)]))),
       ]),
     ]));
   }

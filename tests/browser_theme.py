@@ -71,12 +71,14 @@ with sync_playwright() as pw:
 
     # ── ④ เปลี่ยนชุดสี ────────────────────────────────────────────────
     print("\n④ เปลี่ยนชุดสี")
-    pg.locator('.seg input[value="prev"]').check()
+    # ‼️ พรีวิวรายงานไม่ใช่แท็บแล้ว ย้ายไปเป็นแถบเต็มความกว้างใต้แผงตั้งค่า 13/09/2026
+    #    เพราะในคอลัมน์กลางกว้าง 494px การ์ด KPI เหลือใบละ 108px แล้วตัดคำกลางคำ
+    #    จึงมองเห็นได้ตลอดเวลา ไม่ต้องกดแท็บ
     pg.wait_for_timeout(200)
-    bg_before = pg.locator(".th-canvas").get_attribute("style")
+    bg_before = pg.locator(".th-report").get_attribute("style")
     pg.locator(".ws-left .th-sw", has_text="จอมืด").click()
     pg.wait_for_timeout(400)
-    bg_after = pg.locator(".th-canvas").get_attribute("style")
+    bg_after = pg.locator(".th-report").get_attribute("style")
     ck("กดชุดจอมืดแล้วพื้นพรีวิวเปลี่ยนจริง", bg_before != bg_after, f"{bg_before} -> {bg_after}")
     t2 = theme_json(pg)
     ck("ไฟล์ธีมเปลี่ยนตามชุดที่เลือก", t2["dataColors"] != t["dataColors"] and t2["background"].lower() == "#1a1d23",
@@ -170,7 +172,10 @@ with sync_playwright() as pw:
     ck("ชุดแบรนด์ถูกเตือนว่าแยกออกแค่ 5 สีแรก", "แยกออกแค่ 5" in brand_txt, brand_txt[:170])
     pg.locator(".ws-left .th-sw", has_text="ดินเผา").click(); pg.wait_for_timeout(400)
 
-    pg.locator('.seg input[value="prev"]').check(); pg.wait_for_timeout(500)
+    # ‼️ พรีวิวรายงานไม่ใช่แท็บแล้ว ย้ายไปเป็นแถบเต็มความกว้างใต้แผงตั้งค่า 13/09/2026
+    #    เพราะในคอลัมน์กลางกว้าง 494px การ์ด KPI เหลือใบละ 108px แล้วตัดคำกลางคำ
+    #    จึงมองเห็นได้ตลอดเวลา ไม่ต้องกดแท็บ
+    pg.wait_for_timeout(500)
     # แถบเลื่อนคู่ช่องตัวเลข
     bars = pg.locator(".th-num input[type=range]")
     ck("มีแถบเลื่อนคู่กับช่องตัวเลขทั้งกว้างและสูง", bars.count() == 2, bars.count())
@@ -187,14 +192,30 @@ with sync_playwright() as pw:
     facts = pg.locator(".th-facts").inner_text()
     ck(f"แถบล่างบอกพื้นที่ผืนผ้าใบที่ใช้คำนวณจริง ({facts})", "2,073,600" in facts, facts)
     # รายงานจำลองต้องมีของครบ ไม่ใช่แค่แท่งกราฟ
-    for sel, name in [(".th-cards .th-card", "การ์ด KPI"), (".th-brow", "แถวเทียบเป้าหมาย"),
-                      (".th-spark", "กราฟเส้น"), (".th-ptbl tr", "ตาราง"), (".th-bar", "แท่งทุกชุดข้อมูล")]:
+    for sel, name in [(".th-cards .th-card", "การ์ด KPI"), (".th-tg", "แถวเทียบเป้าหมาย"),
+                      (".th-area", "กราฟเส้น"), (".th-bb", "แท่งยอดขายรายภาค"),
+                      (".th-ccol i", "แท่งแนวตั้ง"), (".th-legend span", "แถบสีชุดข้อมูล")]:
         ck(f"รายงานจำลองมี{name}", pg.locator(sel).count() >= 1, pg.locator(sel).count())
-    sp = pg.locator(".th-spark").bounding_box()
+    # ‼️ ข้อที่พี่ปอนด์ทักโดยตรง การ์ด KPI ต้องกว้างพอจนชื่อไม่ตัดคำ
+    cb = pg.locator(".th-card").first.bounding_box()
+    ck(f"การ์ด KPI กว้างพอไม่ตัดคำ ({round(cb['width'])}px ต้องอย่างน้อย 150)", cb["width"] >= 150, cb)
+    clipped = pg.evaluate("""() => [...document.querySelectorAll('.th-ct, .th-vt')]
+        .filter(e => e.scrollWidth - e.clientWidth > 1).map(e => e.textContent)""")
+    ck(f"ไม่มีชื่อไหนถูกตัดข้อความ ({clipped})", not clipped, clipped)
+    ck("พรีวิวเต็มความกว้างของแผง ไม่อยู่ในคอลัมน์กลางแล้ว",
+       pg.locator(".th-prevwrap").bounding_box()["width"] > pg.locator(".ws-center").bounding_box()["width"] * 1.5)
+    sp = pg.locator(".th-area").bounding_box()
     ck(f"กราฟเส้นเรนเดอร์จริง ไม่ใช่กล่องเปล่า ({sp['width']:.0f}x{sp['height']:.0f})", sp["width"] > 50 and sp["height"] > 30, sp)
-    ck("กราฟเส้นวาดเส้นกับจุดจริง",
-       pg.evaluate("document.querySelectorAll('.th-spark path').length") == 2
-       and pg.evaluate("document.querySelectorAll('.th-spark circle').length") == 12)
+    ck("กราฟเส้นวาดเส้น จุด และป้ายตัวเลขครบทุกเดือน",
+       pg.evaluate("document.querySelectorAll('.th-area path').length") == 2
+       and pg.evaluate("document.querySelectorAll('.th-area circle').length") == 12
+       and pg.evaluate("document.querySelectorAll('.th-area text').length") == 12)
+    # ‼️ ของใหม่ที่ถอดมาจาก datatraining.io ต้องมีจริงทุกชิ้น
+    for sel, name in [(".th-side", "แถบข้างไล่สี"), (".th-cdrow", "บรรทัดเทียบในการ์ด KPI"),
+                      (".th-bbt b", "ป้ายเงินในแท่ง"), (".th-tgt u", "เส้นเป้าหมาย"),
+                      (".th-tree .th-nd", "ผังแยกส่วน"), (".th-ccy span", "แกนค่าของกราฟแท่ง")]:
+        n = pg.locator(sel).count()
+        ck(f"พรีวิวมี{name} ({n} ชิ้น)", n >= 1, n)
 
     # ── ⑨ แผงขวาต้องไม่ล้น ────────────────────────────────────────────
     print("\n⑨ แผงขวาไม่ล้นออกด้านข้าง")

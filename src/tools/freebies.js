@@ -63,8 +63,9 @@ const GIFTS = () => [
     title: tr("ตารางปฏิทินไทย พร้อมปีงบประมาณ", "Thai date table with fiscal year"),
     what: tr("ได้ครบทั้ง พ.ศ. ชื่อเดือนไทย ปีงบที่เริ่มเดือนไหนก็ได้ และคอลัมน์เรียงเดือนที่ทำให้กราฟไม่เรียงผิด",
              "Buddhist years, Thai month names, a fiscal year starting any month, and a sort column so charts never sort months alphabetically"),
-    how: tr("วางเป็น Blank Query แล้วเรียกใช้ว่า fnThaiDateTable(#date(2023,1,1), #date(2026,12,31), 10) จากนั้นคลิกขวาที่ตารางใน Power BI แล้วเลือก Mark as date table",
-            "Paste as a Blank Query, then call fnThaiDateTable(#date(2023,1,1), #date(2026,12,31), 10) and mark the result as a date table in Power BI"),
+    /* ‼️ ข้อความนี้ถูกจำกัดที่ 100 ตัวอักษร (tests/browser_layout.py) วิธีใช้ฉบับเต็มอยู่ในคอมเมนต์หัวไฟล์ .pq */
+    how: tr("วางเป็น Blank Query แล้วเรียก fnThaiDateTable(#date(2023,1,1), #date(2026,12,31), 10)",
+            "Paste as a Blank Query, then call fnThaiDateTable(#date(2023,1,1), #date(2026,12,31), 10)"),
     tool: "pq-multisource-lookup",
     proof: tr("ยิงผ่าน Power Query engine ของ Excel จริงแล้ว ตรงทุกค่าใน 14 คอลัมน์ x 6 วันที่ที่เป็นจุดเปลี่ยน",
               "Run through Excel's real Power Query engine, every value matches across 14 columns and 6 boundary dates"),

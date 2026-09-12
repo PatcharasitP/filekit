@@ -533,11 +533,97 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .fail-box li{overflow-wrap:anywhere; line-height:1.7}
 
 /* ── แถว "ทำอะไรต่อดี" ท้ายหน้าเครื่องมือ ── */
+/* ── รางซ้ายติดขอบจอ (จอกว้างเท่านั้น) ─────────────────────────────────
+   ถอดจาก thepexcel 12/09/2026 ที่วางสารบัญไว้ในรางซ้ายข้างเนื้อหา
+   ‼️ วัดของเราแล้ว เนื้อหาถูกจำกัดกว้าง 1096px จอ 1600px จึงว่างข้างละ 252px
+      จอ 1920px ว่างถึง 412px ซึ่งทิ้งเปล่า จึงเอาหัวเรื่องเครื่องมือ (สูง 138px)
+      ย้ายไปอยู่ตรงนั้น แผงงานจะได้เริ่มที่ด้านบนจอแทนที่จะเริ่มที่ 249px
+   ‼️ ได้ที่แนวตั้งคืน 138px โดยไม่เสียความกว้างพื้นที่ทำงานเลย
+   ‼️ ซ่อนไว้เป็นค่าตั้งต้น เปิดเฉพาะจอ >= 1500px ที่ขอบว่างพอจริง
+      แคบกว่านั้นใช้หัวเรื่องเดิมตามปกติ ไม่มีอะไรเปลี่ยน */
+.tool-rail{display:none}
+
+@media (min-width:1500px){
+  .tool-rail{
+    display:block; position:fixed; inset-block-start:96px; inset-inline-start:24px;
+    width:min(232px, calc((100vw - 1096px) / 2 - 28px));
+    max-height:calc(100dvh - 130px); overflow:auto; overscroll-behavior:contain;
+    padding:14px; border-radius:var(--r);
+    background:var(--bg-soft); border:1px solid var(--line-soft);
+    /* แถบสีประจำตระกูลด้านซ้าย เหมือนที่ thepexcel ใช้กับการ์ดสารบัญของเขา */
+    border-inline-start:3px solid var(--ac,var(--brand));
+  }
+  /* หัวเรื่องใหญ่ถูกย้ายมาอยู่ในรางแล้ว ไม่ต้องแสดงซ้ำ */
+  body.tool .tool-head{display:none}
+}
+.rail-id{display:flex; align-items:center; gap:9px; margin-bottom:8px}
+.rail-ico{flex:none; width:28px; height:28px; display:grid; place-items:center;
+  border-radius:8px; background:var(--ac,var(--brand)); color:#fff}
+.rail-ico svg{width:17px; height:17px}
+.rail-id b{font-size:14px; font-weight:800; line-height:1.45; color:var(--text)}
+.rail-desc{margin:0 0 10px; font-size:12.5px; line-height:1.7; color:var(--text-dim)}
+.tool-rail .tool-meta{margin-top:0}
+.tool-rail .tm-chip{font-size:11px}
+.rail-jump{display:flex; flex-direction:column; gap:2px; margin-top:12px;
+  padding-top:10px; border-top:1px solid var(--line-soft)}
+.rail-jump a{display:block; padding:7px 8px; border-radius:8px; text-decoration:none;
+  font-size:12.5px; font-weight:700; line-height:1.6; color:var(--text-dim)}
+.rail-jump a:hover{background:var(--card-hi); color:var(--text)}
+.rail-jump a:focus-visible{outline:2px solid var(--focus); outline-offset:-2px}
+
+/* ── หัวข้อระดับส่วน และคำถามที่เจอบ่อย ────────────────────────────────
+   ถอดจาก thepexcel 12/09/2026 (.claude/research/2026-09-12-thepexcel-full-system.md)
+   H2 ของเขามีแถบสีตั้งข้างหน้า และขีดใต้ที่ยาวเท่าข้อความเท่านั้น ไม่ลากเต็มบรรทัด
+   ทำให้หาหัวข้อเจอโดยไม่ต้องใช้ตัวอักษรใหญ่มาแย่งพื้นที่จากเนื้อหา
+   ‼️ ธีมเราขาวดำ แถบจึงใช้สีประจำตระกูลของเครื่องมือ (--ac) แทนสีเน้นเดี่ยวแบบทองของเขา */
+.sec-h{position:relative; margin:28px 0 12px; padding-inline-start:13px;
+  font-size:18px; font-weight:800; line-height:1.45; color:var(--text)}
+.sec-h::before{content:""; position:absolute; inset-block:3px; inset-inline-start:0;
+  width:4px; border-radius:2px; background:var(--ac,var(--brand))}
+.sec-h > span{border-bottom:2px solid color-mix(in srgb,var(--ac,var(--brand)) 36%,transparent);
+  padding-bottom:3px}
+
+/* ทั้งส่วนเป็นกล่องพับกล่องเดียว หัวข้อใช้ไวยากรณ์แถบสีเดียวกับ .sec-h
+   ‼️ เหตุผลที่ต้องพับ อยู่ในคอมเมนต์ของ toolFaq() ใน src/ui.js (ปุ่มลงมือทำหลุดจอบนมือถือ) */
+.faq{margin-top:26px; border-top:1px solid var(--line); padding-top:14px}
+.faq-top{cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px;
+  min-height:44px; position:relative; padding-inline-start:13px}
+.faq-top::-webkit-details-marker{display:none}
+.faq-top::before{content:""; position:absolute; inset-block:6px; inset-inline-start:0;
+  width:4px; border-radius:2px; background:var(--ac,var(--brand))}
+.faq-top-t{font-size:18px; font-weight:800; line-height:1.45; color:var(--text);
+  border-bottom:2px solid color-mix(in srgb,var(--ac,var(--brand)) 36%,transparent); padding-bottom:3px}
+.faq-top-n{font-size:12.5px; font-weight:700; color:var(--text-mute); line-height:1.5}
+.faq-top::after{content:"\002B"; margin-inline-start:auto; font-size:17px; font-weight:700;
+  color:var(--text-mute); line-height:1}
+.faq[open] > .faq-top::after{content:"\2212"}
+.faq-top:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.faq-list{display:flex; flex-direction:column; gap:8px; margin-top:12px}
+.faq-i{border:1px solid var(--line-soft); border-radius:var(--r-sm); background:var(--bg-soft);
+  overflow:hidden}
+.faq-i summary{cursor:pointer; list-style:none; padding:12px 14px; min-height:44px;
+  display:flex; align-items:center; gap:10px;
+  font-size:14px; font-weight:700; line-height:1.6; color:var(--text)}
+.faq-i summary::-webkit-details-marker{display:none}
+.faq-i summary::before{content:"\002B"; flex:none; width:18px; text-align:center;
+  font-weight:700; color:var(--text-mute)}
+.faq-i[open] summary::before{content:"\2212"}
+.faq-i summary:hover{background:var(--card-hi)}
+.faq-i summary:focus-visible{outline:2px solid var(--focus); outline-offset:-2px}
+/* ‼️ ตัวอักษรสำหรับ "อ่าน" ต้องใหญ่และโปร่งกว่าตัวอักษรของหน้าจอ
+   วัดจาก thepexcel: ย่อหน้าเนื้อหา 19.2px line-height 1.7 ส่วน UI 15.2px
+   ของเราขยับจาก 13px ของ .note มาเป็น 15px กับ 1.75 ซึ่งพอสำหรับย่อหน้าสั้น ๆ แบบนี้ */
+.faq-a{padding:0 14px 14px 42px; font-size:15px; line-height:1.75; color:var(--text-dim)}
+@media (max-width:640px){ .faq-a{padding-inline:14px} }
+
 .next-steps{position:relative;margin-top:34px;padding-top:22px}
 .next-steps::before{content:"";position:absolute;inset-inline:0;top:0;height:1px;background:var(--line);
   -webkit-mask-image:linear-gradient(90deg,#000,#000 70%,transparent);
           mask-image:linear-gradient(90deg,#000,#000 70%,transparent)}
-.next-steps h2{font-size:13.5px;font-weight:700;color:var(--text-mute);margin:0 0 12px}
+/* ‼️ เดิมหัวข้อนี้เล็กและจางกว่าหัวข้ออื่น พอมาใช้ .sec-h ร่วมกันแล้วดูเหมือนพลาด
+   มากกว่าตั้งใจ (แถบสีกับขีดใต้ครบแต่ตัวอักษรจิ๋ว) จึงให้ใช้ขนาดเดียวกับส่วนอื่น
+   เว้นระยะบนไว้น้อยกว่า เพราะมีเส้นคั่นของ .next-steps อยู่แล้ว */
+.next-steps h2.sec-h{margin-top:0}
 .next-row{display:flex;flex-wrap:wrap;gap:10px}
 /* เดิม hover ใช้ --t-micro (.12s ease) ธรรมดา ไม่มีสปริง — การ์ดนี้คือ .pill ตัวเดียวกันแค่ย้าย
    มาอยู่ท้ายหน้าเครื่องมือ (โครงสร้างเหมือนกันเป๊ะ: ไอคอนวงกลมสี --ac + ข้อความ) ควรสปริงแบบเดียวกัน */

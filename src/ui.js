@@ -86,9 +86,98 @@ export function toolShell(tool) {
       el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc), toolMeta(tool)]),
     ]),
     body,
+    toolFaq(tool),
     nextSteps(tool),
+    toolRail(tool),
   ]);
   return { wrap, body };
+}
+
+/** รางซ้ายติดขอบจอ สำหรับจอกว้างเท่านั้น
+ *
+ * ‼️ ที่มา thepexcel วางสารบัญส่วนไว้ในรางซ้ายที่ลอยอยู่ข้างเนื้อหา
+ *    วัดของเราแล้วพบว่าเนื้อหาถูกจำกัดกว้าง 1096px จอ 1600px จึงมีขอบว่างข้างละ 252px
+ *    และจอ 1920px ว่างถึง 412px ซึ่งทิ้งเปล่าอยู่ทั้งหมด
+ *    เอาหัวเรื่องเครื่องมือ (สูง 138px) ย้ายไปอยู่ในขอบว่างนั้น
+ *    แผงงานจึงขยับขึ้นไปเริ่มที่ด้านบนของจอแทนที่จะเริ่มที่ 249px
+ *    ‼️ ได้ที่แนวตั้งคืน 138px โดยไม่เสียความกว้างของพื้นที่ทำงานเลยสักพิกเซล
+ *
+ * ‼️ โผล่เฉพาะจอตั้งแต่ 1500px ขึ้นไป เพราะแคบกว่านั้นขอบว่างไม่พอ
+ *    จอเล็กกว่านั้นใช้หัวเรื่องเดิมตามปกติ (ดู .tool-rail ใน tool.css)
+ * ‼️ aria-hidden ไม่ได้ เพราะมีลิงก์ข้ามส่วนที่คนใช้คีย์บอร์ดควรใช้ได้
+ *    แต่ชื่อเครื่องมือซ้ำกับ h1 จึงไม่ทำเป็นหัวเรื่องซ้ำอีกชั้น */
+export function toolRail(tool) {
+  const jump = [["ws-top", tr("พื้นที่ทำงาน", "Workspace")],
+                ["faq-h", tr("คำถามที่เจอบ่อย", "Common questions")],
+                ["next-h", tr("ทำอะไรต่อดี", "What next?")]];
+  return el("aside", { class: "tool-rail", "aria-label": tr("ข้อมูลเครื่องมือนี้", "About this tool") }, [
+    el("div", { class: "rail-id" }, [
+      el("span", { class: "rail-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
+      el("b", {}, tool.title),
+    ]),
+    el("p", { class: "rail-desc" }, tool.desc),
+    toolMeta(tool),
+    el("nav", { class: "rail-jump", "aria-label": tr("ข้ามไปยังส่วน", "Jump to a section") },
+      jump.map(([id, label]) => el("a", { href: `#${id}`, onclick: (e) => {
+        /* ‼️ href แบบ #id ชนกับ router ที่อ่าน hash เป็นชื่อเครื่องมือ
+           จะเด้งกลับหน้าแรกทันที จึงเลื่อนเองแล้วห้ามเบราว์เซอร์เปลี่ยน hash */
+        e.preventDefault();
+        const t = document.getElementById(id);
+        if (t) t.scrollIntoView({ block: "start", behavior: "smooth" });
+      } }, label))),
+  ]);
+}
+
+/** หัวข้อระดับส่วน มีแถบสีตั้งข้างหน้าและขีดใต้เฉพาะความกว้างของข้อความ
+ *  ‼️ ถอดจาก thepexcel 12/09/2026 เขาใช้แบบนี้กับ H2 ทุกตัวในหน้าอ้างอิง
+ *     ทำให้กวาดตาหาหัวข้อเจอโดยไม่ต้องใช้ขนาดตัวอักษรใหญ่ ๆ มาแย่งพื้นที่
+ *     ธีมเราเป็นขาวดำ แถบจึงใช้สีประจำตระกูลของเครื่องมือ (--ac) ไม่ใช่สีเน้นเดี่ยว */
+export function sectionHead(text) {
+  return el("h2", { class: "sec-h" }, [el("span", {}, text)]);
+}
+
+/* คำถามที่ตอบได้เหมือนกันทุกเครื่องมือ เพราะเป็นคุณสมบัติของทั้งเว็บ ไม่ใช่ของเครื่องมือใดเครื่องมือหนึ่ง
+   ‼️ ทุกข้อต้องเป็นเรื่องจริงที่ตรวจสอบได้เอง ไม่ใช่คำโฆษณา
+      ข้อแรกบอกวิธีตรวจสอบไว้ด้วย เพราะคำสัญญาเรื่องความเป็นส่วนตัวที่พิสูจน์ไม่ได้ก็แค่คำพูด */
+const BASE_FAQ = () => [
+  [tr("ไฟล์ของฉันถูกส่งขึ้นเซิร์ฟเวอร์ไหม", "Do my files get uploaded?"),
+   tr("ไม่ ทุกอย่างทำในเบราว์เซอร์คุณ ตรวจเองได้โดยเปิดแท็บ Network แล้วกดทำงาน จะไม่เห็นการส่งข้อมูลออกเลย",
+      "No. It all runs in your browser. Open the Network tab, run the tool, and you will see nothing go out.")],
+  [tr("ใช้ตอนไม่มีอินเทอร์เน็ตได้ไหม", "Does it work offline?"),
+   tr("ได้ กดปุ่มโหลดไว้ใช้ออฟไลน์ท้ายหน้าหนึ่งครั้ง จากนั้นใช้ได้แม้ไม่มีเน็ต",
+      "Yes. Press the offline button once, then it works without a connection.")],
+  [tr("ไฟล์ใหญ่ได้แค่ไหน", "How big can a file be?"),
+   tr("ไม่มีเพดานจากฝั่งเว็บ เพราะไม่ได้อัปโหลดไปไหน ขีดจำกัดคือแรมเครื่องคุณเอง",
+      "No limit from our side, nothing is uploaded. Your own memory is the limit.")],
+  [tr("ต้องสมัครสมาชิกหรือเสียเงินไหม", "Do I need an account or payment?"),
+   tr("ไม่ต้องทั้งสองอย่าง ใช้ได้ไม่จำกัดจำนวนครั้ง และไม่มีโฆษณา",
+      "Neither. Use it as many times as you like, with no ads.")],
+];
+
+/** ส่วนคำถามที่เจอบ่อย ท้ายหน้าเครื่องมือ
+ *  ‼️ ถอดจาก thepexcel ที่ใส่ FAQ ไว้ทุกหน้าอ้างอิง เพราะคำถามเดิม ๆ ถูกถามซ้ำทุกวัน
+ *     ของเขาเป็นการ์ดพับได้ เราใช้ <details> ซึ่งพับได้เองโดยไม่ต้องมีสคริปต์
+ *  เครื่องมือไหนมีคำถามเฉพาะตัว ใส่ faq ไว้ในทะเบียนได้ จะขึ้นก่อนคำถามรวม */
+export function toolFaq(tool) {
+  const items = [...(tool.faq || []), ...BASE_FAQ()];
+  if (!items.length) return null;
+  /* ‼️ ทั้งส่วนอยู่ในกล่องพับกล่องเดียว ไม่ใช่กางไว้แล้วมี 4 กล่องย่อย
+     เพราะ tests/browser_mobile.py จับได้ว่าหางหน้าที่ยาวขึ้น ~250px ทำให้ปุ่มลงมือทำ
+     หลุดจอตอนเลื่อนสุดหน้าบนมือถือ ถึง 53 จุด (แถบปุ่มเป็น sticky ในกรอบ .panel
+     พอเลื่อนพ้นกรอบก็หายไป) ยุบเหลือกล่องเดียวแล้วหางสั้นลงเหลือระดับเดียวกับ
+     "ทำอะไรต่อดี" ที่ผ่านเกณฑ์อยู่แล้ว
+     และเข้ากับธรรมชาติของเนื้อหาด้วย คำถามพวกนี้เป็นของเสริม ไม่ใช่สิ่งที่มาทำ */
+  return el("details", { class: "faq" }, [
+    el("summary", { class: "faq-top" }, [
+      el("span", { class: "faq-top-t", id: "faq-h" }, tr("คำถามที่เจอบ่อย", "Common questions")),
+      el("span", { class: "faq-top-n" }, tr(`${items.length} ข้อ`, pl(items.length, "question", "questions"))),
+    ]),
+    el("div", { class: "faq-list" }, items.map(([q, a]) =>
+      el("details", { class: "faq-i" }, [
+        el("summary", {}, q),
+        el("div", { class: "faq-a" }, a),
+      ]))),
+  ]);
 }
 
 /** แถวชิปข้อมูลใต้หัวเรื่องเครื่องมือ
@@ -168,7 +257,7 @@ export function nextSteps(tool) {
   sync();
 
   const nav = el("nav", { class: "next-steps", "aria-label": tr("เครื่องมือที่มักใช้ต่อ", "Tools people use next") }, [
-    el("h2", {}, tr("ทำอะไรต่อดี", "What next?")),
+    Object.assign(sectionHead(tr("ทำอะไรต่อดี", "What next?")), { id: "next-h" }),
     el("div", { class: "next-row" }, cards.map((c) => c.a)),
   ]);
   // อัปเดตป้ายทันทีที่มีผลลัพธ์ใหม่ (ผู้ใช้กดดาวน์โหลดหลังจากแถวนี้วาดไปแล้ว) — ถอดตัวเองเมื่อแถวนี้หลุดจากหน้า

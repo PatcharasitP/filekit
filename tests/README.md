@@ -38,6 +38,7 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_codepaint.py # โค้ดของสามเสา Power ต้องมีสี คัดลอกสะอาด และคอนทราสต์ผ่านทั้งสองโหมด
 ../.venv/bin/python tests/browser_matrixdetails.py # Matrix หลายชั้น ISINSCOPE ต้องผูกชั้นในสุด และชนิดที่เสี่ยงต้องถูกห่อ FORMAT
 ../.venv/bin/python tests/browser_sortbar.py    # ตัวเรียงหน้าแรก และฉาก hero ที่ตัวเลขต้องบวกกันได้จริง
+../.venv/bin/python tests/browser_toolrail.py   # รางซ้ายบนจอกว้าง ต้องไม่ทับพื้นที่ทำงาน และคืนที่แนวตั้งได้จริง
 ../.venv/bin/python tests/browser_a11y.py       # คีย์บอร์ด โฟกัส ป้ายกำกับ คอนทราสต์
 ../.venv/bin/python tests/browser_leak.py       # objectURL / listener / DOM / heap รั่ว (เปิด server เอง พอร์ต 8924)
 ../.venv/bin/python tests/browser_stress.py     # ทรมานด้วยเคสสุดโต่ง ไฟล์เสีย ไฟล์เยอะ กดรัว

@@ -26,6 +26,7 @@ import { tr } from "./i18n.js";
 export function workspace(tool, cfg = {}) {
   const { wrap, body } = toolShell(tool);
   body.classList.add("ws-body");
+  body.id = "ws-top";        // จุดหมายของลิงก์ "พื้นที่ทำงาน" ในรางซ้าย
 
   const panel = (side, spec) => spec ? el("aside", { class: `ws-panel ws-${side}` }, [
     el("div", { class: "ws-head" }, [

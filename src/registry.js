@@ -210,7 +210,7 @@ export const TOOLS = [
     keys:"deneb bar vega แท่ง แนวนอน power bi custom visual กราฟ ranking จัดอันดับ target เป้าหมาย",
     next:["pbi-donut","pa-parse-json"] },
 
-  { id:"pbi-matrix-details", group:"powerbi", icon:"🧾", since:"2026-09-11", title:"รายละเอียดหลายคอลัมน์ในช่องเดียวของ Matrix",
+  { id:"pbi-matrix-details", group:"powerbi", icon:"🧾", since:"2026-09-12", title:"รายละเอียดหลายคอลัมน์ในช่องเดียวของ Matrix",
     desc:"ยุบหลายคอลัมน์ให้อยู่ในช่องเดียวของ Matrix โดยหัวแถวยังตรึงอยู่ที่เดิม แปลงทุกชนิดข้อมูลเป็นข้อความให้ก่อน ยอด 0 กับค่า FALSE จึงไม่หาย",
     accepts:["xlsx","xls","xlsm","csv","txt"],
     libs:["xlsx"], keys:"matrix dax measure text power bi ตรึงคอลัมน์ freeze รายละเอียด transaction details concatenatex sqlbi ยุบคอลัมน์ ข้อความในตาราง",

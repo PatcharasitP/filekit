@@ -6,6 +6,28 @@
    .stage ไปเลย ใช้โทเค็น --stage/--stage-2/--stage-dim ชุดเดียวกับหน้าแรก (ค่าคงที่ ไม่สลับ
    ตามธีม จึงเป็น "จุดยึด" ได้ทั้งสองโหมดเหมือนกัน) ตรวจคอนทราสต์จริงแล้ว: หัวข้อ #f0f1f3 บนพื้น
    เข้มสุด #1b2029 = 14.46:1 · คำอธิบาย stage-dim บนพื้นเดียวกัน = 6.2:1 (ทั้งคู่ผ่าน AA ขาด ๆ) */
+/* ── แถวชิปข้อมูลใต้หัวเรื่องเครื่องมือ ─────────────────────────────────
+   ถอดจาก thepexcel 12/09/2026 ที่ขึ้นต้นหน้าอ้างอิงทุกหน้าด้วยชิปบอกบริบท
+   และชิปเป็นลิงก์กรอง ไม่ใช่ป้ายตาย
+   ‼️ ธีมเราเป็นขาวดำ ชิปทุกตัวจึงเป็นโครงร่าง ไม่มีตัวไหนถมสี
+      ความต่างมาจากจุดสีประจำตระกูลจุดเดียว ไม่ใช่จากพื้นหลังของชิป */
+.tool-meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.tm-chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
+  border:1px solid var(--line); border-radius:999px;
+  font-size:11.5px; font-weight:700; line-height:1.5; color:var(--text-dim);
+  white-space:nowrap; text-decoration:none}
+.tm-dot{width:7px; height:7px; border-radius:50%; background:var(--ac,var(--brand)); flex:none}
+a.tm-chip:hover{color:var(--text); border-color:var(--text-mute)}
+a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.tm-safe{color:var(--g-data); border-color:color-mix(in srgb,var(--g-data) 38%,transparent)}
+/* ‼️ นิ้วแตะต้องการ 36px แต่ชิปสูงแค่ 27px โดยดีไซน์
+   เดิมยืดเฉพาะ pointer:coarse ซึ่งไม่พอ เพราะจอแคบที่ใช้เมาส์ก็ยังตกเกณฑ์
+   (tests/browser_layout.py วัดที่ 390px โดยไม่จำลองการสัมผัส แล้วจับได้ 56 จุด)
+   จึงยืดตามความกว้างจอด้วย และยืดทั้งแถวไม่ใช่เฉพาะตัวที่กดได้
+   ไม่งั้นชิปในแถวเดียวกันสูงไม่เท่ากันจนดูเหมือนจัดวางพลาด */
+@media (max-width:640px){ .tool-meta{gap:8px} .tm-chip{min-height:36px; padding-block:0} }
+@media (pointer:coarse){ .tm-chip{min-height:36px; padding-block:0} }
+
 .tool-head{
   --text:#f0f1f3; --text-dim:var(--stage-dim);
   display:flex; gap:var(--sp4); align-items:flex-start;

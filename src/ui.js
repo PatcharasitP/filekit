@@ -1,6 +1,6 @@
-import { detectType, wrongTypeMessage } from "./filetype.js";
+import { detectType, wrongTypeMessage, typeLabel } from "./filetype.js";
 import { $, $$, el, showVeil, filesFromClipboard } from "./dom.js";
-import { byId } from "./registry.js";
+import { byId, GROUPS } from "./registry.js";
 import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
 import { tr, pl } from "./i18n.js";
 
@@ -83,12 +83,55 @@ export function toolShell(tool) {
   const wrap = el("div", { style: `--ac:var(${GROUP_ACCENT[tool.group] || "--brand"})` }, [
     el("div", { class: "tool-head" }, [
       el("div", { class: "tool-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
-      el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc)]),
+      el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc), toolMeta(tool)]),
     ]),
     body,
     nextSteps(tool),
   ]);
   return { wrap, body };
+}
+
+/** แถวชิปข้อมูลใต้หัวเรื่องเครื่องมือ
+ *
+ * ‼️ ที่มา ผ่าเว็บ thepexcel.com 12/09/2026 (.claude/research/2026-09-12-thepexcel-full-system.md)
+ *    หน้าอ้างอิงของเขาทุกหน้าเริ่มด้วยชิป 3 ตัว (แอป, หมวด, เวอร์ชันที่เริ่มมี)
+ *    และ **ชิปเป็นลิงก์กรอง** กดแล้วเด้งไปหน้ารายการที่กรองให้เลย
+ *    สำรวจของเราแล้วพบว่า ทะเบียนมีข้อมูลพวกนี้ครบอยู่แล้ว แต่ไม่เคยแสดงที่ไหนเลย
+ *    คนเปิดเครื่องมือมาจึงไม่รู้ว่ามันอยู่หมวดไหน และรับไฟล์อะไรได้บ้าง
+ *    จนกว่าจะลากไฟล์ผิดชนิดเข้าไปแล้วโดนเตือน
+ *
+ * ‼️ ธีมขาวดำ จึงไม่ใช้สีเน้นเดี่ยวแบบทองของเขา ชิปหมวดใช้สีประจำตระกูลเป็นจุดเล็ก ๆ แทน
+ */
+export function toolMeta(tool) {
+  const g = GROUPS.find((x) => x.id === tool.group);
+  const chips = [];
+
+  if (g) {
+    /* ‼️ กดแล้วต้องพาไปหน้าแรกที่กรองหมวดนี้ไว้แล้ว ไม่ใช่หน้าแรกเปล่า ๆ
+       ui.js ห้าม import app.js (จะวนกันเอง) จึงฝากค่าไว้ใน sessionStorage แล้วให้หน้าแรกอ่านเอง */
+    chips.push(el("a", {
+      class: "tm-chip tm-cat", href: "#/",
+      title: tr(`ดูเครื่องมือหมวด ${g.label} ทั้งหมด`, `See all ${g.label} tools`),
+      onclick: () => { try { sessionStorage.setItem("fk:gocat", tool.group); } catch { /* โหมดส่วนตัว */ } },
+    }, [el("i", { class: "tm-dot", "aria-hidden": "true" }), g.short || g.label]));
+  }
+
+  /* ‼️ accepts ในทะเบียนใช้ "นามสกุลไฟล์" (xls, xlsm, txt, json…) ส่วน typeLabel รู้จักแค่
+     ชนิดหลักที่ detectType คืนมา ตัวที่ไม่รู้จักจะได้คำว่า "ไฟล์ชนิดนี้" กลับมา
+     ปล่อยไว้จะได้ป้ายว่า "รับ Excel, ไฟล์ชนิดนี้, ไฟล์ชนิดนี้, CSV" ซึ่งอ่านไม่รู้เรื่อง (เจอจริงตอนทดสอบ)
+     จึงยุบด้วย "ป้ายที่ได้" ไม่ใช่ด้วยนามสกุล แล้วตัดตัวที่แปลไม่ออกทิ้ง
+     เหลือว่างทั้งหมดก็ไม่ต้องโชว์ชิปนี้ ดีกว่าโชว์คำที่ไม่มีความหมาย */
+  const unknown = typeLabel("");
+  const kinds = [...new Set((tool.accepts || []).map(typeLabel))].filter((x) => x && x !== unknown);
+  if (kinds.length) {
+    const list = kinds.slice(0, 4).join(", ") + (kinds.length > 4 ? " …" : "");
+    chips.push(el("span", { class: "tm-chip" }, tr(`รับ ${list}`, `Takes ${list}`)));
+  }
+
+  /* คำสัญญาหลักของเว็บ ควรอยู่ตรงที่คนกำลังจะใส่ไฟล์ ไม่ใช่แค่ที่หน้าแรก */
+  chips.push(el("span", { class: "tm-chip tm-safe" }, tr("ทำงานในเครื่องคุณ", "Runs on your device")));
+
+  return el("div", { class: "tool-meta" }, chips);
 }
 
 /** แถว "ทำอะไรต่อดี"ท้ายหน้าเครื่องมือ — งานเอกสารจริงแทบไม่มีขั้นตอนเดียวจบ

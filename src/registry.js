@@ -202,13 +202,13 @@ export const TOOLS = [
     desc:"ปรับหน้าตากราฟโดนัทสด ๆ เห็นผลทันที แล้วคัดลอกสเปกไปวางใน Deneb ได้เลย",
     libs:["vega","vegaLite","vegaEmbed"],
     keys:"deneb donut vega โดนัท วงกลม power bi custom visual กราฟ pie พาย",
-    next:["pa-parse-json","excel-to-pq"] },
+    next:["pbi-theme","excel-to-pq"] },
 
   { id:"pbi-bar", group:"powerbi", icon:"📊", since:"2026-09-11", title:"กราฟแท่งแนวนอน Deneb",
     desc:"ปรับแท่ง ป้ายตัวเลข และเส้นเป้าหมายสด ๆ ความยาวแท่งตรงสัดส่วนค่าจริงเสมอ แล้วคัดลอกสเปกไปวางใน Deneb",
     libs:["vega","vegaLite","vegaEmbed"],
     keys:"deneb bar vega แท่ง แนวนอน power bi custom visual กราฟ ranking จัดอันดับ target เป้าหมาย",
-    next:["pbi-donut","pa-parse-json"] },
+    next:["pbi-donut","pbi-theme"] },
 
   { id:"freebies", group:"powerbi", icon:"🎁", since:"2026-09-12", title:"ของสำเร็จรูปแจกฟรี",
     desc:"สเปก Deneb และฟังก์ชัน Power Query ที่เว็บนี้ใช้อยู่จริง หยิบไปใช้ต่อได้เลย ไม่ต้องเปิดเครื่องมือทีละตัว",
@@ -220,6 +220,11 @@ export const TOOLS = [
     accepts:["xlsx","xls","xlsm","csv","txt"],
     libs:["xlsx"], keys:"matrix dax measure text power bi ตรึงคอลัมน์ freeze รายละเอียด transaction details concatenatex sqlbi ยุบคอลัมน์ ข้อความในตาราง",
     next:["pbi-bar","excel-to-pq"] },
+
+  { id:"pbi-theme", group:"powerbi", icon:"🎨", since:"2026-09-12", title:"สร้างธีม Power BI (theme.json)",
+    desc:"เลือกชุดสีและขนาดผืนผ้าใบ แล้วเห็นพรีวิวรายงานสด ๆ พร้อมคำเตือนว่าสีไหนอ่านไม่ออกและคนตาบอดสีแยกสีไหนไม่ออก",
+    libs:[], keys:"theme json power bi ธีม สี แบรนด์ corporate palette dataColors textClasses คอนทราสต์ ตาบอดสี accessibility contrast",
+    next:["pbi-bar","pbi-donut"] },
 
   { id:"pa-parse-json", group:"powerautomate", icon:"🧩", since:"2026-09-11", title:"ตารางเป็น Schema ของ Parse JSON",
     desc:"อ่านทั้งคอลัมน์ก่อนตัดสินชนิด ช่องที่เคยว่างจริงจะประกาศ null ให้เอง กัน flow พังตอนเจอแถวว่าง",
@@ -305,6 +310,7 @@ const EN_TOOLS = {
   "pbi-matrix-details": ["Matrix transaction details in one column", "Fold several columns into a single matrix column while the row headers stay frozen, every data type is turned into text first so zeros and FALSE never vanish"],
   "pbi-bar":          ["Deneb horizontal bar chart", "Tweak the bars, value labels and target line live, with bar length always true to the real numbers, then copy the spec into Deneb"],
   "pbi-donut":        ["Deneb donut chart", "Tweak a live donut chart and see it change instantly, then copy the spec straight into Deneb"],
+  "pbi-theme":        ["Build a Power BI theme (theme.json)", "Pick a palette and a canvas size, watch a live report preview, and get told which colours fall below the contrast floor or merge for colour blind viewers"],
   "pa-parse-json":    ["Table to a Parse JSON schema", "Reads the whole column before deciding the type, so columns that really do go blank are declared nullable and your flow survives them"],
   "pq-multisource-lookup": ["Build a multi source lookup", "Search several tables in order and stop at the first hit, with results landing in one column even when each source names it differently"],
   "pa-html-table":    ["HTML table for a flow email", "Style it and see the email straight away, with the per cell borders that Outlook desktop actually renders"],

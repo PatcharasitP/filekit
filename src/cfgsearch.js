@@ -1,5 +1,6 @@
 import { el } from "./dom.js";
 import { tr } from "./i18n.js";
+import { uiIcon } from "./icons.js";
 import { enToThai, highlightRange } from "./search.js";
 
 /* ── ค้นหาในแผงตั้งค่า ─────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ export function configSearch(cfg) {
     type: "button", class: "cfs-clear", hidden: true,
     "aria-label": tr("ล้างคำค้นหา", "Clear search"),
     onclick: () => { input.value = ""; run(); input.focus(); },
-  }, "✕");
+  }, [uiIcon("close", "cfs-clear-ico")]);
   const count = el("div", { class: "cfs-count", role: "status", "aria-live": "polite" });
   const node = el("div", { class: "cfs-wrap" }, [
     el("div", { class: "cfs-box" }, [input, clearBtn]), count,

@@ -70,6 +70,9 @@ export const ICONS = {
   "pbi-matrix-details": `<rect x="3.2" y="4.6" width="17.6" height="14.8" rx="1.8"/><path d="M9 4.6v14.8"/><path d="M3.2 9.2h17.6"/><path d="M11.4 12.4h6.8"/><path d="M11.4 15.6h4.4"/>`,
   // กล่องของขวัญ เส้นริบบิ้นพาดกลางกับโบว์สองข้าง อ่านออกว่าเป็นของแจกโดยไม่ต้องใช้อีโมจิ
   "freebies": `<rect x="3.2" y="9.6" width="17.6" height="10.8" rx="1.8"/><rect x="2.4" y="6.2" width="19.2" height="3.4" rx="1.2"/><path d="M12 6.2v14.2"/><path d="M12 6.2C10.6 3.4 6.6 3.4 7.2 5.4c.4 1.3 3 1.5 4.8.8"/><path d="M12 6.2c1.4-2.8 5.4-2.8 4.8-.8-.4 1.3-3 1.5-4.8.8"/>`,
+  // กรอบรายงานหนึ่งหน้า กับแถบสีประจำธีมเรียงอยู่ด้านล่าง
+  "pbi-theme":    `<rect x="3.2"y="4.4"width="17.6"height="15.2"rx="2"/><path d="M3.2 14.4h17.6"/><path d="M6.4 8h7"/><path d="M6.4 11.2h4.6"/><rect x="5.6"y="15.9"width="2.7"height="2.7"rx=".6"/><rect x="9.6"y="15.9"width="2.7"height="2.7"rx=".6"/><rect x="13.6"y="15.9"width="2.7"height="2.7"rx=".6"/>`,
+
   "pbi-donut":    `<circle cx="12"cy="12"r="8.7"/><circle cx="12"cy="12"r="4.3"/><path d="M12 3.3v4.4"/><path d="M19.5 16.3l-3.8-2.2"/>`,
 
   // ── Power Automate ──

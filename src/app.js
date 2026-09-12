@@ -6,7 +6,7 @@ import { TOOLS, GROUPS, byId } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
 import { el, $, $$, showVeil, filesFromClipboard } from "./dom.js";
-import { toolIcon } from "./icons.js";
+import { toolIcon, uiIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic, pl } from "./i18n.js";
 
 const toolBox = $("#tool"), grids = $("#tools");
@@ -670,7 +670,7 @@ function updateBar() {
       onclick: () => location.reload() }, tr("รีเฟรชเลย", "Refresh now")),
     el("button", { class: "upd-x", type: "button",
       "aria-label": tr("ปิดข้อความนี้", "Dismiss"),
-      onclick: () => bar.remove() }, "✕"),
+      onclick: () => bar.remove() }, [uiIcon("close", "upd-x-ico")]),
   ]);
   document.body.appendChild(bar);
 }

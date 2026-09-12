@@ -144,7 +144,9 @@ export function mount(tool) {
     g.node = el("div", { class: "gf-card" }, [
       el("div", { class: "gf-head" }, [
         el("div", { class: "gf-top" }, [el("span", { class: "gf-tag" }, g.group), g.sizeEl]),
-        el("h3", { class: "gf-title" }, g.title),
+        /* ‼️ ต้องเป็น h2 ไม่ใช่ h3 เพราะหน้านี้ไม่ได้ใช้โครง workspace() ที่มี h2 ของแผง
+           หัวข้อถัดจาก h1 จึงกระโดดข้ามขั้น (tests/browser_a11y.py จับได้ 12/09/2026) */
+        el("h2", { class: "gf-title" }, g.title),
         el("p", { class: "gf-what" }, g.what),
         el("p", { class: "gf-how" }, g.how),
       ]),

@@ -12,7 +12,7 @@
 import { el } from "./dom.js";
 import { tr, pl } from "./i18n.js";
 import { detectType } from "./filetype.js";
-import { fileKindIcon } from "./icons.js";
+import { fileKindIcon, uiIcon } from "./icons.js";
 import { normalizeThaiPUA } from "./thai.js";
 
 // ── สไตล์ของโหมด coverflow — ฝังเองเพราะห้ามแก้ assets/css/tool.css ─────────────
@@ -451,7 +451,7 @@ function ensureBox() {
   const close = el("button", {
     class: "pv-x", type: "button", "aria-label": tr("ปิด", "Close"),
     onclick: () => box.close(),
-  }, "✕");
+  }, [uiIcon("close", "pv-x-ico")]);
   box = el("dialog", { class: "pv" }, [close, scene, prevBtn, nextBtn, cap]);
   // คลิกนอกภาพ = ปิด (พฤติกรรมที่คนคาดหวังจากภาพเต็มจอ) — .pv-scene เป็น pointer-events:none
   // เอง (เว้นแต่ตัวการ์ด/สเตจ) คลิกพื้นที่ว่างจึงทะลุมาเจอ box ตรงนี้ได้เหมือนของเดิมทุกโหมด

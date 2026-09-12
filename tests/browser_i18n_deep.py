@@ -362,7 +362,9 @@ def do_tool_action(pg, tool_id, address_xlsx_path, lang="en"):
             pg.locator("input[type=number]").fill("1")
             pg.wait_for_timeout(300)
         if tool_id == "image-convert":
-            pg.locator("select").select_option("webp")
+            # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
+            #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
+            pg.locator(".panel select").first.select_option("webp")
         click_go(pg, btn)
     elif tool_id in SHEETPICK:
         file_rel = SHEETPICK[tool_id][0]

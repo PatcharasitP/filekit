@@ -30,6 +30,14 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 
 .tool-head{
   --text:#f0f1f3; --text-dim:var(--stage-dim);
+  /* ‼️ แถบนี้พื้นมืดเสมอทั้งสองธีม จึงต้องประกาศ token สีให้ครบ ไม่ใช่แค่ --text
+     ที่ขาดไปแล้วพังจริง: โหมดสว่างใช้สีตระกูลชุดเข้ม (เช่นเขียว #0c6440) ซึ่งพอมา
+     อยู่บนพื้นมืดเหลือ 2.27:1 ป้าย "ทำงานในเครื่องคุณ" จึงแทบมองไม่เห็น
+     และ --text-mute ชุดสว่าง #626771 เหลือ 2.88:1 (วัดจริง 12/09/2026)
+     กฎคือ: บล็อกไหนตั้งพื้นเองแบบไม่ตามธีม ต้องตั้ง token สีทุกตัวที่ลูกของมันใช้ */
+  --text-mute:#949ba7; --line:#39404e; --line-soft:#2b313d; --brand-text:#8aa3ff;
+  --g-pdf:#e8613c; --g-img:#3ab7d8; --g-doc:#6c8cff; --g-ppt:#c77dff;
+  --g-data:#3ec98a; --g-thai:#ff6b81; --g-powerbi:#e0a72e;
   display:flex; gap:var(--sp4); align-items:flex-start;
   margin-bottom:var(--sp5);
   border-radius:24px; padding:clamp(18px,3.4vw,26px) clamp(18px,3.4vw,28px);
@@ -1020,3 +1028,10 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 }
 /* โน้ตท้ายเครื่องมือที่อยู่นอกกล่องขาว ดูหลุดออกจากงาน จัดให้อยู่ในระยะเดียวกับกล่อง */
 .panel + .note{ margin-top:14px; padding-inline:2px }
+
+/* ‼️ เครื่องหมายกากบาทเดิมเป็นอักขระ ✕ ซึ่งฟอนต์ไทยบางตัวไม่มี แล้วขึ้นเป็นกล่องสี่เหลี่ยม
+   (เทส tests/browser_noemoji.py จับได้ 12/09/2026) เปลี่ยนเป็นไอคอนเส้นจาก icons.js
+   ขนาดกำหนดที่นี่เพราะปุ่มแต่ละที่มีขนาดต่างกัน */
+.cfs-clear-ico,.pv-x-ico{width:1em; height:1em; stroke:currentColor;
+  stroke-width:2.2; fill:none; stroke-linecap:round; display:block}
+.pv-x-ico{stroke-width:2}

@@ -39,12 +39,12 @@
 <meta property="og:site_name" content="FileKit">
 <meta property="og:locale" content="th_TH">
 <meta property="og:title" content="FileKit - เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน">
-<meta property="og:description" content="42 เครื่องมือ แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
+<meta property="og:description" content="43 เครื่องมือ แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
 <meta property="og:url" content="https://patcharasitp.github.io/filekit/">
 <meta property="og:image" content="https://patcharasitp.github.io/filekit/assets/social/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="FileKit - 42 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
+<meta property="og:image:alt" content="FileKit - 43 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
@@ -64,7 +64,7 @@
  "applicationCategory":"UtilitiesApplication","operatingSystem":"Any web browser",
  "inLanguage":["th-TH","en"],"isAccessibleForFree":true,
  "browserRequirements":"ต้องเปิดใช้งาน JavaScript",
- "description":"42 เครื่องมือแปลง รวม แยก บีบอัด PDF, Word, Excel, PowerPoint, รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
+ "description":"43 เครื่องมือแปลง รวม แยก บีบอัด PDF, Word, Excel, PowerPoint, รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"THB"},
  "featureList":["รวมไฟล์ PDF","แยกไฟล์ PDF","บีบอัดไฟล์ PDF","จัดการหน้า PDF","เซ็นชื่อบน PDF","ใส่ลายน้ำ PDF","OCR อ่านข้อความจากสแกน","PDF เป็น Word","PDF เป็น Excel","PDF เป็นรูปภาพ","PDF เป็นข้อความ","Word เป็น PDF","Excel เป็น PDF","PowerPoint เป็น PDF","PowerPoint เป็น Word","รูปภาพเป็น PDF","ย่อและบีบอัดรูปภาพ","แปลงชนิดไฟล์รูป","รวมไฟล์ Word","ค้นหาและแทนที่ทั้งชุด","ตรวจเอกสารก่อนส่ง","จดหมายเวียน Word กับ Excel","สลับ Excel กับ CSV","ซ่อมไฟล์ไทยเพี้ยน","สลับปี พ.ศ. กับ ค.ศ.","ตรวจเลขบัตรประชาชน","ตัวเลขเป็นบาทถ้วน"]}
 ]}
@@ -297,6 +297,10 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   --card:#181c24; --card-hi:#1f242d; --bg-soft:#12161d;
   --line:#2e3542; --line-soft:#272d38;
   --text:#f0f1f3; --text-dim:#a8adb8; --text-mute:#8f97a6; --brand:#8aa3ff;
+  /* ‼️ สีประจำตระกูลต้องประกาศทับด้วย ไม่งั้นโหมดสว่างจะเอาชุดเข้มมาวางบนพื้นมืด
+     (ป้าย "ในเครื่องคุณ" เคยเหลือ 2.27:1 วัดจริง 12/09/2026) */
+  --g-pdf:#e8613c; --g-img:#3ab7d8; --g-doc:#6c8cff; --g-ppt:#c77dff;
+  --g-data:#3ec98a; --g-thai:#ff6b81; --g-powerbi:#e0a72e; --brand-text:#8aa3ff;
   position:relative; isolation:isolate; overflow:hidden; color:var(--text);
   margin:var(--sp2) 0 var(--sp3); border-radius:28px;
   /* ‼️ วัดจริง 11/09/2026 ของเดิมดันเครื่องมือตัวแรกไปอยู่ที่ 832px บนจอสูง 950
@@ -389,7 +393,9 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 .hd-out{background:#232a34; border-color:color-mix(in srgb,var(--g-pdf) 40%,var(--stage-line));
   border-inline-start:3px solid var(--g-pdf)}
 .hd-out b{color:#fff; font-weight:700}
-.hd-out em{color:var(--g-pdf); font-weight:700}
+/* ‼️ พื้นกล่องนี้ (#232a34) สว่างกว่าแถบรอบ ๆ ส้ม #e8613c จึงเหลือ 4.27:1
+   ใช้ส้มที่อ่อนลงอีกขั้นเฉพาะจุดนี้ วัดได้ 5.20:1 */
+.hd-out em{color:#ee7a56; font-weight:700}
 
 @media (prefers-reduced-motion: reduce){ .sheet.lead,.sheet.lead::after{animation:none} }
 
@@ -659,6 +665,10 @@ body.tool .upd-bar{inset-block-end:max(86px,calc(env(safe-area-inset-bottom) + 8
   color:var(--text-mute);font-size:14px;line-height:1;
 }
 .upd-x:hover{color:var(--text);background:var(--bg-soft)}
+/* ‼️ กฎนี้ต้องอยู่ในไฟล์นี้ ไม่ใช่ tool.css เพราะแถบแจ้งเวอร์ชันใหม่โผล่บนหน้าแรกได้
+   ซึ่งตอนนั้นอาจยังไม่ได้โหลด tool.css เลย ไอคอนจะไม่มีขนาดแล้วบานเต็มปุ่ม */
+.upd-x-ico{width:15px;height:15px;stroke:currentColor;stroke-width:2.2;fill:none;
+  stroke-linecap:round;margin:0 auto;display:block}
 .ob-detail{color:var(--text-mute)}
 .ob-ready{color:var(--ok);font-weight:600}
 .ob-fail{color:var(--err);font-weight:600}
@@ -721,7 +731,7 @@ body.tool #home{display:none}
             <div class="hits" id="hits" role="status" aria-live="polite"></div>
           </div>
           <div class="facts">
-            <div class="fact"><b id="fact-n">42</b><span data-en="tools">เครื่องมือ</span></div>
+            <div class="fact"><b id="fact-n">43</b><span data-en="tools">เครื่องมือ</span></div>
             <div class="fact"><b>0</b><span data-en="files uploaded">ไฟล์ที่ถูกอัปโหลด</span></div>
             <div class="fact"><b data-en="$0">฿0</b><span data-en="free, no ads">ฟรี ไม่มีโฆษณา</span></div>
           </div>

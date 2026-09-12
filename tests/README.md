@@ -18,7 +18,9 @@ node tests/samples.test.mjs      # กฎจุดกลางต้องบั
 
 node tests/matrixdax.test.mjs    # สูตร DAX ของ Matrix ต้องแปลงทุกชนิดเป็นข้อความ ยอด 0 ห้ามหาย
 
-# ② เบราว์เซอร์จริง — ต้องเปิดเซิร์ฟเวอร์ก่อน
+# ② เบราว์เซอร์จริง — ใช้ tests/run.sh จะขอพอร์ตว่างจากระบบและยืนยันว่าเสิร์ฟโค้ดชุดนี้จริงก่อนยิง
+#    (13/09/2026 เจอเซิร์ฟเวอร์เก่าค้าง 10+ พอร์ต ทำเทสยิงใส่โค้ดเก่า)  เช่น tests/run.sh browser_theme browser_sidepanel  หรือ  tests/run.sh all
+# แบบเดิม: เปิดเซิร์ฟเวอร์เองก่อน
 python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error
 ../.venv/bin/python tests/browser_ux.py         # หน้าแรก ค้นหา ธีม คีย์บอร์ด คอนทราสต์ มือถือ

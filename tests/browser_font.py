@@ -36,11 +36,15 @@ GRAB = """() => {
   while ((n = w.nextNode())) {
     const el = n.parentElement;
     if (!el || el.closest("script,style") || !el.offsetParent && el.tagName !== "BODY") continue;
+    // ‼️ เครื่องมือที่ประกาศฟอนต์ของตัวเองด้วย data-font (หน้าธีม Power BI โคลน system-ui จาก datatraining.io
+    //    13/09/2026) ไม่ได้วาดด้วย Sarabun อักขระอย่าง Δ ▲ ▼ ² จึงไม่ใช่ "ฟอนต์ปน" ของเว็บ ข้ามได้
+    //    แต่ต้องประกาศชัดที่ตัว wrap เท่านั้น ห้ามใช้เป็นทางลัดปิดเทสของเครื่องมืออื่น
+    if (el.closest("[data-font]")) continue;
     for (const ch of n.textContent) out.add(ch);
   }
   // ข้อความใน placeholder / aria-label / title ก็เป็นสิ่งที่ผู้ใช้เห็นหรือได้ยิน
   for (const e of document.querySelectorAll("[placeholder],[aria-label],[title]"))
-    for (const a of ["placeholder","aria-label","title"])
+    if (!e.closest("[data-font]")) for (const a of ["placeholder","aria-label","title"])
       for (const ch of (e.getAttribute(a) || "")) out.add(ch);
   return [...out];
 }"""

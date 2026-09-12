@@ -705,3 +705,12 @@ if ("serviceWorker"in navigator && location.protocol.startsWith("http")) {
     });
   });
 }
+
+/* แถบโลโก้ท้ายเว็บ: ลิงก์หมวดฝากหมวดไว้แล้วพากลับหน้าแรก (กลไกเดียวกับชิปหมวดใน ui.js)
+   ‼️ ต้องเลื่อนขึ้นบนด้วย เพราะคนกดอยู่ล่างสุดของหน้า ถ้าไม่เลื่อนจะกรองแล้วแต่มองไม่เห็นว่าเกิดอะไรขึ้น */
+for (const a of $$(".sites a[data-gocat]")) {
+  a.addEventListener("click", () => {
+    try { if (a.dataset.gocat) sessionStorage.setItem("fk:gocat", a.dataset.gocat); } catch { /* โหมดส่วนตัว */ }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}

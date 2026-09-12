@@ -81,15 +81,25 @@ const GROUP_ACCENT = {
 
 export function toolShell(tool) {
   const body = el("div", { class: "panel" });
+  /* ‼️ คอลัมน์ขวา: คำถามที่เจอบ่อย + ทำอะไรต่อดี ที่เดิมอยู่ท้ายหน้า
+     พี่ปอนด์ 13/09/2026: ที่ว่างสองข้างจอกว้าง "อยากให้มีอะไรใส่ลงไป แต่กลัวจะรก ให้พับซ่อนเก็บได้"
+     จึงไม่เพิ่มของใหม่ แต่ย้ายของที่มีอยู่แล้วขึ้นมาข้างงานเมื่อจอ >= 1500px (CSS จัดการ)
+     จอแคบ .tool-side เป็น display:contents = ไหลท้ายหน้าเหมือนเดิมทุกประการ */
+  const sideParts = [toolFaq(tool), nextSteps(tool)].filter(Boolean);
+  const side = sideParts.length
+    ? el("aside", { class: "tool-side", "aria-label": tr("คำถามและขั้นต่อไป", "Questions and next steps") }, sideParts)
+    : null;
+  if (side) collapsible(side, "fk:side-collapsed", tr("คำถามและขั้นต่อไป", "Questions and next steps"));
+  const rail = toolRail(tool);
+  collapsible(rail, "fk:rail-collapsed", tr("ข้อมูลเครื่องมือ", "Tool info"));
   const wrap = el("div", { style: `--ac:var(${GROUP_ACCENT[tool.group] || "--brand"})` }, [
     el("div", { class: "tool-head" }, [
       el("div", { class: "tool-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
       el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc), toolMeta(tool), toolExample(tool)]),
     ]),
     body,
-    toolFaq(tool),
-    nextSteps(tool),
-    toolRail(tool),
+    side,
+    rail,
   ]);
   return { wrap, body };
 }
@@ -107,6 +117,34 @@ export function toolShell(tool) {
  *    จอเล็กกว่านั้นใช้หัวเรื่องเดิมตามปกติ (ดู .tool-rail ใน tool.css)
  * ‼️ aria-hidden ไม่ได้ เพราะมีลิงก์ข้ามส่วนที่คนใช้คีย์บอร์ดควรใช้ได้
  *    แต่ชื่อเครื่องมือซ้ำกับ h1 จึงไม่ทำเป็นหัวเรื่องซ้ำอีกชั้น */
+/* แผงข้างพับเก็บได้ (รางซ้าย + คอลัมน์ขวา) จำสถานะข้าม session ใน localStorage
+   ‼️ ปุ่มเป็นลูกสุดท้ายของแผงเสมอ ไม่แทรกหน้าเนื้อหา เทสเดิมที่อ้าง first-child ของรางจึงไม่เปลี่ยน
+   ‼️ ตอนพับ body ได้ class rail-collapsed/side-collapsed ให้ CSS คืนหัวเรื่องใหญ่มาแทนรางที่หายไป */
+function collapsible(node, key, label) {
+  let open = true;
+  try { open = localStorage.getItem(key) !== "1"; } catch { /* โหมดส่วนตัว */ }
+  const bodyCls = key.replace("fk:", "");
+  const btn = el("button", { class: "side-toggle", type: "button" }, [
+    el("span", { class: "st-lbl" }, label),
+    el("span", { class: "st-chev", "aria-hidden": "true" }),
+  ]);
+  const apply = () => {
+    node.classList.toggle("collapsed", !open);
+    document.body.classList.toggle(bodyCls, !open);
+    btn.setAttribute("aria-expanded", String(open));
+    const name = open ? tr(`ซ่อน${label}`, `Hide ${label.toLowerCase()}`) : tr(`แสดง${label}`, `Show ${label.toLowerCase()}`);
+    btn.setAttribute("aria-label", name); btn.title = name;
+  };
+  btn.addEventListener("click", () => {
+    open = !open;
+    try { localStorage.setItem(key, open ? "0" : "1"); } catch { /* โหมดส่วนตัว */ }
+    apply();
+  });
+  apply();
+  node.appendChild(btn);
+  return btn;
+}
+
 export function toolRail(tool) {
   const jump = [["ws-top", tr("พื้นที่ทำงาน", "Workspace")],
                 ["faq-h", tr("คำถามที่เจอบ่อย", "Common questions")],
@@ -126,7 +164,11 @@ export function toolRail(tool) {
            จะเด้งกลับหน้าแรกทันที จึงเลื่อนเองแล้วห้ามเบราว์เซอร์เปลี่ยน hash */
         e.preventDefault();
         const t = document.getElementById(id);
-        if (t) t.scrollIntoView({ block: "start", behavior: "smooth" });
+        if (!t) return;
+        /* ปลายทางอยู่ในคอลัมน์ขวาที่พับอยู่ ต้องกางก่อน ไม่งั้นกดแล้วไม่มีอะไรเกิดขึ้น */
+        const side = t.closest(".tool-side.collapsed");
+        if (side) side.querySelector(".side-toggle").click();
+        t.scrollIntoView({ block: "start", behavior: "smooth" });
       } }, label))),
   ]);
 }

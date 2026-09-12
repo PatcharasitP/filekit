@@ -706,6 +706,19 @@ footer a:hover{color:var(--text); text-decoration-color:currentColor}
 footer::before{content:""; position:absolute; inset-inline:0; top:0; height:1px; background:var(--line);
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
           mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
+/* แถบโลโก้กดได้ท้ายเว็บ (โครงจาก sqlbi.com ค่าที่วัดอยู่ในคอมเมนต์ตรง markup) พื้นมืดเสมอทั้งสองธีมเหมือนแผง stage */
+.network{background:linear-gradient(152deg,var(--stage),var(--stage-2)); border-top:3px solid var(--stage-line);
+  padding:20px 16px 14px; margin-top:8px}
+.sites{list-style:none; margin:0 auto; padding:0; max-width:1140px; display:flex; flex-wrap:wrap; justify-content:center; gap:4px}
+.sites a{display:inline-flex; align-items:baseline; gap:.28em; height:34px; padding:10px 20px; box-sizing:content-box;
+  color:#fff; opacity:.62; text-decoration:none; font-size:15px; line-height:34px; letter-spacing:.01em; white-space:nowrap;
+  border-radius:6px; transition:opacity var(--t-micro,.1s) ease}
+.sites a span{font-weight:400} .sites a b{font-weight:800}
+.sites a.self,.sites a:hover,.sites a:focus-visible{opacity:1}
+.sites a:focus-visible{outline:2px solid #fff; outline-offset:2px}
+/* ‼️ มือถือซ่อนทั้งแถบ เหมือนที่ sqlbi ทำจริง (วัดแล้ว display:none ที่ 390px) ลองให้ตกบรรทัดแล้วสูง 185px
+   หางหน้ายาวขึ้นจนปุ่มลงมือทำที่ติดในกรอบแผงหลุดเหนือจอ 49 จุด (tests/browser_mobile.py ② จับได้ 13/09/2026) */
+@media (max-width:640px){ .network{display:none} }
 #tool{display:none}
 body.tool #tool{display:block}
 body.tool #home{display:none}
@@ -785,6 +798,23 @@ body.tool #home{display:none}
 </main>
 
 <footer><a href="https://github.com/PatcharasitP/filekit" target="_blank" rel="noopener" data-en="Source code on GitHub">โค้ดทั้งหมดเปิดดูได้บน GitHub</a></footer>
+<!-- แถบโลโก้กดได้ท้ายเว็บ ลอกโครงจาก sqlbi.com (พี่ปอนด์ชอบ 13/09/2026) วัดของจริง: แถวสูง 54px โลโก้สูง 34px
+     ระยะใน li 10px 20px จาง 0.3 ชี้แล้วเต็ม 1 พื้นเทาเข้ม เส้นคั่นบน 3px (ค่าดิบ .claude/research/2026-09-13-sqlbi-footer.md)
+     ของเราไม่มีไฟล์โลโก้ จึงใช้ wordmark ตัวอักษร คำแรกบาง คำหลังหนา แบบ "DAX Guide" ของเขา
+     ‼️ จางแค่ 0.62 ไม่ใช่ 0.3 เพราะของเราเป็นตัวหนังสือ ต้องอ่านออก 4.5:1 (ของเขาเป็นภาพ)
+     ‼️ มือถือซ่อนทั้งแถบตามของเขา (ลองให้ตกบรรทัดแล้วหางหน้ายาว ปุ่มลงมือทำหลุดจอ ดูคอมเมนต์ใน CSS) -->
+<nav class="network" aria-label="เว็บและหมวดในเครือ FileKit" data-en-al="FileKit family of sites and tool groups">
+  <ul class="sites">
+    <li><a class="self" href="#/" data-gocat="" aria-label="FileKit"><span>File</span><b>Kit</b></a></li>
+    <li><a href="#/freebies"><b data-en="Freebies">ของแจกฟรี</b></a></li>
+    <li><a href="#/" data-gocat="powerbi" aria-label="Power BI"><span>Power</span><b>BI</b></a></li>
+    <li><a href="#/" data-gocat="powerquery" aria-label="Power Query"><span>Power</span><b>Query</b></a></li>
+    <li><a href="#/" data-gocat="powerautomate" aria-label="Power Automate"><span>Power</span><b>Automate</b></a></li>
+    <li><a href="#/" data-gocat="thai"><b data-en="Thai docs">งานไทย</b></a></li>
+    <li><a href="https://patcharasitp.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio"><span>Port</span><b>folio</b></a></li>
+    <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard"><span>BKK</span><b>Dashboard</b></a></li>
+  </ul>
+</nav>
 
 <!-- แปลข้อความที่เขียนตายใน HTML ให้เสร็จก่อนวาดจอ — app.js เป็น module จึงถูกเลื่อนไปท้ายสุด
      ถ้ารอมัน ผู้ใช้ภาษาอังกฤษจะเห็นภาษาไทยแวบหนึ่งก่อน (ตรรกะเดียวกับ applyStatic ใน src/i18n.js) -->

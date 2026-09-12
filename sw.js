@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v95";
+const VERSION = "filekit-v96";
 const SHELL = `${VERSION}-shell`;
 
 /* ‼️‼️ แคชไลบรารี **ห้ามผูกกับเวอร์ชันของแอป**
@@ -30,10 +30,17 @@ const SHELL = `${VERSION}-shell`;
  *    (เพิ่ม ลบ หรืออัปเกรดรุ่นไลบรารี) ห้ามขยับตามเวอร์ชันแอปเด็ดขาด */
 const LIBS = "filekit-libs-v1";
 
+/* ‼️ ทุกโมดูลใน src/ ที่ถูก import ต้องอยู่ในนี้ ไม่งั้นออฟไลน์เปิดเครื่องมือไม่ได้ (tests/browser_offline.py ①)
+   13/09/2026 เจอขาด 5 ไฟล์ (cfgsearch, codeview, cvd, dirtymark, toolio) ที่เพิ่มมา 11-12/09 แล้วลืมใส่ */
 const PRECACHE = [
   "./", "./index.html",
   "./src/app.js", "./src/i18n.js", "./src/registry.js", "./src/loader.js", "./src/dom.js", "./src/search.js", "./src/icons.js", "./src/workspace.js",
   "./assets/css/tool.css", "./manifest.webmanifest",
+  "src/cfgsearch.js",
+  "src/codeview.js",
+  "src/cvd.js",
+  "src/dirtymark.js",
+  "src/toolio.js",
 ];
 
 self.addEventListener("install", (e) => {

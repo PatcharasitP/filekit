@@ -169,7 +169,12 @@ with sync_playwright() as p:
     thumb = pg.locator("button.thumb").first
     thumb.focus()
     pg.keyboard.press("Enter")
-    pg.wait_for_timeout(500)
+    # ‼️ รอให้เปิดจริงแทนการหน่วงเวลาตายตัว เกณฑ์ไม่ได้ลดลง แค่ไม่วิ่งชนจังหวะ
+    #    (500ms พอบนเครื่องตัวเอง แต่ไม่พอตอนยิงกับเว็บจริงที่รูปโหลดข้ามเน็ต)
+    try:
+        pg.wait_for_function("() => document.querySelector('dialog.pv')?.open === true", timeout=6000)
+    except Exception:
+        pass
     ck_true("Enter บนปุ่ม 'ดูรูปใหญ่' → เปิด dialog เต็มจอ", pg.evaluate("document.querySelector('dialog.pv')?.open") is True)
 
     # กด Tab วน 20 ครั้ง — ทุก element ที่โฟกัสต้องอยู่ใน dialog เท่านั้น
@@ -231,6 +236,11 @@ with sync_playwright() as p:
     print("  -- ปุ่มหมุน/ลบต่อหน้าใน 'จัดการหน้า PDF' ต้องมี aria-label แยกแต่ละหน้า ไม่ใช้ title ซ้ำกันเฉยๆ --")
     pg.goto(f"{BASE}/#/pdf-pages", wait_until="networkidle")
     pg.wait_for_selector(".dz")
+    # ‼️ ระหว่าง startViewTransition หน้าจะถูกภาพนิ่งคลุมไว้และคลิกไม่ทะลุ
+    #    บนเว็บจริงที่ช้ากว่า การคลิกทันทีจึงไปชนจังหวะนั้นแล้วขึ้นว่า html intercepts pointer events
+    #    รอให้ตัวโหลดหายและหน้านิ่งก่อน ไม่ได้ลดเกณฑ์อะไร
+    pg.wait_for_function("() => !document.querySelector('.loading')", timeout=8000)
+    pg.wait_for_timeout(400)
     with pg.expect_file_chooser() as fcinfo:
         pg.locator(".dz").click()
     fc = fcinfo.value

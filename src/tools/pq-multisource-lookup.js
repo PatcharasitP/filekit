@@ -41,7 +41,7 @@ const STYLE = `
    วัดบนจอ 390x844 จริงแล้วตกเกณฑ์ทุกใบ (tests/browser_mobile.py ข้อ ④)
    ขยายเฉพาะอุปกรณ์สัมผัส เมาส์บนจอใหญ่คงขนาดกระชับเหมือนเดิม */
 @media (pointer:coarse){ .pqm-mini{width:36px;height:36px} }
-.pqm-mini.danger:hover:not(:disabled){border-color:#d64550;color:#d64550}
+.pqm-mini.danger:hover:not(:disabled){border-color:var(--err);color:var(--err)}
 
 .pqm-grid{display:flex;flex-direction:column;gap:8px}
 .pqm-row{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);padding:9px 11px}

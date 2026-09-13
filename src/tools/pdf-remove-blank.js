@@ -31,9 +31,9 @@ const STYLE = `
 .rb-ink{position:absolute;inset-block-end:5px;inset-inline-start:5px;background:rgba(0,0,0,.65);
   color:#fff;font-size:10.5px;padding:1px 6px;border-radius:99px;font-variant-numeric:tabular-nums}
 .pg.rb-blank{opacity:.42;border-style:dashed}
-.pg.rb-blank .rb-tag{background:var(--err,#c62828)}
-.rb-tag{position:absolute;inset-block-start:5px;inset-inline-end:5px;background:var(--ok,#2e7d32);
-  color:#fff;font-size:10.5px;padding:1px 7px;border-radius:99px}
+.pg.rb-blank .rb-tag{background:var(--err)}
+.rb-tag{position:absolute;inset-block-start:5px;inset-inline-end:5px;background:var(--ok);
+  color:var(--btn-fg);font-size:10.5px;padding:1px 7px;border-radius:99px}
 `;
 
 export function mount(tool) {

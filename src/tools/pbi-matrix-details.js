@@ -93,7 +93,7 @@ const STYLE = `
   width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;flex:none}
 .pmd-mini:hover:not(:disabled){border-color:var(--g-powerbi,var(--brand))}
 .pmd-mini:disabled{opacity:.35;cursor:default}
-.pmd-mini.danger{color:var(--danger,#c0392b)}
+.pmd-mini.danger{color:var(--err)}
 @media (pointer:coarse){ .pmd-mini{width:36px;height:36px} }
 .pmd-col-head input[type="checkbox"]{width:18px;height:18px;flex:none;margin:0}
 .pmd-col-name{font-weight:700;font-size:13px;color:var(--text);word-break:break-word;flex:1;min-width:0}

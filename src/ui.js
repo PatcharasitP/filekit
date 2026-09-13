@@ -22,7 +22,7 @@ function ensureRowStyle() {
   st.textContent = `.file-row .f-open{ background:none; border:0; padding:0; margin:0; font:inherit;
     color:inherit; text-align:left; cursor:pointer; min-width:0; }
   .file-row .f-open:hover .f-name{ text-decoration:underline; }
-  .file-row .f-open:focus-visible{ outline:2px solid var(--accent,#3b6cf6); outline-offset:3px; border-radius:6px; }`;
+  .file-row .f-open:focus-visible{ outline:2px solid var(--focus); outline-offset:3px; border-radius:6px; }`;
   document.head.appendChild(st);
 }
 export { $, $$, el } from "./dom.js";

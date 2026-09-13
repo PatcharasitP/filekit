@@ -150,28 +150,16 @@ export function codeView({ getCode, lang = "json", title, openLabel }) {
 /** สีของโทเคนอย่างเดียว สำหรับเครื่องมือที่มีกล่องโค้ดของตัวเองอยู่แล้ว */
 export const CODE_TOKEN_CSS = `
 code i, pre i{font-style:normal}
-/* ‼️ สีโหมดสว่างวัดคอนทราสต์จริงบนพื้นกล่องโค้ดแล้วทุกตัว ต้องผ่าน 4.5:1 ของ WCAG AA
-   ค่าเดิมของ v75 ตกเกณฑ์ 2 ตัว ม่วง #8a3ffc ได้ 4.31:1 และส้ม #b3541e ได้ 4.30:1
-   ทำให้เข้มขึ้นโดยคงโทนเดิม ตอนนี้ผ่านทั้งบนพื้นเทาอ่อน efeeea และพื้นขาวล้วน
+/* ‼️ สีของโทเคนกล่องโค้ดใช้ชุดสีเดียวกับที่เหลือของเว็บ (--brand-text/--ok/--warn/--g-ppt
+   ประกาศใน index.html :root) แทนพาเลตของตัวเอง โทเคนสลับค่าโหมดมืด/สว่างเองอยู่แล้ว
+   คอนทราสต์วัดจริงบนพื้นกล่องโค้ดผ่าน 4.5:1 ของ WCAG AA ทั้งสองโหมด
    (tests/browser_codepaint.py วัดซ้ำทุกครั้ง จะได้ไม่ถอยหลังเงียบ ๆ อีก) */
-.cv-key{color:#0a6ebd}
-.cv-str{color:#0a7a4a}
-.cv-num{color:#a54a15}
-.cv-lit{color:#7c2fe0}
-.cv-kw{color:#7c2fe0;font-weight:700}
+.cv-key{color:var(--brand-text)}
+.cv-str{color:var(--ok)}
+.cv-num{color:var(--warn)}
+.cv-lit{color:var(--g-ppt)}
+.cv-kw{color:var(--g-ppt);font-weight:700}
 .cv-cmt{color:var(--text-mute);font-style:italic}
-/* โหมดมืดต้องสว่างขึ้น ไม่งั้นสีเข้มบนพื้นเข้มอ่านไม่ออก */
-:root[data-theme="dark"] .cv-key{color:#6cb6ff}
-:root[data-theme="dark"] .cv-str{color:#5fd3a0}
-:root[data-theme="dark"] .cv-num{color:#ffa657}
-:root[data-theme="dark"] .cv-lit,:root[data-theme="dark"] .cv-kw{color:#c49bff}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .cv-key{color:#6cb6ff}
-  :root:not([data-theme="light"]) .cv-str{color:#5fd3a0}
-  :root:not([data-theme="light"]) .cv-num{color:#ffa657}
-  :root:not([data-theme="light"]) .cv-lit,
-  :root:not([data-theme="light"]) .cv-kw{color:#c49bff}
-}
 @media (pointer:coarse){ .cv-sum{min-height:44px;align-items:center} }
 `;
 

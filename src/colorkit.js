@@ -165,7 +165,7 @@ export const COLORKIT_CSS = `
 .ck-row .ck-dot{flex:none;width:34px;height:28px;padding:0;border:1px solid var(--line);
   border-radius:6px;background:none;cursor:pointer}
 .ck-hex{flex:1;min-width:0;box-sizing:border-box;max-width:100%;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:12.5px}
-.ck-hex.bad{border-color:#d64550;outline:1px solid #d64550}
+.ck-hex.bad{border-color:var(--err);outline:1px solid var(--err)}
 .ck-swatches{display:flex;flex-wrap:wrap;gap:5px}
 .ck-sw{width:20px;height:20px;border-radius:5px;border:1px solid var(--line);
   background:var(--sw);cursor:pointer;padding:0}
@@ -177,6 +177,6 @@ export const COLORKIT_CSS = `
 }
 .ck-contrast{font-size:12px;line-height:1.6;margin-top:5px}
 .ck-contrast.ok{color:var(--text-mute)}
-.ck-contrast.bad{color:#d64550;font-weight:600}
+.ck-contrast.bad{color:var(--err);font-weight:600}
 .ck-contrast.note{color:var(--text-mute)}
 `;

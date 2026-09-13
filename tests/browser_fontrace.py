@@ -3,14 +3,16 @@
 ‼️ ที่มา 13/09/2026 พี่ปอนด์ทัก "พอ REFRESH ขนาดตัวอักษรไม่เท่ากันแบบสัมผัสได้"
    วินิจฉัยด้วย CDP 75 ตัวอย่างบนเว็บสด: font-display:optional ของ Chrome ใช้ฟอนต์ก็ต่อเมื่อไฟล์อยู่ใน
    memory cache ของแท็บเดิม หรือโหลดเสร็จก่อนวาดเฟรมแรก จึงสลับระหว่าง Sarabun กับ Leelawadee UI ตามวิธีกด
-   แก้ด้วย <link rel=preload> 3 ไฟล์ + ประกาศหน้า Bold ของฟอนต์สำรอง + ใส่ฟอนต์ใน PRECACHE ของ service worker
+   แก้ด้วย preload 3 ไฟล์เฉพาะเมื่อ SW คุมหน้า + font-display:fallback + หน้า Bold ของฟอนต์สำรอง + ฟอนต์ใน PRECACHE
+   (preload คงที่ทำ FCP บนเน็ตมือถือจำลองช้าลง 536 เป็น 824 ms จึงไม่ใช้)
 
 ‼️ ห้ามตัดสินด้วย getComputedStyle().fontFamily (มันบอกแค่ที่ CSS ขอ) ต้องถาม CDP CSS.getPlatformFontsForNode
    ว่าวาดด้วยฟอนต์อะไรจริง และ document.fonts.status ก็บอกไม่ได้ (loaded ทั้งที่วาดด้วย fallback)
 
 เทสนี้ตรวจ
    ① ตัวตรวจแดงเป็น: บล็อก .woff2 แล้ว CDP ต้องตอบ Leelawadee UI
-   ② 6 สถานการณ์ (โหลดแรกหลัง SW พร้อม, reload ครั้งที่ 1, reload ครั้งที่ 2, hard reload, goto ซ้ำ, แท็บใหม่) ต้องเป็น Sarabun ทั้งหมด
+   ② 6 สถานการณ์ (โหลดแรกใน context ใหม่, reload ครั้งที่ 1, reload ครั้งที่ 2, hard reload, goto ซ้ำ, แท็บใหม่)
+      หลังหน้านิ่งแล้ว (1.2 วิ) ต้องเป็น Sarabun ทั้งหมด (fallback สลับให้ภายใน 3 วิ ถ้ามาช้า)
    ③ ตอน fallback จริง (บล็อกฟอนต์) หัวเรื่องหนาต้องกว้างต่างจาก Sarabun ไม่เกิน 3% (ไม่ใช่ 16% แบบก่อนแก้)
 
 รัน: tests/run.sh browser_fontrace   (ตั้ง FK_BASE ชี้เว็บสดได้)
@@ -43,7 +45,8 @@ def h1_width(pg):
         return best; }""")
 
 def wait_home(pg):
-    pg.wait_for_selector(".hero h1"); pg.wait_for_selector(".pill"); pg.wait_for_timeout(250)
+    # รอให้หน้านิ่ง: font-display:fallback ยอมสลับได้ภายใน 3 วิ ผู้ใช้เห็นผลสุดท้ายหลังจากนั้น
+    pg.wait_for_selector(".hero h1"); pg.wait_for_selector(".pill"); pg.wait_for_timeout(1200)
 
 with sync_playwright() as pw:
     br = pw.chromium.launch()
@@ -79,7 +82,7 @@ with sync_playwright() as pw:
         import time; time.sleep(0.3); route.continue_()
     pg3.route("**/*.woff2", slow)
     pg3.goto(BASE + "/", wait_until="networkidle"); wait_home(pg3)
-    print(f"  ℹ️ โหลดแรกสุดบนเน็ตช้า 300ms (ยอมเป็นสำรองได้): {platform_font(pg3, '.hero h1')}")
+    ck(f"โหลดแรกสุดบนเน็ตช้า 300ms หลังหน้านิ่งก็ต้องสลับเป็น Sarabun: {platform_font(pg3, '.hero h1')}", "Sarabun" in platform_font(pg3, '.hero h1'))
     ctx2.close(); ctx.close()
 
     print("\n③ ตอนต้องใช้ฟอนต์สำรอง หัวเรื่องต้องกว้างใกล้ Sarabun")

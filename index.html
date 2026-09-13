@@ -14,7 +14,7 @@
      ‼️ blob: กับ wasm-unsafe-eval จำเป็นสำหรับตัวอ่านข้อความจากสแกน (Tesseract ใช้ worker + WASM) -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'wasm-unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'sha256-Cc0W0CwhZzN7hIDklSuJ+Qs16/OVIJT4eHeIM2+c1js=' 'sha256-+WV7M4JC5RBwOo7oWvLiLqllHEOz4BRSD1jtfIUdJHE=';
+  script-src 'self' 'wasm-unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'sha256-Cc0W0CwhZzN7hIDklSuJ+Qs16/OVIJT4eHeIM2+c1js=' 'sha256-+WV7M4JC5RBwOo7oWvLiLqllHEOz4BRSD1jtfIUdJHE=' 'sha256-gEr3oGeVWgicPLsqe0CuJ60oD88rCyHmQgHf0Q4pgxs=';
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob:;
   font-src 'self' data:;
@@ -30,16 +30,16 @@
 <meta name="description" content="แปลง รวม แยก บีบอัด PDF Excel Word รูปภาพ ทำงานในเครื่องคุณเอง ไฟล์ไม่ถูกอัปโหลดไปไหน ใช้ได้แม้ออฟไลน์">
 <meta name="theme-color" content="#0f1220" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
-<!-- ‼️ preload ฟอนต์ 3 ไฟล์ (13/09/2026) หลังพี่ปอนด์ทักว่า "refresh แล้วขนาดตัวอักษรไม่เท่ากัน"
-     วัดจริงด้วย CDP บนเว็บสด 75 ตัวอย่าง: font-display:optional ของ Chrome ใช้ฟอนต์ก็ต่อเมื่อไฟล์อยู่ใน
-     memory cache ของแท็บเดิม หรือโหลดเสร็จก่อนวาดเฟรมแรก ไม่ใช่ "ทันใน 100ms" ผลคือเปิดแท็บใหม่/
-     Ctrl+Shift+R/reload ครั้งแรกใต้ service worker = Leelawadee UI ทั้งหน้า กด F5 อีกที = Sarabun
-     preload ทำให้คำขอฟอนต์ออกตั้งแต่ตอน parse head ก่อน CSS/JS จึงเสร็จก่อนวาดเฟรมแรกในทุกเส้นทางที่มีแคช
-     (ตัวเลข FCP 296 เป็น 568 ms ที่เคยวัดคือเน็ตช้าครั้งแรกสุด ซึ่งรอบนั้น optional ก็ยังใช้ฟอนต์สำรองอยู่ดี)
-     ‼️ ต้องมี crossorigin แม้ same-origin ไม่งั้น Chrome ยิงซ้ำ 2 ครั้ง -->
-<link rel="preload" as="font" type="font/woff2" href="vendor/fonts/Sarabun-Regular.woff2" crossorigin>
-<link rel="preload" as="font" type="font/woff2" href="vendor/fonts/Sarabun-SemiBold.woff2" crossorigin>
-<link rel="preload" as="font" type="font/woff2" href="vendor/fonts/Sarabun-Bold.woff2" crossorigin>
+<!-- ‼️ preload ฟอนต์ 3 ไฟล์ "เฉพาะเมื่อ service worker ควบคุมหน้าแล้ว" (13/09/2026)
+     ที่มา: พี่ปอนด์ทัก "refresh แล้วขนาดตัวอักษรไม่เท่ากัน" วัดด้วย CDP บนเว็บสด 75 ตัวอย่างพบว่า Chrome ใช้ฟอนต์
+     ที่ตั้ง optional ก็ต่อเมื่อไฟล์อยู่ใน memory cache ของแท็บเดิม หรือโหลดเสร็จก่อนวาดเฟรมแรก
+     เปิดแท็บใหม่/Ctrl+Shift+R/reload ครั้งแรกใต้ SW จึงเป็น Leelawadee UI ทั้งหน้า กด F5 อีกที = Sarabun
+     ทางแก้ที่วัดแล้ว: preload แบบคงที่ทำ FCP บนเน็ตมือถือจำลองช้าลง 536 เป็น 824 ms (ฟอนต์ 53KB แย่ง app.js)
+     และ fetchpriority=low ไม่ช่วย (896 ms) จึง preload เฉพาะตอนที่ SW คุมหน้า = ฟอนต์อยู่ใน Cache Storage แน่
+     (มาถึงใน 2-10 ms ก่อนเฟรมแรก) ส่วนครั้งแรกสุด/hard reload ไม่ preload ให้ FCP เท่าเดิม แล้วพึ่ง font-display fallback
+     ‼️ สคริปต์นี้ถูก hash ไว้ใน CSP (script-src sha256) แก้ตัวอักษรใดก็ตามต้องคำนวณ hash ใหม่ (tests/accepts.test.mjs จับ)
+     ‼️ ต้องมี crossOrigin แม้ same-origin ไม่งั้น Chrome ยิงซ้ำ 2 ครั้ง -->
+<script>if(navigator.serviceWorker&&navigator.serviceWorker.controller){for(const w of["Regular","SemiBold","Bold"]){const l=document.createElement("link");l.rel="preload";l.as="font";l.type="font/woff2";l.crossOrigin="";l.href="vendor/fonts/Sarabun-"+w+".woff2";document.head.appendChild(l)}}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="canonical" href="https://patcharasitp.github.io/filekit/">
 <meta property="og:type" content="website">
@@ -86,7 +86,10 @@
 /* ฟอนต์ของเราเอง — ประกาศไว้ในไฟล์หลักเลย ไม่โหลดทีหลังและไม่ข้ามถ้าเครื่องมีอยู่แล้ว
    ‼️ subset ชุดก่อนขาดตัว "⇄" ที่ใช้อยู่บนหน้าแรก ตัวที่ขาดตกไปใช้ฟอนต์ระบบ
       ทำให้เห็นเป็น "ฟอนต์สองแบบปนกัน" · ชุดนี้สร้างจากตัวอักษรที่เว็บใช้จริง (tools/build-fonts.py) */
-/* ‼️ optional ไม่ใช่ swap — swap ทำให้ข้อความขึ้นด้วยฟอนต์ระบบก่อนแล้วสลับเป็น Sarabun
+/* ‼️ 13/09/2026 เปลี่ยน optional เป็น fallback (บล็อก 100ms แล้วสลับได้ภายใน 3 วิ เกินนั้นใช้สำรองถาวร)
+   เพราะ optional ทำให้ "refresh แล้วคนละฟอนต์" (ดูคอมเมนต์ที่ สคริปต์ preload ใน head) ตอนนี้ฟอนต์สำรอง
+   มี metric ใกล้ Sarabun (กว้างต่าง 2.3%) การสลับจึงแทบไม่ขยับ และเกิดเฉพาะครั้งแรกสุด/hard reload บนเน็ตช้า
+   ของเดิมเขียนไว้ว่า: optional ไม่ใช่ swap — swap ทำให้ข้อความขึ้นด้วยฟอนต์ระบบก่อนแล้วสลับเป็น Sarabun
    ตัวอักษรจึงขยับให้เห็น (เจ้าของเว็บทักเอง) · optional = ถ้าฟอนต์ไม่ทันในเสี้ยววินาทีแรก
    ก็ใช้ฟอนต์สำรองไปทั้งรอบนั้นเลย ไม่สลับกลางคัน = ไม่มีการขยับ
    ‼️ 13/09/2026 พบว่า "แคชแล้วมาทันเสมอ" ไม่จริง (ดูคอมเมนต์ที่ <link rel="preload"> ใน head) จึง preload แล้ว
@@ -99,11 +102,11 @@
 @font-face{font-family:"FK Fallback";src:local("Leelawadee UI Bold"),local("LeelawadeeUI-Bold"),local("Tahoma Bold"),local("Arial Bold");
   font-weight:600 700;size-adjust:97%;ascent-override:92%;descent-override:26%;line-gap-override:0%}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-Regular.woff2") format("woff2");
-  font-weight:400;font-style:normal;font-display:optional}
+  font-weight:400;font-style:normal;font-display:fallback}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-SemiBold.woff2") format("woff2");
-  font-weight:600;font-style:normal;font-display:optional}
+  font-weight:600;font-style:normal;font-display:fallback}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-Bold.woff2") format("woff2");
-  font-weight:700;font-style:normal;font-display:optional}
+  font-weight:700;font-style:normal;font-display:fallback}
 
 :root{
   /* ── พื้นผิวและเส้น (โหมดมืดเป็นค่าตั้งต้น) ── */

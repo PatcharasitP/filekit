@@ -1036,47 +1036,6 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
   stroke-width:2.2; fill:none; stroke-linecap:round; display:block}
 .pv-x-ico{stroke-width:2}
 
-/* ── แผงข้างพับเก็บได้ (13/09/2026) ─────────────────────────────────────────────────
-   พี่ปอนด์: ที่ว่างสองข้างจอกว้าง "อยากให้มีอะไรใส่ลงไป แต่กลัวจะรก ให้พับซ่อนเก็บได้"
-   คอลัมน์ขวา .tool-side = คำถามที่เจอบ่อย + ทำอะไรต่อดี ที่เดิมอยู่ท้ายหน้า ย้ายขึ้นมาข้างงานเมื่อจอ >= 1500px
-   แคบกว่านั้น display:contents = ไหลท้ายหน้าเหมือนเดิมทุกประการ (เทสมือถือ/เลย์เอาต์เดิมไม่เปลี่ยน) */
-.tool-side{display:contents}
-.side-toggle{display:none}
-@media (min-width:1500px){
-  .tool-side{display:block; position:fixed; inset-block-start:96px; inset-inline-end:24px;
-    width:min(300px, calc((100vw - 1096px) / 2 - 28px)); max-height:calc(100dvh - 130px);
-    overflow:auto; overscroll-behavior:contain; padding:14px 14px 16px; border-radius:var(--r);
-    background:var(--bg-soft); border:1px solid var(--line-soft); border-inline-end:3px solid var(--ac,var(--brand))}
-  .tool-side .faq{margin-top:0}
-  .tool-side .faq-top{padding-inline-end:40px}
-  .tool-side .faq-top-t{font-size:15px}
-  .tool-side .faq-i summary{font-size:13px}
-  .tool-side .faq-a{font-size:12.5px}
-  .tool-side .next-steps{margin-top:18px; padding-top:14px}
-  .tool-rail .rail-id{padding-inline-end:36px}
-  /* ปุ่มพับ มุมบนของแผง 36x36 */
-  .side-toggle{display:grid; place-items:center; position:absolute; inset-block-start:8px; inset-inline-end:8px;
-    width:36px; height:36px; padding:0; border:1px solid var(--line-soft); border-radius:8px;
-    background:var(--card); color:var(--text-dim); cursor:pointer}
-  .side-toggle:hover{color:var(--text); border-color:var(--line)}
-  .side-toggle:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
-  .st-lbl{display:none}
-  .st-chev{width:8px; height:8px; border-left:2px solid currentColor; border-bottom:2px solid currentColor;
-    transform:rotate(45deg); margin-inline-start:3px}
-  .tool-side .st-chev{transform:rotate(-135deg); margin:0 3px 0 0}
-  /* พับแล้ว: เหลือแถบแคบ 44px มีป้ายแนวตั้ง กดตรงไหนก็กาง */
-  .tool-rail.collapsed,.tool-side.collapsed{width:44px; padding:0; overflow:hidden}
-  .collapsed > :not(.side-toggle){display:none}
-  .collapsed > .side-toggle{position:static; width:100%; height:auto; min-height:180px; border:0; border-radius:0;
-    background:transparent; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:14px 0}
-  .collapsed .st-lbl{display:block; writing-mode:vertical-rl; font-size:12.5px; font-weight:700; line-height:1;
-    letter-spacing:.02em; color:var(--text-dim); white-space:nowrap}
-  .tool-rail.collapsed .st-chev{transform:rotate(-135deg); margin:0}
-  .tool-side.collapsed .st-chev{transform:rotate(45deg); margin:0}
-  /* พับรางแล้วหัวเรื่องใหญ่ต้องกลับมา ไม่งั้นหน้าไม่มีชื่อเครื่องมือเลย */
-  body.tool.rail-collapsed .tool-head{display:flex}
-}
-
 /* ── คำถามที่เจอบ่อย: แถวเส้นบางมีลูกศรขวา ไม่ใช่กล่องมีขอบ ──
    แบบ FAQ ที่พี่ปอนด์ส่งมา 13/09/2026 ("อันนี้สวยอ่ะ") เส้นคั่นบางระหว่างแถว ลูกศรชี้ลงขวาสุด หมุนขึ้นตอนกาง */
 .faq-list{gap:0; margin-top:8px}

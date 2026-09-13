@@ -129,8 +129,6 @@ const STYLE = `
 @media (max-width:640px){ .ts-sec{padding:16px} }
 /* หัวข้อส่วน มีป้ายเลขลำดับแบบที่พี่ปอนด์ชอบ (/08 FAQ ของเว็บเดียวกัน) */
 .ts-h{display:flex; align-items:center; gap:10px; margin:0 0 16px; font-size:18px; line-height:28px; font-weight:500; color:var(--tfg)}
-.ts-n{display:inline-flex; align-items:center; justify-content:center; min-width:44px; height:26px; padding:0 8px;
-  border-radius:6px; background:var(--tp); color:#fff; font:600 12px/1 ui-monospace,Consolas,monospace; letter-spacing:.04em}
 .ts-ico{width:20px; height:20px; color:var(--tp); flex:none; display:inline-block}
 .ts-ico svg{width:100%; height:100%; display:block; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
 .ts-h3{display:flex; align-items:center; gap:8px; margin:0 0 12px; font-size:14px; line-height:20px; font-weight:500}
@@ -139,11 +137,6 @@ const STYLE = `
 .ts-mute{color:var(--tmute)}
 .ts-ul{margin:0 0 12px; padding-inline-start:22px; font-size:14px; line-height:1.625}
 .ts-ul li{margin:2px 0}
-/* ชิปตัวเลขหนา + คำอธิบายจาง (จากการ์ด case study ที่พี่ปอนด์ส่งมา 13/09) */
-.ts-chips{display:flex; flex-wrap:wrap; gap:8px}
-.ts-chip{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--tbd); border-radius:6px;
-  background:var(--tsur); font-size:12.5px; line-height:16px; color:var(--tmute)}
-.ts-chip b{font-weight:600; color:var(--tfg)}
 .ts-cols{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px}
 .ts-cols2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
 @media (max-width:900px){ .ts-cols,.ts-cols2{grid-template-columns:1fr} }
@@ -316,16 +309,22 @@ const STYLE = `
 .ts-btn svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 .ts .status-wrap{margin-top:14px}
 .ts .status-wrap:has(.status:not(.show)):not(:has(.progress.show)){display:none}
-/* ── แถบล่าง ทาสีธีม ชื่อเครื่องมือ ปุ่มเริ่มใหม่ และตัวเลขสดที่ใช้คำนวณจริง ── */
-.ts-foot{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:16px 20px; border-radius:8px;
-  background:linear-gradient(90deg,var(--tp),var(--tq)); color:#fff}
+/* ── แถบล่าง: ชื่อเครื่องมือ ปุ่มเริ่มใหม่ และตัวเลขสดที่ใช้คำนวณจริง
+   ‼️ เคยเป็นไล่สีธีมเหมือนแถบหัว พี่ปอนด์บอกรก จึงเหลือพื้นเรียบ สีธีมอยู่ที่ปุ่มสร้างไฟล์กับส่วนที่เลือกเท่านั้น */
+.ts-foot{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; border-radius:8px;
+  background:var(--tsur); border:1px solid var(--tbd); color:var(--tfg)}
 .ts-name{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; line-height:20px}
-.ts-name .ts-ico{color:#fff; width:18px; height:18px}
+.ts-name .ts-ico{width:18px; height:18px}
 .ts-reset{font:inherit; font-size:14px; font-weight:500; line-height:20px; padding:8px 16px; border-radius:6px; cursor:pointer;
-  border:1px solid rgba(255,255,255,.7); background:#fff; color:var(--tp); display:inline-flex; align-items:center; gap:6px; margin-inline-start:auto}
+  border:1px solid var(--tbd); background:var(--tbg); color:var(--tp); display:inline-flex; align-items:center; gap:6px; margin-inline-start:auto}
 .ts-reset:hover{background:var(--thov)}
 .ts-reset svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
-.th-facts{font-size:12px; line-height:16px; color:rgba(255,255,255,.92); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.th-facts{font-size:12px; line-height:16px; color:var(--tmute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* 1 บรรทัดสรุปผลตรวจสีใต้พรีวิว */
+.ts-status{margin:12px 0 10px; padding:9px 12px; border-radius:8px; font-size:13px; line-height:1.6;
+  border:1px solid var(--tbd); border-inline-start:3px solid var(--ok); background:var(--tsur); color:var(--tfg)}
+.ts-status.bad{border-inline-start-color:var(--err)}
+.ts-check{margin-top:0}
 @media (max-width:640px){ .ts-reset{margin-inline-start:0} .th-facts{white-space:normal} }
 .ts .note{margin-top:0}
 ` + COLORKIT_CSS + CODE_TOKEN_CSS;
@@ -423,38 +422,19 @@ export function mount(tool) {
 
   /* ── ชิ้นส่วนย่อยที่ใช้ซ้ำ ─────────────────────────────────────────── */
   const ico = (name) => el("span", { class: "ts-ico", "aria-hidden": "true", html: ICONS[name] });
-  /* หัวข้อส่วน: ป้ายเลขลำดับ + ไอคอน + ชื่อ (ป้ายเลขมาจาก FAQ "/08" ที่พี่ปอนด์บอกว่าสวย 13/09) */
-  const sec = (num, title, iconName, kids) => el("section", { class: "ts-sec" }, [
-    el("h2", { class: "ts-h" }, [el("span", { class: "ts-n", "aria-hidden": "true" }, "/" + num), ico(iconName), title]),
+  /* หัวข้อส่วน: ไอคอน + ชื่อ ‼️ เคยมีป้ายเลขลำดับ /01-/06 ด้วย พี่ปอนด์ดูแล้วบอก "รกมาก" (13/09 เย็น) จึงถอด
+     และยุบจาก 6 ส่วนเหลือ 4 (ตัด "นี่คืออะไร" ที่ซ้ำกับหัวเครื่องมือ และรวมผลตรวจสีเข้าใต้พรีวิว) */
+  const sec = (title, iconName, kids) => el("section", { class: "ts-sec" }, [
+    el("h2", { class: "ts-h" }, [ico(iconName), title]),
     ...kids,
   ]);
   const sub = (kids, big) => el("div", { class: "ts-sub" + (big ? " big" : "") }, kids);
   const h3 = (title, iconName) => el("h3", { class: "ts-h3" }, [iconName ? ico(iconName) : null, title]);
   /* ป้ายที่ครอบช่องกรอกไว้ในตัว จึงผูกกับช่องโดยไม่ต้องใช้ id */
   const fld = (label, control) => el("label", { class: "ts-f" }, [el("span", { class: "ts-lb" }, label), control]);
-  const chip = (n, text) => el("span", { class: "ts-chip" }, [el("b", {}, n), text]);
   const btn = (text, iconName, onclick, secondary) => el("button", {
     class: "ts-btn" + (secondary ? " sec" : ""), type: "button", onclick,
   }, [uiIcon(iconName, "ts-bi"), el("span", {}, text)]);
-
-  /* ── /01 นี่คืออะไร ────────────────────────────────────────────────── */
-  const about = sec("01", tr("นี่คืออะไร", "What is it?"), "info", [
-    el("p", { class: "ts-p" },
-      tr("เครื่องมือนี้คำนวณขนาดตัวอักษรให้พอดีกับผืนผ้าใบของรายงาน แล้วรวมกับชุดสีที่เลือกเป็นไฟล์ธีมพร้อมใช้",
-         "It works out text sizes that fit your report canvas, then bundles them with the palette you pick into a ready to use theme file")),
-    el("p", { class: "ts-p" }, tr("ไฟล์ที่ได้มี", "The file you get includes")),
-    el("ul", { class: "ts-ul" }, [
-      tr("ขนาดตัวอักษร 4 คลาสหลัก คำนวณจากขนาดผืนผ้าใบ", "Four core text classes sized from your canvas"),
-      tr("สีชุดข้อมูล พื้นหลัง ตัวอักษร และสีบอกสถานะ", "Data colours, background, text and status colours"),
-      tr("สีกริดตารางที่ไม่ไปทับสีแบรนด์", "A table grid colour that does not hijack your brand colour"),
-      tr("ตรงตาม schema 2.157 ที่ Power BI ใช้จริง", "Valid against the schema 2.157 Power BI actually uses"),
-    ].map((t) => el("li", {}, t))),
-    el("div", { class: "ts-chips" }, [
-      chip("4", tr("คลาสข้อความ", "text classes")),
-      chip("2.157", tr("เวอร์ชัน schema", "schema version")),
-      chip("0", tr("ไฟล์ถูกส่งออกจากเครื่อง", "files leave your device")),
-    ]),
-  ]);
 
   /* ── /02 ผืนผ้าใบ ──────────────────────────────────────────────────── */
   const dimBox = el("div", { class: "ts-dims" });
@@ -480,7 +460,7 @@ export function mount(tool) {
   ]);
   const sizeNote = el("p", { class: "ts-sizenote" });
   const cvPrev = el("div", { class: "th-cvprev" });
-  const canvasSec = sec("02", tr("ตั้งค่าผืนผ้าใบ", "Canvas configuration"), "monitor", [
+  const canvasSec = sec(tr("ผืนผ้าใบ", "Canvas"), "monitor", [
     el("div", { class: "ts-cols" }, [
       sub([el("span", { class: "ts-lb" }, tr("ขนาดที่แนะนำ", "Recommended dimensions")), dimBox]),
       sub([numField(tr("สูง", "Height"), hIn, hBar), numField(tr("กว้าง", "Width"), wIn, wBar), sizeNote]),
@@ -509,7 +489,7 @@ export function mount(tool) {
     el("summary", {}, tr("ปรับสีเองทีละสี", "Fine tune every colour")),
     pickBox,
   ]);
-  const lookSec = sec("03", tr("หน้าตา", "Appearance"), "type", [
+  const lookSec = sec(tr("หน้าตา", "Appearance"), "type", [
     el("div", { class: "ts-cols2" }, [
       sub([
         h3(tr("ตัวอักษร", "Typography"), "type"),
@@ -532,15 +512,21 @@ export function mount(tool) {
 
   /* ── /04 พรีวิวสี ──────────────────────────────────────────────────── */
   const prevBox = el("div", { class: "th-prev" });
-  const prevSec = sec("04", tr("พรีวิวสี", "Colour preview"), "eye", [
+  /* ผลตรวจสี (หัวใจของเครื่องมือนี้ ของเขาไม่มี) เหลือ 1 บรรทัดสรุปใต้พรีวิว รายละเอียดพับไว้
+     ‼️ เดิมเป็นส่วนใหญ่แยกมีตารางเต็ม พี่ปอนด์บอกรก */
+  const checkLine = el("p", { class: "ts-status" });
+  const checkBox = el("div", {});
+  const checkDet = el("details", { class: "ts-more ts-check" }, [
+    el("summary", {}, tr("รายละเอียดการตรวจสี", "Colour check details")),
+    checkBox,
+  ]);
+  const prevSec = sec(tr("พรีวิว", "Preview"), "eye", [
     el("p", { class: "ts-p ts-mute" }, tr("รายงานสมมติที่ทาสีตามธีมที่กำลังสร้าง", "A mock report painted with the theme you are building")),
     prevBox,
+    checkLine,
+    checkDet,
   ]);
   prevSec.classList.add("th-prevwrap");
-
-  /* ── /05 ตรวจสี (หัวใจของเครื่องมือนี้ ของเขาไม่มี) ─────────────────── */
-  const checkBox = el("div", {});
-  const checkSec = sec("05", tr("ตรวจสีก่อนใช้", "Check the colours"), "check", [checkBox]);
 
   /* ── /06 ไฟล์ธีม ───────────────────────────────────────────────────── */
   const codeEl = el("code", {});
@@ -554,7 +540,11 @@ export function mount(tool) {
     btn(tr("คัดลอก JSON", "Copy JSON"), "copy", onCopy, true),
     btn(tr("สร้างไฟล์ธีม", "Generate theme"), "download", onDownload),
   ]);
-  const fileSec = sec("06", tr("ไฟล์ธีม", "Theme file"), "file", [jsonDet, actions, st.node]);
+  const fileSec = sec(tr("ไฟล์ธีม", "Theme file"), "file", [
+    el("p", { class: "ts-p ts-mute" },
+      tr("ไฟล์มีขนาดตัวอักษร 4 คลาส สีชุดข้อมูล พื้นหลัง ตัวอักษร สีสถานะ และสีกริดตาราง ตรง schema 2.157",
+         "Four text classes, data, background, text and status colours, a table grid colour, valid against schema 2.157")),
+    jsonDet, actions, st.node]);
 
   /* ── แถบล่าง ทาสีธีม ────────────────────────────────────────────────── */
   /* ‼️ ของเขาโชว์ "Canvas: 1920x1080 • Area: 2073600 px²" ตลอดเวลา
@@ -574,7 +564,7 @@ export function mount(tool) {
   wrap.dataset.font = "system-ui";
   if (IS_EN) wrap.classList.add("ts-en");
   wrap.prepend(el("style", { text: STYLE }));
-  body.append(about, canvasSec, lookSec, prevSec, checkSec, fileSec, foot,
+  body.append(canvasSec, lookSec, prevSec, fileSec, foot,
     /* ‼️ ข้อความนี้ถูกจำกัดความยาว ทั้งเว็บมีข้อความไทยเกิน 100 ตัวอักษรได้ไม่เกิน 4 ก้อน */
     el("div", { class: "note" }, tr(
       "เอาไปใช้: Power BI Desktop แท็บ View แล้ว Themes แล้ว Browse for themes แล้วเลือกไฟล์นี้",
@@ -876,6 +866,7 @@ export function mount(tool) {
   function drawCheck() {
     const { bg, fg, fg2, colors } = state;
     checkBox.innerHTML = "";
+    let summaryBad = 0;
 
     /* ① คอนทราสต์ เกณฑ์ WCAG: ตัวอักษรปกติ 4.5 ส่วนแท่งกราฟกับสีทึบใหญ่ ๆ ใช้ 3 */
     const pairs = [
@@ -888,6 +879,7 @@ export function mount(tool) {
       return { label, r, ok: r !== null && r >= floor, floor };
     });
     const failed = scored.filter((x) => !x.ok);
+    summaryBad += failed.length;
     checkBox.appendChild(el("div", { class: "th-warn" + (failed.length ? "" : " th-ok") },
       failed.length
         ? tr(`มี ${failed.length} คู่ที่คอนทราสต์ต่ำกว่าเกณฑ์ จะอ่านยากบนจอจริงและบนโปรเจกเตอร์`,
@@ -908,6 +900,14 @@ export function mount(tool) {
 
     /* ② ตาบอดสี */
     const res = checkPalette(colors);
+    const cvdOk = res.maxSafe >= colors.length;
+    /* 1 บรรทัดสรุปใต้พรีวิว: เขียวเมื่อผ่านทั้งสองอย่าง ไม่งั้นบอกว่าอะไรตก */
+    checkLine.className = "ts-status" + (failed.length || !cvdOk ? " bad" : " ok");
+    checkLine.textContent = failed.length || !cvdOk
+      ? tr(`ตรวจสีแล้วพบปัญหา: ${failed.length ? `คอนทราสต์ต่ำ ${failed.length} คู่` : ""}${failed.length && !cvdOk ? ", " : ""}${!cvdOk ? `ตาบอดสีแยกได้แค่ ${res.maxSafe} สี` : ""} ดูรายละเอียดด้านล่าง`,
+           `Colour check found issues: ${failed.length ? `${failed.length} low contrast ${failed.length === 1 ? "pair" : "pairs"}` : ""}${failed.length && !cvdOk ? ", " : ""}${!cvdOk ? `only ${res.maxSafe} colours stay apart for colour blind viewers` : ""}, see details below`)
+      : tr(`ตรวจสีผ่าน: คอนทราสต์ผ่านทุกคู่ และคนตาบอดสีแยกได้ครบ ${colors.length} สี`,
+           `Colour check passed: every pair clears the contrast floor and all ${colors.length} colours stay apart for colour blind viewers`);
     checkBox.appendChild(el("h3", { class: "th-sec" }, tr("คนตาบอดสีเห็นแบบนี้", "How colour blind viewers see it")));
     checkBox.appendChild(el("div", { class: "th-warn" + (res.maxSafe >= colors.length ? " th-ok" : "") },
       res.maxSafe >= colors.length

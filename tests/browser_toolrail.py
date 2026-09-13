@@ -84,8 +84,7 @@ with sync_playwright() as p:
        pg.evaluate("() => location.hash") == before, f"{before} → {pg.evaluate('() => location.hash')}")
     ck("⑤ กดลิงก์แล้วยังอยู่หน้าเครื่องมือ ไม่เด้งกลับหน้าแรก",
        pg.evaluate("() => document.body.classList.contains('tool')"))
-    # ‼️ 13/09/2026 คำถามที่เจอบ่อยย้ายไปอยู่คอลัมน์ขวาที่ลอยอยู่บนจอกว้าง (tests/browser_sidepanel.py)
-    #    จึงไม่ต้องเลื่อนหน้าก็เห็น เกณฑ์ใหม่คือ กดแล้วส่วนนั้นต้องอยู่ในจอ ไม่ว่าจะเลื่อนมาหรือลอยอยู่แล้ว
+    # ‼️ เกณฑ์: กดแล้วส่วนนั้นต้องอยู่ในจอ (13/09/2026 เคยย้าย FAQ ไปคอลัมน์ขวาแล้วถอดออกเพราะรก เกณฑ์นี้ใช้ได้ทั้งสองแบบ)
     inview = pg.evaluate("() => { const r = document.getElementById('faq-h').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.width > 0; }")
     ck("⑤ กดลิงก์แล้วส่วนนั้นอยู่ในจอจริง", inview, f"scrollY={pg.evaluate('() => scrollY')}")
 

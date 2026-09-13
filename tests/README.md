@@ -19,7 +19,6 @@ node tests/samples.test.mjs      # กฎจุดกลางต้องบั
 node tests/matrixdax.test.mjs    # สูตร DAX ของ Matrix ต้องแปลงทุกชนิดเป็นข้อความ ยอด 0 ห้ามหาย
 
 # ② เบราว์เซอร์จริง — ใช้ tests/run.sh จะขอพอร์ตว่างจากระบบและยืนยันว่าเสิร์ฟโค้ดชุดนี้จริงก่อนยิง
-#    (13/09/2026 เจอเซิร์ฟเวอร์เก่าค้าง 10+ พอร์ต ทำเทสยิงใส่โค้ดเก่า)  เช่น tests/run.sh browser_theme browser_sidepanel  หรือ  tests/run.sh all
 # แบบเดิม: เปิดเซิร์ฟเวอร์เองก่อน
 python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_smoke.py      # เปิดครบทุกเครื่องมือ ไม่มี error
@@ -40,7 +39,6 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_codepaint.py # โค้ดของสามเสา Power ต้องมีสี คัดลอกสะอาด และคอนทราสต์ผ่านทั้งสองโหมด
 ../.venv/bin/python tests/browser_matrixdetails.py # Matrix หลายชั้น ISINSCOPE ต้องผูกชั้นในสุด และชนิดที่เสี่ยงต้องถูกห่อ FORMAT
 ../.venv/bin/python tests/browser_sortbar.py    # ตัวเรียงหน้าแรก และฉาก hero ที่ตัวเลขต้องบวกกันได้จริง
-../.venv/bin/python tests/browser_sidepanel.py  # รางซ้าย+คอลัมน์ขวา (FAQ/ทำอะไรต่อ) พับได้และจำสถานะ FAQ แถวเส้นบาง (13/09)
 ../.venv/bin/python tests/browser_hover.py      # ชี้การ์ดหน้าแรกแล้วยกเงา+วงขอบสีเน้นของตระกูล (ไอเดีย ① thepexcel 13/09)
 ../.venv/bin/python tests/browser_fontrace.py   # ฟอนต์ที่วาดจริง (CDP) ต้องเป็น Sarabun ทุกวิธีโหลด ไม่สลับเป็น Leelawadee หลัง refresh (13/09)
 ../.venv/bin/python tests/browser_theme.py      # หน้าธีม Power BI โคลนโครง datatraining.io ฟอนต์ Segoe UI ทั้งหน้าทาสีตามชุด (13/09)

@@ -3,7 +3,8 @@
 ‼️ ที่มา พี่ปอนด์ส่ง https://datatraining.io/powerbi-theme-starter มาให้ดู
    พร้อมคลิปสอนทำธีม แล้วสั่งให้เพิ่มเครื่องมือทำ Custom Theme JSON ในหมวด Power BI
 ‼️ 13/09/2026 พี่ปอนด์ทักว่า "ของเราไม่สวยเท่าของเขาทั้ง UX UI ทั้ง FONT" สั่งโคลนหน้าตา
-   หน้าจึงเปลี่ยนจาก 3 แผงเป็นการ์ดเรียงลง 6 ส่วน (/01 ถึง /06) ฟอนต์ Segoe UI และทั้งหน้าทาสีตามชุดที่เลือก
+   หน้าจึงเปลี่ยนจาก 3 แผงเป็นการ์ดเรียงลง ฟอนต์ Segoe UI และทั้งหน้าทาสีตามชุดที่เลือก
+‼️ 13/09/2026 เย็น พี่ปอนด์ดูแล้วบอก "รกมาก" ยุบจาก 6 ส่วนเหลือ 4 ตัดป้ายเลข/ชิป ผลตรวจสีเหลือ 1 บรรทัด + รายละเอียดพับ
 
 เทสนี้ตรวจ 11 อย่าง
    ① เปิดหน้าได้ ไม่มี error หลุด (‼️ ดักบั๊ก TDZ ที่ทำให้ไฟล์ธีมว่างเปล่า เจอจริง 12/09)
@@ -37,6 +38,11 @@ def theme_json(pg):
     pg.wait_for_timeout(150)
     return json.loads(pg.locator(".th-code").inner_text())
 
+def open_check(pg):
+    """กางกล่อง 'รายละเอียดการตรวจสี' (ตาราง/กล่องตาบอดสีอยู่ในนั้น)"""
+    pg.locator("details.ts-check").evaluate("d => d.open = true")
+    pg.wait_for_timeout(150)
+
 def open_custom(pg):
     """กางกล่อง 'ปรับสีเองทีละสี' ช่องสีทั้งหมดอยู่ในนั้น"""
     pg.locator("details.ts-custom").evaluate("d => d.open = true")
@@ -61,9 +67,10 @@ with sync_playwright() as pw:
     pg.goto(BASE + "/#/pbi-theme", wait_until="networkidle")
     pg.wait_for_selector(".th-prev .th-canvas", timeout=8000)
     ck("เปิดแล้วไม่มี error หลุดออกมาเลย", not errs, errs)
-    ck("มีครบทั้ง 6 ส่วน /01 ถึง /06", pg.locator(".ts-sec").count() == 6, pg.locator(".ts-sec").count())
-    nums = pg.locator(".ts-n").all_inner_texts()
-    ck("ป้ายเลขลำดับเรียง /01 ถึง /06", nums == ["/01", "/02", "/03", "/04", "/05", "/06"], nums)
+    ck("มี 4 ส่วน (ผืนผ้าใบ หน้าตา พรีวิว ไฟล์ธีม) ไม่มีป้ายเลข/ชิปสถิติที่พี่ปอนด์บอกรก",
+       pg.locator(".ts-sec").count() == 4 and pg.locator(".ts-n").count() == 0 and pg.locator(".ts-chip").count() == 0,
+       [pg.locator(".ts-sec").count(), pg.locator(".ts-n").count()])
+    ck("ผลตรวจสีเป็น 1 บรรทัดสรุปใต้พรีวิว และรายละเอียดพับไว้", pg.locator(".ts-status").count() == 1 and not pg.locator("details.ts-check").evaluate("d => d.open"))
 
     # ── ② ปุ่มกดได้ตั้งแต่แรก ─────────────────────────────────────────
     print("\n② ปุ่มลงมือทำ")
@@ -97,6 +104,8 @@ with sync_playwright() as pw:
 
     # ── ⑤ คำเตือนคอนทราสต์ต้องเป็นของจริง ─────────────────────────────
     print("\n⑤ คำเตือนคอนทราสต์")
+    open_check(pg)
+    ck("บรรทัดสรุปตอนเริ่มต้นเป็นเขียว", "ok" in pg.locator(".ts-status").get_attribute("class"), pg.locator(".ts-status").get_attribute("class"))
     ok_txt = " ".join(pg.locator(".th-warn").all_inner_texts())
     ck("ตอนเริ่มต้น ชุดของกลางผ่านคอนทราสต์ทุกคู่", "ผ่านเกณฑ์ทุกคู่" in ok_txt, ok_txt[:120])
     # ‼️ #FFFF00 บนพื้นขาวได้ราว 1.07:1 ต้องถูกจับได้แน่นอน
@@ -106,6 +115,7 @@ with sync_playwright() as pw:
     rows = pg.locator(".th-tbl tbody tr").all_inner_texts()
     low = [r for r in rows if "ต่ำไป" in r]
     ck("ใส่เหลืองสดบนพื้นขาวแล้วขึ้นเตือนว่าคอนทราสต์ต่ำ", "ต่ำกว่าเกณฑ์" in bad_txt, bad_txt[:140])
+    ck("บรรทัดสรุปกลายเป็นแดงและบอกว่าคอนทราสต์ต่ำ", "bad" in pg.locator(".ts-status").get_attribute("class") and "คอนทราสต์ต่ำ" in pg.locator(".ts-status").inner_text(), pg.locator(".ts-status").inner_text())
     ck("ตารางชี้ได้ว่าแถวไหนตก", len(low) >= 1, rows)
     ck("ตัวเลขที่โชว์คือค่าที่วัดได้จริง ไม่ใช่ป้ายตายตัว",
        any(re.search(r"1\.0\d:1", r) for r in low), low)
@@ -174,7 +184,7 @@ with sync_playwright() as pw:
     tp_before = pg.evaluate("getComputedStyle(document.querySelector('.ts')).getPropertyValue('--tp').trim()")
     head_bg = pg.evaluate("getComputedStyle(document.querySelector('.ts .tool-head')).backgroundImage")
     foot_bg = pg.evaluate("getComputedStyle(document.querySelector('.ts-foot')).backgroundImage")
-    ck("แถบหัวและแถบล่างเป็นไล่สีของธีม", "linear-gradient" in head_bg and "linear-gradient" in foot_bg, [head_bg[:60], foot_bg[:60]])
+    ck("แถบหัวเป็นไล่สีของธีม ส่วนแถบล่างพื้นเรียบ (ไม่ซ้ำกันจนรก)", "linear-gradient" in head_bg and foot_bg == "none", [head_bg[:60], foot_bg[:60]])
     pg.locator(".ts-pal .th-sw", has_text="True Corporation").click()
     pg.wait_for_timeout(600)
     tp_after = pg.evaluate("getComputedStyle(document.querySelector('.ts')).getPropertyValue('--tp').trim()")
@@ -190,7 +200,7 @@ with sync_playwright() as pw:
       const tp = getComputedStyle(document.querySelector('.ts')).getPropertyValue('--tp').trim();
       return (1.05) / (L(tp) + .05); }""")
     ck(f"ตัวหนังสือขาวบนสีธีมได้คอนทราสต์อย่างน้อย 4.5 (วัดได้ {ratio:.2f})", ratio >= 4.5, ratio)
-    open_custom(pg)
+    open_custom(pg); open_check(pg)
     ck("ชุดของแบรนด์โหลดสีมาครบ 8 สี ไม่ถูกตัดเหลือ 5",
        pg.locator(".ts-custom .ck-hex").count() == 13, pg.locator(".ts-custom .ck-hex").count())
     # ‼️ ชุดแบรนด์ต้องถูกรายงานตามจริง ไม่ใช่ปล่อยผ่านเพราะเป็นของบริษัท
@@ -288,6 +298,7 @@ with sync_playwright() as pw:
     en.wait_for_selector(".th-prev .th-canvas", timeout=8000)
     en.locator("details.ts-custom").evaluate("d => d.open = true")
     en.locator("details.ts-json").evaluate("d => d.open = true")
+    en.locator("details.ts-check").evaluate("d => d.open = true")
     en.wait_for_timeout(300)
     panel = en.locator(".panel").inner_text()
     thai = sorted(set(re.findall(r"[฀-๿]+", panel)))

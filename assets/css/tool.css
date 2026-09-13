@@ -1052,3 +1052,44 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
    ผสมกับสีตัวอักษรของธีม 30% ให้เข้มขึ้นในโหมดสว่างและสว่างขึ้นในโหมดมืดพร้อมกัน */
 .faq-top-n{background:color-mix(in srgb,var(--ac,var(--brand)) 14%,transparent);
   color:color-mix(in srgb,var(--ac,var(--brand)) 70%,var(--text)); border-radius:6px; padding:2px 8px; font-size:12px}
+
+/* ── ท้ายหน้าเครื่องมือเป็นภาษาเดียวกัน (13/09/2026 พี่ปอนด์: "เหลืออีกนิดนึง กำลังจะดีละ") ──
+   ก่อนหน้านี้ท้ายหน้ามี 3 ภาษาปนกัน: หัวข้อแถบสี+ขีดเส้นใต้หนัก, FAQ แถวเส้นบางลูกศรขวา,
+   กล่องความรู้ของเครื่องมือ (วิธีเขียนสูตร M, เรียนรู้ Deneb, ดูสเปก) เป็นกรอบมีลูกศร ▸ ของระบบ
+   รวมเป็นภาษาเดียว: หัวข้อตัวหนา 16px บนเส้นบาง, ทุกกล่องพับเป็นแถวเส้นบาง ลูกศรขวาหมุนตอนกาง */
+.sec-h{padding-inline-start:0; font-size:16px; font-weight:700; margin:22px 0 10px}
+.sec-h::before{content:none}
+.sec-h > span{border-bottom:0; padding-bottom:0}
+.faq{margin-top:22px; padding-top:6px}
+.faq-top{padding-inline-start:0; min-height:44px}
+.faq-top::before{content:none}
+.faq-top-t{font-size:16px; font-weight:700; border-bottom:0; padding-bottom:0}
+.faq-top::after{content:""; width:8px; height:8px; font-size:0; border-right:2px solid var(--text-mute);
+  border-bottom:2px solid var(--text-mute); transform:translateY(-2px) rotate(45deg); transition:transform var(--t-micro,.1s)}
+.faq[open] > .faq-top::after{content:""; transform:translateY(2px) rotate(-135deg)}
+.next-steps{margin-top:22px; padding-top:6px}
+/* กล่องความรู้ท้ายเครื่องมือ ‼️ ใช้ #tool นำหน้าเพื่อชนะ STYLE ของแต่ละเครื่องมือที่ฉีดทีหลังใน body */
+#tool .pq-teach,#tool .pbib-learn,#tool .pbid-learn,#tool .gf-see{margin-top:14px; border:0;
+  border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); border-radius:0; background:transparent; padding:0; overflow:visible}
+#tool .pq-teach > summary,#tool .pbib-learn > summary,#tool .pbid-learn > summary,#tool .gf-see > summary{cursor:pointer; list-style:none;
+  display:flex; align-items:center; gap:12px; padding:12px 4px; min-height:44px; font-size:14px; font-weight:700; line-height:1.6;
+  color:var(--text); background:transparent}
+#tool .pq-teach > summary::-webkit-details-marker,#tool .pbib-learn > summary::-webkit-details-marker,
+#tool .pbid-learn > summary::-webkit-details-marker,#tool .gf-see > summary::-webkit-details-marker{display:none}
+#tool .pq-teach > summary::before,#tool .pbib-learn > summary::before,#tool .pbid-learn > summary::before,#tool .gf-see > summary::before{content:none}
+#tool .pq-teach > summary::after,#tool .pbib-learn > summary::after,#tool .pbid-learn > summary::after,#tool .gf-see > summary::after{content:"";
+  flex:none; width:8px; height:8px; margin-inline-start:auto; border-right:2px solid var(--text-mute); border-bottom:2px solid var(--text-mute);
+  transform:translateY(-2px) rotate(45deg); transition:transform var(--t-micro,.1s)}
+#tool .pq-teach[open] > summary::after,#tool .pbib-learn[open] > summary::after,#tool .pbid-learn[open] > summary::after,#tool .gf-see[open] > summary::after{transform:translateY(2px) rotate(-135deg)}
+#tool .pq-teach > summary:hover,#tool .pbib-learn > summary:hover,#tool .pbid-learn > summary:hover,#tool .gf-see > summary:hover{color:var(--ac,var(--brand)); background:transparent}
+#tool .pq-teach > :not(summary){padding-inline:4px}
+/* ── เก็บรายละเอียดจากรีวิว 3 มุม (13/09/2026 เย็น) ── */
+.faq-top:hover .faq-top-t{color:var(--ac,var(--brand))}                     /* หัว FAQ ชี้แล้วเปลี่ยนสีเหมือนแถวอื่น */
+.next-steps::before{-webkit-mask-image:none; mask-image:none}                 /* เส้นบน "ทำอะไรต่อดี" ทึบเท่าเส้น FAQ */
+#tool .pq-teach:not([open]),#tool .pbib-learn:not([open]),#tool .pbid-learn:not([open]){border-bottom:0} /* ไม่ให้เส้นคู่กับเส้นบน FAQ */
+#tool .pq-teach > :last-child{padding-bottom:14px}                            /* เนื้อในกล่องมีระยะหายใจล่างเท่า FAQ */
+#tool .pbib-learn-body,#tool .pbid-learn-body{padding-inline:4px}            /* แนวซ้ายเนื้อในตรงกับหัวแถว */
+/* กล่อง "ดูโค้ดก่อน" ของแจกฟรีอยู่ในการ์ด ไม่ใช่ท้ายหน้า ให้ชิดขอบเนื้อหาการ์ด (16px) และไม่ซ้อนเส้นกับขอบการ์ด */
+#tool .gf-see{margin-top:0; border-bottom:0}
+#tool .gf-see > summary{padding-inline:16px}
+.faq-i:last-child{border-bottom:0}                                        /* ไม่ให้เส้นคู่กับเส้นบน "ทำอะไรต่อดี" */

@@ -101,7 +101,9 @@ export function mount(tool) {
     el("div", { class: "row" }, [sheetField, field(tr("จำนวนแถวที่ใส่", "Rows to include"), rowsSel),
                                  field(tr("รูปแบบผลลัพธ์", "Output shape"), shapeSel)]),
     summary, colsBox, codeBox, st.node, actions);
-  wrap.insertBefore(teachPanel(), wrap.lastElementChild);
+  /* ‼️ กล่องความรู้ต้องอยู่ต่อจากแผงงานทันที ก่อน FAQ (13/09/2026 เดิมแทรกก่อนรางซ้ายจึงไปโผล่หลัง "ทำอะไรต่อดี")
+     ให้ลำดับท้ายหน้าเหมือน pbi-bar: แผง → ความรู้ของเครื่องมือ → คำถามที่เจอบ่อย → ทำอะไรต่อดี */
+  wrap.querySelector(".panel").after(teachPanel());
   sheetField.hidden = true;
 
   sheetSel.onchange = () => { pickSheet(+sheetSel.value); };

@@ -671,8 +671,9 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
      (วัดจริงจอ 1440: แผง 172→1268 · แถบเดิม 140→1300 ล้ำออกข้างละ 32px) */
   width:calc(100% - 2 * clamp(14px,4vw,32px));
   max-width:calc(1160px - 2 * clamp(14px,4vw,32px));
-  margin:var(--sp5) auto 0;padding:14px 20px;
-  background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  /* 13/09/2026 เป็นแถวเส้นบางเหมือนท้ายหน้าที่เหลือ (เดิมเป็นการ์ดมุม 20px พื้นทึบ นั่งทับเส้น footer โดยไม่มีระยะล่าง) */
+  margin:var(--sp4) auto 22px;padding:12px 4px;
+  background:transparent;border:0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);border-radius:0;
   font-size:13px;color:var(--text-dim);
 }
 .offline-bar strong{color:var(--text);font-weight:700}
@@ -710,6 +711,7 @@ body.tool .upd-bar{inset-block-end:max(86px,calc(env(safe-area-inset-bottom) + 8
 .ob-ready{color:var(--ok);font-weight:600}
 .ob-fail{color:var(--err);font-weight:600}
 .ob-btn{padding:9px 18px;font-size:13px}
+.offline-bar .ob-btn{background:var(--card);color:var(--text);border:1px solid var(--line);box-shadow:none}   /* ปุ่มสีอ่อนขอบบางเท่าเส้นอื่นในท้ายหน้า ไม่ใช่ปุ่มดำทึบ */
 .ob-link{background:none;border:0;color:var(--brand-text);cursor:pointer;font-size:12.5px;text-decoration:underline;font-family:inherit}
 .ob-progress{flex:1;min-width:220px;height:7px;border-radius:99px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--line-soft)}
 .ob-progress .fill{height:100%;width:0;border-radius:99px;background:var(--btn-bg);transition:width .2s}

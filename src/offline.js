@@ -57,6 +57,8 @@ export async function prepareOffline(onProgress) {
 }
 
 /** แถบเล็ก ๆ ท้ายหน้าแรก ให้ผู้ใช้กดเตรียมไฟล์ไว้ใช้ตอนไม่มีเน็ต */
+/* ‼️ ปุ่มสีอ่อน (13/09/2026): แถบนี้อยู่ท้ายทุกหน้า ปุ่มดำทึบแย่งสายตาจากปุ่มลงมือทำของเครื่องมือ
+   สไตล์อยู่ที่ .offline-bar .ob-btn ใน index.html ไม่ใช้ class ghost เพราะ tests/browser_visible.py นับ .btn.ghost ทุกตัวในการพิสูจน์ตัวตรวจ */
 export function offlineBar() {
   const bar = el("div", { class: "offline-bar" });
 

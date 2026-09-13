@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v96";
+const VERSION = "filekit-v97";
 const SHELL = `${VERSION}-shell`;
 
 /* ‼️‼️ แคชไลบรารี **ห้ามผูกกับเวอร์ชันของแอป**
@@ -32,6 +32,8 @@ const LIBS = "filekit-libs-v1";
 
 /* ‼️ ทุกโมดูลใน src/ ที่ถูก import ต้องอยู่ในนี้ ไม่งั้นออฟไลน์เปิดเครื่องมือไม่ได้ (tests/browser_offline.py ①)
    13/09/2026 เจอขาด 5 ไฟล์ (cfgsearch, codeview, cvd, dirtymark, toolio) ที่เพิ่มมา 11-12/09 แล้วลืมใส่ */
+/* ‼️ ฟอนต์ 3 ไฟล์อยู่ใน PRECACHE ด้วย (13/09/2026): โหลดแรกสุดฟอนต์ถูก fetch ก่อน SW จะ claim หน้า
+   จึงไม่เคยถูกใส่แคชในรอบนั้น รอบถัดไปต้องไปดึงจาก HTTP cache ผ่าน SW อีก ใส่ไว้ตั้งแต่ install ให้จบ */
 const PRECACHE = [
   "./", "./index.html",
   "./src/app.js", "./src/i18n.js", "./src/registry.js", "./src/loader.js", "./src/dom.js", "./src/search.js", "./src/icons.js", "./src/workspace.js",
@@ -41,6 +43,7 @@ const PRECACHE = [
   "src/cvd.js",
   "src/dirtymark.js",
   "src/toolio.js",
+  "./vendor/fonts/Sarabun-Regular.woff2", "./vendor/fonts/Sarabun-SemiBold.woff2", "./vendor/fonts/Sarabun-Bold.woff2",
 ];
 
 self.addEventListener("install", (e) => {

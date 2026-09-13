@@ -30,9 +30,16 @@
 <meta name="description" content="แปลง รวม แยก บีบอัด PDF Excel Word รูปภาพ ทำงานในเครื่องคุณเอง ไฟล์ไม่ถูกอัปโหลดไปไหน ใช้ได้แม้ออฟไลน์">
 <meta name="theme-color" content="#0f1220" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
-<!-- ‼️ ไม่ preload ฟอนต์: บนเน็ตช้ามันไปแย่งแบนด์วิดท์กับ JS ที่ต้องใช้วาดหน้า
-     ทำให้ FCP ช้าลงจาก 296 เป็น 568 ms · font-display:optional ทำให้ข้อความขึ้นทันที
-     ด้วยฟอนต์ระบบแล้วค่อยสลับ ผู้ใช้ไม่เห็นจอว่าง -->
+<!-- ‼️ preload ฟอนต์ 3 ไฟล์ (13/09/2026) หลังพี่ปอนด์ทักว่า "refresh แล้วขนาดตัวอักษรไม่เท่ากัน"
+     วัดจริงด้วย CDP บนเว็บสด 75 ตัวอย่าง: font-display:optional ของ Chrome ใช้ฟอนต์ก็ต่อเมื่อไฟล์อยู่ใน
+     memory cache ของแท็บเดิม หรือโหลดเสร็จก่อนวาดเฟรมแรก ไม่ใช่ "ทันใน 100ms" ผลคือเปิดแท็บใหม่/
+     Ctrl+Shift+R/reload ครั้งแรกใต้ service worker = Leelawadee UI ทั้งหน้า กด F5 อีกที = Sarabun
+     preload ทำให้คำขอฟอนต์ออกตั้งแต่ตอน parse head ก่อน CSS/JS จึงเสร็จก่อนวาดเฟรมแรกในทุกเส้นทางที่มีแคช
+     (ตัวเลข FCP 296 เป็น 568 ms ที่เคยวัดคือเน็ตช้าครั้งแรกสุด ซึ่งรอบนั้น optional ก็ยังใช้ฟอนต์สำรองอยู่ดี)
+     ‼️ ต้องมี crossorigin แม้ same-origin ไม่งั้น Chrome ยิงซ้ำ 2 ครั้ง -->
+<link rel="preload" as="font" type="font/woff2" href="vendor/fonts/Sarabun-Regular.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="vendor/fonts/Sarabun-SemiBold.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="vendor/fonts/Sarabun-Bold.woff2" crossorigin>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="canonical" href="https://patcharasitp.github.io/filekit/">
 <meta property="og:type" content="website">
@@ -82,10 +89,15 @@
 /* ‼️ optional ไม่ใช่ swap — swap ทำให้ข้อความขึ้นด้วยฟอนต์ระบบก่อนแล้วสลับเป็น Sarabun
    ตัวอักษรจึงขยับให้เห็น (เจ้าของเว็บทักเอง) · optional = ถ้าฟอนต์ไม่ทันในเสี้ยววินาทีแรก
    ก็ใช้ฟอนต์สำรองไปทั้งรอบนั้นเลย ไม่สลับกลางคัน = ไม่มีการขยับ
-   รอบต่อ ๆ ไปฟอนต์อยู่ในแคชแล้วจึงมาทันเสมอ · ยังไม่ preload ด้วยเหตุผลด้านบน
+   ‼️ 13/09/2026 พบว่า "แคชแล้วมาทันเสมอ" ไม่จริง (ดูคอมเมนต์ที่ <link rel="preload"> ใน head) จึง preload แล้ว
    ‼️ ฟอนต์สำรองต้องระบุ metric ให้ใกล้เคียง ไม่งั้นความสูงบรรทัดต่างกันจนหน้าขยับอยู่ดี */
+/* ‼️ ต้องประกาศหน้า Bold ของฟอนต์สำรองแยก (13/09/2026) เดิมมีแค่ local("Leelawadee UI") หน้า Regular
+   หัวเรื่องหนาจึงถูกทำหนาเทียม (synthetic bold) แคบกว่า Sarabun Bold ถึง 16% นี่คือ "ขนาดไม่เท่ากัน" ที่พี่ปอนด์เห็น
+   Leelawadee UI Bold จริง + size-adjust 97% วัดแล้วกว้างต่างจาก Sarabun Bold แค่ 1px (280.64 กับ 281.64) */
 @font-face{font-family:"FK Fallback";src:local("Leelawadee UI"),local("Tahoma"),local("Arial");
-  size-adjust:97%;ascent-override:92%;descent-override:26%;line-gap-override:0%}
+  font-weight:400;size-adjust:97%;ascent-override:92%;descent-override:26%;line-gap-override:0%}
+@font-face{font-family:"FK Fallback";src:local("Leelawadee UI Bold"),local("LeelawadeeUI-Bold"),local("Tahoma Bold"),local("Arial Bold");
+  font-weight:600 700;size-adjust:97%;ascent-override:92%;descent-override:26%;line-gap-override:0%}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-Regular.woff2") format("woff2");
   font-weight:400;font-style:normal;font-display:optional}
 @font-face{font-family:"FK Sarabun";src:url("vendor/fonts/Sarabun-SemiBold.woff2") format("woff2");
@@ -551,7 +563,11 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
   box-shadow:0 1px 2px rgba(0,0,0,.07), 0 8px 18px -10px rgba(0,0,0,.35);
   transition:transform 320ms var(--ease-spring), box-shadow var(--t-btn) var(--ease-snap);
 }
-.pill:hover{transform:translateY(-2px); box-shadow:0 2px 4px rgba(0,0,0,.09), 0 14px 26px -10px rgba(0,0,0,.42)}
+/* ‼️ ไอเดีย ① จาก thepexcel (พี่ปอนด์เคาะ 13/09/2026): ชี้แล้วยกเงา + ขอบกลายเป็นสีเน้นของตระกูล
+   วัดของเขา: เงา 0 1px 3px กลายเป็น 0 16px 36px + ขอบ rgba(10,10,10,.08) กลายเป็นสีเน้น .4
+   ของเรามีเงายกอยู่แล้ว เพิ่มวงขอบสีเน้น 1.5px และย้อมเงาด้วยสีเน้นเดียวกัน ไม่เพิ่มสีใหม่ (ไอเดีย ②) */
+.pill:hover{transform:translateY(-2px);
+  box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ac) 55%,transparent), 0 2px 4px rgba(0,0,0,.09), 0 14px 26px -10px color-mix(in srgb,var(--ac) 50%,rgba(0,0,0,.42))}
 .pill:active{transform:translateY(0)}
 .pill:focus-visible{outline:2.5px solid #fff; outline-offset:3px}
 .pill i{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;
@@ -719,6 +735,13 @@ footer::before{content:""; position:absolute; inset-inline:0; top:0; height:1px;
 /* ‼️ มือถือซ่อนทั้งแถบ เหมือนที่ sqlbi ทำจริง (วัดแล้ว display:none ที่ 390px) ลองให้ตกบรรทัดแล้วสูง 185px
    หางหน้ายาวขึ้นจนปุ่มลงมือทำที่ติดในกรอบแผงหลุดเหนือจอ 49 จุด (tests/browser_mobile.py ② จับได้ 13/09/2026) */
 @media (max-width:640px){ .network{display:none} }
+/* ‼️ มือถือ: 12 ชิปต้องอยู่ใน 3 แถว ไม่งั้นเครื่องมือตัวแรกโผล่ต่ำกว่า 80% ของจอ (tests/browser_findability.py)
+   13/09/2026 หลังแก้ให้ Sarabun วาดจริงตั้งแต่โหลดแรก ชิปกว้างขึ้นตัวละ 6-11px ตกเป็น 4 แถว (721px)
+   ตัวที่ทำให้ตกคือชิปยาวสุด "Power Automate 2" 127px จึงซ่อนตัวเลขนับหลังชื่อหมวดเฉพาะมือถือ (ชิปละ ~14px)
+   ความสูงกด 36px คงเดิม ตัวเลขยังอยู่บนจอใหญ่ */
+@media (max-width:640px){ .cat{padding-inline:8px; font-size:12.5px; gap:4px; min-width:36px; justify-content:center} .cat b{display:none} .cats{gap:6px}
+  /* hero บนมือถือแน่นขึ้น 6px บน/ล่าง (ฟอนต์จริงทำ hero สูงขึ้น 5px จากช่องค้นหา) ให้เครื่องมือตัวแรกกลับมาอยู่ใน 80% ของจอ */
+  .hero{padding-block:14px} }
 #tool{display:none}
 body.tool #tool{display:block}
 body.tool #home{display:none}

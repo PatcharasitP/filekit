@@ -41,6 +41,8 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_matrixdetails.py # Matrix หลายชั้น ISINSCOPE ต้องผูกชั้นในสุด และชนิดที่เสี่ยงต้องถูกห่อ FORMAT
 ../.venv/bin/python tests/browser_sortbar.py    # ตัวเรียงหน้าแรก และฉาก hero ที่ตัวเลขต้องบวกกันได้จริง
 ../.venv/bin/python tests/browser_sidepanel.py  # รางซ้าย+คอลัมน์ขวา (FAQ/ทำอะไรต่อ) พับได้และจำสถานะ FAQ แถวเส้นบาง (13/09)
+../.venv/bin/python tests/browser_hover.py      # ชี้การ์ดหน้าแรกแล้วยกเงา+วงขอบสีเน้นของตระกูล (ไอเดีย ① thepexcel 13/09)
+../.venv/bin/python tests/browser_fontrace.py   # ฟอนต์ที่วาดจริง (CDP) ต้องเป็น Sarabun ทุกวิธีโหลด ไม่สลับเป็น Leelawadee หลัง refresh (13/09)
 ../.venv/bin/python tests/browser_theme.py      # หน้าธีม Power BI โคลนโครง datatraining.io ฟอนต์ Segoe UI ทั้งหน้าทาสีตามชุด (13/09)
 ../.venv/bin/python tests/browser_toolrail.py   # รางซ้ายบนจอกว้าง ต้องไม่ทับพื้นที่ทำงาน และคืนที่แนวตั้งได้จริง
 ../.venv/bin/python tests/browser_toolio.py     # ‼️ ช้า ~5 นาที รันทุกเครื่องมือจริงแล้วเทียบกับตัวเลขที่โชว์บนหน้า

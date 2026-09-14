@@ -87,7 +87,22 @@ function paintDax(src) {
     : `<i class="cv-lit">${fn}</i>`);
 }
 
-const PAINT = { json: paintJson, m: paintM, html: paintHtml, dax: paintDax };
+/* ไฮไลต์ T-SQL แบบเบา
+ * ‼️ ทาสีรอบเดียวเหมือนตัวอื่น ห้ามอ่านสิ่งที่ตัวเองเพิ่งเขียน
+ * ลำดับสำคัญ: คอมเมนต์ก่อน (ทั้ง -- และ ต้องมาก่อนตัวดำเนินการลบ) แล้วสตริง
+ * (N'...' ของ Unicode ต้องจับ N นำหน้าด้วย ไม่งั้น N โดดไปเป็นคำสงวน) แล้วชื่อในวงเล็บเหลี่ยม
+ * แล้วคำสงวน สุดท้ายชื่อฟังก์ชันที่ตามด้วยวงเล็บ */
+const SQL_TOKEN = /(--[^\n]*|\/\*[\s\S]*?\*\/)|(N?'(?:''|[^'])*')|(\[[^\]\n]*\])|\b(SELECT|FROM|WHERE|GROUP|BY|ORDER|HAVING|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|APPLY|ON|AS|WITH|UNION|ALL|DISTINCT|CASE|WHEN|THEN|ELSE|END|AND|OR|NOT|NULL|IS|IN|OVER|PARTITION|DESC|ASC|VALUES|INSERT|INTO|UPDATE|SET|DELETE|CREATE|VIEW|TABLE|DECLARE|WITHIN|GROUP_ORDER)\b|\b([A-Za-z][A-Za-z0-9_]*)(?=\s*\()/gi;
+function paintSql(src) {
+  return esc(src).replace(SQL_TOKEN, (m, cmt, str, ref, kw, fn) =>
+    cmt ? `<i class="cv-cmt">${cmt}</i>`
+    : str ? `<i class="cv-str">${str}</i>`
+    : ref ? `<i class="cv-key">${ref}</i>`
+    : kw ? `<i class="cv-kw">${kw}</i>`
+    : `<i class="cv-lit">${fn}</i>`);
+}
+
+const PAINT = { json: paintJson, m: paintM, html: paintHtml, dax: paintDax, sql: paintSql };
 
 /** ทาสีโค้ดหนึ่งก้อนแล้วคืน HTML ที่พร้อมยัดลง innerHTML
  *
@@ -98,7 +113,7 @@ const PAINT = { json: paintJson, m: paintM, html: paintHtml, dax: paintDax };
  * ‼️ ปลอดภัยต่อการคัดลอก: ทุกตัวทาสีเรียก esc() ก่อนเสมอ และห่อด้วย <i> ซึ่งไม่มีข้อความ
  *    ของตัวเอง ดังนั้น element.textContent หลังทาสี ยังเท่ากับโค้ดต้นฉบับเป๊ะ
  * @param {string} src โค้ดต้นฉบับ
- * @param {"json"|"m"|"html"|"dax"} lang ภาษา · ไม่รู้จัก = คืนข้อความที่ esc แล้วเฉย ๆ */
+ * @param {"json"|"m"|"html"|"dax"|"sql"} lang ภาษา · ไม่รู้จัก = คืนข้อความที่ esc แล้วเฉย ๆ */
 export function paintCode(src, lang) {
   return (PAINT[lang] || esc)(src || "");
 }

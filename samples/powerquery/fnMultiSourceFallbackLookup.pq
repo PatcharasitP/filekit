@@ -1,6 +1,6 @@
 // ============================================================================
-//  fnMultiSourceFallbackLookup  (v1 — 2026-08-23)
-//  ไล่หา code จาก "หลายแหล่ง" ตามลำดับความสำคัญ — แต่ละแหล่งมี key กี่ชั้นก็ได้
+//  fnMultiSourceFallbackLookup  (v1, 2026-08-23)
+//  ไล่หา code จาก "หลายแหล่ง" ตามลำดับความสำคัญ, แต่ละแหล่งมี key กี่ชั้นก็ได้
 //  คืน payload ที่ map ชื่อคอลัมน์ให้ลงช่องเดียวกันได้แม้ต้นทางคนละชื่อ
 //  ----------------------------------------------------------------------------
 //  ต่างจาก fnFallbackLookup ยังไง:
@@ -9,10 +9,10 @@
 //      + Match_Source บอกชื่อแหล่ง (ตั้ง label ไดนามิกจากคอลัมน์ในแถวที่ match ได้)
 //      + Payload เป็น record map: ผลลัพธ์ชื่อเดียว ↔ ชื่อคอลัมน์ต้นทางที่ต่างกันในแต่ละแหล่ง
 //
-//  PERFORMANCE (รองรับล้านแถว — ยึดบทเรียน fnFallbackLookup v3):
-//    • dict = Record.FromList → hash lookup O(1)/code  เก็บ dict ทุกชั้นใน "record"
+//  PERFORMANCE (รองรับล้านแถว, ยึดบทเรียน fnFallbackLookup v3):
+//    • dict = Record.FromList → hash lookup O(1)/code, เก็บ dict ทุกชั้นใน "record"
 //      (M memoize record field = build ครั้งเดียวแน่นอน)
-//      ‼️ ห้ามเก็บ dict ใน list จาก List.Transform — M ไม่ memoize สมาชิก list
+//      ‼️ ห้ามเก็บ dict ใน list จาก List.Transform, M ไม่ memoize สมาชิก list
 //         = rebuild ทุกแถว ช้าระดับแสนเท่า (บั๊กจริงที่ฆ่า fnCascadeLookup 23/07)
 //    • SelectColumns เหลือ key+payload ก่อน Table.Buffer → เบา RAM/เร็วขึ้นมาก
 //    • scan ตารางต้นทางรอบเดียว (เทียบกับเรียก fnFallbackLookup ซ้ำ = scan หลายรอบ)
@@ -21,7 +21,7 @@
 //  พารามิเตอร์
 //    Source      : ตารางต้นทาง
 //    CodeColumn  : ชื่อคอลัมน์ code (1 เซลล์มีหลาย code คั่น Separator ได้)
-//    Sources     : list ของ record เรียงตามลำดับความสำคัญ — แต่ละ record:
+//    Sources     : list ของ record เรียงตามลำดับความสำคัญ, แต่ละ record:
 //        [ Name    = "Latest Contract",              // ชื่อแหล่ง (ค่า default ของ Match_Source)
 //          Table   = #"Latest Contract",             // ตาราง lookup
 //          Keys    = {"รหัสสถานี", "รหัสสถานีเดิม"}, // key เรียงตามลำดับ กี่ชั้นก็ได้
@@ -66,7 +66,7 @@ let
 
     // ผลลัพธ์ payload ทั้งหมด (union ของทุกแหล่ง เรียงตามที่พบครั้งแรก)
     payloadNames = List.Distinct(List.Combine(List.Transform(Sources, each Record.FieldNames(_[Payload])))),
-    // นิยามคอลัมน์ payload รายแหล่ง (โหมด KeepPerSource) — เก็บเป็น record ไม่ต้อง parse ชื่อกลับ
+    // นิยามคอลัมน์ payload รายแหล่ง (โหมด KeepPerSource), เก็บเป็น record ไม่ต้อง parse ชื่อกลับ
     perDefs      = if not keepPer then {}
                    else List.Combine(List.Transform(Sources, (s) =>
                           List.Transform(Record.FieldNames(s[Payload]),
@@ -123,7 +123,7 @@ let
 
     blankMain = Record.FromList(List.Repeat({null}, List.Count(payloadNames)), payloadNames),
 
-    // ---- จับคู่ 1 เซลล์: ไล่แหล่ง → ไล่ key ในแหล่ง → ไล่ code  เจอแล้วหยุดทันที ----
+    // ---- จับคู่ 1 เซลล์: ไล่แหล่ง → ไล่ key ในแหล่ง → ไล่ code, เจอแล้วหยุดทันที ----
     matchOne = (codesText as nullable text) as record =>
         let
             codes = List.Select(

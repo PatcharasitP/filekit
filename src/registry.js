@@ -238,6 +238,24 @@ export const TOOLS = [
     keys:"power query m lookup merge fallback multisource รวมแหล่ง ค้นข้าม vlookup ไล่หา cascade",
     next:["excel-to-pq","pa-parse-json"] },
 
+  { id:"pq-group-concat", group:"powerquery", icon:"🧵", since:"2026-09-14", title:"ยุบหลายแถวให้เหลือแถวเดียว",
+    desc:"หลายสัญญาต่อ 1 สถานีให้เหลือแถวเดียว ค่าต่อกันด้วยจุลภาค ยุบค่าซ้ำและบวกเงินตามที่ยุบได้ แถวที่ค่าว่างก็ยังอ่านคู่กันได้ไม่เลื่อนตำแหน่ง ตั้งค่าครั้งเดียวได้ทั้งโค้ด Power Query และ T-SQL",
+    libs:[],
+    keys:"power query m group concat ยุบแถว รวมแถว ต่อข้อความ combine rows group by textjoin concatenate สรุปต่อกลุ่ม latest contract sql server t-sql string_agg for xml path",
+    next:["pq-multisource-lookup","excel-to-pq"] },
+
+  { id:"pq-to-date", group:"powerquery", icon:"📅", since:"2026-09-14", title:"แปลงข้อความให้เป็นวันที่",
+    desc:"คอลัมน์วันที่ที่เก็บเป็นข้อความ แปลงทีเดียวทั้งคอลัมน์ บอกได้ว่าข้อมูลเป็น พ.ศ. หรือ ค.ศ. ไม่ปล่อยให้เครื่องเดาเองจนวันเพี้ยน 543 ปี",
+    libs:[],
+    keys:"power query m date text แปลงวันที่ พศ คศ buddhist era ปฏิทิน type date locale culture วันที่เพี้ยน 543 เปลี่ยนชนิดข้อมูล sql server t-sql try_convert dateadd",
+    next:["pq-pick-date","pq-group-concat"] },
+
+  { id:"pq-pick-date", group:"powerquery", icon:"🗓", since:"2026-09-14", title:"เลือกวันล่าสุดจากหลายคอลัมน์",
+    desc:"หลายคอลัมน์วันที่ในแถวเดียว เลือกวันล่าสุด วันรองลงมา หรือวันแรกสุด มาไว้คอลัมน์เดียว เพิ่มได้หลายชั้นเพื่อเอาไปคิดช่วงห่างต่อ",
+    libs:[],
+    keys:"power query m date max min rank วันล่าสุด วันแรกสุด อันดับ sla ช่วงห่าง list max หลายคอลัมน์ เลือกวันที่ sql server t-sql cross apply row_number",
+    next:["pq-to-date","pq-group-concat"] },
+
   { id:"pa-html-table", group:"powerautomate", icon:"✉", since:"2026-09-11", title:"ตาราง HTML สำหรับอีเมลใน flow",
     desc:"ปรับหน้าตาแล้วเห็นตัวอย่างอีเมลทันที ได้เส้นขอบครบทุกช่องแบบที่ Outlook เดสก์ท็อปยอมแสดง",
     libs:[],
@@ -312,6 +330,9 @@ const EN_TOOLS = {
   "pbi-donut":        ["Deneb donut chart", "Tweak a live donut chart and see it change instantly, then copy the spec straight into Deneb"],
   "pbi-theme":        ["Build a Power BI theme (theme.json)", "Pick a palette and a canvas size, watch a live report preview, and get told which colours fall below the contrast floor or merge for colour blind viewers"],
   "pa-parse-json":    ["Table to a Parse JSON schema", "Reads the whole column before deciding the type, so columns that really do go blank are declared nullable and your flow survives them"],
+  "pq-to-date":       ["Turn text into real dates", "Convert a whole column of text dates at once, telling it whether the years are Buddhist or Common era instead of letting the machine guess and shift everything by 543 years"],
+  "pq-pick-date":     ["Pick the latest date across columns", "Bring the latest, the one before it, or the earliest of several date columns into a single column, stacked in as many layers as you need for gap calculations"],
+  "pq-group-concat":  ["Collapse many rows into one", "Turn many contracts per site into a single row, values joined by commas, with repeats collapsed and their amounts added up, and blanks that still line up column by column"],
   "pq-multisource-lookup": ["Build a multi source lookup", "Search several tables in order and stop at the first hit, with results landing in one column even when each source names it differently"],
   "pa-html-table":    ["HTML table for a flow email", "Style it and see the email straight away, with the per cell borders that Outlook desktop actually renders"],
 };

@@ -216,7 +216,42 @@ def main():
             ck("ทุกชุดในไฟล์ตรงกับชุดบนจอ",
                sorted(key_of(*[float(x) for x in v]) for v in in_file.values()), sorted(shown.keys()))
 
-            print("\n── ⑦ โหมดวางตัวเลขเอง (ไม่มีไฟล์) ──")
+            print("\n── ⑦ ไฟล์ Excel ที่ตั้ง Solver ไว้ให้แล้ว ──")
+            # ‼️ จุดตายของฟีเจอร์นี้คือชื่อที่นิยามระดับชีต ถ้าหลุดไปเป็นระดับสมุดงาน
+            #    Excel จะเปิด Solver มาเป็นค่าว่าง ผู้ใช้กด Solve แล้วไม่มีอะไรเกิดขึ้น
+            #    (พิสูจน์กับ Excel จริง 15/09/2026: ไฟล์ที่มีชื่อครบ กด Solve ได้คำตอบใน 0.82 วินาที)
+            shown = search(target="400", hi="4")
+            pg.evaluate("() => document.querySelector('input[value=\"excel\"]').click()")
+            pg.wait_for_timeout(500)
+            with pg.expect_download() as dl2:
+                pg.locator(".ms-solverbox button").click()
+            spath = TMP / "solver.xlsx"
+            dl2.value.save_as(str(spath))
+            swb = openpyxl.load_workbook(spath)
+            ck("ไฟล์มีสองชีต คือแผ่นงานกับแผ่นวิธีใช้", len(swb.sheetnames), 2)
+            sws = swb[swb.sheetnames[0]]
+            names = sorted(sws.defined_names.keys())
+            need = ["solver_adj", "solver_eng", "solver_lhs1", "solver_num", "solver_opt",
+                    "solver_rel1", "solver_rhs1", "solver_typ", "solver_val"]
+            ck("การตั้งค่า Solver ถูกฝังเป็นชื่อระดับชีตครบ", [n for n in need if n not in names], [])
+            ck("เป้าหมายในไฟล์ตรงกับที่ตั้งบนหน้าเว็บ", float(sws.defined_names["solver_val"].value), 400.0)
+            ck("ชนิดโจทย์เป็น Value Of (3)", sws.defined_names["solver_typ"].value.strip(), "3")
+            ck("ข้อจำกัดตัวแรกเป็นแบบ binary (5)", sws.defined_names["solver_rel1"].value.strip(), "5")
+            nrow = sws.max_row
+            ok("จำนวนแถวไม่เกินเพดาน 200 ตัวแปรของ Solver", nrow - 1 <= 200, f"ได้ {nrow - 1} แถว")
+            ok("ช่วงตัวแปรครอบทุกแถวที่ใส่มาจริง",
+               f"$B$2:$B${nrow}" in sws.defined_names["solver_adj"].value, 
+               f"ได้ {sws.defined_names['solver_adj'].value}")
+            # แถวที่เป็นคำตอบต้องถูกยกมาไว้ต้น ๆ ไม่งั้นกด Solve แล้วอาจไม่มีคำตอบอยู่ในไฟล์เลย
+            head_rows = [sws.cell(row=r, column=3).value for r in range(2, min(12, nrow + 1))]
+            answer_rows = {r for rows in shown.values() for r in rows}
+            ok("แถวที่เป็นคำตอบถูกยกขึ้นมาไว้ต้นไฟล์",
+               bool(answer_rows & set(head_rows)), f"คำตอบอยู่แถว {sorted(answer_rows)} แต่ต้นไฟล์คือ {head_rows}")
+            # สูตรต้องเป็นสูตรจริง ไม่ใช่ข้อความ
+            ok("ช่องรวมเป็นสูตร SUMPRODUCT จริง",
+               str(sws["G1"].value).startswith("=SUMPRODUCT("), f"ได้ {sws['G1'].value!r}")
+
+            print("\n── ⑧ โหมดวางตัวเลขเอง (ไม่มีไฟล์) ──")
             pg.goto(f"{base}/#/excel-match-sum", wait_until="networkidle")
             pg.wait_for_selector(".ms-ta", state="attached")
             pg.evaluate("""() => {
@@ -235,7 +270,7 @@ def main():
             ck("ค้นจากตัวเลขที่วางเองได้", set(sets_on_screen(pg)),
                {key_of(300, 100), key_of(250.5, 100, 49.5)})
 
-            print("\n── ⑧ โหมดอังกฤษ ──")
+            print("\n── ⑨ โหมดอังกฤษ ──")
             pg.evaluate("() => { try { localStorage.setItem('fk-lang','en'); } catch {} }")
             pg.reload(wait_until="networkidle")
             pg.wait_for_timeout(400)

@@ -86,6 +86,10 @@ const STYLE = `
 .ms-table th{background:var(--bg-soft);font-weight:700}
 .ms-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ms-empty-hint{font-size:13px;color:var(--text-mute);line-height:1.8}
+.ms-solverbox{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);
+  padding:13px 15px;margin-bottom:16px}
+.ms-solverbox p{margin:0 0 11px;font-size:13px;line-height:1.75;color:var(--text)}
+.ms-solverbox small{display:block;margin-top:9px;font-size:12px;color:var(--text-mute);line-height:1.6}
 `;
 
 export function mount(tool) {
@@ -527,6 +531,116 @@ export function mount(tool) {
       tr("ชุดที่รวมกันได้.xlsx", "matching-sets.xlsx"));
   }
 
+  /* สร้างไฟล์ Excel ที่ "ตั้ง Solver ไว้ให้เสร็จแล้ว" เปิดมากด Data > Solver > Solve ได้เลย
+   *
+   * ‼️ Solver ไม่ได้เก็บการตั้งค่าไว้ที่ไหนลึกลับ มันเก็บเป็นชื่อที่นิยามระดับชีต (defined names)
+   *    ชื่อ solver_opt / solver_adj / solver_typ / solver_val / solver_eng / solver_relN ฯลฯ
+   *    พิสูจน์แล้ว 15/09/2026: ให้ Excel จริงกด SolverSave แล้วดัมพ์ชื่อออกมาดู จากนั้นสร้างไฟล์เอง
+   *    ด้วยไลบรารีตัวเดียวกับที่หน้านี้ใช้ แล้วสั่ง SolverSolve ทันทีโดยไม่ตั้งค่าใหม่เลย
+   *    ได้คำตอบถูกใน 0.51 วินาที (return code 14) = Excel อ่านค่าที่เราฝังไว้จริง
+   *
+   * ‼️ เพดาน 200 ตัวแปรของ Solver รุ่นที่ติดมากับ Excel เป็นของจริง ใส่เกินแล้วมันปฏิเสธทั้งงาน
+   *    ไฟล์นี้จึงใส่ได้มากสุด 200 แถว และ **ยกแถวที่อยู่ในคำตอบที่หน้านี้หาเจอขึ้นก่อนเสมอ**
+   *    เพื่อให้กด Solve แล้วเจอคำตอบแน่ ไม่ใช่ตัด 200 แถวแรกมาแบบสุ่มแล้วไม่มีคำตอบอยู่ในนั้นเลย
+   */
+  const SOLVER_MAX_VARS = 200;
+
+  function buildSolverWorkbook() {
+    const target = toInt(String(targetIn.value).trim(), decimals);
+    if (target == null) return null;
+    const tolInt = Math.abs(toInt(String(tolIn.value).trim() || "0", decimals) ?? 0);
+    const maxCount = Math.max(1, Math.round(intOf(maxCountIn, 4)));
+
+    // แถวที่อยู่ในคำตอบมาก่อน แล้วค่อยเติมแถวอื่นที่ยังมีสิทธิ์เป็นคำตอบจนครบเพดาน
+    const picked = new Set();
+    for (const res of lastResults) for (const p of res.picks) for (const row of p.g.rows.slice(0, p.times)) picked.add(row);
+    const inAnswer = items.filter((x) => picked.has(x.row));
+    const rest = items.filter((x) => !picked.has(x.row) && x.v > 0 && x.v <= target + tolInt);
+    const chosen = [...inAnswer, ...rest].slice(0, SOLVER_MAX_VARS);
+    if (!chosen.length) return null;
+
+    const sheetName = tr("หายอด", "MatchSum");
+    const last = chosen.length + 1;
+    const head = [tr("ยอด", "Amount"), tr("เลือก 0 หรือ 1", "Pick 0 or 1"),
+                  tr("แถวในไฟล์เดิม", "Row in source"), tr("ชื่อรายการ", "Label")];
+    const aoa = [head, ...chosen.map((x) => [Number(fromInt(x.v, decimals).replace(/,/g, "")), 0, x.row, x.label || ""])];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const put = (addr, cell) => { ws[addr] = cell; };
+    put("F1", { t: "s", v: tr("รวมที่เลือก", "Picked total") });
+    put("G1", { t: "n", f: `SUMPRODUCT(A2:A${last},B2:B${last})` });
+    put("F2", { t: "s", v: tr("เป้าหมาย", "Target") });
+    put("G2", { t: "n", v: Number(fromInt(target, decimals).replace(/,/g, "")) });
+    put("F3", { t: "s", v: tr("ส่วนต่าง", "Difference") });
+    put("G3", { t: "n", f: "G1-G2" });
+    put("F4", { t: "s", v: tr("ใช้กี่รายการ", "Rows used") });
+    put("G4", { t: "n", f: `SUM(B2:B${last})` });
+    ws["!ref"] = `A1:G${Math.max(last, 4)}`;
+    ws["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 15 }, { wch: 22 }, { wch: 2 }, { wch: 16 }, { wch: 16 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    // แผ่นวิธีใช้ เขียนเป็นข้อความล้วน เปิดมาแล้วอ่านรู้เรื่องโดยไม่ต้องกลับมาที่เว็บ
+    const guide = [
+      [tr("เปิดไฟล์นี้ใน Excel แล้วทำตามนี้", "Open this file in Excel and do this")],
+      [tr("1. แถบ Data ขวาสุด กด Solver (ไม่เห็นปุ่ม ให้เปิดที่ File > Options > Add-ins > Solver Add-in)",
+          "1. Data tab, far right, click Solver (missing? enable it in File > Options > Add-ins > Solver Add-in)")],
+      [tr("2. ช่องทุกช่องถูกตั้งไว้ให้แล้ว กด Solve ได้เลย", "2. Everything is already filled in. Just press Solve")],
+      [tr("3. เสร็จแล้วดูคอลัมน์ B แถวไหนเป็น 1 คือแถวที่ถูกเลือก และคอลัมน์ C บอกว่าเป็นแถวที่เท่าไรในไฟล์เดิม",
+          "3. Afterwards, rows with 1 in column B are the picked ones, and column C says which row they were in the source file")],
+      [""],
+      [tr(`ไฟล์นี้ใส่มาให้ ${chosen.length.toLocaleString()} แถว จากทั้งหมด ${items.length.toLocaleString()} แถวในไฟล์ต้นทาง`,
+          `This file carries ${chosen.length.toLocaleString()} of the ${pl(items.length.toLocaleString(), "row", "rows")} in the source file`)],
+      [tr("เพราะ Solver ที่ติดมากับ Excel รับตัวแปรได้มากสุด 200 ตัว ใส่เกินกว่านั้นมันจะไม่ยอมทำงานทั้งงาน",
+          "The Solver bundled with Excel takes at most 200 variables. Past that it refuses the whole job")],
+      [tr("แถวที่หน้าเว็บหาเจอว่าเป็นคำตอบถูกยกมาไว้ก่อนแล้ว กด Solve จึงเจอคำตอบแน่นอน",
+          "Rows already known to form an answer are placed first, so pressing Solve will find one")],
+      [""],
+      [tr("อยากเปลี่ยนเงื่อนไขเอง", "To change the rules yourself")],
+      [tr("จำกัดจำนวนใบที่ใช้: ใน Solver กด Add แล้วใส่ $G$4 <= 4", "Cap how many rows: in Solver press Add and set $G$4 <= 4")],
+      [tr("ยอมคลาดเคลื่อนได้: เปลี่ยน Set Objective เป็น Min ของ =ABS(G1-G2) แทนแบบ Value Of",
+          "Allow a small difference: set the objective to Min of =ABS(G1-G2) instead of Value Of")],
+    ];
+    const gws = XLSX.utils.aoa_to_sheet(guide);
+    gws["!cols"] = [{ wch: 110 }];
+    XLSX.utils.book_append_sheet(wb, gws, tr("วิธีใช้", "How to"));
+
+    // ‼️ การตั้งค่า Solver ต้องเป็นชื่อระดับชีต (Sheet: 0) ถ้าเป็นระดับสมุดงาน Solver จะมองไม่เห็น
+    const q = `'${sheetName}'`;
+    const val = Number(fromInt(target, decimals).replace(/,/g, ""));
+    const names = [
+      { Name: "solver_opt", Ref: `${q}!$G$1` },
+      { Name: "solver_typ", Ref: "3" },                    // 3 = Value Of
+      { Name: "solver_val", Ref: String(val) },
+      { Name: "solver_adj", Ref: `${q}!$B$2:$B$${last}` },
+      { Name: "solver_eng", Ref: "2" },                    // 2 = Simplex LP
+      { Name: "solver_neg", Ref: "1" },
+      { Name: "solver_ver", Ref: "3" },
+      { Name: "solver_num", Ref: "2" },
+      { Name: "solver_lhs1", Ref: `${q}!$B$2:$B$${last}` },
+      { Name: "solver_rel1", Ref: "5" },                   // 5 = binary
+      { Name: "solver_rhs1", Ref: '"binary"' },
+      { Name: "solver_lhs2", Ref: `${q}!$G$4` },
+      { Name: "solver_rel2", Ref: "1" },                   // 1 = <=
+      { Name: "solver_rhs2", Ref: String(maxCount) },
+    ].map((n) => ({ ...n, Sheet: 0 }));
+    wb.Workbook = { Names: names };
+
+    return { wb, count: chosen.length, cut: items.length - chosen.length };
+  }
+
+  function downloadSolverFile() {
+    const built = buildSolverWorkbook();
+    if (!built) { st.err(tr("ยังไม่มีตัวเลขหรือยอดเป้าหมาย", "No numbers or target yet")); return; }
+    const buf = XLSX.write(built.wb, { bookType: "xlsx", type: "array" });
+    download(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      tr("ตั้ง Solver ไว้ให้แล้ว.xlsx", "solver-ready.xlsx"));
+    st.ok(built.cut > 0
+      ? tr(`ได้ไฟล์แล้ว ใส่มาให้ ${built.count.toLocaleString()} แถว (ตัดออก ${built.cut.toLocaleString()} แถวเพราะ Solver รับได้ 200 ตัวแปร)`,
+           `File ready with ${pl(built.count.toLocaleString(), "row", "rows")} (${built.cut.toLocaleString()} left out, Solver takes 200 variables)`)
+      : tr(`ได้ไฟล์แล้ว ใส่มาให้ครบ ${built.count.toLocaleString()} แถว`, `File ready with all ${pl(built.count.toLocaleString(), "row", "rows")}`));
+  }
+
   // ── แท็บ "ทำเองใน Excel" ─────────────────────────────────────────────────
   function renderExcelGuide() {
     const n = items.length || 0;
@@ -535,10 +649,23 @@ export function mount(tool) {
     const targetTxt = String(targetIn.value).trim() || "257425.30";
     const tooBig = n > 200;
     excelBox.innerHTML = "";
+    const dlSolver = button(tr("ดาวน์โหลดไฟล์ Excel ที่ตั้ง Solver ไว้ให้แล้ว", "Download an Excel file with Solver already set up"),
+      { icon: "download", onclick: downloadSolverFile });
+    dlSolver.disabled = !items.length;
     excelBox.append(
+      el("div", { class: "ms-solverbox" }, [
+        el("p", {}, tr(
+          "ไม่อยากตั้งเองทีละช่อง กดปุ่มนี้ได้เลย ไฟล์ที่ได้มีตัวเลข, ช่องเลือก, สูตร และการตั้งค่า Solver ฝังไว้ครบ เปิดใน Excel แล้วกด Data > Solver > Solve ได้ทันที",
+          "Rather not fill in every box? This file comes with the numbers, the pick column, the formula and the Solver setup already inside. Open it in Excel and press Data > Solver > Solve")),
+        dlSolver,
+        el("small", {}, n > SOLVER_MAX_VARS
+          ? tr(`ไฟล์ที่เปิดอยู่มี ${n.toLocaleString()} แถว ไฟล์ที่ได้จะใส่ให้ ${SOLVER_MAX_VARS} แถว โดยยกแถวที่เป็นคำตอบขึ้นมาก่อน เพราะ Solver รับตัวแปรได้เท่านี้`,
+               `The open file has ${pl(n.toLocaleString(), "row", "rows")}. The download carries ${SOLVER_MAX_VARS} of them, answer rows first, because that is Solver's limit`)
+          : tr(`ไฟล์ที่ได้จะใส่ให้ครบทั้ง ${n.toLocaleString()} แถว`, `The download carries all ${pl(n.toLocaleString(), "row", "rows")}`)),
+      ]),
       el("p", { class: "ms-empty-hint" }, tr(
-        "Excel มี Solver มาให้อยู่แล้ว (แถบ Data ขวาสุด ถ้าไม่เห็นให้เปิดจาก File > Options > Add-ins > Solver Add-in) ทำโจทย์นี้ได้เหมือนกัน วิธีตั้งมีดังนี้",
-        "Excel ships with Solver (Data tab, far right. If it is missing, enable it in File > Options > Add-ins > Solver Add-in). Here is how to set this problem up")),
+        "หรือถ้าอยากตั้งเองในไฟล์ของตัวเอง Solver อยู่ที่แถบ Data ขวาสุด (ไม่เห็นให้เปิดจาก File > Options > Add-ins > Solver Add-in) วิธีตั้งมีดังนี้",
+        "Or to set it up yourself in your own file, Solver sits at the right end of the Data tab (missing? enable it in File > Options > Add-ins > Solver Add-in). Here is how")),
       el("ol", { class: "ms-steps" }, [
         el("li", { html: tr(
           `วางตัวเลขไว้คอลัมน์ <code>${col}</code> แถว 2 ถึง ${last} แล้วเว้นคอลัมน์ <code>B</code> ไว้ว่าง ใส่ 0 ทุกแถว ช่องนี้คือ "เลือกหรือไม่เลือก"`,

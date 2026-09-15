@@ -454,7 +454,9 @@ function route() {
       sessionStorage.removeItem("fk:gocat");
       /* ‼️ ต้องวาดแถบหมวดใหม่ด้วย ไม่งั้นกรองจริงแต่ปุ่มยังชี้ว่า "ทั้งหมด" อยู่
          ผู้ใช้เห็นรายการสั้นลงโดยไม่รู้ว่าถูกกรองอยู่ (เจอจริงตอนทดสอบ) */
-      if (GROUPS.some((g) => g.id === want)) { activeCat = want; renderCats(); }
+      // ลิงก์เก่าที่บุ๊กมาร์กไว้ตอนหมวดยังชื่อ data ต้องพามาที่หมวด Excel ไม่ใช่เงียบ ๆ ไม่กรองอะไรเลย
+      const cat = want === "data" ? "excel" : want;
+      if (GROUPS.some((g) => g.id === cat)) { activeCat = cat; renderCats(); }
     }
   } catch { /* โหมดส่วนตัว */ }
   // ลิงก์เก่า/พิมพ์ผิด → กลับหน้าแรกแล้วเก็บกวาด hash ที่ไม่มีความหมายทิ้งด้วย

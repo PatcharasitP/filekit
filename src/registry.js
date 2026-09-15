@@ -14,7 +14,7 @@ export const GROUPS = [
   { id: "image",    label: "รูปภาพ",                short: "รูปภาพ",      accent: "--g-img" },
   { id: "doc",      label: "เอกสารและจดหมายเวียน",  short: "Word",        accent: "--g-doc" },
   { id: "ppt",      label: "PowerPoint",            short: "PowerPoint",  accent: "--g-ppt" },
-  { id: "data",     label: "ตารางและข้อมูล",        short: "ตาราง",       accent: "--g-data" },
+  { id: "excel",    label: "Excel และการคำนวณ",     short: "Excel",       accent: "--g-data" },
   { id: "thai",     label: "งานเอกสารไทย",          short: "งานไทย",      accent: "--g-thai" },
   // ตระกูล Power Platform ใช้สีเดียวกันทั้งสามหมวด ตามกฎเดียวกับตระกูล PDF ที่ใช้ 3 หมวด 1 สี
   // (เพิ่มสีใหม่ทุกครั้งที่เพิ่มหมวด = หน้าเดียวมีสิบสี ลายตาและจำไม่ได้)
@@ -149,17 +149,24 @@ export const TOOLS = [
     accepts:["pptx"],
     libs:["jszip","jspdf"], keys:"powerpoint ppt pptx สไลด์ pdf presentation แปลง แจก", next:["pdf-merge","pdf-compress"] },
 
-  { id:"excel-csv",   group:"data", icon:"🔁", title:"สลับ Excel กับ CSV",
+  { id:"excel-match-sum", group:"excel", icon:"🎯", since:"2026-09-15", title:"หายอดที่บวกกันได้เท่านี้",
+    desc:"เงินเข้าก้อนเดียวแต่ในระบบเป็นหลายใบ หาให้ว่าใบไหนบ้างรวมกันได้พอดี ตั้งเงื่อนไขได้ว่ากี่ใบ ช่วงยอดเท่าไร ยอมคลาดเคลื่อนได้แค่ไหน และบอกตรง ๆ ว่าคำตอบมีกี่ชุด",
+    accepts:["xlsx","xls","xlsm","csv","txt"],
+    libs:["xlsx"],
+    keys:"solver subset sum กระทบยอด reconcile หายอด รวมกันได้ จับคู่ยอด เงินโอน ใบแจ้งหนี้ ผลต่าง หาตัวที่หาย combination excel solver what combination adds up",
+    next:["excel-split","excel-csv"] },
+
+  { id:"excel-csv",   group:"excel", icon:"🔁", title:"สลับ Excel กับ CSV",
     desc:"แปลง XLSX เป็น CSV (แยกทีละชีท) หรือรวม CSV กลับเป็น Excel",
     accepts:["xlsx","csv"],
     libs:["xlsx","jszip"], keys:"csv excel xlsx แปลง data ข้อมูล", next:["thai-encoding","excel-to-pdf"] },
 
-  { id:"excel-split", group:"data", icon:"✂️", title:"แยกไฟล์ Excel ตามคอลัมน์",
+  { id:"excel-split", group:"excel", icon:"✂️", title:"แยกไฟล์ Excel ตามคอลัมน์",
     desc:"เลือกคอลัมน์แล้วแยกเป็นไฟล์ละกลุ่ม (ZIP) หรือไฟล์เดียวแยกเป็นชีท",
     accepts:["xlsx","csv"],
     libs:["xlsx","jszip"], keys:"split แยก แบ่ง group แผนก สาขา จังหวัด ตามคอลัมน์ excel", next:["excel-to-pdf","thai-encoding"] },
 
-  { id:"excel-merge", group:"data", icon:"🧲", title:"รวมหลายไฟล์ Excel",
+  { id:"excel-merge", group:"excel", icon:"🧲", title:"รวมหลายไฟล์ Excel",
     desc:"ต่อแถวจากหลายไฟล์เป็นไฟล์เดียว จับคู่คอลัมน์ด้วยชื่อหัวตาราง ไม่ใช่ตำแหน่ง",
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"merge รวม ต่อ combine consolidate หลายไฟล์ สาขา excel", next:["excel-split","excel-to-pdf"] },
@@ -281,7 +288,7 @@ const EN_GROUPS = {
   "image":    ["Images", "Images"],
   "doc":      ["Documents & mail merge", "Word"],
   "ppt":      ["PowerPoint", "PowerPoint"],
-  "data":     ["Spreadsheets & data", "Data"],
+  "excel":    ["Excel & calculations", "Excel"],
   "thai":     ["Thai paperwork", "Thai"],
   "powerbi":  ["Power BI", "Power BI"],
   "powerquery": ["Power Query", "Power Query"],
@@ -314,6 +321,7 @@ const EN_TOOLS = {
   "word-mailmerge":   ["Mail merge (Word + Excel)", "Fill a Word template from Excel row by row and get the whole set of documents at once"],
   "powerpoint-to-word": ["PowerPoint → Word", "Pull the text, bullets and speaker notes from every slide into a Word document"],
   "powerpoint-to-pdf":  ["PowerPoint → PDF", "Lay the deck out as a readable PDF. One slide per page, pick a theme"],
+  "excel-match-sum":  ["Find rows that add up to an amount", "One payment lands but the system holds many invoices. This finds which rows add up to it, with your own rules for how many rows, what size, and how close is close enough, and it says how many different answers exist"],
   "excel-csv":        ["Excel ⇄ CSV", "Turn XLSX into CSV (one per sheet), or fold CSV files back into Excel"],
   "excel-to-pq":      ["Table to a Power Query formula", "Drop in an Excel, PDF, Word file or a photo of a table and get ready-to-paste #table code. Pick the Power Query type for every column"],
   "excel-split":      ["Split an Excel file by column", "Pick a column and split into one file per group (ZIP), or one file with a sheet per group"],

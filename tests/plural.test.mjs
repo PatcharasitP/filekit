@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // คำนามที่ใช้จริงในเว็บนี้ · เพิ่มคำใหม่ที่นี่เมื่อมีเครื่องมือที่นับของชนิดอื่น
 const NOUNS = ["pages", "files", "rows", "sheets", "columns", "slides",
-               "characters", "images", "spots", "paragraphs"];
+               "characters", "images", "spots", "paragraphs", "sets"];
 const PAT = new RegExp(String.raw`\$\{[^{}]+\}\s+(${NOUNS.join("|")})\b`, "g");
 
 let pass = 0; const fail = [];

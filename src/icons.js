@@ -53,6 +53,7 @@ export const ICONS = {
   "excel-merge":  `<rect x="2.5"y="3"width="8"height="7"rx="1.5"/><path d="M2.5 5.6h8"/><rect x="2.5"y="14"width="8"height="7"rx="1.5"/><path d="M2.5 16.6h8"/><path d="M11 6.5h3.6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H11"/><path d="M18.2 9.6L21 12l-2.8 2.4"/>`,
   // ตารางที่แปลงเป็นโค้ด สื่อด้วยวงเล็บปีกกาข้างตาราง
   "excel-to-pq": `<rect x="2.5"y="4.5"width="10"height="15"rx="1.4"/><path d="M2.5 9h10M7.5 4.5v15"/><path d="M17.4 6.5a2 2 0 0 0-2 2v2a1.6 1.6 0 0 1-1.6 1.6 1.6 1.6 0 0 1 1.6 1.6v2a2 2 0 0 0 2 2"/><path d="M21.5 9.4v5.2"/>`,
+  "excel-match-sum":`<circle cx="11"cy="13"r="7.5"/><circle cx="11"cy="13"r="3.6"/><path d="M11 13l8.4-8.4"/><path d="M16.8 4.2h3.4v3.4"/>`,
   "excel-csv":    `<rect x="2.5"y="4.5"width="8"height="15"rx="1.4"/><path d="M2.5 9h8M6.5 4.5v15"/><path d="M12.5 12h6"/><path d="M16.6 9.6L19.4 12l-2.8 2.4"/><path d="M21.5 7v10"opacity="0"/><path d="M12.5 12h-.2"/>`,
 
   // ── งานเอกสารไทย ──

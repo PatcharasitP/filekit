@@ -112,6 +112,7 @@ export function mount(tool) {
   let sortKey = "distanceKm", sortDir = -1;
   let lastHiddenLabels = 0;        // ป้ายที่ต้องซ่อนเพราะจะไปทับป้ายอื่น
   let radiusTooSmall = false;      // วงรัศมีเล็กกว่าที่ตาเห็นในมาตราส่วนนี้
+  let lastMerged = 0;              // คู่ที่จุดสองจุดใกล้กันเกินกว่าจะวาดแยกกันได้
 
   // ── แผงซ้าย ───────────────────────────────────────────────────────────
   const sheetSel = select([["0", "-"]], "0");
@@ -491,19 +492,38 @@ export function mount(tool) {
     ctx.globalAlpha = 1;
 
     // จุด
+    // ‼️ บทเรียน 16/09/2026 (เทสนับพิกเซลจับได้): คู่ที่ย้ายกันไม่กี่กิโลเมตร พอดูทั้งประเทศแล้ว
+    //    จุดสองจุดห่างกันไม่ถึงหนึ่งพิกเซล จุดใหม่จึงวาดทับจุดเดิมมิดทุกคู่ เหลือแต่สีน้ำเงินทั้งแผนที่
+    //    ซึ่งโกหกสายตาว่าไม่มีจุดเดิมอยู่เลย ที่มาตราส่วนแบบนั้นจึงวาดเป็นวงกลมสองซีกแทน
+    //    ซีกซ้ายสีเดิม ซีกขวาสีใหม่ แปลว่าทั้งคู่อยู่ตรงนี้และแยกกันไม่ออกที่ระยะซูมนี้
+    let merged = 0;
     for (const p of list) {
       const dim = selected && selected !== p;
       ctx.globalAlpha = dim ? 0.2 : 1;
-      for (const [lat, lon, col] of [[p.latOld, p.lonOld, cOld], [p.latNew, p.lonNew, cNew]]) {
-        const q = pr.project(lat, lon);
+      const a = pr.project(p.latOld, p.lonOld), b2 = pr.project(p.latNew, p.lonNew);
+      const apart = Math.hypot(a.x - b2.x, a.y - b2.y);
+      if (apart < r * 1.6) {
+        merged++;
+        const cx = (a.x + b2.x) / 2, cy = (a.y + b2.y) / 2;
+        ctx.fillStyle = cOld;
+        ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI / 2, (Math.PI * 3) / 2); ctx.fill();
+        ctx.fillStyle = cNew;
+        ctx.beginPath(); ctx.arc(cx, cy, r, (Math.PI * 3) / 2, Math.PI / 2); ctx.fill();
+        ctx.strokeStyle = cssVar("--bg", "#fff");
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+        continue;
+      }
+      for (const [x, y, col] of [[a.x, a.y, cOld], [b2.x, b2.y, cNew]]) {
         ctx.fillStyle = col;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = cssVar("--bg", "#fff");
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
     }
     ctx.globalAlpha = 1;
+    lastMerged = merged;
 
     // ป้ายระยะทาง
     const unit = unitIn.value || "";
@@ -517,13 +537,18 @@ export function mount(tool) {
     ctx.textBaseline = "middle";
     // ‼️ ป้ายทับกันคือสิ่งแรกที่พี่ปอนด์ทักตอนดูต้นแบบใน Power BI
     //    ที่นี่จึงวางจากคู่ไกลสุดก่อน แล้วข้ามป้ายที่จะไปทับของที่วางแล้ว และบอกด้วยว่าซ่อนไปกี่ป้าย
+    // ‼️ บทเรียน 16/09/2026 (เห็นกับตาตอนตรวจภาพจริง): กล่องพื้นของป้ายเคยวางทับจุดกึ่งกลางพอดี
+    //    คู่ที่ย้ายกันไม่กี่กิโลเมตร จุดสองจุดจึงถูกกล่องขาวบังมิดทั้งแผนที่ เหลือแต่ตัวเลขลอย
+    //    ป้ายจึงต้องลอยเหนือแนวเส้น ไม่ทับจุดของตัวเอง
+    const LABEL_LIFT = 16;
     const placed = [];
     let hidden = 0;
     for (const p of [...labelled].sort((x, y) => y.distanceKm - x.distanceKm)) {
       const m = pr.project(p.midLat, p.midLon);
+      const my = m.y - LABEL_LIFT;
       const txt = `${p.distanceKm.toFixed(2)}${unit}`;
       const w = ctx.measureText(txt).width + 8;
-      const box = { x1: m.x - w / 2, y1: m.y - 9, x2: m.x + w / 2, y2: m.y + 9 };
+      const box = { x1: m.x - w / 2, y1: my - 9, x2: m.x + w / 2, y2: my + 9 };
       const clash = placed.some((q) => !(box.x2 < q.x1 - 2 || box.x1 > q.x2 + 2 || box.y2 < q.y1 - 2 || box.y1 > q.y2 + 2));
       if (clash && labelled.length > 1) { hidden++; continue; }
       placed.push(box);
@@ -532,7 +557,13 @@ export function mount(tool) {
       ctx.fillRect(box.x1, box.y1, w, 18);
       ctx.globalAlpha = 1;
       ctx.fillStyle = ink;
-      ctx.fillText(txt, m.x, m.y);
+      ctx.fillText(txt, m.x, my);
+      // เส้นบางเชื่อมป้ายกับจุดกึ่งกลาง เพื่อให้รู้ว่าป้ายนี้เป็นของคู่ไหน
+      ctx.strokeStyle = mute;
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(m.x, my + 9); ctx.lineTo(m.x, m.y - 1); ctx.stroke();
+      ctx.globalAlpha = 1;
     }
     lastHiddenLabels = hidden;
 
@@ -554,6 +585,9 @@ export function mount(tool) {
              `A ${Number(radiusKm.value) || 3} km radius is too small to see at this scale. Zoom to the data or click a single pair`)
         : tr(`วงจาง = รัศมี ${Number(radiusKm.value) || 3} กม.`, `Faded ring = ${Number(radiusKm.value) || 3} km radius`));
     }
+    if (lastMerged) item(tr(
+      `จุดครึ่งส้มครึ่งน้ำเงิน ${lastMerged} จุด = คู่ที่อยู่ใกล้กันเกินกว่าจะแยกได้ที่ระยะซูมนี้`,
+      `${lastMerged} half-orange half-blue ${pl(lastMerged, "dot", "dots")} = pairs too close to separate at this zoom`));
     if (lastHiddenLabels) item(tr(`ซ่อนป้ายที่ทับกัน ${lastHiddenLabels} ป้าย`, `${lastHiddenLabels} overlapping ${pl(lastHiddenLabels, "label", "labels")} hidden`));
   }
 

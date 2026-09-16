@@ -96,6 +96,26 @@ def canvas_ink(pg):
     }""")
 
 
+def dot_pixels(pg):
+    """นับพิกเซลที่เป็นสีจุดเดิม (ส้ม) และจุดใหม่ (น้ำเงิน) บนภาพจริง
+
+    ‼️ เกิดจากบั๊กจริง 16/09/2026: กล่องพื้นของป้ายระยะทางวางทับจุดกึ่งกลางพอดี
+       จุดทั้งสองของทุกคู่จึงถูกบังมิด เหลือแต่ตัวเลขลอยอยู่บนแผนที่ เทสเดิมที่ดูแค่
+       ว่ามีหมึกบนผืนภาพผ่านฉลุย เพราะป้ายก็เป็นหมึกเหมือนกัน
+    """
+    return pg.evaluate("""() => {
+      const c = document.querySelector('.mr-canvas');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let orange = 0, blue = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i+1], b = d[i+2];
+        if (r > 180 && g > 90 && g < 170 && b < 110) orange++;
+        else if (b > 130 && r < 110 && g > 80 && g < 150) blue++;
+      }
+      return { orange, blue };
+    }""")
+
+
 def canvas_hash(pg):
     return pg.evaluate("""() => {
       const c = document.querySelector('.mr-canvas');
@@ -162,6 +182,11 @@ def main():
             ok("มีเนื้อภาพวาดอยู่จริง ไม่ใช่ผืนว่าง", ink["diff"] > 40, f"พิกเซลที่ต่างจากพื้น {ink['diff']}")
             ok("กรอบภาพสูงกว่ากว้าง เพราะประเทศไทยเป็นแนวตั้ง",
                ink["h"] >= ink["w"] * 0.9, f"ได้ {ink['w']}x{ink['h']}")
+            dots = dot_pixels(pg)
+            ok(f"เห็นจุดสถานีเดิมสีส้มจริงบนภาพ ({dots['orange']} พิกเซล)", dots["orange"] > 60, f"ได้ {dots}")
+            ok(f"เห็นจุดสถานีใหม่สีน้ำเงินจริงบนภาพ ({dots['blue']} พิกเซล)", dots["blue"] > 60, f"ได้ {dots}")
+            ok("ป้ายระยะทางไม่บังจุดจนหาย (จำนวนจุดสองสีใกล้เคียงกัน)",
+               min(dots["orange"], dots["blue"]) > max(dots["orange"], dots["blue"]) * 0.45, f"ได้ {dots}")
 
             print("\n── ④ ตารางคู่ย้าย ระยะทางต้องตรงกับที่ DAX คำนวณไว้ ──")
             pg.locator(".seg-item", has_text="ตาราง").first.click()

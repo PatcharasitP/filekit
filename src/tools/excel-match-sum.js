@@ -98,6 +98,8 @@ export function mount(tool) {
 
   let wb = null, sheetNames = [], rawTable = null, table = null;
   let items = [];        // [{ row, v, label }] หน่วยจำนวนเต็ม
+  // จำว่าผู้ใช้เลือกคอลัมน์เองแล้วหรือยัง ถ้ายัง ให้ใช้คอลัมน์ที่เดาไว้เสมอ
+  let userPickedCol = false, userPickedLabel = false;
   let decimals = 2;
   let lastResults = [], lastTargetInt = 0;
 
@@ -227,8 +229,8 @@ export function mount(tool) {
   };
   ta.oninput = () => { clearTimeout(ta._t); ta._t = setTimeout(readPasted, 250); };
   sheetSel.onchange = () => pickSheet(+sheetSel.value);
-  colSel.onchange = readColumn;
-  labelSel.onchange = readColumn;
+  colSel.onchange = () => { userPickedCol = true; readColumn(); };
+  labelSel.onchange = () => { userPickedLabel = true; readColumn(); };
 
   // ── อ่านข้อมูลเข้า ────────────────────────────────────────────────────────
   async function onFiles() {
@@ -307,8 +309,12 @@ export function mount(tool) {
       for (const r of table.rows) if (looksNumeric(r.cells[c])) hit++;
       if (hit > bestScore) { bestScore = hit; best = c; }
     }
-    colSel.value = keep && +keep < table.header.length ? keep : String(best);
-    if (keepL && +keepL < table.header.length) labelSel.value = keepL;
+    // ‼️ บั๊กที่เทส browser_affordance จับได้ 16/09/2026: เดิมเช็คว่า keep มีค่าไหม
+    //    แต่ค่าเริ่มต้นของ dropdown คือสตริง "0" ซึ่งเป็นค่าจริงในเงื่อนไข คอลัมน์ที่เดาไว้จึงไม่เคยถูกใช้เลย
+    //    ไฟล์ที่คอลัมน์แรกเป็นข้อความ (เช่น ไฟล์ตัวอย่างของเว็บเอง) จึงขึ้นว่า "อ่านเป็นตัวเลขได้ 0 แถว" ทันที
+    //    ต้องแยกให้ชัดว่า "ผู้ใช้เลือกเอง" กับ "ค่าเริ่มต้นของกล่อง" ไม่ใช่เรื่องเดียวกัน
+    colSel.value = userPickedCol && +keep < table.header.length ? keep : String(best);
+    if (userPickedLabel && +keepL < table.header.length) labelSel.value = keepL;
     colField.hidden = false; labelField.hidden = false;
     readColumn();
   }

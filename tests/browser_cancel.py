@@ -26,7 +26,10 @@ with sync_playwright() as p:
     # ‼️ ตั้งเป็น PNG ก่อน เพราะการเข้ารหัส PNG ช้ากว่า JPG มาก
     #    ตั้งแต่ทำงานขนานหลายไฟล์พร้อมกัน (09/09/2026) งาน JPG 30 ไฟล์จบเร็วกว่า 700 มิลลิวินาที
     #    ปุ่มหยุดจึงหายไปก่อนที่เทสจะกดทัน = เทสตกทั้งที่การยกเลิกยังทำงานถูกต้อง
-    pg.select_option("select", "png")
+    # ‼️ ต้องชี้ดรอปดาวน์ด้วยค่าที่ต้องการ ไม่ใช่ "select ตัวไหนก็ได้"
+    #    เพราะ <select class="sort-sel"> ของหน้าแรกยังค้างใน DOM หลังสลับมาหน้าเครื่องมือ
+    #    คำสั่งเดิมจึงไปตกที่ดรอปดาวน์เรียงลำดับของหน้าแรกแล้วค้างจนหมดเวลา (แดงมาตั้งแต่ 13/09)
+    pg.locator("select").filter(has=pg.locator('option[value="png"]')).first.select_option("png")
     pg.locator("button.btn", has_text="แปลง").first.click()
     pg.wait_for_selector(".btn-cancel:visible", timeout=5000)
     ck("เริ่มงานแล้ว → ปุ่มหยุดโผล่", pg.locator(".btn-cancel:visible").count(), 1)

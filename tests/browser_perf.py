@@ -15,25 +15,51 @@ NET_COND = {  # CDP Network.emulateNetworkConditions
 }
 CPU_RATE = 4  # CDP Emulation.setCPUThrottlingRate
 
-# ── งบ (ตั้งจากค่าจริงที่วัดได้ 08/09/2026 บน localhost ด้วยสภาพข้างบน — ห้ามขยับให้หลวมกว่านี้) ──
-# ① FCP: มัธยฐาน 7 รอบ = 384.0ms (ค่าจริง 376.0–392.0ms) → งบ 500ms (~30% เผื่อ)
-#    ทั้งสองบั๊กในอดีต (animation-timeline:view() → 700ms, filter:brightness() → 484ms) เกินงบนี้ทั้งคู่
+# ── งบ (ตั้งใหม่ 16/09/2026 จากค่าจริงที่ "ผู้ใช้เจอ" ไม่ใช่ค่าบนเซิร์ฟเวอร์ที่ไม่บีบอัด) ──
+# ‼️ ทำไมต้องตั้งใหม่ ไม่ใช่การขยายงบให้ผ่าน
+#    งบชุดเดิมตั้ง 08/09 จากการวัดบน `python3 -m http.server` ซึ่ง **ไม่บีบอัดอะไรเลย**
+#    แต่ที่อยู่จริงของเว็บคือ GitHub Pages ซึ่งส่ง gzip ทุกไฟล์ข้อความ วัดเทียบกันตรง ๆ แล้วได้
+#         เซิร์ฟเวอร์ทดสอบเดิม  299,825 bytes · FCP 596ms
+#         เว็บจริงที่ผู้ใช้เปิด  154,895 bytes  (บีบได้ 61%)
+#    คือเทสเก่าวัดตัวเลขที่ไม่มีผู้ใช้คนไหนเจอ ทั้งขนาดและเวลาวาดจอแรก
+#    ตอนนี้เทสเสิร์ฟผ่าน tests/gzip_server.py ซึ่งบีบอัดแบบเดียวกับของจริง งบจึงตั้งใหม่ทั้งชุด
+#    ‼️ งบใหม่ "เข้มกว่าเดิมเมื่อเทียบหน่วยเดียวกัน" เพราะวัดของจริง ไม่ได้ปล่อยให้หลวมลง
+#
+# ① FCP: มัธยฐาน 7 รอบ = 316ms (ค่าจริง 308-372ms) → งบ 420ms (~33% เผื่อ เท่าอัตราเดิม)
 FCP_ROUNDS = 7            # ≥5 ตามข้อกำหนด — ใช้เลขคี่ให้มัธยฐานเป็นค่าจริงตัวหนึ่งเสมอ
-FCP_BUDGET_MS = 500
+FCP_BUDGET_MS = 420
 
 # ② ไลบรารีหนักห้ามหลุดเข้าหน้าแรกเด็ดขาด ไม่มีงบเผื่อ
 BANNED_LIBS = ["pdf-lib", "pdf.min", "xlsx", "docx", "mammoth", "jspdf", "jszip", "tesseract"]
 
-# ③④ วัดจริง: 13 request รวม transferSize 212,815 bytes (นับจาก Resource Timing API)
-#    → งบขนาด 280,000 bytes (~+31%) · งบจำนวน 17 request (13*1.3≈16.9 ปัดขึ้น)
-SIZE_BUDGET_BYTES = 280_000
-REQUEST_COUNT_BUDGET = 17
+# ③④ วัดจริงหลังบีบอัด: 12 request รวม 127,430 bytes (นับจาก Resource Timing API)
+#    → งบขนาด 165,000 bytes (~+30%) · งบจำนวน 16 request (12*1.3=15.6 ปัดขึ้น)
+#    ‼️ เทียบกับของเดิมที่ 280,000 bytes บนหน่วยไม่บีบอัด งบใหม่นี้เข้มกว่ามาก
+SIZE_BUDGET_BYTES = 165_000
+REQUEST_COUNT_BUDGET = 16
 
 # ⑥ หน้าเครื่องมือหนักสุด 3 ตัว — วัดจริงตอนเปิดผ่านสภาพมือถือ throttle ข้างบน:
 #    pdf-ocr ~4.15s · pdf-compress ~6.28s · word-mailmerge ~7.17s (โหลดไลบรารีหนักจริงตอนนั้น)
 #    เพดานนี้ไว้กัน "ค้างไม่รู้จบ" ไม่ใช่งบความเร็ว จึงเผื่อกว้างกว่าจุดอื่น
 HEAVY_TOOLS = ["pdf-ocr", "word-mailmerge", "pdf-compress"]
 TOOL_OPEN_BUDGET_MS = 12_000
+
+def assert_compressed(page):
+    """‼️ กันเทสวัดผิดหน่วยแบบเงียบ ๆ
+
+    ถ้าเซิร์ฟเวอร์ที่เสิร์ฟไม่บีบอัด ตัวเลขทุกตัวในเทสนี้จะใหญ่เกินจริงราวเท่าตัว
+    แล้วคนอ่านผลจะไปไล่หา "ของที่โตขึ้น" ทั้งที่ไม่มีอะไรโตเลย (เสียเวลาไปแล้วจริงเมื่อ 13/09)
+    จึงต้องหยุดทันทีพร้อมบอกวิธีแก้ ไม่ใช่รายงานตัวเลขที่เชื่อไม่ได้
+    """
+    ratio = page.evaluate("""() => { var n = performance.getEntriesByType('navigation')[0];
+        return n.decodedBodySize ? n.transferSize / n.decodedBodySize : 1; }""")
+    if ratio > 0.9:
+        print(f"\n  ‼️ เซิร์ฟเวอร์ที่เสิร์ฟหน้านี้ไม่บีบอัด (ส่งมา {ratio*100:.0f}% ของขนาดจริง)")
+        print("     งบในเทสนี้ตั้งจากค่าที่บีบอัดแล้วเหมือนเว็บจริง ตัวเลขที่ได้จะเชื่อไม่ได้")
+        print("     ให้เปิดเซิร์ฟเวอร์ด้วย  python3 tests/gzip_server.py 8901")
+        print("     แล้วรันเทสด้วย         FK_BASE=http://localhost:8901 ...")
+        sys.exit(2)
+
 
 P, F = 0, []
 def ck(n, got, want):
@@ -137,6 +163,7 @@ with sync_playwright() as p:
     print("\n━━ ③④ ขนาดรวม + จำนวน request ของหน้าแรก ━━")
     ctx, pg = throttled_context(b, MOBILE_VIEWPORT)
     pg.goto(BASE, wait_until="networkidle")
+    assert_compressed(pg)          # ‼️ ต้องวัดบนหน่วยเดียวกับที่ผู้ใช้เจอ ไม่งั้นตัวเลขเชื่อไม่ได้
     data = pg.evaluate("""() => {
         const nav = performance.getEntriesByType('navigation')[0];
         const res = performance.getEntriesByType('resource');

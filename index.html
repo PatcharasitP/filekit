@@ -662,6 +662,34 @@ main{max-width:1160px; margin:0 auto; padding:clamp(18px,3.4vw,34px) clamp(14px,
 }
 
 /* แถบเตรียมใช้งานออฟไลน์ */
+/* ‼️ กฎชุดนี้ยกมาจาก tool.css เฉพาะเท่าที่แถบเตรียมใช้งานออฟไลน์ต้องใช้จริง (ปุ่มกับแถบความคืบหน้า)
+   เดิมหน้าแรกดึง tool.css ทั้งไฟล์ 100KB มาเพียงเพื่อจัดสไตล์แถบเดียวนี้ ซึ่งวัดจริงแล้วคิดเป็น
+   หนึ่งในสี่ของทุกอย่างที่หน้าแรกโหลด (397KB) ทั้งที่ผู้ใช้ยังไม่ได้เปิดเครื่องมือสักตัว
+   ‼️ ถ้าแก้ .btn หรือ .progress ใน tool.css ต้องมาแก้ที่นี่ด้วย มีเทสจับที่ tests/browser_perf.py */
+.btn{border:0;border-radius:999px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;
+     background:var(--btn-bg);color:var(--btn-fg);
+     box-shadow:0 6px 18px color-mix(in srgb,var(--brand) 35%,transparent);
+     transition:transform var(--t-panel,.22s) var(--ease-spring,ease),
+                filter var(--t-btn,.1s) var(--ease-snap,ease),
+                box-shadow var(--t-panel,.22s) var(--ease-spring,ease)}
+.btn:hover{filter:brightness(1.07);transform:translateY(-2px);
+           box-shadow:0 10px 24px -6px color-mix(in srgb,var(--brand) 42%,transparent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;filter:grayscale(.65)}
+@media (prefers-reduced-motion: reduce){
+  .btn{transition:filter var(--t-btn,.1s) ease}
+  .btn:hover{transform:none}
+}
+.progress{display:none;height:7px;border-radius:99px;background:var(--bg-soft);
+          overflow:hidden;margin-top:10px;border:1px solid var(--line-soft)}
+/* ‼️ ไอคอนต้องมีกฎกำหนดขนาดมาพร้อมหน้า ไม่งั้นมันบานเต็มที่เป็นวงกลมดำ 300px
+   (เจอกับตาตอนย้ายสไตล์รอบนี้ และเป็นอาการเดียวกับที่คอมเมนต์เรื่องแถบแจ้งเวอร์ชันใหม่เตือนไว้) */
+.ob-ico{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9;
+        stroke-linecap:round;stroke-linejoin:round;
+        display:inline-block;vertical-align:-3px;margin-inline-end:7px}
+.progress.show{display:block}
+.progress .fill{height:100%;width:0;border-radius:99px;
+                background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .18s ease}
 .offline-bar{
   display:flex;align-items:center;gap:var(--sp4);flex-wrap:wrap;
   /* ‼️ อยู่นอก <main> จึงไม่ได้ padding ของ main ด้วย — ต้องหักออกเองให้ขอบตรงกับแผงเครื่องมือ

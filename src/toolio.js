@@ -132,19 +132,19 @@ export const TOOL_IO_ALL = {
  "pdf-compress": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
    "outSize": "",
-   "outMeta": "28 KB → 25 KB, ระดับปานกลาง"
+   "outMeta": "27 KB → 25 KB, ระดับปานกลาง"
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
    "outSize": "",
-   "outMeta": "28 KB → 25 KB, Medium level"
+   "outMeta": "27 KB → 25 KB, Medium level"
   }
  },
  "pdf-merge": {

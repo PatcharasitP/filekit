@@ -119,12 +119,23 @@ def open_tool(pg, tid):
     pg.wait_for_selector(".dz", timeout=20000)
 
 
+def pick(pg, label):
+    """เลือกช่องดรอปดาวน์จาก "ตัวเลือกที่ต้องการ" แทนการนับลำดับ
+
+    ‼️ เดิมเขียน select >> nth=1 ซึ่งพังมาตั้งแต่ 13/09 เพราะ <select class="sort-sel"> ของหน้าแรก
+       ยังค้างอยู่ใน DOM (ซ่อนไว้) หลังสลับมาหน้าเครื่องมือ ลำดับจึงเลื่อนไปหนึ่งช่องทั้งหมด
+       การชี้ด้วยตัวเลือกที่ต้องการ ทนต่อการเพิ่มหรือลดดรอปดาวน์ และอ่านแล้วรู้ว่ากำลังเลือกอะไร
+    """
+    box = pg.locator("select").filter(has=pg.locator(f'option:text-is("{label}")'))
+    box.first.wait_for(state="attached", timeout=20000)
+    box.first.select_option(label=label)
+
 def case_split(pg, main):
     print("\n── แยกไฟล์ Excel ตามคอลัมน์ ──")
     open_tool(pg, "excel-split")
     pg.locator(".dz input[type=file]").set_input_files(str(main))
     pg.wait_for_timeout(2200)
-    pg.select_option("select >> nth=1", label="แผนก")
+    pick(pg, "แผนก")
     pg.wait_for_timeout(800)
 
     summary = pg.locator(".stats").inner_text()
@@ -149,7 +160,7 @@ def case_split(pg, main):
     ck("กลุ่มไอทีได้ 2 คน บวกหัวตาราง", len(list(ws2.iter_rows(values_only=True))), 3)
 
     # ‼️ เลือกคอลัมน์รหัสที่ไม่ซ้ำกันเลย ต้องเตือนและปิดปุ่ม ไม่ใช่ปล่อยให้สร้าง 9 ไฟล์
-    pg.select_option("select >> nth=1", label="รหัส")
+    pick(pg, "รหัส")
     pg.wait_for_timeout(700)
     ck_true("เลือกคอลัมน์ที่ค่าไม่ซ้ำกันเลย แล้วยังกดแยกได้ (9 กลุ่ม ยังไม่เกินเพดาน 300)",
             not pg.locator("button.btn", has_text="แยกไฟล์").first.is_disabled())
@@ -198,8 +209,8 @@ def case_page_numbers(pg, pdf):
             "5 หน้า จากทั้งหมด 5 หน้า" in pg.locator(".pn-meta").inner_text(),
             pg.locator(".pn-meta").inner_text())
 
-    pg.select_option("select >> nth=1", label="หน้า 1 จาก 12")
-    pg.select_option("select >> nth=2", label="เลขไทย ๑ ๒ ๓")
+    pick(pg, "หน้า 1 จาก 12")
+    pick(pg, "เลขไทย ๑ ๒ ๓")
     pg.locator("input[type=number]").nth(1).fill("2")     # เริ่มใส่จากหน้าที่ 2 (ข้ามปก)
     pg.wait_for_timeout(900)
 

@@ -119,7 +119,11 @@ def extract_precache(sw_text):
     m = re.search(r'const PRECACHE\s*=\s*\[(.*?)\];', sw_text, re.S)
     if not m:
         return set()
-    items = re.findall(r'"([^"]*)"', m.group(1))
+    # ‼️ ต้องลบคอมเมนต์ก่อนเสมอ (เจอของจริง 16/09/2026)
+    #    คอมเมนต์อธิบายในรายการมีเครื่องหมายคำพูดไทยอยู่ข้างใน เช่น ผู้ใช้จะเห็นเป็น "บางเครื่องมือพัง"
+    #    ถ้าไม่ลบก่อน ข้อความนั้นจะถูกนับเป็นชื่อไฟล์ แล้วเทสไปไล่หาไฟล์ชื่อภาษาไทยจนได้ 404
+    #    ซึ่งชี้ไปผิดทางหมด คนอ่านผลจะนึกว่าไฟล์จริงหาย ทั้งที่ไม่มีอะไรหายเลย
+    items = re.findall(r'"([^"]*)"', strip_comments(m.group(1)))
     return {normalize(it) for it in items if normalize(it)}
 
 

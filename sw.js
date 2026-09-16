@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v103";
+const VERSION = "filekit-v104";
 const SHELL = `${VERSION}-shell`;
 
 /* ‼️‼️ แคชไลบรารี **ห้ามผูกกับเวอร์ชันของแอป**
@@ -43,6 +43,13 @@ const PRECACHE = [
   "src/cvd.js",
   "src/dirtymark.js",
   "src/toolio.js",
+  /* ‼️ โมดูลที่เครื่องมือใช้ร่วมกัน ถ้าไม่อยู่ที่นี่ เครื่องมือนั้นจะเปิดไม่ได้ตอนไม่มีเน็ต
+     ทั้งที่หน้าอื่นใช้ได้ปกติ ผู้ใช้จะเห็นเป็น "บางเครื่องมือพัง" ซึ่งงงกว่าเว็บล่มทั้งเว็บ
+     tests/browser_offline.py ข้อ ① จับข้อนี้ได้ ให้รันทุกครั้งที่เพิ่มโมดูลใหม่ */
+  "src/binkit.js",       /* number-bins */
+  "src/geokit.js",       /* map-relocate */
+  "src/sqlgen.js",       /* pq-group-concat, pq-pick-date, pq-to-date */
+  "src/subsetsum.js",    /* excel-match-sum */
   "./vendor/fonts/Sarabun-Regular.woff2", "./vendor/fonts/Sarabun-SemiBold.woff2", "./vendor/fonts/Sarabun-Bold.woff2",
 ];
 

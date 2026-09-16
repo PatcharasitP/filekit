@@ -331,6 +331,51 @@ def main():
             pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
             pg.wait_for_timeout(700)
 
+            print("\n── ⑨ค ขนาดงานจริง 2,418 คู่ ต้องไหวและต้องอ่านออก ──")
+            big = TMP / "big.xlsx"
+            import random as _rnd, math as _m
+            _rnd.seed(20260916)
+            wbb = openpyxl.Workbook(); wsb = wbb.active
+            wsb.append(["SITE_CODE_OLD", "LAT_OLD", "LON_OLD", "SITE_CODE_NEW", "LAT_NEW", "LON_NEW", "PROVINCE"])
+            CITIES = [(13.75, 100.50, "กรุงเทพมหานคร"), (18.79, 98.98, "เชียงใหม่"), (7.88, 98.39, "ภูเก็ต"),
+                      (16.44, 102.83, "ขอนแก่น"), (7.00, 100.47, "สงขลา"), (17.41, 102.79, "อุดรธานี")]
+            for i in range(2418):
+                la0, lo0, prov = CITIES[i % len(CITIES)]
+                la = la0 + _rnd.uniform(-0.8, 0.8); lo = lo0 + _rnd.uniform(-0.8, 0.8)
+                km = _rnd.uniform(0.3, 12); brg = _rnd.uniform(0, 2 * _m.pi)
+                dla = (km * _m.cos(brg)) / 110.574
+                dlo = (km * _m.sin(brg)) / (111.320 * _m.cos(_m.radians(la)))
+                wsb.append([f"S{i:05d}", round(la, 6), round(lo, 6), f"N{i:05d}",
+                            round(la + dla, 6), round(lo + dlo, 6), prov])
+            wbb.save(big)
+            t0 = time.time()
+            pg.locator(".dz input[type=file]").first.set_input_files(str(big))
+            pg.wait_for_function("() => [...document.querySelectorAll('.mr-chip')].some(c => c.textContent.includes('2,418'))",
+                                 timeout=30000)
+            load_s = time.time() - t0
+            ok(f"อ่าน 2,418 คู่และวาดเสร็จใน {load_s:.2f} วินาที", load_s < 6, f"ใช้ {load_s:.2f} วินาที")
+            pg.wait_for_timeout(800)
+            note = pg.evaluate("() => document.querySelector('.mr-canvas') ? document.body.textContent : ''")
+            ok("เตือนว่าข้อมูลเยอะเกินกว่าจะอ่านทีเดียว พร้อมบอกทางออก",
+               "ลองเลือกดูเฉพาะอันดับต้น" in note or "ซูมพอดีกับข้อมูล" in note, "ไม่เจอคำเตือน")
+            pg.locator(".seg-item", has_text="ตาราง").first.click()
+            pg.wait_for_timeout(900)
+            nrow = pg.evaluate("() => document.querySelectorAll('.mr-pairs tbody tr').length")
+            ok(f"ตารางจำกัดแถวที่วาดไว้ {nrow} แถว ไม่ยัดทั้งสองพันแถวลง DOM", nrow <= 300, f"ได้ {nrow}")
+            body = pg.evaluate("() => document.body.textContent")
+            ok("บอกตรง ๆ ว่าแสดงกี่แถวจากทั้งหมดกี่คู่", "2,418" in body and "300" in body)
+            pg.evaluate("""() => {
+              const s = [...document.querySelectorAll('.ws-right select')]
+                .find(x => [...x.options].some(o => o.textContent.includes('10 อันดับ')));
+              s.value = '10'; s.dispatchEvent(new Event('change', { bubbles: true }));
+            }""")
+            pg.wait_for_timeout(800)
+            nrow2 = pg.evaluate("() => document.querySelectorAll('.mr-pairs tbody tr').length")
+            ck("เลือกดู 10 อันดับแล้วเหลือ 10 คู่จริง", nrow2, 10)
+            kms = pg.evaluate("""() => [...document.querySelectorAll('.mr-pairs tbody tr')]
+              .map(tr => parseFloat(tr.querySelectorAll('td')[3].textContent))""")
+            ok("10 คู่ที่เหลือคือคู่ที่ย้ายไกลสุดจริง", min(kms) > 11.5, f"ได้ {kms}")
+
             print("\n── ⑩ ไม่มี error ในคอนโซล ──")
             real_errs = [e for e in errs if "favicon" not in e.lower()]
             ck("เงียบสนิทตลอดการใช้งาน", real_errs, [])

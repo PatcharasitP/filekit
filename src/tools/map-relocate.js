@@ -179,6 +179,13 @@ export function mount(tool) {
     ["data", tr("ซูมพอดีกับข้อมูล", "Zoom to the data")],
   ], "country");
   const minKmIn = el("input", { class: "mr-num", type: "text", inputmode: "decimal", placeholder: tr("ไม่กรอง", "no filter") });
+  const topSel = select([
+    ["0", tr("ทุกคู่", "Every pair")],
+    ["10", tr("10 อันดับที่ย้ายไกลสุด", "Top 10 longest moves")],
+    ["25", tr("25 อันดับ", "Top 25")],
+    ["50", tr("50 อันดับ", "Top 50")],
+    ["100", tr("100 อันดับ", "Top 100")],
+  ], "0");
   const unitIn = el("input", { class: "mr-num", type: "text", value: tr(" กม.", " km") });
 
   [colorOld, colorNew].forEach((c) => c.addEventListener("input", () => draw()));
@@ -187,7 +194,8 @@ export function mount(tool) {
   provSw.input.addEventListener("change", () => draw());
   radiusKm.addEventListener("input", () => draw());
   unitIn.addEventListener("input", () => draw());
-  minKmIn.addEventListener("change", () => { selected = null; draw(); renderTable(); renderChips(); });
+  minKmIn.addEventListener("change", () => { selected = null; draw(); renderTable(); renderChips(); renderProv(); });
+  topSel.onchange = () => { selected = null; draw(); renderTable(); renderChips(); renderProv(); };
 
   const rightBody = el("div", {}, [
     el("h3", { class: "mr-group-title" }, tr("สีและขนาด", "Colour and size")),
@@ -209,6 +217,10 @@ export function mount(tool) {
     provSw.wrap,
     el("h3", { class: "mr-group-title" }, tr("กรองข้อมูล", "Filter")),
     field(tr("เอาเฉพาะที่ย้ายไกลกว่า (กม.)", "Only moves longer than (km)"), minKmIn),
+    field(tr("หรือดูเฉพาะอันดับต้น", "Or only the top ranks"), topSel),
+    el("small", { class: "mr-hint" }, tr(
+      "ข้อมูลหลักพันคู่ ดูทีเดียวทั้งหมดจะอ่านไม่ออก เริ่มจากอันดับต้นก่อนแล้วค่อยเปิดดูทั้งหมด",
+      "With thousands of pairs the map is unreadable at once. Start with the top ranks, then open it up")),
   ]);
 
   // ── ตรงกลาง ───────────────────────────────────────────────────────────
@@ -222,7 +234,8 @@ export function mount(tool) {
   const stage = el("div", { class: "mr-stage" }, [canvas, tip]);
   const legend = el("div", { class: "mr-legend" });
   const selBar = el("div", { class: "mr-sel", hidden: true });
-  const mapBox = el("div", {}, [selBar, stage, legend,
+  const crowdNote = el("div", {});
+  const mapBox = el("div", {}, [selBar, stage, legend, crowdNote,
     el("p", { class: "mr-help" }, tr(
       "ชี้ที่จุดหรือเส้นเพื่อดูรายละเอียด, คลิกเพื่อเลือกคู่นั้นแล้วแผนที่จะซูมให้, คลิกที่ว่างเพื่อกลับมาดูทั้งประเทศ",
       "Hover a dot or a line for details, click to select that pair and zoom in, click empty space to go back to the whole country"))]);
@@ -338,10 +351,13 @@ export function mount(tool) {
     if (pairs.length) { draw(); renderTable(); renderProv(); }
   }
 
-  /** คู่ที่ผ่านตัวกรองระยะขั้นต่ำ */
+  /** คู่ที่ผ่านตัวกรองทั้งหมด (ระยะขั้นต่ำ แล้วค่อยตัดเอาเฉพาะอันดับต้น) */
   function shown() {
     const min = Number(String(minKmIn.value).replace(/,/g, ""));
-    return Number.isFinite(min) && min > 0 ? pairs.filter((p) => p.distanceKm >= min) : pairs;
+    let list = Number.isFinite(min) && min > 0 ? pairs.filter((p) => p.distanceKm >= min) : pairs;
+    const top = +topSel.value;
+    if (top > 0 && list.length > top) list = [...list].sort((a, b) => b.distanceKm - a.distanceKm).slice(0, top);
+    return list;
   }
 
   function renderChips() {
@@ -569,6 +585,7 @@ export function mount(tool) {
 
     renderLegend(list, maxKm);
     renderSelBar();
+    renderCrowdNote(list);
   }
 
   function renderLegend(list, maxKm) {
@@ -589,6 +606,27 @@ export function mount(tool) {
       `จุดครึ่งส้มครึ่งน้ำเงิน ${lastMerged} จุด = คู่ที่อยู่ใกล้กันเกินกว่าจะแยกได้ที่ระยะซูมนี้`,
       `${lastMerged} half-orange half-blue ${pl(lastMerged, "dot", "dots")} = pairs too close to separate at this zoom`));
     if (lastHiddenLabels) item(tr(`ซ่อนป้ายที่ทับกัน ${lastHiddenLabels} ป้าย`, `${lastHiddenLabels} overlapping ${pl(lastHiddenLabels, "label", "labels")} hidden`));
+  }
+
+  /** ‼️ วัดกับข้อมูลขนาดงานจริง 2,418 คู่ 16/09/2026: เปิดป้ายทุกคู่แล้วซ่อนเพราะทับกัน 2,385 ป้าย
+   *     และทุกคู่ถูกยุบเป็นจุดสองซีกหมด แปลว่ามุมมองนี้ตอบอะไรไม่ได้เลย ต้องบอกและเสนอทางออกตรงนั้น */
+  function renderCrowdNote(list) {
+    crowdNote.innerHTML = "";
+    const tips = [];
+    if (lastMerged && lastMerged >= list.length * 0.9 && list.length > 20) {
+      tips.push(tr("ทุกคู่ใกล้กันเกินกว่าจะเห็นเส้นเชื่อมที่ระยะซูมนี้ ลองเลือกขอบเขตเป็นซูมพอดีกับข้อมูล หรือคลิกทีละคู่จากตาราง",
+                   "Every pair is too close to show its line at this zoom. Switch the extent to zoom-to-data, or click one pair in the table"));
+    }
+    if (lastHiddenLabels > 30) {
+      tips.push(tr(`ป้ายซ้อนกันจนต้องซ่อน ${lastHiddenLabels.toLocaleString()} ป้าย ให้เลือกแสดงเฉพาะอันดับที่ไกลสุดจะอ่านง่ายกว่า`,
+                   `${lastHiddenLabels.toLocaleString()} labels had to be hidden. Showing only the farthest moves reads much better`));
+    }
+    if (list.length > 400 && +topSel.value === 0) {
+      tips.push(tr(`กำลังวาด ${list.length.toLocaleString()} คู่พร้อมกัน ลองเลือกดูเฉพาะอันดับต้นในแผงขวาก่อน`,
+                   `Drawing ${list.length.toLocaleString()} pairs at once. Try the top ranks option on the right first`));
+    }
+    if (!tips.length) return;
+    crowdNote.appendChild(el("p", { class: "mr-help" }, tips.join(" ")));
   }
 
   function renderSelBar() {
@@ -665,9 +703,12 @@ export function mount(tool) {
   });
 
   // ── ตารางคู่ย้าย ──────────────────────────────────────────────────────
+  const TABLE_MAX = 300;
+
   function renderTable() {
-    const list = [...shown()].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : a[sortKey] < b[sortKey] ? -1 : 0) * sortDir);
-    const maxKm = Math.max(1, ...list.map((p) => p.distanceKm));
+    const all = [...shown()].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : a[sortKey] < b[sortKey] ? -1 : 0) * sortDir);
+    const list = all.slice(0, TABLE_MAX);
+    const maxKm = Math.max(1, ...all.map((p) => p.distanceKm));
     tableBox.innerHTML = "";
     const th = (key, label, cls) => {
       const h = el("th", { class: cls || "" }, label + (sortKey === key ? (sortDir > 0 ? " ▲" : " ▼") : ""));
@@ -696,6 +737,11 @@ export function mount(tool) {
         return trow;
       })),
     ]));
+    if (all.length > list.length) {
+      tableBox.appendChild(el("p", { class: "mr-help" }, tr(
+        `แสดง ${list.length.toLocaleString()} แถวแรกจาก ${all.length.toLocaleString()} คู่ ไฟล์ที่ดาวน์โหลดได้ครบทุกคู่`,
+        `Showing the first ${list.length.toLocaleString()} of ${all.length.toLocaleString()} pairs. The download has every one`)));
+    }
   }
 
   function renderProv() {

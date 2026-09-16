@@ -143,6 +143,25 @@ export function tableToBlob(header, rows, sheetName = "Sheet1") {
     { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
+/** สมุดงานหลายชีตในไฟล์เดียว — sheets = [[ชื่อชีต, { header, rows }], ...]
+ *  ‼️ งานที่ต้องส่งต่อเข้า Power BI มักต้องการหลายตารางในไฟล์เดียว (ตารางหลัก, ตารางรูปทรง, ตารางเส้นทาง)
+ *     ถ้าแยกเป็นหลายไฟล์ ผู้ใช้ต้องมานั่งต่อเองใน Power Query ทุกครั้ง */
+export function tablesToBlob(sheets) {
+  const wb = XLSX.utils.book_new();
+  const used = new Set();
+  for (const [rawName, t] of sheets) {
+    const ws = XLSX.utils.aoa_to_sheet([t.header, ...t.rows], { cellDates: true, dateNF: "dd/mm/yyyy" });
+    ws["!cols"] = autoWidths(t.header, t.rows);
+    let name = String(rawName).replace(/[[\]*?/\\:]/g, "-").slice(0, 31) || "Sheet";
+    let i = 2;
+    while (used.has(name)) name = name.slice(0, 28) + "_" + i++;      // ชื่อชีตซ้ำ = ไฟล์เปิดไม่ขึ้น
+    used.add(name);
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  }
+  return new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })],
+    { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
 export const cellText = (v) =>
   v == null ? "" : v instanceof Date
     ? `${String(v.getDate()).padStart(2, "0")}/${String(v.getMonth() + 1).padStart(2, "0")}/${v.getFullYear()}`

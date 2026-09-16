@@ -18,6 +18,10 @@ node tests/samples.test.mjs      # กฎจุดกลางต้องบั
 
 node tests/matrixdax.test.mjs    # สูตร DAX ของ Matrix ต้องแปลงทุกชนิดเป็นข้อความ ยอด 0 ห้ามหาย
 
+node tests/binkit.test.mjs        # จัดกลุ่มตัวเลขเป็นช่วง (ขอบบนรวม, ล็อกรายตัวแล้วลำดับต้องไม่พัง)
+
+node tests/geokit.test.mjs        # แผนที่การย้ายที่ตั้ง (ระยะทางเทียบกับค่าที่ DAX คำนวณไว้จริง 40 คู่, WKT)
+
 # ② เบราว์เซอร์จริง — ใช้ tests/run.sh จะขอพอร์ตว่างจากระบบและยืนยันว่าเสิร์ฟโค้ดชุดนี้จริงก่อนยิง
 # แบบเดิม: เปิดเซิร์ฟเวอร์เองก่อน
 python3 -m http.server 8899 &
@@ -32,6 +36,8 @@ python3 -m http.server 8899 &
 ../.venv/bin/python tests/browser_mailmerge.py  # ขั้นตอนล็อก/ปลดล็อก + ฟอร์มตรงแนว
 ../.venv/bin/python tests/browser_batch.py      # ไฟล์เสียปนมาแล้วไฟล์อื่นต้องรอด
 ../.venv/bin/python tests/browser_pbibar.py     # กราฟแท่ง Deneb วัดความยาวแท่งจากพิกัดจริงในเบราว์เซอร์
+../.venv/bin/python tests/browser_numberbins.py # จัดกลุ่มตัวเลข ตรวจค่าบนจอและในไฟล์ที่ดาวน์โหลดทุกแถว (16/09)
+../.venv/bin/python tests/browser_maprelocate.py # แผนที่การย้ายที่ตั้ง ตรวจภาพที่วาดจริง ซูม ธีม และชีตที่ส่งเข้า Power BI (16/09)
 
 ../.venv/bin/python tests/browser_viewer.py     # ตัวดูรูปเต็มจอ ปิดแล้วต้องไม่พาหลุดออกจากงาน
 ../.venv/bin/python tests/browser_dialogroute.py # กล่องดูไฟล์เต็มจอต้องปิดเองตอนสลับเครื่องมือ ไม่งั้นหน้าที่เหลือคลิกไม่ได้

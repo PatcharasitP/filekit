@@ -1073,10 +1073,15 @@ export function dropzone(opts = {}) {
 
   // ‼️ ปุ่ม "ลองด้วยไฟล์ตัวอย่าง" — โผล่เฉพาะเมื่อ opts.expect บอกชนิดไฟล์ไว้ชัดเจน
   //    โหลดจริงเฉพาะตอนกด (fetch ใน onclick) ไม่โหลดตอนเปิดหน้า จึงไม่ถ่วงหน้าแรก
-  const sampleKind = expect && SAMPLE_KIND_PRIORITY.find((k) => expect.includes(k) && SAMPLE_FILES[k]);
+  // ‼️ เครื่องมือบางตัวต้องการไฟล์ที่มีคอลัมน์เฉพาะ (เช่น แผนที่ต้องมีพิกัดสี่ช่อง)
+  //    ไฟล์ตัวอย่างกลางตามชนิดจึงใช้ไม่ได้ ต้องให้เครื่องมือส่งไฟล์ของตัวเองมาแทน
+  const ownSamples = Array.isArray(opts.samples) && opts.samples.length ? opts.samples : null;
+  const sampleKind = ownSamples || (expect && SAMPLE_KIND_PRIORITY.find((k) => expect.includes(k) && SAMPLE_FILES[k]));
   let sampleBox = null;
   if (sampleKind) {
-    const entries = SAMPLE_FILES[sampleKind].slice(0, multiple ? 2 : 1);
+    const entries = ownSamples
+      ? ownSamples.slice(0, multiple ? 2 : 1)
+      : SAMPLE_FILES[sampleKind].slice(0, multiple ? 2 : 1);
     const sampleErr = el("small", { class: "dz-sample-err", style: { display: "block", marginTop: "6px", color: "var(--err)" } });
     const sampleBtn = button(tr("ลองด้วยไฟล์ตัวอย่าง", "Try a sample file"), {
       ghost: true,

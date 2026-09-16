@@ -239,6 +239,20 @@ export const TOOLS = [
     libs:["xlsx"], keys:"power automate flow parse json schema พาร์ส เจสัน โฟลว์ สคีมา อัตโนมัติ",
     next:["excel-to-pq","pbi-donut"] },
 
+  { id:"map-relocate", group:"powerbi", icon:"🗺", since:"2026-09-16", title:"แผนที่การย้ายที่ตั้ง",
+    desc:"ไฟล์พิกัดจุดเดิมกับจุดใหม่ กลายเป็นแผนที่ประเทศไทยที่มีจุด เส้นเชื่อม และระยะทางทันที ปรับสีขนาดป้ายเองได้ บันทึกเป็นภาพไปใส่สไลด์ หรือได้ชีตพร้อมใส่ Icon Map Pro ใน Power BI",
+    accepts:["xlsx","xls","xlsm","csv","txt"],
+    libs:["xlsx"],
+    keys:"map แผนที่ ย้ายสถานี relocate relocation กระจัด พิกัด lat lon latitude longitude ระยะทาง distance haversine icon map pro wkt linestring polygon รัศมี site move จุดเดิม จุดใหม่",
+    next:["number-bins","pbi-bar"] },
+
+  { id:"number-bins", group:"powerquery", icon:"📶", since:"2026-09-16", title:"จัดกลุ่มตัวเลขเป็นช่วง",
+    desc:"เห็นการกระจายจริงก่อน แล้วให้เครื่องเสนอจุดตัดมาเทียบ 4 แบบ ลากปรับเองได้ ล็อกบางรายการไปหมวดที่ต้องการเองก็ได้ และได้คอลัมน์เลขเรียงคู่มาเสมอ กราฟจึงไม่เรียงมั่ว",
+    accepts:["xlsx","xls","xlsm","csv","txt"],
+    libs:["xlsx"],
+    keys:"bin binning จัดกลุ่ม แบ่งช่วง ช่วงตัวเลข band bucket range histogram การกระจาย อายุงาน sla ค่าเช่า ระยะทาง quantile quartile decile jenks natural breaks เลขกลม group by range sort by column เรียงมั่ว เรียงผิด",
+    next:["pq-group-concat","excel-to-pq"] },
+
   { id:"pq-multisource-lookup", group:"powerquery", icon:"🧭", since:"2026-09-11", title:"สร้างสูตรค้นข้ามหลายแหล่ง",
     desc:"ไล่หาจากหลายตารางตามลำดับ เจอแหล่งแรกแล้วหยุด ผลลัพธ์ลงคอลัมน์เดียวกันได้แม้แต่ละแหล่งตั้งชื่อคอลัมน์ต่างกัน",
     libs:[],   // เครื่องนี้เขียนโค้ดล้วน ไม่ต้องใช้ไลบรารีนอกเลย
@@ -321,6 +335,8 @@ const EN_TOOLS = {
   "word-mailmerge":   ["Mail merge (Word + Excel)", "Fill a Word template from Excel row by row and get the whole set of documents at once"],
   "powerpoint-to-word": ["PowerPoint → Word", "Pull the text, bullets and speaker notes from every slide into a Word document"],
   "powerpoint-to-pdf":  ["PowerPoint → PDF", "Lay the deck out as a readable PDF. One slide per page, pick a theme"],
+  "map-relocate":     ["Map of site moves", "Turn a file of old and new coordinates into a Thailand map with dots, joining lines and distances. Style it yourself, save it as an image for a deck, or export the sheets Icon Map Pro needs in Power BI"],
+  "number-bins":      ["Group numbers into bands", "See the real spread first, compare four ways to cut the groups, drag any cut point by hand, lock chosen rows into a group of your own, and always get the sort column that keeps charts in the right order"],
   "excel-match-sum":  ["Find rows that add up to an amount", "One payment lands but the system holds many invoices. This finds which rows add up to it, with your own rules for how many rows, what size, and how close is close enough, and it says how many different answers exist"],
   "excel-csv":        ["Excel ⇄ CSV", "Turn XLSX into CSV (one per sheet), or fold CSV files back into Excel"],
   "excel-to-pq":      ["Table to a Power Query formula", "Drop in an Excel, PDF, Word file or a photo of a table and get ready-to-paste #table code. Pick the Power Query type for every column"],

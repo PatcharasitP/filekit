@@ -55,7 +55,42 @@ export function workspace(tool, cfg = {}) {
   if (!cfg.left) grid.classList.add("no-left");
   if (!cfg.right) grid.classList.add("no-right");
 
-  const footer = cfg.footer && cfg.footer.length ? el("div", { class: "ws-footer" }, cfg.footer) : null;
+  /* ‼️ แถบปุ่มล่างกินจอมือถือมากเกินไป (วัดจริง 18/09/2026)
+   *   ปุ่มเรียงด้วย flex-wrap ปุ่มละบรรทัด พอเครื่องมือมี 6-7 ปุ่มจึงสูงถึง 362px
+   *   บนจอ 390x844 คือ 43% ของจอ และแถบนี้ลอยค้างตลอด เนื้อหาจึงถูกบังเกือบครึ่ง
+   *   ผู้ใช้ต้องเลื่อนผ่านปุ่มที่ยังไม่ได้จะกดทุกครั้งที่อยากดูผลงานตัวเอง
+   *
+   *   ทางแก้ ปุ่มแรกคือปุ่มที่คนกดบ่อยที่สุดอยู่แล้ว (ทุกเครื่องมือวางไว้ตัวแรก)
+   *   จึงให้ปุ่มแรกอยู่นอกเสมอ ที่เหลือพับเก็บไว้หลังปุ่มเดียวที่บอกจำนวนตรง ๆ
+   *   ‼️ ไม่ซ่อนแบบไม่บอก เพราะงานวิจัยของเราเองระบุว่า "หาไม่เจอ" เป็นสาเหตุ 45%
+   *   ของงานที่ทำไม่สำเร็จ ปุ่มพับจึงบอกจำนวนที่ซ่อนไว้ และจำสถานะที่ผู้ใช้เลือกไว้
+   *   ‼️ พับเฉพาะจอแคบ บนเดสก์ท็อปแถบนี้กว้างพอ ปุ่มอยู่แถวเดียวอยู่แล้ว ไม่ต้องแตะ */
+  let footer = null;
+  if (cfg.footer && cfg.footer.length) {
+    const items = cfg.footer.filter(Boolean);
+    const buttons = items.filter((n) => n && n.tagName === "BUTTON");
+    footer = el("div", { class: "ws-footer" }, items);
+    if (buttons.length >= 3) {
+      const extra = buttons.slice(1);
+      const more = el("button", {
+        type: "button", class: "ws-more", "aria-expanded": "false",
+        onclick: () => {
+          const open = footer.classList.toggle("more-open");
+          more.setAttribute("aria-expanded", String(open));
+          more.textContent = open
+            ? tr("ย่อปุ่มอื่น", "Fewer buttons")
+            : tr(`อีก ${extra.length} ปุ่ม`, `${extra.length} more`);
+        },
+      }, tr(`อีก ${extra.length} ปุ่ม`, `${extra.length} more`));
+      extra.forEach((b) => b.classList.add("ws-foot-extra"));
+      footer.insertBefore(more, extra[0]);
+      footer.classList.add("has-more");
+      /* ‼️ ตั้งใจไม่จำสถานะกางข้ามหน้า (เคยใส่แล้วถอดออก 18/09/2026)
+       *   ใส่ไปแล้ววัดจริงพบว่าเปิดเครื่องมือไหนแถบก็สูงค้างอยู่อย่างนั้น เพราะเคยกางไว้ครั้งเดียว
+       *   ซึ่งย้อนกลับไปเป็นปัญหาเดิมที่ตั้งใจแก้ คือแถบบังงานของผู้ใช้
+       *   การกางเป็นการกระทำชั่วคราวตอนจะกดปุ่ม ไม่ใช่ความชอบถาวรที่ควรจำ */
+    }
+  }
   body.append(grid, footer);
   if (cfg.note) body.appendChild(el("div", { class: "note" }, cfg.note));
 

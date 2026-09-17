@@ -806,6 +806,9 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .ws-footer .status-wrap{flex:1;min-width:200px;margin:0}
 .ws-footer .status{margin:0}
 
+/* ‼️ ปุ่มพับ เห็นเฉพาะจอแคบ บนเดสก์ท็อปปุ่มอยู่แถวเดียวอยู่แล้วไม่ต้องพับ */
+.ws-more{display:none}
+
 @media (max-width:1000px){
   .ws-grid,.ws-grid.no-left,.ws-grid.no-right{grid-template-columns:1fr}
   .ws-panel,.ws-canvas{max-height:none}
@@ -888,6 +891,34 @@ select,
   .ws-body.has-file .ws-footer{
     position:sticky; bottom:calc(var(--sp3) + env(safe-area-inset-bottom,0px)); z-index:6;
   }
+
+  /* ‼️ จอแคบ พับปุ่มที่ไม่ใช่ปุ่มหลักเก็บไว้ (เพิ่ม 18/09/2026)
+     เดิมปุ่มเรียงลงมาบรรทัดละปุ่ม เครื่องมือที่มี 7 ปุ่มจึงสูง 362px = 43% ของจอ 844px
+     เนื้อหาถูกบังเกือบครึ่ง ทั้งที่ปุ่มส่วนใหญ่ยังไม่ถึงเวลากด
+     พับแล้วเหลือปุ่มหลักหนึ่งปุ่มกับปุ่มบอกจำนวน สูงลงเหลือสองแถว */
+  .ws-more{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:9px 14px;border-radius:var(--r-md,10px);
+    border:1px dashed var(--line);background:transparent;color:var(--text-mute);
+    font:inherit;font-size:13.5px;cursor:pointer;min-height:44px;
+  }
+  .ws-more:hover{background:var(--bg-soft);color:var(--text)}
+  .ws-footer.has-more .ws-foot-extra{display:none}
+  .ws-footer.has-more.more-open .ws-foot-extra{display:inline-flex}
+  /* กางแล้วปุ่มเรียงสองคอลัมน์ เตี้ยกว่าเรียงลงมาทีละปุ่มเกือบครึ่ง */
+  .ws-footer.has-more.more-open{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ws-footer.has-more.more-open > button:first-child,
+  .ws-footer.has-more.more-open .ws-more,
+  .ws-footer.has-more.more-open .status-wrap{grid-column:1 / -1}
+
+  /* ‼️ ทุกปุ่มในแถบล่างต้องแตะได้สบายบนมือถือ
+     วัดจริงแล้วปุ่มหลักสูง 40px และปุ่มคืนค่าสูง 42px ซึ่งต่ำกว่าที่ Apple แนะนำไว้ 44px
+     ตรงนี้คือแถบที่คนกดจริงตอนงานเสร็จ ปุ่มเตี้ยแล้วกดพลาดคือเสียงานที่ทำมาทั้งหมด */
+  /* ‼️ ต้องระบุให้ชัดถึง .btn.ghost ด้วย ไม่งั้นแพ้กฎ .btn,.btn.ghost{min-height:36px}
+     ซึ่งมีน้ำหนักสูงกว่า .ws-footer button วัดจริงแล้วปุ่มยังเหลือ 42px ทั้งที่เขียนกฎไปแล้ว */
+  .ws-footer button,
+  .ws-footer .btn,
+  .ws-footer .btn.ghost{min-height:44px}
 }
 
 /* ── ดูไฟล์เต็มจอ ─────────────────────────────────────────────────────── */

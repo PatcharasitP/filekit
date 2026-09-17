@@ -798,7 +798,7 @@ export function mount(tool) {
     const blob = tablesToBlob(sheets);
     download(blob, tr("แผนที่การกระจัด-สำหรับ-PowerBI", "relocation-for-powerbi") + ".xlsx");
     st.ok(tr(`บันทึกแล้ว ${sheets.length} ชีต พร้อมใส่ Icon Map Pro ได้เลย`,
-             `Saved ${sheets.length} sheets, ready for Icon Map Pro`));
+             `Saved ${pl(sheets.length, "sheet", "sheets")}, ready for Icon Map Pro`));
   }
 
   function saveCsv() {

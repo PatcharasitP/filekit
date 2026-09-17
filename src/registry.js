@@ -239,6 +239,13 @@ export const TOOLS = [
     libs:["xlsx"], keys:"power automate flow parse json schema พาร์ส เจสัน โฟลว์ สคีมา อัตโนมัติ",
     next:["excel-to-pq","pbi-donut"] },
 
+  { id:"map-coverage", group:"powerbi", icon:"⭕", since:"2026-09-18", title:"แผนที่พื้นที่รอบจุด",
+    desc:"มีพิกัดจุดศูนย์กลาง เช่น สายที่ลูกค้าแจ้ง แล้วอยากรู้ว่ารอบ ๆ มีอะไรอยู่บ้าง ลากไฟล์เข้ามาแล้วเลื่อนแถบรัศมี ภาพกับตัวเลขขยับตามทันที บอกว่าจุดไหนใกล้ที่สุด วงไหนไม่มีอะไรเลย แล้วส่งออกเป็นชีตให้ Icon Map Pro ใน Power BI ทำ slicer ปรับรัศมีต่อได้",
+    accepts:["xlsx","xls","csv","txt"],
+    libs:["xlsx"],
+    keys:"map แผนที่ รัศมี radius วง circle พื้นที่ area coverage buffer call center คอลเซ็นเตอร์ ใกล้ที่สุด nearest ระยะทาง distance haversine icon map pro wkt polygon slicer จุดศูนย์กลาง ครอบคลุม",
+    next:["map-relocate","excel-to-pq"] },
+
   { id:"map-relocate", group:"powerbi", icon:"🗺", since:"2026-09-16", title:"แผนที่การย้ายที่ตั้ง",
     desc:"ไฟล์พิกัดจุดเดิมกับจุดใหม่ กลายเป็นแผนที่ประเทศไทยที่มีจุด เส้นเชื่อม และระยะทางทันที ปรับสีขนาดป้ายเองได้ บันทึกเป็นภาพไปใส่สไลด์ หรือได้ชีตพร้อมใส่ Icon Map Pro ใน Power BI",
     accepts:["xlsx","xls","xlsm","csv","txt"],
@@ -335,6 +342,7 @@ const EN_TOOLS = {
   "word-mailmerge":   ["Mail merge (Word + Excel)", "Fill a Word template from Excel row by row and get the whole set of documents at once"],
   "powerpoint-to-word": ["PowerPoint → Word", "Pull the text, bullets and speaker notes from every slide into a Word document"],
   "powerpoint-to-pdf":  ["PowerPoint → PDF", "Lay the deck out as a readable PDF. One slide per page, pick a theme"],
+  "map-coverage":     ["Map of what is around a point", "Drop in a file of centre points such as customer calls, then drag the radius bar. The map and the numbers move with it. Tells you which point is nearest and which circles are empty, then exports the sheets Icon Map Pro needs so Power BI can slice by radius"],
   "map-relocate":     ["Map of site moves", "Turn a file of old and new coordinates into a Thailand map with dots, joining lines and distances. Style it yourself, save it as an image for a deck, or export the sheets Icon Map Pro needs in Power BI"],
   "number-bins":      ["Group numbers into bands", "See the real spread first, compare four ways to cut the groups, drag any cut point by hand, lock chosen rows into a group of your own, and always get the sort column that keeps charts in the right order"],
   "excel-match-sum":  ["Find rows that add up to an amount", "One payment lands but the system holds many invoices. This finds which rows add up to it, with your own rules for how many rows, what size, and how close is close enough, and it says how many different answers exist"],

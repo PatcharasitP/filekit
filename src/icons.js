@@ -97,6 +97,7 @@ export const ICONS = {
   "number-bins": `<path d="M3 20.5h18"/><rect x="4"y="13"width="2.6"height="7.5"rx=".6"/><rect x="8"y="8"width="2.6"height="12.5"rx=".6"/><rect x="13.4"y="10.5"width="2.6"height="10"rx=".6"/><rect x="17.4"y="15.5"width="2.6"height="5"rx=".6"/><path d="M12 3v18" stroke-dasharray="2.5 2"/>`,
 
   // หมุดสองจุดกับเส้นประเชื่อม สื่อว่าย้ายจากจุดเดิมไปจุดใหม่
+  "map-coverage": `<circle cx="12" cy="12" r="7.6" stroke-dasharray="2.6 2.2"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/><circle cx="16.4" cy="8.6" r="1.25" fill="currentColor" stroke="none"/><circle cx="8.3" cy="14.6" r="1.25" fill="currentColor" stroke="none"/><circle cx="14.2" cy="15.4" r="1.25" fill="currentColor" stroke="none"/>`,
   "map-relocate": `<path d="M6.5 3.5a3.2 3.2 0 0 1 3.2 3.2c0 2.4-3.2 5.3-3.2 5.3S3.3 9.1 3.3 6.7A3.2 3.2 0 0 1 6.5 3.5Z"/><circle cx="6.5" cy="6.7" r="1.05" fill="var(--card)"/><path d="M17.5 12.2a3.2 3.2 0 0 1 3.2 3.2c0 2.4-3.2 5.3-3.2 5.3s-3.2-2.9-3.2-5.3a3.2 3.2 0 0 1 3.2-3.2Z"/><circle cx="17.5" cy="15.4" r="1.05" fill="var(--card)"/><path d="M8.6 9.4l6.4 4.6" stroke-dasharray="2.4 2"/>`,
 
   // ซองจดหมายที่มีตารางอยู่ข้างใน

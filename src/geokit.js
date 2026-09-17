@@ -280,3 +280,90 @@ export function summarize(pairs) {
       .sort((a, b) => b.n - a.n || b.total - a.total),
   };
 }
+
+// ───────────────────────────────────────── พื้นที่รอบจุดศูนย์กลาง (เพิ่ม 18/09/2026)
+
+/* ‼️ ทำไมต้องมีตารางกริด ไม่ใช้วิธีวนเทียบทุกคู่ตรง ๆ
+ *   งานนี้มีจุดศูนย์กลางหลายสิบจุด และจุดบริวารได้ถึงหลักหมื่น
+ *   การวนเทียบทุกคู่คือ ศูนย์กลาง คูณ บริวาร ซึ่งโตเร็วมากเมื่อข้อมูลใหญ่ขึ้น
+ *   และหน้านี้ต้องคำนวณใหม่ทุกครั้งที่ลากแถบรัศมี จึงต้องเร็วพอที่จะลากได้ลื่น
+ *   กริดตัดจุดที่อยู่คนละมุมประเทศออกก่อนโดยไม่ต้องคิดระยะเลย
+ *   เหลือเฉพาะจุดที่อยู่ในช่องข้างเคียงเท่านั้นที่คำนวณระยะจริง
+ *
+ * ‼️ ขนาดช่องกริดต้องอิงรัศมีที่ใหญ่ที่สุดที่ผู้ใช้เลือกได้
+ *   ถ้าช่องเล็กกว่ารัศมี จะพลาดจุดที่อยู่ข้ามช่องไปหลายช่อง
+ *   จึงตั้งช่องเท่ากับรัศมี แล้วดูช่องรอบตัวหนึ่งชั้น ซึ่งครอบคลุมได้ครบเสมอ
+ */
+export function buildGrid(points, cellKm) {
+  const cell = Math.max(0.2, cellKm);
+  const map = new Map();
+  const kx = 111.320, ky = 110.574;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue;
+    const gx = Math.floor((p.lon * kx * Math.cos(rad(p.lat))) / cell);
+    const gy = Math.floor((p.lat * ky) / cell);
+    const k = gx + "," + gy;
+    const arr = map.get(k);
+    if (arr) arr.push(i); else map.set(k, [i]);
+  }
+  return { map, cell, points };
+}
+
+/** จุดที่อยู่ในรัศมีรอบพิกัดหนึ่ง คืน [{index, km}] เรียงจากใกล้ไปไกล */
+export function withinKm(grid, lat, lon, km) {
+  const { map, cell, points } = grid;
+  const kx = 111.320, ky = 110.574;
+  const gx = Math.floor((lon * kx * Math.cos(rad(lat))) / cell);
+  const gy = Math.floor((lat * ky) / cell);
+  const span = Math.ceil(km / cell);
+  const out = [];
+  for (let dx = -span; dx <= span; dx++) {
+    for (let dy = -span; dy <= span; dy++) {
+      const arr = map.get((gx + dx) + "," + (gy + dy));
+      if (!arr) continue;
+      for (const i of arr) {
+        const d = distanceKm(lat, lon, points[i].lat, points[i].lon);
+        if (d <= km) out.push({ index: i, km: d });
+      }
+    }
+  }
+  out.sort((a, b) => a.km - b.km);
+  return out;
+}
+
+/** จุดที่ใกล้ที่สุด ขยายวงค้นทีละเท่าตัวจนเจอ คืน null ถ้าไม่มีจุดเลย */
+export function nearestOf(grid, lat, lon, startKm = 2, maxKm = 400) {
+  let r = Math.max(0.5, startKm);
+  while (r <= maxKm) {
+    const hit = withinKm(grid, lat, lon, r);
+    if (hit.length) return hit[0];
+    r *= 2;
+  }
+  // ‼️ ทางถอยเมื่อข้อมูลกระจายมากจนกริดช่วยไม่ได้ ยอมวนทั้งชุดดีกว่าคืนค่าว่างผิด ๆ
+  let best = null;
+  for (let i = 0; i < grid.points.length; i++) {
+    const p = grid.points[i];
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue;
+    const d = distanceKm(lat, lon, p.lat, p.lon);
+    if (!best || d < best.km) best = { index: i, km: d };
+  }
+  return best;
+}
+
+/** สรุปพื้นที่รอบจุดศูนย์กลางแต่ละจุด ที่รัศมีที่กำหนด */
+export function coverageOf(centers, grid, km) {
+  const covered = new Set();
+  const rows = centers.map((c) => {
+    const hit = withinKm(grid, c.lat, c.lon, km);
+    for (const h of hit) covered.add(h.index);
+    const byKind = {};
+    for (const h of hit) {
+      const k = grid.points[h.index].kind || "";
+      byKind[k] = (byKind[k] || 0) + 1;
+    }
+    return { center: c, hits: hit, count: hit.length, byKind,
+             nearest: hit[0] || null };
+  });
+  return { rows, covered, emptyCenters: rows.filter((r) => r.count === 0).length };
+}

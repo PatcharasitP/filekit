@@ -55,11 +55,11 @@ export function presetBar(presets, onApply) {
 
 export const PRESETS_CSS = `
 .ps-wrap{margin-bottom:16px}
-.ps-label{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+.ps-label{font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
   color:var(--text-mute);margin-bottom:7px}
 .ps-chips{display:flex;flex-wrap:wrap;gap:6px}
 .ps-chip{border:1.5px solid var(--line);background:var(--bg-soft);color:var(--text);
-  border-radius:999px;padding:5px 12px;font:600 12.5px/1.4 var(--font);cursor:pointer;
+  border-radius:999px;padding:5px 12px;font:500 12.5px/1.4 var(--font);cursor:pointer;
   transition:border-color .12s var(--ease-snap,ease),background .12s var(--ease-snap,ease)}
 .ps-chip:hover{border-color:color-mix(in srgb,var(--g-powerbi,var(--brand)) 45%,var(--line))}
 .ps-chip.on{border-color:var(--g-powerbi,var(--brand));

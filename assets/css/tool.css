@@ -230,7 +230,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 
 /* ---- controls ---- */
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:start;margin-top:16px}
-.field{display:grid;grid-template-rows:auto auto auto;gap:5px;font-size:13px;font-weight:600;min-width:170px;flex:1;align-content:start}
+.field{display:grid;grid-template-rows:auto auto auto;gap:5px;font-size:13px;font-weight:500;min-width:170px;flex:1;align-content:start}
 .field small{font-weight:400;color:var(--text-mute);font-size:11.5px}
 .field input,.field select,.field textarea{
   font-family:inherit;font-size:14px;font-weight:500;padding:9px 12px;border-radius:var(--r-sm);
@@ -782,9 +782,15 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
    แก้ด้วยหลักความใกล้ชิด ของที่อยู่ใกล้กันตาจะอ่านว่าเป็นพวกเดียวกัน
    จึงเว้นก่อนหัวกลุ่มให้มากกว่าระยะระหว่างช่องในกลุ่มอย่างชัดเจน
    บวกเส้นบางคั่นด้านบน และทำให้หัวกลุ่มเข้มกว่าป้ายช่องจริง ๆ
+
+   ‼️ วิธีทำให้หัวกลุ่มชนะ เลือกลดน้ำหนักป้ายช่อง ไม่ใช่เพิ่มน้ำหนักหัวกลุ่ม (18/09/2026)
+   รอบแรกดันหัวกลุ่มขึ้นเป็น 800 แล้วมันกลายเป็นตัวอักษรเล็กที่หนาที่สุดในแผง
+   ทั้งแผงอ่านเป็นกำแพงตัวหนา ซึ่งสวนทางกับที่พี่ปอนด์ชอบคือโปร่ง บาง จาง
+   ป้ายช่องคือเนื้อหมึกส่วนใหญ่ของแผง ลดมันจาก 600 เหลือ 500 แผงจึงเบาลงทั้งแผง
+   แล้วหัวกลุ่มแค่ 700 ก็ชนะสบาย ๆ โดยไม่ต้องหนาขึ้นเลย
    ‼️ ไม่ซ่อนอะไร ไม่เปลี่ยนวิธีใช้ ทุกช่องยังอยู่ครบที่เดิม แค่ตาอ่านออกว่าเป็นกลุ่ม ๆ */
 .ws-right h3{
-  font-size:12.5px; font-weight:800; letter-spacing:.06em;
+  font-size:12px; font-weight:700; letter-spacing:.04em;
   color:var(--text); margin:0 0 4px;
 }
 /* ‼️ เส้นคั่นกับระยะเว้นต้องใส่ที่ "กล่องกลุ่ม" ไม่ใช่ที่ตัวหัวข้อ
@@ -824,7 +830,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   max-height:min(74vh,720px); overflow:hidden;
 }
 .ws-head{display:flex;align-items:center;gap:10px;padding:13px 15px 10px}
-.ws-head h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--text-mute)}
+.ws-head h2{margin:0;font-size:12px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--text-mute)}
 .ws-head > :last-child:not(h2){margin-inline-start:auto}
 .ws-hint{margin:0 15px 8px;font-size:12px;color:var(--text-mute);line-height:1.6}
 .ws-scroll{overflow:auto;padding:0 15px 15px;display:flex;flex-direction:column;gap:9px}

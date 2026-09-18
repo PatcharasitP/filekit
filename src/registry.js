@@ -29,6 +29,11 @@ export const TOOLS = [
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์", next:["pdf-merge","pdf-compress"] },
 
+  { id:"pdf-edit",    group:"pdf", icon:"✏️", title:"แก้ไขข้อความบน PDF",
+    desc:"ปิดทับข้อความเดิมแล้วพิมพ์ข้อความใหม่วางแทน ภาษาไทยได้",
+    accepts:["pdf"],
+    libs:["pdfjs","pdflib"], keys:"edit แก้ไข ข้อความ ลบข้อความ ปิดทับ วันที่ พิมพ์ทับ redact", next:["pdf-pages","pdf-watermark"] },
+
   { id:"pdf-merge",   group:"pdf", icon:"🔗", title:"รวมไฟล์ PDF",
     desc:"รวมหลายไฟล์เป็นเล่มเดียว ลากสลับลำดับได้",
     accepts:["pdf"],
@@ -318,6 +323,7 @@ const EN_GROUPS = {
 
 const EN_TOOLS = {
   "pdf-pages":        ["Organise PDF pages", "Keep, delete, reorder and rotate pages, with a preview of every page"],
+  "pdf-edit":         ["Edit text on a PDF", "Cover the old text and type new text over it. Thai included"],
   "pdf-merge":        ["Merge PDF files", "Combine several files into one, drag to reorder"],
   "pdf-split":        ["Split a PDF", "Split by page range, every N pages, or one file per page"],
   "pdf-compress":     ["Compress a PDF", "Shrink scans and image-heavy files. See the size before and after"],

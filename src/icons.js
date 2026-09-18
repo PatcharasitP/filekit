@@ -8,6 +8,7 @@ const DOC = 'M7 3h7l4 4v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><pa
 export const ICONS = {
   // ── จัดการไฟล์ PDF ──
   "pdf-pages":    `<rect x="3"y="6"width="11"height="14"rx="1.8"/><path d="M7 3h9a2 2 0 0 1 2 2v11"/><path d="M6.5 11h5M6.5 14.5h3"/>`,
+  "pdf-edit":     `<path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/>`,
   "pdf-merge":    `<rect x="3"y="3"width="8"height="7"rx="1.5"/><rect x="3"y="14"width="8"height="7"rx="1.5"/><path d="M11 6.5h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4"/><path d="M18.5 9l2.5 2.5-2.5 2.5"/>`,
   "pdf-split":    `<rect x="2.5"y="8"width="7.5"height="8"rx="1.5"/><path d="M10 12h2.4"/><path d="M12.4 12V7.4h2.6M12.4 12v4.6h2.6"/><rect x="15"y="4"width="6.5"height="6.5"rx="1.3"/><rect x="15"y="13.5"width="6.5"height="6.5"rx="1.3"/>`,
   "pdf-compress": `<path d="M9.6 4v5.6H4"/><path d="M14.4 4v5.6H20"/><path d="M9.6 20v-5.6H4"/><path d="M14.4 20v-5.6H20"/><path d="M3.8 3.8l4.4 4.4M20.2 3.8l-4.4 4.4M3.8 20.2l4.4-4.4M20.2 20.2l-4.4-4.4"/>`,

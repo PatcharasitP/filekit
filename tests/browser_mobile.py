@@ -270,6 +270,28 @@ def scroll_to(pg, y):
     pg.wait_for_timeout(200)
 
 
+def btn_rects_stable(pg, tries=12, step_ms=150):
+    """อ่านตำแหน่งปุ่มซ้ำจนได้ค่าเดิมสองรอบติดกัน แล้วคืนค่านั้นพร้อมประวัติที่วัดได้
+
+    ‼️ ที่มา 18/09/2026 ข้อ ② แดงสลับเขียว (center-y=909 บ้าง 794 บ้าง บนจอสูง 844)
+       ทำซ้ำในสภาพโดดเดี่ยว 5 รอบและจำลองรอบกวาด 5 เครื่องมือ ไม่ออกสักครั้ง
+       จึงเลิกไล่หาเหตุด้วยการเดา แล้วแก้ที่วิธีวัดแทน
+       เดิมรอคงที่ 200ms แล้ววัดเลย ถ้าหน้ายังขยับอยู่จะได้ค่ากลางทาง
+    ‼️ ไม่ได้ซ่อนความผิดพลาด ปุ่มที่หลุดจอจริงจะหลุดอยู่อย่างนั้นไม่ว่ารอนานแค่ไหน
+       และถ้ายังตกอยู่ ประวัติที่คืนไปจะบอกได้ว่ามันนิ่งหรือกำลังขยับ
+    """
+    seen, prev = [], None
+    for _ in range(tries):
+        info = pg.evaluate(BTN_JS)
+        key = [(round(b["top"]), round(b["bottom"])) for b in info.get("buttons", [])]
+        seen.append(key)
+        if key == prev:
+            return info, seen
+        prev = key
+        pg.wait_for_timeout(step_ms)
+    return pg.evaluate(BTN_JS), seen
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # sweep — ไล่ทุกเครื่องมือ ก่อน+หลังใส่ไฟล์
 # ═══════════════════════════════════════════════════════════════════════════
@@ -337,7 +359,7 @@ def check_tool(pg, base, tid, results):
         h = pg.evaluate("document.documentElement.scrollHeight")
         target = 0 if label.startswith("scrollY") else (h / 2 if label == "กลางหน้า" else h)
         scroll_to(pg, target)
-        info = pg.evaluate(BTN_JS)
+        info, seen = btn_rects_stable(pg)     # รอให้ตำแหน่งนิ่งก่อนตัดสิน (ดูเหตุผลที่ btn_rects_stable)
         if not info["hasContainer"]:
             results["btn_off"].append(f"{tid}·{label} → ไม่พบ .actions/.ws-footer เลย")
             continue
@@ -346,7 +368,8 @@ def check_tool(pg, base, tid, results):
             if cy < 0 or cy > VIEWPORT["height"]:
                 results["btn_off"].append(
                     f"{tid}·{label} → ปุ่ม {bt['text']!r} center-y={round(cy)}px "
-                    f"(จอสูง {VIEWPORT['height']}px — อยู่นอกจอ)")
+                    f"(จอสูง {VIEWPORT['height']}px — อยู่นอกจอ) "
+                    f"· ค่าที่วัดได้ระหว่างรอให้นิ่ง: {seen}")
 
     # ⑤ ท้ายหน้าไม่ถูกแถบลอยบัง — เลื่อนสุดท้ายจริง (อ่าน scrollHeight สดอีกที กันค่านิ่งเก่า)
     h = pg.evaluate("document.documentElement.scrollHeight")

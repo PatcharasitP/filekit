@@ -121,12 +121,12 @@ const STYLE = `
 .gf-card{border:1px solid var(--line); border-radius:var(--r); background:var(--bg-soft); overflow:hidden}
 .gf-head{padding:14px 16px}
 .gf-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px}
-.gf-tag{font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+.gf-tag{font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
   color:var(--g-powerbi); border:1px solid color-mix(in srgb,var(--g-powerbi) 42%,transparent);
   border-radius:999px; padding:3px 9px; line-height:1.5}
 .gf-size{margin-inline-start:auto; font-size:11.5px; font-weight:700; color:var(--text-mute);
   font-variant-numeric:tabular-nums; line-height:1.5}
-.gf-title{margin:0 0 6px; font-size:15px; font-weight:800; line-height:1.5; color:var(--text)}
+.gf-title{margin:0 0 6px; font-size:15px; font-weight:700; line-height:1.5; color:var(--text)}
 /* ‼️ ตัวอักษรสำหรับ "อ่าน" ใหญ่และโปร่งกว่าตัวอักษรของหน้าจอ (วัดจาก thepexcel 19.2px/1.7) */
 .gf-what{margin:0 0 8px; font-size:14.5px; line-height:1.75; color:var(--text-dim)}
 .gf-proof{margin:6px 0 0; display:flex; gap:6px; align-items:flex-start;
@@ -169,7 +169,7 @@ export function mount(tool) {
     },
     footer: [st.node],
     note: tr(
-      "อยากปรับให้ตรงงานของคุณเองมากกว่านี้ เปิดเครื่องมือที่ลิงก์ไว้ในแต่ละชิ้น แล้วปรับค่าแล้วคัดลอกโค้ดใหม่ได้",
+      "อยากปรับให้ตรงงานของคุณ เปิดเครื่องมือที่ลิงก์ไว้ แล้วปรับค่าแล้วคัดลอกใหม่ได้",
       "Want it tuned to your own data? Open the tool linked on each item, adjust the settings and copy fresh code"
     ),
   });

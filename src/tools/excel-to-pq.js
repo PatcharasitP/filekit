@@ -14,6 +14,7 @@ import { guessTableTypes } from "../pqtypes.js";
 import { extractTable, kindOfFile } from "../tabledata.js";
 import { PQ_TYPES, buildTableCode, wrapAsQuery } from "../pqm.js";
 import { tr, pl } from "../i18n.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 
 const STYLE = `
 /* ‼️ ตารางคอลัมน์กว้างเกินจอมือถือได้ง่ายมาก ต้องให้มันเลื่อนในกล่องของตัวเอง
@@ -80,7 +81,30 @@ export function mount(tool) {
   const codeBox = el("pre", { class: "pq-code", hidden: true });
   const copyBtn = button(tr("คัดลอกโค้ด", "Copy code"), { icon: "copy", onclick: copyCode });
   const saveBtn = button(tr("บันทึกเป็นไฟล์", "Save as file"), { ghost: true, icon: "download", onclick: saveCode });
-  const actions = el("div", { class: "actions", hidden: true }, [copyBtn, saveBtn, acceptAll]);
+  /* ── จำค่าที่ตั้งไว้ และส่งต่อด้วยลิงก์ ───────────────────────────────
+     ‼️ เก็บแค่ 2 ค่าที่ไม่ผูกกับไฟล์ ส่วนชีทกับชนิดข้อมูลรายคอลัมน์ผูกกับไฟล์ที่เปิดอยู่
+        ส่งลิงก์ไปคนอื่นที่ไม่มีไฟล์เดียวกัน ค่าพวกนั้นจะชี้ผิดที่ทันที */
+  const RULES = () => ({ rows: rowsSel.value, onlyWarn: onlyWarn.checked });
+  const store = stateKit(tool.id, {
+    defaults: RULES(),
+    collect: RULES,
+    apply: (v) => {
+      if (v.rows !== undefined) rowsSel.value = v.rows;
+      if (v.onlyWarn !== undefined) onlyWarn.checked = v.onlyWarn;
+    },
+  });
+  store.restore();
+
+  async function onShare() {
+    const link = store.shareLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
+  }
+  const shareBtn = button(tr("คัดลอกลิงก์ค่านี้", "Copy link to these settings"), { ghost: true, onclick: onShare });
+  const actions = el("div", { class: "actions", hidden: true }, [copyBtn, saveBtn, shareBtn, acceptAll]);
+  for (const c of [rowsSel, onlyWarn]) c.addEventListener("change", () => store.save());
 
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp",

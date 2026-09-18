@@ -45,6 +45,7 @@ const CVD_NAME = {
 };
 const cvdName = (t) => (CVD_NAME[t] ? CVD_NAME[t]() : t);
 import { tr, pl, IS_EN } from "../i18n.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 
 /* ขนาดตัวอักษรฐานที่ผืนผ้าใบ 1920x1080 เป็นค่าที่ Power BI ใช้เป็นค่าตั้งต้นอยู่แล้ว
    ประกาศแค่ 4 คลาสหลักตาม TH1 อีก 10 คลาสสืบทอดจากสี่ตัวนี้เอง ไม่ต้องเขียนซ้ำ */
@@ -414,11 +415,21 @@ export function derive(s) {
 export function mount(tool) {
   const st = statusBar();
   const first = PALETTES()[0];
-  const state = derive({
+  /* ‼️ ทั้งธีมถูกกำหนดด้วยค่าดิบ 9 ตัวนี้เท่านั้น ที่เหลือ (fg2, line, ขนาดตัวอักษร)
+     คำนวณออกมาจากพวกนี้ทั้งหมด จึงเก็บแค่ 9 ตัวนี้พอ ลิงก์จะได้สั้น */
+  const START = {
     name: "FileKit Theme", w: 1920, h: 1080, font: "Segoe UI",
     colors: first.colors.slice(), bg: first.bg, fg: first.fg,
     good: "#1F8A50", neutral: "#6C7A8D", bad: "#C4321F",
-  });
+  };
+  const SAVED_KEYS = Object.keys(START);
+  const pickSaved = (o) => {
+    const out = {};
+    for (const k of SAVED_KEYS) if (o[k] !== undefined) out[k] = k === "colors" ? o[k].slice() : o[k];
+    return out;
+  };
+  let store = null;
+  const state = derive({ ...START, colors: START.colors.slice() });
 
   /* ── ชิ้นส่วนย่อยที่ใช้ซ้ำ ─────────────────────────────────────────── */
   const ico = (name) => el("span", { class: "ts-ico", "aria-hidden": "true", html: ICONS[name] });
@@ -538,6 +549,7 @@ export function mount(tool) {
   const actions = el("div", { class: "ts-actions" }, [
     el("p", { class: "ts-hint" }, tr("ไฟล์ถูกสร้างในเครื่องคุณ ไม่มีอะไรถูกส่งออกไป", "Built on your device, nothing is sent anywhere")),
     btn(tr("คัดลอก JSON", "Copy JSON"), "copy", onCopy, true),
+    btn(tr("คัดลอกลิงก์ค่านี้", "Copy link to these settings"), "link", onShare, true),
     btn(tr("สร้างไฟล์ธีม", "Generate theme"), "download", onDownload),
   ]);
   const fileSec = sec(tr("ไฟล์ธีม", "Theme file"), "file", [
@@ -569,6 +581,19 @@ export function mount(tool) {
     el("div", { class: "note" }, tr(
       "เอาไปใช้: Power BI Desktop แท็บ View แล้ว Themes แล้ว Browse for themes แล้วเลือกไฟล์นี้",
       "To use it: Power BI Desktop, View tab, Themes, Browse for themes, then pick this file")));
+
+  /* ‼️ ต้องสร้างหลังช่องกรอกถูกประกาศครบแล้ว และต้องกู้ค่าก่อน build* ทุกตัว
+     ไม่งั้นแผงจะถูกวาดด้วยค่าเริ่มต้นแล้วค่อยโดนทับ ซึ่งเห็นเป็นภาพกระพริบ */
+  store = stateKit(tool.id, {
+    defaults: { ...START },
+    collect: () => pickSaved(state),
+    apply: (vals) => {
+      Object.assign(state, pickSaved(vals));
+      derive(state);
+      syncInputs();
+    },
+  });
+  store.restore();
 
   buildPalettes(); buildCanvas(); buildPickers(); drawCanvasPrev();
   for (const c of [nameIn, wIn, hIn]) c.addEventListener("input", readInputs);
@@ -696,6 +721,7 @@ export function mount(tool) {
     drawPreview(sz);
     drawCheck();
     codeEl.innerHTML = paintCode(json(), "json");
+    store?.save();     // หน่วง 400ms ในตัวแล้ว ลากแถบเลื่อนรัว ๆ ก็ไม่เขียนถี่
   }
 
   /* ‼️ ต้องเป็น function declaration ไม่ใช่ const ลูกศร เพราะอยู่หลัง return
@@ -967,14 +993,27 @@ export function mount(tool) {
     catch { st.err(tr("คัดลอกไม่สำเร็จ กดดาวน์โหลดแทนได้", "Could not copy, download instead")); }
   }
 
-  function onReset() {
-    const p = PALETTES()[0];
-    Object.assign(state, { name: "FileKit Theme", w: 1920, h: 1080, font: "Segoe UI",
-      colors: p.colors.slice(), bg: p.bg, fg: p.fg,
-      good: "#1F8A50", neutral: "#6C7A8D", bad: "#C4321F" });
-    derive(state);
+  /** ดันค่าใน state ลงช่องกรอกให้ตรงกัน ใช้ทั้งตอนกู้ค่าและตอนกดเริ่มใหม่ */
+  function syncInputs() {
     nameIn.value = state.name; wIn.value = state.w; hIn.value = state.h; fontSel.value = state.font;
-    wBar.value = String(state.w); hBar.value = String(state.h);
+    wBar.value = String(Math.min(3840, state.w));
+    hBar.value = String(Math.min(3840, state.h));
+  }
+
+  async function onShare() {
+    const link = store?.shareLink();
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
+  }
+
+  function onReset() {
+    Object.assign(state, pickSaved(START), { colors: START.colors.slice() });
+    derive(state);
+    syncInputs();
+    store?.forget();
     buildPalettes(); buildCanvas(); buildPickers(); render();
     st.ok(tr("กลับไปค่าตั้งต้นแล้ว", "Back to the starting values"));
   }

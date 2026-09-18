@@ -40,7 +40,7 @@ const STYLE = `
 .mc-canvas-wrap canvas.drag{cursor:grabbing}
 .mc-zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:4px}
 .mc-zoom button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);
-  background:var(--card);color:var(--text);font-size:17px;line-height:1;cursor:pointer}
+  background:var(--card);color:var(--text);font-size:15px;font-weight:600;line-height:1;cursor:pointer}
 .mc-zoom button:hover{background:var(--bg-soft)}
 .mc-stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:10px}
 .mc-stat div{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -93,7 +93,7 @@ export function mount(tool) {
 
   const leftBody = el("div", { class: "mc-src" }, [
     el("h3", { style: "margin:2px 0 0;font-size:13px;color:var(--text-mute)" },
-      tr("① จุดศูนย์กลาง", "① Centre points")),
+      tr("1. จุดศูนย์กลาง", "1. Centre points")),
     dzC.container, chipsC,
     field(tr("ชีต", "Sheet"), shC),
     field(tr("รหัส", "Id"), idC),
@@ -101,7 +101,7 @@ export function mount(tool) {
     field(tr("ลองจิจูด", "Longitude"), lonC),
     el("hr", { style: "border:0;border-top:1px solid var(--line);margin:6px 0" }),
     el("h3", { style: "margin:2px 0 0;font-size:13px;color:var(--text-mute)" },
-      tr("② จุดบริวาร", "② Surrounding points")),
+      tr("2. จุดบริวาร", "2. Surrounding points")),
     dzS.container, chipsS,
     field(tr("ชีต", "Sheet"), shS),
     field(tr("รหัส", "Id"), idS),
@@ -113,7 +113,10 @@ export function mount(tool) {
 
   // ── แผงขวา ปรับแต่ง ──────────────────────────────────────────────
   const radius = el("input", { type: "range", min: "0.2", max: "25", step: "0.1", value: "3" });
-  const radiusNum = el("span", { class: "mc-num" }, "3.0 กม.");
+  // ‼️ ค่าเริ่มต้นต้องแปลภาษาด้วย เดิมเขียน "3.0 กม." ตายตัว
+  //    อีกสองที่ที่อัปเดตค่านี้ใช้ IS_EN ถูกแล้ว แต่ค่าตั้งต้นตกหล่น
+  //    ผลคือคนเปิดภาษาอังกฤษเห็น "กม." จนกว่าจะขยับแถบเลื่อน
+  const radiusNum = el("span", { class: "mc-num" }, IS_EN ? "3.0 km" : "3.0 กม.");
   const dotSize = el("input", { type: "range", min: "1", max: "9", step: "0.5", value: "4" });
   const onOff = () => [["on", tr("แสดง", "Show")], ["off", tr("ซ่อน", "Hide")]];
   const showOut = segmented([["dim", tr("จาง", "Dim")], ["hide", tr("ซ่อน", "Hide")],
@@ -140,9 +143,9 @@ export function mount(tool) {
   // ── กลาง แผนที่กับตาราง ──────────────────────────────────────────
   const canvas = el("canvas");
   const zoomBox = el("div", { class: "mc-zoom" }, [
-    button("+", { onclick: () => zoomBy(1.35) }),
-    button("−", { onclick: () => zoomBy(1 / 1.35) }),
-    button("⤢", { onclick: () => { view = { k: 1, x: 0, y: 0 }; draw(); } }),
+    button("+", { label: tr("ซูมเข้า", "Zoom in"), onclick: () => zoomBy(1.35) }),
+    button("-", { label: tr("ซูมออก", "Zoom out"), onclick: () => zoomBy(1 / 1.35) }),
+    button("1:1", { label: tr("กลับไปขนาดเต็ม", "Reset zoom"), onclick: () => { view = { k: 1, x: 0, y: 0 }; draw(); } }),
   ]);
   const statBox = el("div", { class: "mc-stat" });
   const tblWrap = el("div", { class: "mc-tblwrap" });

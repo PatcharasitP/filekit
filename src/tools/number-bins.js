@@ -1,6 +1,7 @@
 import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, segmented, dropzone, download } from "../ui.js";
 import { tr, pl, IS_EN } from "../i18n.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 import { readWorkbook, sheetToTable, tableToBlob, cellText } from "../sheetpick.js";
 import { paintCode, CODE_TOKEN_CSS } from "../codeview.js";
 import {
@@ -33,8 +34,7 @@ const STYLE = `
 .nb-chip b{color:var(--text);font-weight:700}
 .nb-chip.warn{border-color:var(--warn,#c98a00);color:var(--text)}
 
-.nb-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--text-mute)}
+.nb-group-title{margin:18px 0 8px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
 .nb-group-title:first-child{margin-top:0}
 .nb-hint{display:block;font-size:12px;color:var(--text-mute);line-height:1.6;margin:-2px 0 6px}
 .nb-num{width:100%;min-height:36px;padding:8px 11px;border:1px solid var(--line);
@@ -110,6 +110,9 @@ export function mount(tool) {
   let overrides = {};                               // { key: ป้าย }
   let extraOrder = [];                              // ลำดับหมวดพิเศษที่เกิดจากการล็อก
   let customLabels = null;                          // ป้ายที่ผู้ใช้พิมพ์เอง
+  /* ‼️ ต้องประกาศตรงนี้ ไม่ใช่กลางไฟล์ เพราะ apply() ของการกู้ค่าแตะตัวนี้
+     ถ้าประกาศทีหลังจะชนกฎ TDZ แล้วเครื่องมือพังตอนเปิดลิงก์ที่มีค่ามา */
+  let wholeTouched = false;                         // ผู้ใช้เคยกดสวิตช์ป้ายจำนวนเต็มเองหรือยัง
   let lastAssigned = null;
 
   // ── แผงซ้าย: ตัวเลขมาจากไหน ───────────────────────────────────────────
@@ -224,7 +227,7 @@ export function mount(tool) {
     field(tr("ชื่อกลุ่มของค่าว่าง", "Name for the empty group"), nullIn),
     el("h3", { class: "nb-group-title" }, tr("ล็อกรายตัว", "Lock a row into a group")),
     el("small", { class: "nb-hint" }, tr(
-      "บังคับบางรายการไปอยู่หมวดที่ต้องการ ไม่ว่าตัวเลขจะตกช่วงไหน ล็อกแล้วลำดับการเรียงยังถูกต้องเหมือนเดิม",
+      "บังคับบางรายการไปอยู่หมวดที่ต้องการ ไม่ว่าตัวเลขจะตกช่วงไหน ลำดับการเรียงยังถูกเหมือนเดิม",
       "Force chosen rows into a group whatever their number says. The sort order stays correct")),
     lockKeyIn, el("div", { style: "height:6px" }), el("div", { class: "nb-row" }, [lockToIn, lockAdd]),
     lockList,
@@ -264,11 +267,54 @@ export function mount(tool) {
   const goC = button(tr("ดาวน์โหลดเป็น CSV", "Download as CSV"), { icon: "download", onclick: () => save("csv"), ghost: true });
   goX.disabled = true; goC.disabled = true;
 
+  /* ── จำกติกาไว้ และส่งต่อด้วยลิงก์ ───────────────────────────────────
+     ‼️ เก็บเฉพาะกติกาที่ไม่ผูกกับไฟล์ ชีต/คอลัมน์/รายการล็อกไม่เก็บ
+        เพราะมันอ้างถึงไฟล์ที่เปิดอยู่ ส่งลิงก์ไปคนอื่นแล้วจะชี้ผิดที่ */
+  const RULES = () => ({
+    method: methodSel.value, k: kSel.value, breaks: breaksIn.value,
+    unit: unitIn.value, nullLabel: nullIn.value, whole: wholeSw.input.checked,
+    labels: labelsIn.value, bandCol: bandColIn.value, sortCol: sortColIn.value,
+  });
+  const store = stateKit(tool.id, {
+    defaults: RULES(),
+    collect: RULES,
+    apply: (v) => {
+      if (v.method !== undefined) methodSel.value = v.method;
+      if (v.k !== undefined) kSel.value = v.k;
+      if (v.unit !== undefined) unitIn.value = v.unit;
+      if (v.nullLabel !== undefined) nullIn.value = v.nullLabel;
+      if (v.whole !== undefined) { wholeSw.input.checked = v.whole; wholeTouched = true; }
+      if (v.bandCol !== undefined) bandColIn.value = v.bandCol;
+      if (v.sortCol !== undefined) sortColIn.value = v.sortCol;
+      /* ‼️ จุดตัดกับป้ายต้องแปลงกลับเหมือนที่ตัวรับ event ทำ การตั้ง .value เฉย ๆ
+         ไม่ทำให้ตัวแปร breaks/customLabels เปลี่ยนตาม แล้วจะได้ลิงก์ที่ดูเหมือนติด แต่ไม่ทำงาน */
+      if (v.breaks !== undefined) {
+        breaksIn.value = v.breaks;
+        breaks = cleanBreaks(v.breaks.split(/[,\s;]+/).filter(Boolean));
+      }
+      if (v.labels !== undefined) {
+        labelsIn.value = v.labels;
+        const list = v.labels.split("\n").map((x) => x.trim()).filter(Boolean);
+        customLabels = list.length === breaks.length + 1 ? list : null;
+      }
+    },
+  });
+
+  async function onShare() {
+    const link = store.shareLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
+  }
+  const goL = button(tr("คัดลอกลิงก์ค่านี้", "Copy link to these settings"), { icon: "link", onclick: onShare, ghost: true });
+  store.restore();     // ลิงก์มาก่อนของที่จำไว้ในเครื่องเสมอ (statekit จัดลำดับให้แล้ว)
+
   const ws = workspace(tool, {
     left: { title: tr("ตัวเลขที่จะจัดกลุ่ม", "Numbers to group"), node: leftBody },
     center: { node: centerNode, empty: tr("เปิดไฟล์หรือวางตัวเลข แล้วจะเห็นการกระจายทันที", "Open a file or paste numbers to see the spread right away") },
     right: { title: tr("กติกา", "Rules"), node: rightBody },
-    footer: [goX, goC, st.node],
+    footer: [goX, goC, goL, st.node],
   });
   ws.body.prepend(styleEl);
 
@@ -340,8 +386,6 @@ export function mount(tool) {
     keys = lines.map((_, i) => String(i + 1));
     afterRead();
   }
-
-  let wholeTouched = false;   // ผู้ใช้เคยกดสวิตช์นี้เองหรือยัง ถ้าเคย เราจะไม่ไปยุ่งอีก
 
   function afterRead() {
     read = readValues(values);
@@ -431,6 +475,7 @@ export function mount(tool) {
   }
 
   function refresh() {
+    store.save();     // ‼️ ต้องอยู่ก่อน return ข้างล่าง ไม่งั้นตั้งกติกาก่อนเปิดไฟล์แล้วไม่ถูกจำ
     renderChips();
     renderLocks();
     if (!read.nums.length) return;
@@ -721,7 +766,7 @@ export function mount(tool) {
       codeBox.appendChild(codeCard(tr("โค้ด Power Query วางใน Advanced Editor ได้เลย", "Power Query code, paste into the Advanced Editor"),
         genM(cfg), "m", "จัดกลุ่มตัวเลข.pq"));
       codeBox.appendChild(el("p", { class: "nb-chart-help" }, tr(
-        "อย่าลืมขั้นสุดท้ายในโมเดล ตั้ง Sort by column ให้คอลัมน์ป้ายใช้คอลัมน์เลขเรียง ไม่งั้นกราฟจะเรียงตามตัวอักษร",
+        "อย่าลืมตั้ง Sort by column ในโมเดล ให้คอลัมน์ป้ายใช้คอลัมน์เลขเรียง ไม่งั้นกราฟเรียงตามตัวอักษร",
         "One last step in the model: set Sort by column so the label column sorts by the number column, otherwise charts sort alphabetically")));
     }
     if (!sqlBox.hidden) {

@@ -178,7 +178,7 @@ export function mount(tool) {
     },
   });
 
-  const zoomOutBtn = button("−", { ghost: true, label: tr("ซูมออก", "Zoom out"), onclick: () => stepZoom(-1) });
+  const zoomOutBtn = button("-", { ghost: true, label: tr("ซูมออก", "Zoom out"), onclick: () => stepZoom(-1) });
   const zoomLabel = el("span", { class: "pe-zoom" }, "100%");
   const zoomInBtn = button("+", { ghost: true, label: tr("ซูมเข้า", "Zoom in"), onclick: () => stepZoom(1) });
   const fitBtn = button(tr("พอดีหน้า", "Fit"), { ghost: true, onclick: () => setZoom(1) });

@@ -46,6 +46,33 @@ function subseqScore(hay, q) {
   return Math.max(0, 30 - Math.min(gaps, 25));
 }
 
+// ‼️ คำเชื่อมที่คนพิมพ์ติดมาแต่ไม่ได้บอกว่าอยากได้เครื่องมืออะไร ตัดทิ้งก่อนนับ
+const STOP = new Set(["ที่","ใน","ให้","เป็น","จาก","กับ","ของ","และ","หรือ","ไม่","เอา",
+  "ได้","แล้ว","อยาก","ต้องการ","ช่วย","ขอ","หน่อย","ด้วย","ทำ","มี","อัน","ตัว","แบบ",
+  "the","a","an","to","of","for","my","me","i"]);
+
+let _seg = null;
+/** ตัดคำค้นเป็นคำ ๆ · ไทยใช้ Intl.Segmenter · ถ้าเบราว์เซอร์ไม่มีก็ตัดด้วยช่องว่างแทน */
+function segWords(s) {
+  let words;
+  try {
+    if (!_seg) _seg = new Intl.Segmenter("th", { granularity: "word" });
+    words = [..._seg.segment(s)].filter((x) => x.isWordLike).map((x) => x.segment);
+  } catch {
+    words = s.split(/[\s,.]+/);
+  }
+  return words.filter((w) => w.length >= 2 && !STOP.has(w));
+}
+
+/** คำนี้อยู่ในกองข้อความไหม · ยอมตัดหางคำได้บ้าง ("หน้าที่" -> "หน้า")
+ * ‼️ แต่ห้ามตัดจนสั้นกว่า 3 ตัวหรือสั้นกว่าครึ่งคำ ไม่งั้นคำมั่วที่พิมพ์ผิดแป้น
+ *    จะเหลือเศษ 2 ตัวที่บังเอิญโผล่ในคำไทยอื่นเสมอ แล้วหลุดมาเป็นผลค้นหา (วัดเจอจริง) */
+function hasWord(hay, w) {
+  const floor = Math.max(3, Math.ceil(w.length / 2));
+  for (let n = w.length; n >= floor; n--) if (hay.includes(w.slice(0, n))) return true;
+  return w.length < 3 ? hay.includes(w) : false;
+}
+
 /**
  * ให้คะแนนความเข้ากันของเครื่องมือกับคำค้น (สูง = ตรงกว่า) · 0 = ไม่ตรงเลย
  * ลำดับความสำคัญ: ชื่อขึ้นต้นตรง > ชื่อมีคำนี้ > คำสำคัญ/คำอธิบายมีคำนี้ > ข้ามตัวอักษรในชื่อ
@@ -81,6 +108,27 @@ export function scoreTool(t, rawQ) {
     if (s.length >= 3) {
       const sub = subseqScore(title, s);
       if (sub != null) bump(58 - (30 - sub));     // ยิ่งตัวอักษรอยู่ห่างกัน คะแนนยิ่งลด
+    }
+    // ‼️ ไทยไม่เว้นวรรคระหว่างคำ คนจึงพิมพ์เป็นวลีติดกันก้อนเดียว เช่น "ลบหน้าที่ไม่เอา"
+    //    ซึ่งไม่มีอยู่เป็นสตริงติดกันที่ไหนเลย ทั้งที่ทุกคำในวลีมีอยู่ครบในทะเบียน
+    //    ใช้ Intl.Segmenter ตัดคำไทย (มีติดมากับเบราว์เซอร์ ไม่ต้องลงคลังคำ) แล้วนับว่า
+    //    ตรงเมื่อ "คำเนื้อหา" ตรงตั้งแต่ครึ่งหนึ่งขึ้นไปและอย่างน้อย 2 คำ
+    //    ‼️ ต้องบังคับ 2 คำขึ้นไป ไม่งั้นคำมั่ว ๆ ที่บังเอิญตัดได้ 1 คำจะหลุดมาทันที
+    if (!sc) {
+      const toks = segWords(s);
+      if (toks.length >= 2) {
+        const hay = `${title} ${keys} ${desc} ${id}`;
+        let hitN = 0, longHit = false;
+        for (const w of toks) {
+          if (!hasWord(hay, w)) continue;
+          hitN++;
+          if (w.length >= 3) longHit = true;
+        }
+        // ‼️ ต้องมีคำยาว 3 ตัวขึ้นไปตรงอย่างน้อยหนึ่งคำ
+        //    คำไทย 2 ตัวอักษรไม่มีความหมายในตัวเอง มันโผล่แทรกในคำอื่นตลอด
+        //    ถ้านับแต่จำนวนคำ คำที่พิมพ์ผิดแป้นจะได้ 2 คำสั้น ๆ แล้วหลุดมาทันที
+        if (hitN >= 2 && longHit && hitN * 2 >= toks.length) bump(30 + Math.min(hitN, 4) * 3);
+      }
     }
     if (sc) best = Math.max(best, sc - penalty);
   }

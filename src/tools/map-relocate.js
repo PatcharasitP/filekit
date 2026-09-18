@@ -30,8 +30,7 @@ const STYLE = `
 .mr-chip b{color:var(--text);font-weight:700}
 .mr-chip.warn{border-color:var(--warn,#c98a00);color:var(--text);white-space:normal;line-height:1.5}
 
-.mr-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--text-mute)}
+.mr-group-title{margin:18px 0 8px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
 .mr-group-title:first-child{margin-top:0}
 .mr-hint{display:block;font-size:12px;color:var(--text-mute);line-height:1.6;margin:-2px 0 6px}
 .mr-num{width:100%;min-height:36px;padding:8px 11px;border:1px solid var(--line);
@@ -237,7 +236,7 @@ export function mount(tool) {
   const crowdNote = el("div", {});
   const mapBox = el("div", {}, [selBar, stage, legend, crowdNote,
     el("p", { class: "mr-help" }, tr(
-      "ชี้ที่จุดหรือเส้นเพื่อดูรายละเอียด, คลิกเพื่อเลือกคู่นั้นแล้วแผนที่จะซูมให้, คลิกที่ว่างเพื่อกลับมาดูทั้งประเทศ",
+      "ชี้เพื่อดูรายละเอียด คลิกเลือกคู่แล้วแผนที่จะซูมให้ คลิกที่ว่างเพื่อกลับมาดูทั้งประเทศ",
       "Hover a dot or a line for details, click to select that pair and zoom in, click empty space to go back to the whole country"))]);
   const tableBox = el("div", { class: "mr-scroll" });
   tableBox.hidden = true;
@@ -614,7 +613,7 @@ export function mount(tool) {
     crowdNote.innerHTML = "";
     const tips = [];
     if (lastMerged && lastMerged >= list.length * 0.9 && list.length > 20) {
-      tips.push(tr("ทุกคู่ใกล้กันเกินกว่าจะเห็นเส้นเชื่อมที่ระยะซูมนี้ ลองเลือกขอบเขตเป็นซูมพอดีกับข้อมูล หรือคลิกทีละคู่จากตาราง",
+      tips.push(tr("ทุกคู่ใกล้กันเกินกว่าจะเห็นเส้นที่ซูมนี้ ลองเลือกขอบเขตเป็นซูมพอดีข้อมูล หรือคลิกทีละคู่จากตาราง",
                    "Every pair is too close to show its line at this zoom. Switch the extent to zoom-to-data, or click one pair in the table"));
     }
     if (lastHiddenLabels > 30) {

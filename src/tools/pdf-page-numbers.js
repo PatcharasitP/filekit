@@ -13,6 +13,7 @@ import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 
 const THAI_DIGITS = "๐๑๒๓๔๕๖๗๘๙";
 const toThaiDigits = (s) => String(s).replace(/[0-9]/g, (d) => THAI_DIGITS[+d]);
@@ -97,6 +98,14 @@ export function mount(tool) {
   const meta = el("div", { class: "pn-meta" });
   const stage = el("div", { class: "pn-stage", hidden: true }, [mockPage, meta]);
 
+  async function onShare() {
+    const link = store.shareLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
+  }
+  const shareBtn = button(tr("คัดลอกลิงก์ค่านี้", "Copy link to these settings"), { ghost: true, onclick: onShare });
   const go = button(tr("ใส่เลขหน้า", "Add page numbers"), { onclick: run });
 
   const dz = dropzone({
@@ -119,15 +128,35 @@ export function mount(tool) {
             tr("หน้าก่อนหน้านี้จะไม่มีเลข เช่นข้ามปกกับสารบัญ", "Earlier pages get no number, for example a cover and contents")),
     ]) },
     center: { node: stage, empty: tr("เลือกไฟล์ PDF เพื่อดูตัวอย่างตำแหน่งเลขหน้า", "Choose a PDF to preview where the number lands") },
-    footer: [go, st.node],
+    footer: [go, shareBtn, st.node],
   });
+  /* ── จำค่าที่ตั้งไว้ และส่งต่อด้วยลิงก์ ───────────────────────────────
+     ค่าทั้ง 6 ไม่ผูกกับไฟล์เลย (ตำแหน่ง รูปแบบ ชนิดตัวเลข ขนาด เริ่มนับที่ เริ่มใส่จากหน้าที่)
+     ส่งลิงก์ให้เพื่อนแล้วได้รูปแบบเลขหน้าเหมือนกันเป๊ะ ใช้กับไฟล์ของเขาเองได้เลย */
+  const RULES = () => ({ pos: posSel.value, fmt: fmtSel.value, digit: digitSel.value,
+    size: sizeSel.value, start: startAt.value, first: firstPage.value });
+  const store = stateKit(tool.id, {
+    defaults: RULES(),
+    collect: RULES,
+    apply: (v) => {
+      if (v.pos !== undefined) posSel.value = v.pos;
+      if (v.fmt !== undefined) fmtSel.value = v.fmt;
+      if (v.digit !== undefined) digitSel.value = v.digit;
+      if (v.size !== undefined) sizeSel.value = v.size;
+      if (v.start !== undefined) startAt.value = v.start;
+      if (v.first !== undefined) firstPage.value = v.first;
+    },
+  });
+  store.restore();
+
   ws.wrap.appendChild(el("style", {}, STYLE));
   ws.wrap.appendChild(results);
 
   let file = null, pageCount = 0, encrypted = false;
 
-  for (const c of [posSel, fmtSel, digitSel, sizeSel]) c.onchange = drawPreview;
-  for (const c of [startAt, firstPage]) c.oninput = drawPreview;
+  const onTweak = () => { store.save(); drawPreview(); };
+  for (const c of [posSel, fmtSel, digitSel, sizeSel]) c.onchange = onTweak;
+  for (const c of [startAt, firstPage]) c.oninput = onTweak;
 
   async function onFile() {
     file = dz.files[0] || null;

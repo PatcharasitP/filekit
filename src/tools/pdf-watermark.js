@@ -3,6 +3,7 @@ import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, segmented, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
+import { stateKit, SHARE_MSG } from "../statekit.js";
 
 // วาดข้อความลายน้ำลง canvas โปร่งใสแล้วฝังเป็นภาพ PNG
 // ทำแบบนี้เพื่อให้ "ข้อความไทยใช้ได้ทันที"โดยไม่ต้องฝังฟอนต์เข้า PDF
@@ -235,10 +236,11 @@ export function mount(tool) {
 
   if (typeof ResizeObserver !== "undefined") new ResizeObserver(drawPreview).observe(paper);
   syncMode();          // ตั้งค่าเริ่มต้นให้ตรงโหมดตั้งแต่เปิดหน้า
-  [textInput, colorInput, opacity].forEach((n) => n.addEventListener("input", drawPreview));
+  [textInput, colorInput, opacity].forEach((n) => n.addEventListener("input", () => { store.save(); drawPreview(); }));
   opacity.addEventListener("input", () => { oLabel.textContent = tr(`ความเข้ม ${opacity.value}%`, `Opacity ${opacity.value}%`); });
-  posSel.addEventListener("change", drawPreview);
-  sizeSel.addEventListener("change", drawPreview);
+  posSel.addEventListener("change", () => { store.save(); drawPreview(); });
+  sizeSel.addEventListener("change", () => { store.save(); drawPreview(); });
+  modeSel.addEventListener("change", () => store.save());
 
   // ── แผงซ้าย: เลือกไฟล์ + รายการไฟล์ ───────────────────────────────────
   const dz = dropzone({
@@ -270,6 +272,38 @@ export function mount(tool) {
   }
 
   // ── แถบล่าง: ปุ่มสร้าง + สถานะ ─────────────────────────────────────────
+  /* ── จำค่าที่ตั้งไว้ และส่งต่อด้วยลิงก์ ───────────────────────────────
+     ‼️ ไม่เก็บรูปโลโก้ เป็นไฟล์ของผู้ใช้ ส่งลิงก์ไปคนอื่นก็ไม่มีรูปนั้น
+        และถ้ายัดรูปลงลิงก์ ลิงก์จะยาวจนส่งไม่ได้ */
+  const RULES = () => ({ mode: modeSel.value, text: textInput.value, pos: posSel.value,
+    color: colorInput.value, opacity: opacity.value, size: sizeSel.value });
+  const store = stateKit(tool.id, {
+    defaults: RULES(),
+    collect: RULES,
+    apply: (v) => {
+      if (v.mode !== undefined) modeSel.value = v.mode;
+      if (v.text !== undefined) textInput.value = v.text;
+      if (v.pos !== undefined) posSel.value = v.pos;
+      if (v.color !== undefined) colorInput.value = v.color;
+      if (v.size !== undefined) sizeSel.value = v.size;
+      if (v.opacity !== undefined) {
+        opacity.value = v.opacity;
+        oLabel.textContent = tr(`ความเข้ม ${v.opacity}%`, `Opacity ${v.opacity}%`);
+      }
+    },
+  });
+  store.restore();
+  syncMode();
+  drawPreview();
+
+  async function onShare() {
+    const link = store.shareLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+    } catch { st.err(SHARE_MSG.fail()); }
+  }
+  const shareBtn = button(tr("คัดลอกลิงก์ค่านี้", "Copy link to these settings"), { ghost: true, onclick: onShare });
   const go = button(tr("ใส่ลายน้ำ", "Add watermark"), { onclick: run });
   const st = statusBar();
 
@@ -279,7 +313,7 @@ export function mount(tool) {
     right: { title: tr("ตัวเลือกลายน้ำ", "Watermark options"), node: rightBox },
     toolbar: [el("div", { class: "wmp-toolbar-note" }, tr("พรีวิวจำลอง ไม่ใช่เนื้อหาไฟล์จริง",
                                                             "Simulated preview, not real content"))],
-    footer: [go, st.node],
+    footer: [go, shareBtn, st.node],
     note: tr("ลายน้ำเป็นภาพทับเนื้อหา ป้องกันการคัดลอกภาพหน้าจอไม่ได้ ใช้ระบุสถานะเอกสารเป็นหลัก",
       "The watermark is an overlay image. It does not stop screenshots, it just marks status"),
   });

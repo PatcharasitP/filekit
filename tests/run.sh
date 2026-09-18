@@ -12,7 +12,15 @@ set -u
 cd "$(dirname "$0")/.."
 PY="${PY:-../.venv/bin/python}"
 PORT=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
-python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+# ‼️ browser_perf ต้องวัดบนเซิร์ฟเวอร์ที่บีบอัดเหมือน GitHub Pages ไม่งั้นตัวเลขใหญ่เกินจริงเท่าตัว
+#    เดิมเปิด http.server ให้ทุกเทส คนจึงรัน `tests/run.sh browser_perf` แล้วได้ผลที่เชื่อไม่ได้เสมอ
+#    (เทสมี guard หยุดให้อยู่แล้ว แต่แก้ที่ต้นทางดีกว่าให้คนไปอ่านคำเตือนทุกครั้ง)
+if printf '%s\n' "$@" | grep -qx "browser_perf" || [ "${1:-}" = "all" ]; then
+  python3 tests/gzip_server.py "$PORT" >/dev/null 2>&1 &
+  echo "▶ ใช้ gzip_server (บีบอัดเหมือนเว็บจริง) เพราะมี browser_perf อยู่ในชุดที่รัน"
+else
+  python3 -m http.server "$PORT" --bind 127.0.0.1 >/dev/null 2>&1 &
+fi
 SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 for _ in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:$PORT/" && break; sleep 0.2; done

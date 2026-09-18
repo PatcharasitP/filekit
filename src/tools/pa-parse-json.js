@@ -41,8 +41,7 @@ const STYLE = `
 /* ‼️ คลาสสองชุดนี้ยืมชื่อมาจากเครื่องมือกราฟโดนัท แต่ CSS ของมันฝังอยู่ในโมดูลนั้น
    หน้านี้ไม่ได้โหลดโมดูลนั้น จึงต้องประกาศเองซ้ำ ไม่งั้นสวิตช์กลายเป็นช่องติ๊กเปล่า
    (เจอจริงตอนดูจอ 11/09/2026) กฎของโปรเจกต์คือสไตล์อยู่ในโมดูลตัวเอง ห้ามไปแก้ tool.css */
-.pbid-group-title{margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--text-mute)}
+.pbid-group-title{margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
 .pbid-switch-field{display:flex;align-items:center;justify-content:space-between;flex-direction:row;gap:10px}
 .pbid-switch{position:relative;display:inline-block;width:42px;height:24px;flex:none}
 .pbid-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%;z-index:1}

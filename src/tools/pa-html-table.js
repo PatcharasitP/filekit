@@ -53,7 +53,10 @@ const STYLE = `
 /* ‼️ นิ้วแตะต้องการ 36x36px (WCAG 2.5.8 / Apple HIG / Material) แต่ปุ่มไอคอนพวกนี้กว้าง 26px
    วัดบนจอ 390x844 จริงแล้วตกเกณฑ์ทุกใบ (tests/browser_mobile.py ข้อ ④)
    ขยายเฉพาะอุปกรณ์สัมผัส เมาส์บนจอใหญ่คงขนาดกระชับเหมือนเดิม */
-@media (pointer:coarse){ .pah-mini{width:36px;height:36px} }
+/* ‼️ ต้องมี flex:none ด้วย ไม่งั้นตั้ง 36px ไปก็ไม่ได้ 36px จริง
+   ปุ่มพวกนี้เป็น flex item ใน .pah-col-head ที่มีช่องพิมพ์ flex:1 อยู่ด้วย
+   พอที่ไม่พอ ปุ่มจึงถูกบีบเหลือ 33.3px ทั้งที่ CSS เขียน 36px ไว้แล้ว (วัดจริง 18/09/2026) */
+@media (pointer:coarse){ .pah-mini{width:36px;height:36px;flex:none} }
 .pah-mini.danger:hover:not(:disabled){border-color:var(--err);color:var(--err)}
 .pah-hint{font-size:12px;color:var(--text-mute);line-height:1.7;margin:6px 0 0}
 .pah-warn{border:1px solid var(--line);border-left:3px solid var(--g-powerbi,var(--brand));
@@ -68,8 +71,7 @@ ${PRESETS_CSS}
 /* ‼️ คลาสสองชุดนี้ยืมชื่อมาจากเครื่องมือกราฟโดนัท แต่ CSS ของมันฝังอยู่ในโมดูลนั้น
    หน้านี้ไม่ได้โหลดโมดูลนั้น จึงต้องประกาศเองซ้ำ ไม่งั้นสวิตช์กลายเป็นช่องติ๊กเปล่า
    (เจอจริงตอนดูจอ 11/09/2026) กฎของโปรเจกต์คือสไตล์อยู่ในโมดูลตัวเอง ห้ามไปแก้ tool.css */
-.pbid-group-title{margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--text-mute)}
+.pbid-group-title{margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
 .pbid-switch-field{display:flex;align-items:center;justify-content:space-between;flex-direction:row;gap:10px}
 .pbid-switch{position:relative;display:inline-block;width:42px;height:24px;flex:none}
 .pbid-switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%;z-index:1}

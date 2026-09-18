@@ -642,7 +642,7 @@ export function mount(tool) {
     // ‼️ บทเรียน 14/09/2026 ตำแหน่งเลื่อนเงียบ ต้องเตือนแรง ๆ ตรงนี้
     if (opt.nullMode === "drop" && cols.length > 1) {
       msgs.push(tr(
-        "ตั้งให้ทิ้งค่าว่างทั้งที่ต่อกันหลายคอลัมน์ ถ้าแถวไหนว่างแค่บางคอลัมน์ จำนวนค่าของแต่ละคอลัมน์จะไม่เท่ากัน อ่านคู่กันไม่ได้",
+        "ทิ้งค่าว่างทั้งที่ต่อหลายคอลัมน์ ถ้าแถวไหนว่างบางคอลัมน์ จำนวนค่าจะไม่เท่ากัน อ่านคู่กันไม่ได้",
         "Dropping blanks while joining several columns means a row that is blank in only one of them makes the counts differ, so they cannot be read side by side"
       ));
     }
@@ -651,13 +651,13 @@ export function mount(tool) {
     if (view === "sql") {
       if (!sort.column.trim()) {
         msgs.push(tr(
-          "ฝั่ง SQL ไม่มีลำดับแถวตามธรรมชาติ ยังไม่ได้เลือกคอลัมน์เรียง ระบบจึงเรียงตามคอลัมน์แรกที่ต่อ ลำดับจะไม่เหมือนที่ได้จาก Power Query และค่าว่างจะขึ้นก่อน",
+          "SQL ไม่มีลำดับแถวตามธรรมชาติ ยังไม่เลือกคอลัมน์เรียง จึงเรียงตามคอลัมน์แรก ลำดับต่างจาก Power Query",
           "SQL has no natural row order. With no sort column chosen it orders by the first joined column, so the order will differ from Power Query and blanks come first"
         ));
       }
       if (!opt.numberFormat.trim() && picked("sum").length) {
         msgs.push(tr(
-          "คอลัมน์ตัวเลขชนิดทศนิยมจะติด .00 มาด้วยในฝั่ง SQL ถ้าอยากได้เหมือน Power Query ให้ใส่รูปแบบตัวเลขเป็น 0 หรือ #,0",
+          "คอลัมน์ทศนิยมจะติด .00 มาในฝั่ง SQL อยากได้เหมือน Power Query ใส่รูปแบบตัวเลขเป็น 0 หรือ #,0",
           "Decimal columns keep their .00 on the SQL side. To match Power Query set the number format to 0 or #,0"
         ));
       }

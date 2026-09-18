@@ -140,6 +140,14 @@ if POISON:
 with sync_playwright() as p:
     b = p.chromium.launch()
 
+    # ‼️ เช็คการบีบอัด "ก่อน" วัดอะไรทั้งสิ้น (ย้ายมาจากท้าย 18/09/2026)
+    #    เดิมเช็คทีหลัง คนจึงเห็นบรรทัดแดง "FCP เกินงบ" ก่อนแล้วค่อยเจอคำอธิบาย
+    #    ซึ่งเป็นเลขที่เชื่อไม่ได้ตั้งแต่ต้น แล้วไปไล่หาของที่ช้าลงทั้งที่ไม่มีอะไรช้าลง
+    _c, _pg = throttled_context(b, MOBILE_VIEWPORT)
+    _pg.goto(BASE, wait_until="load")
+    assert_compressed(_pg)
+    _c.close()
+
     print(f"━━ ① FCP หน้าแรก (มือถือ 390×780, latency 150ms, 1.6Mbps/750Kbps, CPU 4x) — งบ ≤{FCP_BUDGET_MS}ms ━━")
     vals = []
     for i in range(FCP_ROUNDS):

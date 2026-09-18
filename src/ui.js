@@ -703,7 +703,10 @@ export function dropzone(opts = {}) {
                      `Choose files: ${expectLabel}, click or press Enter to pick, or drop files here`),
   }, [
     el("div", { class: "dz-ico", "aria-hidden": "true" }, [uiIcon("upload", "dz-svg")]),
-    el("div", { class: "dz-main" }, tr("ลากไฟล์มาวางที่นี่", "Drop your files here")),
+    el("div", { class: "dz-main" }, [
+      el("span", { class: "dz-drag" }, tr("ลากไฟล์มาวางที่นี่", "Drop your files here")),
+      el("span", { class: "dz-tap" }, tr("แตะเพื่อเลือกไฟล์", "Tap to choose files")),
+    ]),
     chooseBtn,
     // โผล่แทนทั้งกล่องตอนยุบแล้ว (CSS สลับให้) — ยังลากไฟล์ทับได้เหมือนเดิม
     el("span", { class: "dz-more" }, tr("+ เพิ่มไฟล์", "+ Add files")),
@@ -1132,6 +1135,11 @@ export function dropzone(opts = {}) {
     const scope = container.closest(".panel") || document;
     const zones = [...scope.querySelectorAll(".dz-wrap")];
     const ready = zones.length > 0 && zones.every((z) => z.classList.contains("has-files"));
+    /* ‼️ พอผู้ใช้มีไฟล์จริงแล้ว ตัวอย่าง "ลองแล้วได้แบบนี้" กลายเป็นตัวเลขสมมติที่ขัดกับของจริงตรงหน้า
+       ยุบทิ้งด้วยเหตุผลเดียวกับที่กล่องรับไฟล์ยุบตัวเอง (ดูคอมเมนต์ใน render())
+       ธงอยู่ที่กล่องนอกสุดของเครื่องมือ เพราะ .tool-head เป็นพี่น้องกับ .panel ไม่ใช่ลูก */
+    const shell = scope.parentElement;
+    if (shell) shell.classList.toggle("tool-working", zones.some((z) => z.classList.contains("has-files")));
     const btns = scope.querySelectorAll(".actions button.btn, .ws-footer button.btn");
     for (const b of btns) {
       if (b.classList.contains("ghost")) continue;   // ปุ่มช่วยอย่างรีเซ็ตหรือคัดลอก กดได้ตลอด

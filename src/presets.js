@@ -55,7 +55,7 @@ export function presetBar(presets, onApply) {
 
 export const PRESETS_CSS = `
 .ps-wrap{margin-bottom:16px}
-.ps-label{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+.ps-label{font-size:13px;font-weight:700;letter-spacing:.01em;
   color:var(--text-mute);margin-bottom:7px}
 .ps-chips{display:flex;flex-wrap:wrap;gap:6px}
 .ps-chip{border:1.5px solid var(--line);background:var(--bg-soft);color:var(--text);

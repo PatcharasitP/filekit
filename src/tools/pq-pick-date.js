@@ -46,8 +46,7 @@ const STYLE = `
 
 .pqp-hint{font-size:12px;color:var(--text-mute);line-height:1.7;margin:6px 0 0}
 .pqp-add{margin-top:6px}
-.pqp-sect{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--text-mute)}
+.pqp-sect{margin:18px 0 8px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
 .pqp-sect:first-child{margin-top:0}
 
 /* การ์ด 1 ใบ = การเลือก 1 ชั้น เพิ่มได้เรื่อย ๆ */
@@ -277,7 +276,7 @@ export function mount(tool) {
       tr("แปลงเป็นวันที่ให้ก่อน 1 บรรทัด", "Convert them to dates first"),
       convertFirst,
       (v) => { convertFirst = v; render(); },
-      tr("ตัวเลือกวันที่ไม่แปลงข้อความให้เอง ถ้าคอลัมน์ยังเป็นข้อความอยู่ต้องเปิดอันนี้ ไม่งั้นคิวรีจะฟ้องว่าไม่ใช่ชนิดวันที่",
+      tr("ตัวเลือกวันที่ไม่แปลงข้อความให้เอง คอลัมน์ที่ยังเป็นข้อความต้องเปิดอันนี้ ไม่งั้นคิวรีจะฟ้อง",
          "The picker never converts text itself. If your columns are still text you need this on, otherwise the query will complain that they are not dates")
     ));
   }
@@ -345,7 +344,7 @@ export function mount(tool) {
            "Left off, repeated dates count once. Turned on, the 2nd rank usually equals the 1st and the gap collapses to zero days")),
       switchField(tr("ใช้ค่าสำรองกับทุกชั้น ไม่ใช่แค่ชั้นแรก", "Use the fallback on every layer, not just the first"),
         opt.fallbackEveryRank, (v) => { opt.fallbackEveryRank = v; render(); },
-        tr("เปิดแล้วแถวที่ไม่มีวันที่เลยจะได้วันเดียวกันทุกชั้น ช่วงห่างจะกลายเป็น 0 วันทั้งที่ความจริงคือไม่มีข้อมูล",
+        tr("เปิดแล้วแถวที่ไม่มีวันที่จะได้วันเดียวกันทุกชั้น ช่วงห่างกลายเป็น 0 วันทั้งที่จริงคือไม่มีข้อมูล",
            "With this on, rows with no dates get the same day on every layer, so the gap reads as zero days when the truth is no data at all")),
       switchField(tr("ข้ามการตรวจว่าคอลัมน์เป็นวันที่จริง", "Skip checking that the columns really are dates"),
         opt.skipTypeCheck, (v) => { opt.skipTypeCheck = v; render(); },
@@ -523,7 +522,7 @@ export function mount(tool) {
 
     if (opt.fallbackEveryRank && layers.length > 1) {
       msgs.push(tr(
-        "เปิดให้ใช้ค่าสำรองทุกชั้น แถวที่ไม่มีวันที่เลยจะได้วันเดียวกันทุกชั้น เอาไปลบกันจะได้ 0 วันที่ไม่ใช่ความจริง",
+        "ใช้ค่าสำรองทุกชั้น แถวที่ไม่มีวันที่จะได้วันเดียวกัน เอาไปลบกันได้ 0 วันที่ไม่ใช่ความจริง",
         "With the fallback on every layer, rows without dates get the same day everywhere and subtracting them gives a zero that is not real"
       ));
     }

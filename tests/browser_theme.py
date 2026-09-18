@@ -76,7 +76,11 @@ with sync_playwright() as pw:
     print("\n② ปุ่มลงมือทำ")
     btns = pg.locator(".ts-actions button, .ts-foot button")
     disabled = [btns.nth(i).inner_text() for i in range(btns.count()) if btns.nth(i).is_disabled()]
-    ck("มีปุ่มคัดลอก สร้างไฟล์ และเริ่มใหม่", btns.count() == 3, btns.count())
+    # ‼️ 18/09/2026 เพิ่มปุ่ม "คัดลอกลิงก์ค่านี้" เป็นปุ่มที่ 4 (ต่อ statekit เข้ากับเครื่องมือนี้)
+    #    นับชื่อปุ่มแทนการนับจำนวนล้วน จะได้บอกได้ว่าปุ่มไหนหายไปเวลาแดง
+    names = [btns.nth(i).inner_text().strip() for i in range(btns.count())]
+    want = ["คัดลอก JSON", "คัดลอกลิงก์ค่านี้", "สร้างไฟล์ธีม", "เริ่มใหม่"]
+    ck("มีปุ่มคัดลอก JSON, คัดลอกลิงก์, สร้างไฟล์ และเริ่มใหม่", sorted(names), sorted(want))
     ck("ปุ่มทุกปุ่มกดได้ทันทีโดยไม่ต้องมีไฟล์ก่อน", not disabled, disabled)
 
     # ── ③ ไฟล์ธีม ─────────────────────────────────────────────────────

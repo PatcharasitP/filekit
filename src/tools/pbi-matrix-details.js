@@ -109,8 +109,7 @@ const STYLE = `
 .pmd-preview td.detail{white-space:pre-wrap;word-break:break-word;color:var(--text)}
 .pmd-steps{font-size:12.5px;color:var(--text);line-height:1.85;margin:0;padding-left:18px}
 .pmd-steps strong{color:var(--text)}
-.pmd-group-title{margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--text-mute)}
+.pmd-group-title{margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
 ` + CODE_TOKEN_CSS;
 
 /** ใส่เครื่องหมายคำพูดเดี่ยวรอบชื่อตารางเมื่อจำเป็น ตามกฎการอ้างชื่อของ DAX */
@@ -403,7 +402,7 @@ export function mount(tool) {
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
     footer: [copyBtn, dlBtn, st.node],
     note: tr(
-      "เอาไปใช้ยังไง: สร้าง measure ใหม่ใน Power BI วางสูตรนี้ลงไป แล้วลากไปไว้ช่อง Values ของ Matrix โดยคอลัมน์หัวแถวอยู่ช่อง Rows",
+      "สร้าง measure ใหม่ใน Power BI วางสูตรนี้ แล้วลากไปช่อง Values ของ Matrix ส่วนคอลัมน์หัวแถวอยู่ช่อง Rows",
       "How to use it: create a new measure in Power BI, paste this in, then drop it into the Values box of a matrix with your header column in Rows"
     ),
   });
@@ -578,7 +577,7 @@ export function mount(tool) {
     const risky = picked.filter((c) => RISKY.has(c.type));
     if (risky.length) {
       msgs.push(tr(
-        `${risky.length} ฟิลด์ไม่ใช่ข้อความ แปลงให้แล้ว ถ้าไม่แปลง ยอด 0 กับค่า FALSE จะหายเงียบ ๆ เพราะ DAX มองว่าเท่ากับช่องว่าง`,
+        `${risky.length} ฟิลด์ไม่ใช่ข้อความ แปลงให้แล้ว ไม่งั้นยอด 0 กับ FALSE จะหายเงียบ ๆ เพราะ DAX มองว่าว่าง`,
         `${risky.length} fields are not text, converted for you. Otherwise a zero or FALSE vanishes silently, DAX reads them as empty`));
     }
     warnEl.textContent = msgs.join("  ");
@@ -654,7 +653,7 @@ export function mount(tool) {
     }).length;
     if (dup && strategySel.value === "rows") {
       previewBox.appendChild(el("div", { class: "pmd-warn", style: "margin:10px" },
-        tr(`${dup} กลุ่มมีบรรทัดซ้ำกันหมด เพราะฟิลด์ที่เลือกอยู่ระดับหัวเอกสาร ลองใช้ SUMMARIZE หรือเลือกฟิลด์ระดับรายการ`,
+        tr(`${dup} กลุ่มมีบรรทัดซ้ำหมด เพราะฟิลด์ที่เลือกอยู่ระดับหัวเอกสาร ลองใช้ SUMMARIZE หรือฟิลด์ระดับรายการ`,
            `${dup} groups repeat the same line, because the picked fields sit at document level. Try SUMMARIZE, or pick line-level fields`)));
     }
     /* ‼️ วิธี "ค่าที่ไม่ซ้ำของแต่ละฟิลด์" ใช้ VALUES ซึ่งต้องมีค่าเดียวต่อกลุ่ม

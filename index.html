@@ -351,7 +351,7 @@ main{max-width:var(--page-w); margin:0 auto; padding:clamp(18px,3.4vw,34px) var(
 .hero-in{display:grid; grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr);
   gap:clamp(18px,3vw,38px); align-items:center}
 .kicker{display:inline-flex; align-items:center; gap:10px; margin-bottom:var(--sp4);
-  font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--text-mute)}
+  font-size:11px; font-weight:700; letter-spacing:.02em; color:var(--text-mute)}
 .kicker{margin-bottom:var(--sp3)}
 .kicker s{display:block; width:26px; height:1px; background:var(--line); text-decoration:none}
 .hero h1{
@@ -492,21 +492,7 @@ main{max-width:var(--page-w); margin:0 auto; padding:clamp(18px,3.4vw,34px) var(
   display:flex; flex-wrap:wrap; gap:var(--sp2);
   padding:var(--sp2) 2px var(--sp3); margin:0 -2px;
 }
-/* ── แถบเรียงลำดับ ───────────────────────────────────────────────────────
-   ใช้ <select> ตามแบบ thepexcel (12/09/2026) และเพราะเทสของเราจับได้ว่าปุ่มเรียงกัน
-   กิน Tab เกินเพดาน เตี้ยกว่าเกณฑ์นิ้วแตะ และ line-height ที่ต้องใช้ทำสระไทยล้น
-   ‼️ ชิดขวาสุดของแถบหมวด จะได้อ่านเป็นคนละเรื่องกับตัวกรอง */
-.sortbar{display:flex; align-items:center; gap:8px; flex:none;
-  margin-inline-start:auto; padding-inline-start:var(--sp3)}
-.sort-lb{font-size:12.5px; font-weight:700; color:var(--text-mute); white-space:nowrap; line-height:1.5}
-.sort-sel{font:inherit; font-size:12.5px; font-weight:700; line-height:1.5;
-  min-height:36px; padding:6px 10px; border-radius:999px;
-  color:var(--text); background:transparent; border:1px solid var(--line); cursor:pointer}
-.sort-sel:hover{border-color:var(--text-mute)}
-.sort-sel:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 @media (max-width:640px){
-  .sortbar{margin-inline-start:0; padding-inline-start:0; width:100%; padding-top:var(--sp2)}
-  .sort-sel{flex:1; min-width:0}
 }
 
 .cat{
@@ -532,9 +518,12 @@ main{max-width:var(--page-w); margin:0 auto; padding:clamp(18px,3.4vw,34px) var(
   background:linear-gradient(152deg,var(--stage),var(--stage-2));
   box-shadow:0 30px 60px -26px rgba(8,10,16,.45), inset 0 1px 0 0 rgba(255,255,255,.05);
 }
+/* ‼️ ถอด uppercase ออกให้ตรงกับที่อื่นทั้งเว็บ (ไทยไม่มีตัวพิมพ์ใหญ่ แต่พอสลับอังกฤษจะตะโกน)
+   และลดระยะล่างลง 10px เพราะเทส browser_findability วัดว่าเครื่องมือตัวแรก
+   อยู่ลึกเกินเพดาน 684px ไป 9px มานานแล้ว บรรทัดนี้เป็นบรรทัดสรุป ไม่ต้องเว้นห่างขนาดนั้น */
 .stage-h{display:flex;align-items:baseline;gap:10px;
-  font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--stage-dim);
-  margin-bottom:var(--sp5)}
+  font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--stage-dim);
+  margin-bottom:var(--sp4)}
 /* แถบหัวตอนลากไฟล์ลงหน้าแรก — บอกว่ากำลังดูเครื่องมือสำหรับไฟล์ไหนอยู่ */
 .drop-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   margin:0 0 var(--sp4);padding:10px 14px;border-radius:12px;
@@ -784,7 +773,7 @@ footer::before{content:""; position:absolute; inset-inline:0; top:0; height:1px;
 .sites a{display:inline-flex; align-items:baseline; gap:.28em; height:34px; padding:10px 20px; box-sizing:content-box;
   color:#fff; opacity:.62; text-decoration:none; font-size:15px; line-height:34px; letter-spacing:.01em; white-space:nowrap;
   border-radius:6px; transition:opacity var(--t-micro,.1s) ease}
-.sites a span{font-weight:400} .sites a b{font-weight:800}
+.sites a span{font-weight:400} .sites a b{font-weight:700}
 .sites a.self,.sites a:hover,.sites a:focus-visible{opacity:1}
 .sites a:focus-visible{outline:2px solid #fff; outline-offset:2px}
 /* ‼️ มือถือซ่อนทั้งแถบ เหมือนที่ sqlbi ทำจริง (วัดแล้ว display:none ที่ 390px) ลองให้ตกบรรทัดแล้วสูง 185px

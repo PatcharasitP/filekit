@@ -42,8 +42,7 @@ const STYLE = `
 .ms-pair .ms-num{flex:1;min-width:0}
 .ms-pair span{font-size:12.5px;color:var(--text-mute);flex:none}
 
-.ms-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
-  text-transform:uppercase;color:var(--text-mute)}
+.ms-group-title{margin:18px 0 8px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
 .ms-group-title:first-child{margin-top:0}
 .ms-switch-field{display:flex;align-items:center;justify-content:space-between;gap:10px;
   font-size:13px;color:var(--text);padding:5px 0;min-height:36px}
@@ -456,7 +455,7 @@ export function mount(tool) {
       st.ok(tr(`เจอ ${lastResults.length} ชุด ใช้เวลา ${ms} ms`, `Found ${pl(lastResults.length, "set", "sets")} in ${ms} ms`));
       banner.hidden = false;
       banner.innerHTML = tr(
-        `เจอ <b>${lastResults.length} ชุด</b> ที่รวมกันได้ตามเงื่อนไขนี้${exhaustedAll ? " และนี่คือทั้งหมดที่เป็นไปได้" : " และยังมีมากกว่านี้ ถ้าค้นต่อ"} <b>คำตอบจึงไม่ได้มีชุดเดียว</b> ก่อนตัดสินใจ ควรดูว่าชุดไหนสมเหตุสมผลกับงานจริง`,
+        `เจอ <b>${lastResults.length} ชุด</b> ที่รวมได้${exhaustedAll ? " ทั้งหมดเท่านี้" : " และมีอีก"} <b>ไม่ได้มีชุดเดียว</b> เลือกที่เข้ากับงานจริง`,
         `Found <b>${pl(lastResults.length, "set", "sets")}</b> that match${exhaustedAll ? ", and that is all of them" : ", and more exist if the search continues"}. <b>There is no single right answer</b>, so check which set makes sense for the real work.`);
     }
   }
@@ -661,26 +660,26 @@ export function mount(tool) {
     excelBox.append(
       el("div", { class: "ms-solverbox" }, [
         el("p", {}, tr(
-          "ไม่อยากตั้งเองทีละช่อง กดปุ่มนี้ได้เลย ไฟล์ที่ได้มีตัวเลข, ช่องเลือก, สูตร และการตั้งค่า Solver ฝังไว้ครบ เปิดใน Excel แล้วกด Data > Solver > Solve ได้ทันที",
+          "ไฟล์ที่ได้ฝังตัวเลข สูตร และค่า Solver ไว้ครบ เปิดใน Excel แล้วกด Data > Solver > Solve ได้เลย",
           "Rather not fill in every box? This file comes with the numbers, the pick column, the formula and the Solver setup already inside. Open it in Excel and press Data > Solver > Solve")),
         dlSolver,
         el("small", {}, n > SOLVER_MAX_VARS
-          ? tr(`ไฟล์ที่เปิดอยู่มี ${n.toLocaleString()} แถว ไฟล์ที่ได้จะใส่ให้ ${SOLVER_MAX_VARS} แถว โดยยกแถวที่เป็นคำตอบขึ้นมาก่อน เพราะ Solver รับตัวแปรได้เท่านี้`,
+          ? tr(`มี ${n.toLocaleString()} แถว ไฟล์ที่ได้ใส่ให้ ${SOLVER_MAX_VARS} แถว ยกแถวที่เป็นคำตอบขึ้นก่อน เพราะ Solver รับได้เท่านี้`,
                `The open file has ${pl(n.toLocaleString(), "row", "rows")}. The download carries ${SOLVER_MAX_VARS} of them, answer rows first, because that is Solver's limit`)
           : tr(`ไฟล์ที่ได้จะใส่ให้ครบทั้ง ${n.toLocaleString()} แถว`, `The download carries all ${pl(n.toLocaleString(), "row", "rows")}`)),
       ]),
       el("p", { class: "ms-empty-hint" }, tr(
-        "หรือถ้าอยากตั้งเองในไฟล์ของตัวเอง Solver อยู่ที่แถบ Data ขวาสุด (ไม่เห็นให้เปิดจาก File > Options > Add-ins > Solver Add-in) วิธีตั้งมีดังนี้",
+        "ตั้งเองในไฟล์ของคุณก็ได้ Solver อยู่ท้ายแถบ Data (ไม่เห็น เปิดที่ File > Options > Add-ins)",
         "Or to set it up yourself in your own file, Solver sits at the right end of the Data tab (missing? enable it in File > Options > Add-ins > Solver Add-in). Here is how")),
       el("ol", { class: "ms-steps" }, [
         el("li", { html: tr(
-          `วางตัวเลขไว้คอลัมน์ <code>${col}</code> แถว 2 ถึง ${last} แล้วเว้นคอลัมน์ <code>B</code> ไว้ว่าง ใส่ 0 ทุกแถว ช่องนี้คือ "เลือกหรือไม่เลือก"`,
+          `ตัวเลขอยู่คอลัมน์ <code>${col}</code> แถว 2 ถึง ${last} ส่วนคอลัมน์ <code>B</code> ใส่ 0 ทุกแถว คือช่อง "เลือกหรือไม่"`,
           `Put the numbers in column <code>${col}</code>, rows 2 to ${last}, and leave column <code>B</code> as 0 on every row. That column means "picked or not"`) }),
         el("li", { html: tr(
           `ช่อง <code>E1</code> ใส่สูตร <code>=SUMPRODUCT(${col}2:${col}${last},B2:B${last})</code> คือผลรวมเฉพาะแถวที่ถูกเลือก`,
           `In <code>E1</code> put <code>=SUMPRODUCT(${col}2:${col}${last},B2:B${last})</code>, the total of the picked rows only`) }),
         el("li", { html: tr(
-          `เปิด <b>Data &gt; Solver</b> ตั้ง Set Objective เป็น <code>$E$1</code>, เลือก <b>Value Of</b> แล้วใส่ <code>${targetTxt}</code>`,
+          `เปิด <b>Data &gt; Solver</b> ตั้ง Set Objective = <code>$E$1</code> แล้วเลือก <b>Value Of</b> ใส่ <code>${targetTxt}</code>`,
           `Open <b>Data &gt; Solver</b>, set the objective to <code>$E$1</code>, choose <b>Value Of</b> and type <code>${targetTxt}</code>`) }),
         el("li", { html: tr(
           `By Changing Variable Cells ใส่ <code>$B$2:$B$${last}</code>`,
@@ -692,7 +691,7 @@ export function mount(tool) {
           `เลือกวิธี <b>Simplex LP</b> แล้วกด Solve`,
           `Pick <b>Simplex LP</b> and press Solve`) }),
         el("li", { html: tr(
-          `อยากจำกัดจำนวนใบที่ใช้ ให้เพิ่มช่อง <code>E4</code> เป็น <code>=SUM(B2:B${last})</code> แล้ว Add ข้อจำกัด <code>$E$4 &lt;= 4</code>`,
+          `จำกัดจำนวนใบ ใส่ <code>E4</code> = <code>=SUM(B2:B${last})</code> แล้ว Add <code>$E$4 &lt;= 4</code>`,
           `To cap how many rows may be used, put <code>=SUM(B2:B${last})</code> in <code>E4</code> and add the constraint <code>$E$4 &lt;= 4</code>`) }),
       ]),
       el("h3", { class: "ms-group-title", style: "margin-top:20px" }, tr("ผลที่วัดเองจากเครื่องจริง", "Measured on a real machine")),
@@ -712,10 +711,10 @@ export function mount(tool) {
         ]),
       ]),
       el("p", { class: "ms-empty-hint" }, tr(
-        "อีกสองอย่างที่ Solver ทำให้ไม่ได้: มันคืนคำตอบเดียวแล้วจบ ไม่บอกว่ามีกี่ชุดที่รวมกันได้เท่ากัน และไม่ได้เลือกชุดที่ใช้รายการน้อยที่สุดให้ (ทดลองซ่อนคำตอบ 4 รายการไว้ Solver ตอบกลับมา 8 ถึง 12 รายการ)",
+        "Solver คืนคำตอบเดียวแล้วจบ ไม่บอกว่ามีกี่ชุด และไม่เลือกชุดที่ใช้รายการน้อยสุด (ซ่อนคำตอบ 4 รายการ Solver ตอบมา 8-12 รายการ)",
         "Two things Solver will not do: it returns one answer and stops, never saying how many other sets add up the same, and it does not prefer the shortest set (hiding a 4 row answer, it came back with 8 to 12 rows)")),
       el("p", { class: "ms-empty-hint" }, tooBig
-        ? tr(`ข้อมูลที่เปิดอยู่มี ${n.toLocaleString()} แถว เกินเพดาน 200 ตัวแปรของ Solver รุ่นที่ติดมากับ Excel จึงใส่ทั้งหมดไม่ได้ ถ้าจะใช้ Solver ต้องคัดให้เหลือไม่เกิน 200 แถวก่อน`,
+        ? tr(`มี ${n.toLocaleString()} แถว เกินเพดาน 200 ตัวแปรของ Solver ที่ติดมากับ Excel ต้องคัดให้เหลือไม่เกิน 200 แถวก่อน`,
              `The open file has ${pl(n.toLocaleString(), "row", "rows")}, past the 200 variable cap of the Solver bundled with Excel. You would have to narrow it to 200 rows first`)
         : tr("Solver เหมาะกับชุดเล็ก ๆ ไม่กี่สิบแถว พอเกินนั้นมันจะไล่ความเป็นไปได้ไม่ไหว",
              "Solver copes with a few dozen rows. Past that it cannot walk the possibilities fast enough")),

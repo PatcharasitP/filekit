@@ -46,17 +46,10 @@ const isNew = (t) => !!t.since && Date.now() - Date.parse(t.since) < NEW_DAYS * 
 /* ── วาดหน้าแรก ── */
 let activeCat = "";                     // "" = ทุกหมวด
 
-/* ── ตัวเรียงรายการเครื่องมือ ───────────────────────────────────────────────
- * แนวคิดจากการผ่าเว็บ thepexcel.com 12/09/2026 เขาแยก "ตัวเรียง" ออกจาก "ตัวกรอง"
- * ชัดเจน (ตัวกรองอยู่แถบข้าง ตัวเรียงเป็น dropdown เหนือรายการ) และมีถึง 9 แบบ
- * เพราะคลังเขา 511 รายการ ของเรา 41 ตัว จึงเอาแค่ 3 แบบที่ตอบคำถามคนละข้อกันจริง ๆ
- *   หมวด   = "มีอะไรให้ใช้บ้าง"     (ค่าตั้งต้น จัดกลุ่มให้เห็นภาพรวม)
- *   ใหม่   = "มีอะไรเพิ่มมาตั้งแต่ครั้งก่อน"
- *   ล่าสุด = "ตัวที่ฉันใช้ประจำอยู่ไหน"
- * ‼️ สองแบบหลังต้องวาดเป็นรายการเรียบ ไม่มีหัวหมวดคั่น ไม่งั้นลำดับที่เรียงมาถูกหัวหมวดหั่นทิ้ง */
-const SORTS = ["group", "new", "recent"];
-let sortBy = "group";
-try { const v = localStorage.getItem("fk:sort"); if (SORTS.includes(v)) sortBy = v; } catch { /* โหมดส่วนตัว */ }
+/* ‼️ เคยมีดรอปดาวน์ "เรียง" 3 แบบ (ตามหมวด / ใหม่ก่อน / เพิ่งใช้ก่อน) ถอดออก 18/09/2026
+   พี่ปอนด์ชี้แล้วสั่งเอาออก · ค่าตั้งต้นคือตามหมวดอยู่แล้ว และ "เพิ่งใช้ก่อน" ซ้ำกับ
+   แถว "เพิ่งใช้ล่าสุด" ที่ขึ้นให้เองอยู่แล้วด้านล่าง จึงเหลือการจัดกลุ่มตามหมวดอย่างเดียว
+   อย่าใส่กลับ ถ้าจะใส่ต้องมีหลักฐานว่าคนใช้จริง ไม่ใช่เพราะเว็บอื่นมี */
 function renderHome(q = "") {
   const found = searchTools(TOOLS, q);
   const stageH = $("#stageh");
@@ -84,14 +77,6 @@ function renderHome(q = "") {
          `${TOOLS.length} tools, all of them run on your device`);
 
   const box = el("div", { class: "pills" });
-  /* เรียงแบบอื่นที่ไม่ใช่ตามหมวด = รายการเรียบ ไม่มีหัวหมวดคั่น
-     ‼️ ถ้ายังใส่หัวหมวด ลำดับที่เพิ่งเรียงมาจะถูกหั่นเป็นก้อน ๆ จนอ่านลำดับไม่ออก */
-  const flat = sortedFlat(shown);
-  if (flat) {
-    flat.forEach((t) => box.appendChild(pillOf(t)));
-    grids.appendChild(box);
-    return;
-  }
   // แถวเพิ่งใช้ล่าสุดขึ้นก่อน เฉพาะตอนดูทั้งหมด — คนกลับมาเว็บนี้มักใช้ตัวเดิมซ้ำ
   if (!activeCat) {
     const recent = recentIds().map(byId).filter(Boolean);
@@ -265,57 +250,9 @@ function renderCats() {
     const n = TOOLS.filter((t) => t.group === g.id).length;
     if (n) cats.appendChild(mk(g.id, g.short || g.label, n, accentOf(g.id)));
   }
-  renderSort();
 }
 
-/** แถบเรียงลำดับ อยู่ท้ายแถบหมวด
- *
- * ‼️ ใช้ <select> ไม่ใช่ปุ่มเรียงกัน ด้วยเหตุผล 3 ข้อที่เทสของเราจับได้เองตอนลองทำเป็นปุ่ม
- *    ① ปุ่ม 3 ปุ่มกิน Tab 3 ที่ ทำให้หน้าแรกทะลุเพดาน 20 ที่ของ browser_a11y
- *    ② ปุ่มเตี้ยกว่า 36px บนจอ 390px ตกเกณฑ์นิ้วแตะของ browser_layout
- *    ③ line-height:1 ที่ใส่ให้ปุ่มเตี้ย ทำสระไทยล้นตามกฎ 1.3 ของโปรเจกต์
- *    และบังเอิญตรงกับของ thepexcel พอดี เขาก็ใช้ <select> เหมือนกัน (ของเขามีถึง 9 ตัวเลือก)
- *    เพราะตัวเรียงเป็น "เลือกหนึ่งจากหลายอย่าง" ซึ่งเป็นงานของ select อยู่แล้ว */
-function renderSort() {
-  const labels = {
-    group: tr("ตามหมวด", "By category"),
-    new: tr("ใหม่ก่อน", "Newest first"),
-    recent: tr("เพิ่งใช้ก่อน", "Recently used"),
-  };
-  /* ‼️ ยังไม่เคยเปิดเครื่องมือไหนเลย = ไม่มีลำดับ "เพิ่งใช้" ให้เรียง
-     ถ้าปล่อยให้เลือกได้ จะได้รายการเรียงตามชื่อ id ซึ่งไม่มีความหมาย
-     แต่ผู้ใช้จะนึกว่านั่นคือประวัติการใช้ของตัวเอง */
-  const noHistory = recentIds().length === 0;
-  const sel = el("select", { class: "sort-sel", "aria-label": tr("เรียงลำดับเครื่องมือ", "Sort tools") });
-  for (const id of SORTS) {
-    if (id === "recent" && noHistory) continue;
-    sel.appendChild(el("option", { value: id, selected: sortBy === id }, labels[id]));
-  }
-  sel.addEventListener("change", () => {
-    sortBy = sel.value;
-    try { localStorage.setItem("fk:sort", sortBy); } catch { /* โหมดส่วนตัว */ }
-    renderHome(search.value);
-  });
-  cats.appendChild(el("div", { class: "sortbar" }, [
-    el("span", { class: "sort-lb" }, tr("เรียง", "Sort")), sel,
-  ]));
-}
 
-/** เรียงรายการเครื่องมือตามที่เลือก คืน null ถ้าให้ใช้การจัดกลุ่มตามหมวดแบบเดิม */
-function sortedFlat(list) {
-  if (sortBy === "recent" && recentIds().length === 0) return null;   // จำค่าไว้แต่ประวัติถูกล้าง
-  if (sortBy === "new") {
-    /* ‼️ since เป็นสตริง YYYY-MM-DD เทียบตรง ๆ ได้ ไม่ต้องแปลงเป็นวันที่
-       ตัวที่ไม่มี since ให้ไปท้ายสุด ไม่ใช่ขึ้นต้น (ค่าว่างเทียบแล้วน้อยกว่าทุกอย่าง) */
-    return [...list].sort((a, b) => (b.since || "").localeCompare(a.since || "") || a.id.localeCompare(b.id));
-  }
-  if (sortBy === "recent") {
-    const order = recentIds();
-    const rank = (t) => { const i = order.indexOf(t.id); return i === -1 ? 1e9 : i; };
-    return [...list].sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id));
-  }
-  return null;
-}
 
 /* ── prefetch: เริ่มดึงโค้ดเครื่องมือ + ไลบรารี ตอนผู้ใช้ "เล็ง"การ์ด ────────
    ผู้ใช้ใช้เวลาจากชี้เมาส์ถึงคลิกราว 100-300 ms ซึ่งพอให้เริ่มโหลดไปก่อนได้ */

@@ -72,7 +72,7 @@ export const TOOLS = [
   { id:"pdf-ocr",     group:"pdf", icon:"🔍", title:"OCR อ่านข้อความจากสแกน",
     desc:"อ่านตัวอักษรไทย-อังกฤษจาก PDF สแกน ได้เป็นข้อความหรือ PDF ที่ค้นหาได้",
     accepts:["pdf","image"],
-    libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร recognize", next:["pdf-to-text","pdf-to-word"] },
+    libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร ตัวหนังสือ รูปภาพ ภาพถ่าย recognize", next:["pdf-to-text","pdf-to-word"] },
 
   { id:"pdf-to-images",group:"from-pdf", icon:"🖼", title:"PDF → รูปภาพ",
     desc:"แปลงทุกหน้าเป็น PNG หรือ JPG เลือกความละเอียดได้",

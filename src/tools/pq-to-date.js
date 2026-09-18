@@ -532,7 +532,7 @@ export function mount(tool) {
 
     if (pick === "auto" && o.detect === "all") {
       msgs.push(tr(
-        "เลือกกวาดคอลัมน์ข้อความทั้งหมด คอลัมน์ที่ไม่ใช่วันที่จะกลายเป็นค่าว่างทันที ควรใช้กับตารางที่รู้จักดีเท่านั้น",
+        "กวาดคอลัมน์ข้อความทั้งหมด คอลัมน์ที่ไม่ใช่วันที่จะกลายเป็นค่าว่าง ควรใช้กับตารางที่รู้จักดี",
         "Sweeping every text column turns non-date columns blank straight away, so only use it on a table you know well"
       ));
     }

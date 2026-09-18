@@ -9,7 +9,7 @@ import { tr, pl } from "../i18n.js";
 // จัดกลุ่มเป็นกล่อง (cluster) ตามไฟล์ผลลัพธ์ที่จะได้ แล้วคั่นด้วยรอยตัด (.sp-cut) ระหว่างกล่องไฟล์คนละใบ
 const STYLE = `
 .sp-left,.sp-right{display:flex;flex-direction:column;gap:10px}
-.sp-count{font-size:15px;font-weight:800;color:var(--text)}
+.sp-count{font-size:15px;font-weight:700;color:var(--text)}
 .sp-count.err{color:var(--err);font-size:13px;font-weight:600;line-height:1.6}
 .sp-sumlist{display:flex;flex-direction:column;gap:6px;margin-top:2px}
 .sp-sumrow{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 9px;
@@ -29,7 +29,7 @@ const STYLE = `
   background:color-mix(in srgb,var(--pc) 7%,var(--card))}
 .sp-cluster.excl{border:1.5px dashed var(--line);background:var(--bg-soft);opacity:.75}
 .sp-cluster-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.sp-cluster-label{font-size:12px;font-weight:800;color:var(--text)}
+.sp-cluster-label{font-size:12px;font-weight:700;color:var(--text)}
 .sp-cluster-label.muted{color:var(--text-mute)}
 .sp-cluster-range{font-size:11px;color:var(--text-mute);font-variant-numeric:tabular-nums}
 .sp-tiles{display:flex;flex-wrap:wrap;gap:4px}

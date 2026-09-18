@@ -52,8 +52,14 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 }
 /* เดิม h1 21px/700 จืดมากเทียบกับหัวข้อ 52px บนหน้าแรก — ไม่ต้องเท่าหน้าแรก (นี่คือหัวข้อ
    เครื่องมือย่อย ไม่ใช่ hero การตลาด) แต่ต้องมีน้ำหนักพอจะเป็น "หัวเรื่องของแผงมืด" ได้ */
-.tool-head h1{margin:0;color:var(--text);font-size:clamp(21px,2.6vw,27px);font-weight:800;line-height:1.32;letter-spacing:calc(1em * -0.02)}
+.tool-head h1{margin:0;color:var(--text);font-size:clamp(22px,2.7vw,28px);font-weight:700;line-height:1.32;letter-spacing:calc(1em * -0.02)}
 .tool-head p{margin:5px 0 0;color:var(--text-dim);font-size:13.5px;max-width:70ch}
+
+/* ‼️ หลังผู้ใช้ใส่ไฟล์ของตัวเองแล้ว แถวตัวอย่าง "ลองแล้วได้แบบนี้" หมดหน้าที่
+   มันเป็นตัวเลขสมมติที่ตอนนี้ขัดกับไฟล์จริงที่อยู่ข้างล่างแล้ว
+   วัดจริง 18/09/2026: หลังใส่ไฟล์ ส่วนอธิบายเครื่องมือกิน 402px ส่วนพื้นที่ทำงานจริงได้แค่ 238px
+   หลักการเดียวกับที่กล่องรับไฟล์ยุบตัวเองอยู่แล้ว (ดู .dz-wrap.has-files) */
+.tool-working .tex{display:none}
 
 .panel{
   background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);
@@ -102,7 +108,12 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 }
 .dz-ico .dz-svg{stroke:#fff}
 .dz:hover .dz-ico .dz-svg,.dz.over .dz-ico .dz-svg{stroke:#fff}
-.dz-main{font-weight:800;font-size:16px;margin-top:14px}
+.dz-main{font-weight:700;font-size:16px;margin-top:14px}
+/* ‼️ จอสัมผัสลากไฟล์ไม่ได้ ข้อความจึงต้องเป็น "แตะ" ไม่ใช่ "ลาก" (ถอดจาก tinypng.com 18/09/2026)
+   สลับด้วย CSS ไม่ใช่ JS เพราะโน้ตบุ๊กจอสัมผัสสลับโหมดได้ระหว่างใช้งาน
+   กล่องทั้งกล่องเป็น role=button อยู่แล้ว คำว่าแตะจึงตรงกับสิ่งที่ทำได้จริง */
+.dz-tap{display:none}
+@media (pointer:coarse){ .dz-drag{display:none} .dz-tap{display:inline} }
 .dz-hint{font-size:12.5px;color:var(--text-mute);margin-top:5px}
 .dz-safe{font-size:11.5px;color:var(--text-mute);margin-top:11px;opacity:.85}
 @media (prefers-reduced-motion: reduce){ .dz.over,.dz:hover,.next-card:hover,.chip:hover{transform:none;box-shadow:none} }
@@ -150,7 +161,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
    จะเด้งเต็มร้อยทันที @starting-style บอก browser ว่า "ค่าเริ่มต้นตอนเพิ่งเกิด" คืออะไร
    (caniuse 08/09/2026 = 91.92% · เบราว์เซอร์เก่ากว่านั้นแค่ไม่มี fade เฉย ๆ ไม่พัง) */
 @starting-style{ .dropveil.on{opacity:0} .dropveil.on .dropveil-in{transform:scale(.92)} }
-.dropveil-in{transition:transform .18s var(--ease-spring,cubic-bezier(.2,1.6,.4,1));padding:18px 28px;border-radius:999px;font-weight:800;font-size:16px;line-height:1.5;
+.dropveil-in{transition:transform .18s var(--ease-spring,cubic-bezier(.2,1.6,.4,1));padding:18px 28px;border-radius:999px;font-weight:700;font-size:16px;line-height:1.5;
   background:var(--btn-bg);color:var(--btn-fg);box-shadow:0 18px 40px -12px rgba(0,0,0,.5)}
 @media (prefers-reduced-motion: reduce){ .dropveil,.dropveil-in{transition:none} .dropveil .dropveil-in{transform:none} }
 
@@ -245,7 +256,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .field input[type=color]::-moz-color-swatch{border:none;border-radius:calc(var(--r-sm) - 4px)}
 
 .btn{
-  border:0;border-radius:999px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;
+  border:0;border-radius:999px;padding:12px 25px;font-size:15px;font-weight:700;cursor:pointer;
   background:var(--btn-bg);color:var(--btn-fg);
   box-shadow:0 6px 18px color-mix(in srgb,var(--brand) 35%,transparent);
   transition:transform var(--t-panel,.22s) var(--ease-spring,ease), filter var(--t-btn,.1s) var(--ease-snap,ease), box-shadow var(--t-panel,.22s) var(--ease-spring,ease);
@@ -258,6 +269,10 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .btn.ghost{
   background:var(--card);color:var(--text);border:1px solid var(--line);
   box-shadow:0 1px 2px rgba(0,0,0,.06), var(--ring-top);
+  /* ‼️ หักขอบ 1px ออกจากระยะในและลดตัวอักษรลงหนึ่งขั้น
+     ไม่งั้นปุ่มรองจะ "สูงกว่า" ปุ่มลงมือทำ 2px ทั้งที่ไม่ได้ตั้งใจ (วัดเจอ 14 เครื่องมือ 18/09/2026)
+     ปุ่มที่สำคัญกว่าต้องใหญ่กว่าเสมอ ไม่ใช่เล็กกว่า */
+  padding:11px 24px;font-size:14px;
 }
 /* เดิม ghost ใช้ background:var(--card) เหมือนพื้นแผงที่มันวางอยู่เสมอ (ws-head/.panel ก็ var(--card))
    ปุ่มเลยแทบล่องหน โดยเฉพาะธีมสว่างที่เส้นขอบ var(--line) จางมาก (เคยเจอกับปุ่ม "รีเซ็ตตำแหน่งเลื่อน") */
@@ -309,6 +324,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 
 /* ---- page thumbnails (จัดการหน้า PDF) ---- */
 .pages{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));margin-top:16px}
+.pages:has(.pg-page){align-items:start}
 .pg{
   position:relative;border:1.5px solid var(--line-soft);border-radius:var(--r-sm);overflow:hidden;
   background:var(--bg-soft);cursor:grab;transition:border-color .15s,opacity .15s;
@@ -330,9 +346,22 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .pages.is-dragging .pg:not(.dragging){ transition:transform .12s var(--ease-snap,ease) }
 .pg .num{position:absolute;top:5px;inset-inline-start:5px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;padding:1px 7px;border-radius:99px}
 .pg .tools{position:absolute;bottom:0;inset-inline:0;display:flex;gap:4px;justify-content:center;padding:5px;background:linear-gradient(transparent,rgba(0,0,0,.6))}
+/* หน้าว่างที่ผู้ใช้เพิ่มเอง — ไม่มีภาพย่อให้แสดง วาดเป็นกระดาษเปล่าพร้อมป้าย
+   ไม่งั้นการ์ดจะว่างเปล่าแล้วคนคิดว่าภาพโหลดไม่ขึ้น */
+/* หน้ากระดาษขนาดเดิม (ขาว) + กรอบเนื้อหาที่ครอบแล้วถูกขยายจัดกลางอยู่ข้างใน
+   ตรงกับไฟล์จริงที่ใช้ embedPage + drawPage แบบรักษาสัดส่วน */
+.pg-page{position:relative;width:100%;background:#fff;overflow:hidden}
+.pg-crop{position:absolute;overflow:hidden;background:#fff}
+.pg-crop img{position:absolute;display:block;max-width:none}
+.pg-blank{width:100%;background:#fff;border:1px dashed var(--line);border-radius:4px;
+  display:grid;place-items:center;color:var(--text-mute);font-size:12px;font-weight:600}
+/* ป้ายบอกว่าหน้านี้ถูกครอบขอบขาวไว้ — มุมบนขวา ไม่ชนเลขหน้าที่อยู่มุมบนซ้าย */
+.pg-cropped{position:absolute;top:6px;inset-inline-end:6px;z-index:2;
+  background:var(--ok,#1f8a50);color:#fff;border-radius:999px;
+  padding:1px 7px;font:700 10px/1.5 var(--font)}
 .pg .tools button{border:0;background:rgba(255,255,255,.9);color:#111;border-radius:6px;width:26px;height:24px;cursor:pointer;font-size:12px}
 /* บนมือถือกดด้วยนิ้ว ไม่ใช่เมาส์ — ขยายให้ถึงเกณฑ์ 36px (เดสก์ท็อปคงขนาดเดิม ไม่บังภาพหน้า) */
-@media (max-width:720px){ .pg .tools button{width:36px;height:36px} .pg .tools{gap:6px;padding:6px} }
+@media (max-width:720px){ .pg .tools button{width:36px;height:36px;flex:none} .pg .tools{gap:4px;padding:5px} }
 .pg .tools button:hover{background:#fff}
 
 /* ---- misc ---- */
@@ -588,7 +617,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .rail-ico{flex:none; width:28px; height:28px; display:grid; place-items:center;
   border-radius:8px; background:var(--ac,var(--brand)); color:#fff}
 .rail-ico svg{width:17px; height:17px}
-.rail-id b{font-size:14px; font-weight:800; line-height:1.45; color:var(--text)}
+.rail-id b{font-size:14px; font-weight:700; line-height:1.45; color:var(--text)}
 .rail-desc{margin:0 0 10px; font-size:12.5px; line-height:1.7; color:var(--text-dim)}
 .tool-rail .tool-meta{margin-top:0}
 .tool-rail .tm-chip{font-size:11px}
@@ -606,7 +635,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   border:1px solid color-mix(in srgb,var(--text) 22%,transparent); border-radius:var(--r-sm);
   background:color-mix(in srgb,var(--text) 7%,transparent);
   font-size:11.5px; line-height:1.6; color:var(--text-dim); white-space:nowrap}
-.tex-box b{font-size:12px; font-weight:800; color:var(--text)}
+.tex-box b{font-size:12px; font-weight:700; color:var(--text)}
 .tex-arw{color:var(--text-mute); font-size:13px; line-height:1}
 .tex-out{border-color:color-mix(in srgb,var(--ac,var(--brand)) 52%,transparent);
   border-inline-start:3px solid var(--ac,var(--brand))}
@@ -643,7 +672,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
    ทำให้หาหัวข้อเจอโดยไม่ต้องใช้ตัวอักษรใหญ่มาแย่งพื้นที่จากเนื้อหา
    ‼️ ธีมเราขาวดำ แถบจึงใช้สีประจำตระกูลของเครื่องมือ (--ac) แทนสีเน้นเดี่ยวแบบทองของเขา */
 .sec-h{position:relative; margin:28px 0 12px; padding-inline-start:13px;
-  font-size:18px; font-weight:800; line-height:1.45; color:var(--text)}
+  font-size:18px; font-weight:700; line-height:1.45; color:var(--text)}
 .sec-h::before{content:""; position:absolute; inset-block:3px; inset-inline-start:0;
   width:4px; border-radius:2px; background:var(--ac,var(--brand))}
 .sec-h > span{border-bottom:2px solid color-mix(in srgb,var(--ac,var(--brand)) 36%,transparent);
@@ -657,7 +686,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .faq-top::-webkit-details-marker{display:none}
 .faq-top::before{content:""; position:absolute; inset-block:6px; inset-inline-start:0;
   width:4px; border-radius:2px; background:var(--ac,var(--brand))}
-.faq-top-t{font-size:18px; font-weight:800; line-height:1.45; color:var(--text);
+.faq-top-t{font-size:18px; font-weight:700; line-height:1.45; color:var(--text);
   border-bottom:2px solid color-mix(in srgb,var(--ac,var(--brand)) 36%,transparent); padding-bottom:3px}
 .faq-top-n{font-size:12.5px; font-weight:700; color:var(--text-mute); line-height:1.5}
 .faq-top::after{content:"\002B"; margin-inline-start:auto; font-size:17px; font-weight:700;
@@ -801,7 +830,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
    แล้วหัวกลุ่มแค่ 700 ก็ชนะสบาย ๆ โดยไม่ต้องหนาขึ้นเลย
    ‼️ ไม่ซ่อนอะไร ไม่เปลี่ยนวิธีใช้ ทุกช่องยังอยู่ครบที่เดิม แค่ตาอ่านออกว่าเป็นกลุ่ม ๆ */
 .ws-right h3{
-  font-size:12px; font-weight:700; letter-spacing:.04em;
+  font-size:13px; font-weight:700; letter-spacing:.01em;
   color:var(--text); margin:0 0 4px;
 }
 /* ‼️ เส้นคั่นกับระยะเว้นต้องใส่ที่ "กล่องกลุ่ม" ไม่ใช่ที่ตัวหัวข้อ
@@ -841,7 +870,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   max-height:min(74vh,720px); overflow:hidden;
 }
 .ws-head{display:flex;align-items:center;gap:10px;padding:13px 15px 10px}
-.ws-head h2{margin:0;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-mute)}
+.ws-head h2{margin:0;font-size:14px;font-weight:700;letter-spacing:.01em;color:var(--text-dim)}
 .ws-head > :last-child:not(h2){margin-inline-start:auto}
 .ws-hint{margin:0 15px 8px;font-size:12px;color:var(--text-mute);line-height:1.6}
 .ws-scroll{overflow:auto;padding:0 15px 15px;display:flex;flex-direction:column;gap:9px}
@@ -863,6 +892,36 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid var(--line-soft);
 }
 .ws-toolbar .btn{padding:7px 14px;font-size:13px;min-height:34px}
+/* ‼️ แผงข้างกว้างแค่ 210-290px ปุ่มที่ออกแบบมาสำหรับแถบเต็มความกว้างจึงบวมเกินคำ
+   วัดจริง 18/09/2026: ปุ่ม "ใช้ช่วงนี้" กว้าง 100px ข้อความ 50px = ใหญ่กว่าคำ 2 เท่า
+   (พี่ปอนด์ทักเองว่า "มันใหญ่เกินคำอ่ะ") · หลักเดียวกับ .ws-toolbar ที่ทำไว้ก่อนแล้ว
+   ‼️ min-height 36px ห้ามลด เพดานนิ้วแตะของ browser_mobile ข้อ ④ ยังต้องผ่าน */
+.ws-left .btn,.ws-right .btn{padding:8px 15px;font-size:13.5px;min-height:36px}
+
+/* ── แผงตั้งค่าแบบแน่น เฉพาะจอกว้างที่ชี้ด้วยเมาส์ ───────────────────────────
+   วัดจริง 18/09/2026: แผงกราฟโดนัทมีเนื้อหา 2260px ในช่องมอง 654px = เลื่อน 3.5 เท่า
+   .field สูงเฉลี่ย 82-97px คูณ 19 ช่อง = สองในสามของแผงทั้งอัน
+   ‼️ เงื่อนไขต้องมีครบสองข้อ
+      (min-width:1001px) = จอที่แผงข้างเป็นคอลัมน์แคบจริง แคบกว่านี้แผงเต็มความกว้างอยู่แล้ว
+      (pointer:fine)     = ชี้ด้วยเมาส์ ไม่ใช่นิ้ว
+   นิ้วสัมผัสได้ขนาดเดิมทุกชิ้น เพดานนิ้วแตะ 36px จึงไม่ถูกแตะเลย
+   ‼️ ห้ามผูกกับ pointer อย่างเดียว เพราะ browser_layout เปิดจอ 390px โดยไม่จำลองนิ้ว
+      จะได้ขนาดเล็กไปด้วยแล้วเทศ tap target แดงทันที */
+@media (min-width:1001px) and (pointer:fine){
+  .ws-left .field,.ws-right .field{gap:3px}
+  .ws-left .field input,.ws-left .field select,.ws-left .field textarea,
+  .ws-right .field input,.ws-right .field select,.ws-right .field textarea{
+    min-height:32px; font-size:13.5px; padding:5px 10px;
+  }
+  .ws-left .row,.ws-right .row{margin-top:11px; row-gap:10px}
+  .ws-left .row + .row,.ws-right .row + .row{margin-top:10px}
+  .ws-left .btn,.ws-right .btn{padding:5px 12px;font-size:13px;min-height:30px}
+  .ws-left .field small,.ws-right .field small{font-size:11px;line-height:1.45}
+  /* ‼️ สองก้อนนี้เป็นช่องว่างลอย ไม่มีเส้นคั่นกลุ่ม แต่กว้างกว่าช่องคั่นกลุ่มจริง (28px)
+     ช่องค้นหา→ชิป 32px และ ชิป→กลุ่มแรก 44px · หดให้เท่าหรือน้อยกว่าช่องคั่นกลุ่ม */
+  .ws-right .cfs-wrap,.ws-left .cfs-wrap{margin-block-end:6px}
+  .ws-right .ps-wrap,.ws-left .ps-wrap{margin-bottom:8px}
+}
 .ws-toolbar .sep{width:1px;height:20px;background:var(--line);margin-inline:4px}
 .ws-stage-in{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 .ws-empty{margin:auto;text-align:center;color:var(--text-mute);font-size:13.5px;line-height:1.8;padding:28px 20px}
@@ -882,7 +941,10 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .ws-more{display:none}
 
 @media (max-width:1000px){
-  .ws-grid,.ws-grid.no-left,.ws-grid.no-right{grid-template-columns:1fr}
+  /* ‼️ ต้องเป็น minmax(0,1fr) ไม่ใช่ 1fr เปล่า เพราะ 1fr = minmax(auto,1fr)
+     ซึ่งห้ามช่องหดต่ำกว่าความกว้างเนื้อหา พอมีชื่อไฟล์ไทยยาว ๆ ในแผง
+     ช่องเลยดันกว้าง 453px บนจอ 390px แล้วหน้าเลื่อนซ้ายขวาได้ (วัดจริง 18/09/2026) */
+  .ws-grid,.ws-grid.no-left,.ws-grid.no-right{grid-template-columns:minmax(0,1fr)}
   .ws-panel,.ws-canvas{max-height:none}
   .ws-canvas{min-height:280px}
   /* แผงตัวเลือก (ขวา) ห้ามมีกรอบเลื่อนซ้อนบนมือถือ — ผู้ใช้จะไม่รู้ว่ามีของอยู่ข้างล่าง
@@ -941,7 +1003,31 @@ select,
     border-top:1px solid var(--line-soft);
   }
   .actions .btn{flex:1 1 auto; min-width:0}
+}
 
+/* ‼️ จอใหญ่ก็ต้องตรึงเหมือนกัน (แก้ 18/09/2026)
+   คอมเมนต์เดิมด้านบนเขียนว่า "จอใหญ่ปล่อยไว้ ปุ่มอยู่ในสายตาอยู่แล้ว"
+   วัดจริงแล้วไม่จริง: ใส่ 12 ไฟล์บนจอ 1440x950 ปุ่มไปอยู่ที่ y=1361 คือหลุดจอ ต้องเลื่อนหา
+   ข้อสมมติผิดเพราะทดสอบด้วยไฟล์ไม่กี่ไฟล์ · เงื่อนไข :has(.file-row) ยังกันเคส pdf-ocr เหมือนเดิม
+   ใช้ระยะในเท่ากับแผง (--sp4/--sp5 ตาม clamp ของ .panel) ไม่งั้นแถบจะเยื้องออกนอกขอบการ์ด */
+@media (min-width:721px){
+  .panel:has(.file-row) .actions{
+    position:sticky; bottom:0; z-index:6;
+    margin-inline:calc(clamp(var(--sp4),3vw,var(--sp5)) * -1);
+    margin-block-end:calc(var(--sp3) * -1);
+    padding:var(--sp3) clamp(var(--sp4),3vw,var(--sp5));
+    background:var(--card);
+    background:color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border-top:1px solid var(--line-soft);
+    border-end-start-radius:var(--r-lg); border-end-end-radius:var(--r-lg);
+  }
+}
+
+/* ‼️ ต่อจากนี้เป็นกฎของจอแคบล้วน ห้ามหลุดออกนอกบล็อกนี้
+   เคยหลุดมาแล้ว 18/09/2026 ตอนใส่กฎตรึงปุ่มจอใหญ่ สคริปต์กลืนปีกกาปิดไป
+   ผลคือปุ่มที่ควรยุบเฉพาะจอแคบ ถูกซ่อนบนเดสก์ท็อปด้วย */
+@media (max-width:720px){
   /* กล่องลากไฟล์เตี้ยลงตอนยังไม่มีไฟล์ — เดิมกินครึ่งจอแรก ดันพรีวิวลงไปที่ 707-761px
      บนจอสูง 844px แปลว่าแทบไม่เห็นพรีวิวเลยจนกว่าจะเลื่อน ทั้งที่พรีวิวคือสิ่งที่อยากเห็นที่สุด */
   .dz{padding:var(--sp5) var(--sp4)}
@@ -1086,7 +1172,7 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
    (บนมือถือคงเดิม เพราะที่นั่นมันทำหน้าที่เป็นหัวเรื่องของทั้งหน้าจริง ๆ) */
 @media (min-width:900px){
   .tool-head{ padding:20px 26px; margin-bottom:var(--sp4); }
-  .tool-head h1{ font-size:clamp(20px,2.1vw,24px); }
+  .tool-head h1{ font-size:clamp(21px,2.3vw,26px); }
 }
 
 /* ‼️ ปุ่มดาวน์โหลดในรายการผลลัพธ์เคยมีแต่ไอคอนใน 8 เครื่องมือ (ไม่มีข้อความเลย) ขณะที่
@@ -1196,3 +1282,6 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 #tool .gf-see{margin-top:0; border-bottom:0}
 #tool .gf-see > summary{padding-inline:16px}
 .faq-i:last-child{border-bottom:0}                                        /* ไม่ให้เส้นคู่กับเส้นบน "ทำอะไรต่อดี" */
+
+/* ปุ่มเลือกโหมดที่กำลังใช้อยู่ — เน้นด้วยเส้นขอบสีเครื่องมือ ไม่ใช่พื้นทึบ (ธีมสว่างอ่านง่ายกว่า) */
+.btn.ghost.on{border-color:var(--ac,var(--brand));color:var(--ac,var(--brand));font-weight:700}

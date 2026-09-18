@@ -27,7 +27,7 @@ export const TOOLS = [
   { id:"pdf-pages",   group:"pdf", icon:"📑", title:"จัดการหน้า PDF",
     desc:"หลายไฟล์มารวมกระดานเดียว เก็บ ลบ สลับลำดับ และหมุนหน้า",
     accepts:["pdf"],
-    libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์", next:["pdf-merge","pdf-compress"] },
+    libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์", next:["pdf-edit","pdf-merge","pdf-compress"] },
 
   { id:"pdf-edit",    group:"pdf", icon:"✏️", title:"แก้ไขข้อความบน PDF",
     desc:"ปิดทับข้อความเดิมแล้วพิมพ์ข้อความใหม่วางแทน ภาษาไทยได้",

@@ -91,6 +91,12 @@ def main():
         pg.wait_for_function("() => document.querySelectorAll('.pg').length > 0", timeout=60000)
         pg.wait_for_timeout(1200)
 
+        # ‼️ ชื่อ "จัดการหน้า PDF" กับ "แก้ไขข้อความบน PDF" ใกล้กันมาก
+        #    พี่ปอนด์เปิดหน้านี้แล้วถามว่า "ไหนถ้าพี่จะลบพวกข้อความ" ซึ่งอยู่คนละเครื่องมือ
+        #    ต้องมีทางเชื่อมที่เห็นตั้งแต่แรก ไม่ใช่รอให้ไปเจอตอนทำงานเสร็จ
+        edit_link = pg.query_selector("a[href='#/pdf-edit']")
+        ck(edit_link is not None, "มีทางเชื่อมไปเครื่องมือลบข้อความให้เห็นตั้งแต่แรก")
+
         cards = pg.query_selector_all(".pg")
         ck(len(cards) == 5, f"หน้าจากทั้งสองไฟล์มาครบ 5 ใบ (พบ {len(cards)})", f"พบ {len(cards)}")
 

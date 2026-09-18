@@ -61,8 +61,13 @@ const STYLE = `
   border-radius:50%;background:var(--brand);box-shadow:0 0 0 2px #fff}
 
 /* เวทีแก้ไข หน้ากระดาษกับชั้นวาดทับต้องซ้อนกันพอดีเป๊ะ ไม่งั้นตำแหน่งเพี้ยน */
-.pe-stage{position:relative;margin:auto;max-width:100%;line-height:0;
-  box-shadow:var(--sh2);border-radius:4px;overflow:hidden;background:#fff}
+/* ‼️ เวทีต้องสูงเท่าหน้ากระดาษเป๊ะ ห้ามถูกบีบ (เจอจริง 18/09/2026)
+   กล่องกลางเป็น flex column ที่มีเพดานความสูง เวทีจึงโดนหดจาก 954 เหลือ 631
+   แต่ภาพข้างในยังสูง 954 ตามเดิม ผลคือชั้นวาดทับซึ่งอิงขนาดเวที เตี้ยกว่าภาพ 34%
+   พิกัดที่คำนวณจากชั้นนั้นจึงเพี้ยนทั้งหมด ข้อความที่วางออกมาใหญ่กว่าที่เห็นบนจอ 53%
+   flex:none บอกว่าอย่าหด แล้วปล่อยให้กล่องกลางเลื่อนแทน */
+.pe-stage{position:relative;margin:0 auto;max-width:100%;line-height:0;flex:none;
+  box-shadow:var(--sh2);border-radius:4px;background:#fff}
 .pe-stage canvas{display:block;width:100%;height:auto}
 .pe-layer{position:absolute;inset:0;cursor:crosshair}
 .pe-layer.text-mode{cursor:text}
@@ -74,9 +79,15 @@ const STYLE = `
 .pe-box.cover::before{content:""; position:absolute; inset:0; background:var(--brand); opacity:.10}
 .pe-box.text{display:flex;align-items:center;white-space:pre;overflow:visible;
   font-family:"FK Sarabun","Sarabun","Noto Sans Thai",sans-serif;line-height:1.2}
+/* ‼️ ปุ่มเอาออกโผล่เฉพาะตอนชี้หรือโฟกัส (18/09/2026)
+   เดิมโผล่ตลอด พอวางของใกล้กันปุ่มจะซ้อนกันจนบังงานตัวเอง
+   บนจอสัมผัสที่ไม่มีการชี้ ให้โผล่ตลอดเหมือนเดิม ไม่งั้นกดลบไม่ได้เลย */
 .pe-box .rm{position:absolute;inset-block-start:-9px;inset-inline-end:-9px;width:18px;height:18px;
   border-radius:50%;border:0;background:var(--danger,#c0392b);color:#fff;font-size:11px;
-  line-height:18px;text-align:center;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  line-height:18px;text-align:center;cursor:pointer;padding:0;box-shadow:0 1px 3px rgba(0,0,0,.4);
+  opacity:0;transition:opacity .12s}
+.pe-box:hover .rm,.pe-box .rm:focus-visible{opacity:1}
+@media (hover:none){ .pe-box .rm{opacity:1} }
 .pe-hint{font-size:12.5px;line-height:1.6;color:var(--text-mute);padding:9px 12px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm,10px)}
 `;

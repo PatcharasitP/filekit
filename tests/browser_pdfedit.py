@@ -104,6 +104,19 @@ def main():
         ck(len(texts) == 1 and "มีนาคม" in texts[0],
            f"วางข้อความไทยบนหน้าได้ (ได้ {texts})", str(texts))
 
+        # ‼️ เวทีต้องสูงเท่าภาพหน้ากระดาษเป๊ะ ไม่งั้นพิกัดเพี้ยนทั้งหมด
+        #    เคยโดนกล่องกลางบีบจาก 954 เหลือ 631 แล้วข้อความที่วางออกมาใหญ่กว่าที่เห็น 53%
+        fit = pg.evaluate("""() => {
+          const st = document.querySelector('.pe-stage');
+          const cv = st.querySelector('canvas');
+          const ly = st.querySelector('.pe-layer');
+          const h = (n) => Math.round(n.getBoundingClientRect().height);
+          return {stage: h(st), canvas: h(cv), layer: h(ly)};
+        }""")
+        ck(abs(fit["stage"] - fit["canvas"]) <= 2 and abs(fit["layer"] - fit["canvas"]) <= 2,
+           f"เวทีและชั้นวาดสูงเท่าภาพหน้ากระดาษ (เวที {fit['stage']} ภาพ {fit['canvas']} ชั้น {fit['layer']})",
+           str(fit))
+
         # ── บันทึกแล้วตรวจไฟล์จริง
         if SELFTEST:
             # จำลองบั๊กลืมกลับแกนตั้ง กล่องจะไปโผล่คนละที่ เทสต้องจับได้

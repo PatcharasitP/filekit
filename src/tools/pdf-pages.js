@@ -24,6 +24,13 @@ const STYLE = `
 .pp-stats{font-size:12.5px;line-height:1.6;color:var(--text-mute);padding:9px 12px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm,10px)}
 .pp-stats b{color:var(--text);font-variant-numeric:tabular-nums}
+.pp-quick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}
+.pp-chip{border:1.5px solid var(--line);background:var(--bg-soft);color:var(--text);
+  border-radius:999px;padding:6px 13px;font:500 12.5px/1.4 var(--font);cursor:pointer;min-height:32px;
+  transition:border-color .12s var(--ease-snap,ease),background .12s var(--ease-snap,ease)}
+.pp-chip:hover:not(:disabled){border-color:color-mix(in srgb,var(--g-pdf,var(--brand)) 45%,var(--line))}
+.pp-chip:disabled{opacity:.45;cursor:default}
+.pp-quick-hint{display:block;color:var(--text-mute);font-size:11.5px;line-height:1.5;margin-bottom:6px}
 .pg.selected{outline:2px solid var(--ac,var(--brand));outline-offset:2px}
 /* แถบสีประจำไฟล์บนการ์ดหน้า กับป้ายตัวอักษรที่เป็นตัวบอกจริง */
 .pg{position:relative}
@@ -112,10 +119,45 @@ export function mount(tool) {
      แต่งานของเครื่องมือนี้คือ "ดูภาพแล้วลากสลับ" พื้นที่ภาพจึงสำคัญที่สุด
      วัดจริงแล้วแผงขวากินไป 340px ทำให้กริดเหลือ 708px ได้แค่ 3 คอลัมน์
      ย้ายมาต่อท้ายแผงซ้ายซึ่งยังมีที่ว่าง แล้วคืนพื้นที่ให้ภาพทั้งหมด */
+  /* ‼️ ชิปเลือกเร็ว แทนที่จะให้พิมพ์รูปแบบช่วงหน้าเอง (ถอดจาก openkrua 18/09/2026)
+     หน้าใช้งานจริงของเขาไม่ให้ผู้ใช้พิมพ์อะไรเลย ให้กดเลือกจากสิ่งที่เตรียมไว้
+     ของเราช่องนี้ต้องรู้ก่อนว่ารูปแบบ 1-3,5,8- แปลว่าอะไร ซึ่งต้องเรียนก่อนใช้
+     ชิปพวกนี้คือสิ่งที่คนทำบ่อยที่สุดจริง ๆ กดครั้งเดียวได้เลย ไม่ต้องคิด
+     ช่องพิมพ์ยังอยู่ครบสำหรับคนที่ต้องการช่วงเฉพาะเจาะจง */
+  const QUICK = [
+    { id: "odd",   label: () => tr("หน้าคี่", "Odd pages"),      pick: (n) => range(n).filter((i) => i % 2 === 1) },
+    { id: "even",  label: () => tr("หน้าคู่", "Even pages"),     pick: (n) => range(n).filter((i) => i % 2 === 0) },
+    { id: "first", label: () => tr("ครึ่งแรก", "First half"),    pick: (n) => range(n).slice(0, Math.ceil(n / 2)) },
+    { id: "last",  label: () => tr("ครึ่งหลัง", "Second half"),  pick: (n) => range(n).slice(Math.ceil(n / 2)) },
+    { id: "nocover", label: () => tr("ตัดหน้าปก", "Drop cover"), pick: (n) => range(n).slice(1) },
+  ];
+  const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
+
+  const quickWrap = el("div", { class: "pp-quick" }, QUICK.map((q) =>
+    el("button", {
+      class: "pp-chip", type: "button", disabled: true, "data-q": q.id,
+      onclick: () => applyQuick(q),
+    }, q.label())));
+
+  function applyQuick(q) {
+    if (!items.length) return;
+    const keep = new Set(q.pick(items.length));
+    items.forEach((it, i) => { it.dropped = !keep.has(i + 1); });
+    selected = null;
+    rangeInput.value = "";
+    render();
+    st.ok(tr(`เก็บ ${keep.size} หน้า ตามที่เลือก`, `Keeping ${pl(keep.size, "page", "pages")}`));
+  }
+
   leftNode.append(
-    field(tr("เก็บเฉพาะหน้า", "Keep only these pages"), rangeInput, tr("หน้านอกช่วงจะถูกทำเครื่องหมายลบอัตโนมัติ",
-      "Pages outside the range are marked for removal automatically")),
-    rangeBtn,
+    el("div", {}, [
+      el("h3", {}, tr("อยากเก็บหน้าไหนไว้บ้าง", "Which pages do you want to keep")),
+      quickWrap,
+      el("small", { class: "pp-quick-hint" },
+        tr("กดเลือกได้เลย หรือพิมพ์ช่วงหน้าเองด้านล่าง", "Tap one, or type a page range below")),
+      field("", rangeInput, ""),
+      rangeBtn,
+    ]),
     sortGroup,
   );
 
@@ -158,6 +200,7 @@ export function mount(tool) {
   function setLoaded(on) {
     rangeInput.disabled = !on;
     rangeBtn.disabled = !on;
+    quickWrap.querySelectorAll(".pp-chip").forEach((b) => { b.disabled = !on; });
     saveBtn.disabled = !on;
     resetBtn.disabled = !on;
     // ปุ่มเรียงมีความหมายเฉพาะตอนมีมากกว่าหนึ่งไฟล์

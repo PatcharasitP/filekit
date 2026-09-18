@@ -1004,9 +1004,13 @@ export function dropzone(opts = {}) {
       //    จึงต้องมีปุ่มขึ้น-ลงคู่กันเสมอ ไม่ใช่ทางเลือกเสริม
       const move = (d) => { const j = i + d; if (j < 0 || j >= files.length) return;
         [files[i], files[j]] = [files[j], files[i]]; render(); onChange(files); };
-      const row = el("div", { class: "file-row", draggable: reorder || null, "data-i": i,
+      /* ‼️ มีไฟล์เดียวก็ไม่มีอะไรให้สลับ (เจอจริง 18/09/2026)
+         ปุ่มขึ้นลงกับที่จับลากยังโผล่อยู่ทั้งที่กดแล้วไม่เกิดอะไร
+         และมันเบียดแถวจนขนาดไฟล์ตกบรรทัดเป็น "4.5" กับ "KB" คนละบรรทัด */
+      const canReorder = reorder && files.length > 1;
+      const row = el("div", { class: "file-row", draggable: canReorder || null, "data-i": i,
         "data-state": states.get(f) || "pending" }, [
-        reorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
+        canReorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
         thumbs ? thumbBox(f) : null,
         openable(f) ? el("button", { class: "f-meta f-open", type: "button",
             title: tr("กดเพื่อดูข้อมูลในไฟล์", "Click to see what's inside"),
@@ -1027,9 +1031,9 @@ export function dropzone(opts = {}) {
           ]),
         ]),
         stateBadge(states.get(f)),
-        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
+        canReorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
           title: tr("เลื่อนขึ้น", "Move up"), disabled: i === 0 || null, onclick: () => move(-1) }, "↑") : null,
-        reorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
+        canReorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
           title: tr("เลื่อนลง", "Move down"), disabled: i === files.length - 1 || null, onclick: () => move(1) }, "↓") : null,
         el("button", { class: "icon-btn danger", type: "button", title: tr("เอาออก", "Remove"),
           "aria-label": tr(`เอา ${f.name} ออก`, `Remove ${f.name}`), onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),

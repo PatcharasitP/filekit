@@ -97,6 +97,18 @@ def main():
         edit_link = pg.query_selector("a[href='#/pdf-edit']")
         ck(edit_link is not None, "มีทางเชื่อมไปเครื่องมือลบข้อความให้เห็นตั้งแต่แรก")
 
+        # ‼️ ชิปเลือกเร็ว ถอดแนวคิดจาก openkrua ที่หน้าใช้งานจริงไม่ให้ผู้ใช้พิมพ์อะไรเลย
+        #    ของเราเดิมต้องรู้ก่อนว่ารูปแบบ 1-3,5,8- แปลว่าอะไร ซึ่งต้องเรียนก่อนใช้
+        chips = pg.eval_on_selector_all(".pp-chip", "ns=>ns.map(n=>n.textContent.trim())")
+        ck(len(chips) >= 4, f"มีชิปเลือกเร็วให้กดโดยไม่ต้องพิมพ์ ({chips})", str(chips))
+        pg.click(".pp-chip:has-text('หน้าคี่')")
+        pg.wait_for_timeout(400)
+        left = pg.eval_on_selector_all(
+            ".pg", "ns=>ns.map((n,i)=>n.classList.contains('dropped')?null:i+1).filter(Boolean)")
+        ck(left == [1, 3, 5], f"กดหน้าคี่แล้วเหลือหน้า 1 3 5 จริง (ได้ {left})", str(left))
+        pg.click("button:has-text('รีเซ็ตทั้งหมด')")
+        pg.wait_for_timeout(1500)
+
         cards = pg.query_selector_all(".pg")
         ck(len(cards) == 5, f"หน้าจากทั้งสองไฟล์มาครบ 5 ใบ (พบ {len(cards)})", f"พบ {len(cards)}")
 

@@ -20,6 +20,10 @@ import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
 
 const VIEW_SCALE = 1.6;    // ความละเอียดที่เรนเดอร์หน้ามาให้ดู ยิ่งสูงยิ่งวางตำแหน่งแม่น
+/* ‼️ ต้องซูมได้ เพราะข้อความในสัญญาจริงตัวเล็กมาก (พี่ปอนด์ขอเอง 18/09/2026)
+   ถ้าเห็นหน้าเต็มพอดีจอ ตัวอักษรจะสูงไม่ถึงสิบพิกเซล ลากคลุมให้พอดีคำแทบเป็นไปไม่ได้
+   ระดับซูมคูณกับความกว้างที่แสดง ส่วนกล่องที่วางไว้เก็บเป็นสัดส่วนอยู่แล้วจึงตามไปเอง */
+const ZOOMS = [0.75, 1, 1.5, 2, 3];
 const PNG_SCALE = 4;       // ความละเอียดของข้อความที่ฝังลงไฟล์ ต้องสูงกว่าจอไม่งั้นเบลอ
 
 /* วาดข้อความลง canvas แล้วคืนเป็น PNG พร้อมขนาดจริงเป็นหน่วยของ PDF
@@ -66,12 +70,27 @@ const STYLE = `
    แต่ภาพข้างในยังสูง 954 ตามเดิม ผลคือชั้นวาดทับซึ่งอิงขนาดเวที เตี้ยกว่าภาพ 34%
    พิกัดที่คำนวณจากชั้นนั้นจึงเพี้ยนทั้งหมด ข้อความที่วางออกมาใหญ่กว่าที่เห็นบนจอ 53%
    flex:none บอกว่าอย่าหด แล้วปล่อยให้กล่องกลางเลื่อนแทน */
-.pe-stage{position:relative;margin:0 auto;max-width:100%;line-height:0;flex:none;
+/* ‼️ ห้ามใส่ max-width:100% ที่เวที (เจอจริง 18/09/2026)
+   เคยใส่ไว้ ผลคือกดซูมแล้วป้ายเปลี่ยนเป็น 200% แต่ภาพไม่ขยายสักนิด
+   เพราะโดนเพดานความกว้างของกล่องแม่กดไว้ ซึ่งดูเผิน ๆ เหมือนปุ่มซูมเสีย
+   ให้เวทีกว้างได้ตามที่สั่ง แล้วให้กล่องแม่เลื่อนแนวนอนแทน */
+.pe-stage{position:relative;margin:0 auto;line-height:0;flex:none;
   box-shadow:var(--sh2);border-radius:4px;background:#fff}
+/* ‼️ ต้อง align-items:start ไม่งั้นเวทีโดนยืดให้สูงเท่ากล่องเลื่อน
+   ซึ่งเตี้ยกว่าหน้ากระดาษจริง แล้วชั้นวาดทับก็เตี้ยตาม พิกัดเพี้ยนเหมือนเดิมอีกรอบ
+   เป็นกับดักเดียวกับที่เจอตอนแก้ flex:none ครั้งแรก แค่ย้ายมาอยู่ที่กล่องใหม่ */
+.pe-scroll{overflow:auto;padding:10px;display:flex;justify-content:center;align-items:flex-start}
 .pe-stage canvas{display:block;width:100%;height:auto}
 .pe-layer{position:absolute;inset:0;cursor:crosshair}
 .pe-layer.text-mode{cursor:text}
-.pe-box{position:absolute;box-sizing:border-box}
+.pe-box{position:absolute;box-sizing:border-box;cursor:move;touch-action:none}
+.pe-box.moving{opacity:.75}
+/* มือจับมุมล่างขวา สำหรับปรับขนาดกล่องปิดทับ */
+.pe-grip{position:absolute;inset-block-end:-6px;inset-inline-end:-6px;width:13px;height:13px;
+  border-radius:3px;background:var(--brand);border:2px solid var(--bg);cursor:nwse-resize;
+  opacity:0;transition:opacity .12s}
+.pe-box:hover .pe-grip{opacity:1}
+@media (hover:none){ .pe-grip{opacity:1} }
 /* ‼️ กล่องปิดทับมักเป็นสีขาวเพื่อกลืนกับกระดาษ ซึ่งแปลว่าบนจอก็มองไม่เห็นเหมือนกัน
    ผู้ใช้จึงไม่รู้ว่าปิดไปตรงไหนบ้างและปิดครบหรือยัง
    จึงตีกรอบให้เห็นบนจอ แต่กรอบนี้อยู่แค่บนจอ ไม่ได้ติดลงไฟล์จริง */
@@ -88,6 +107,8 @@ const STYLE = `
   opacity:0;transition:opacity .12s}
 .pe-box:hover .rm,.pe-box .rm:focus-visible{opacity:1}
 @media (hover:none){ .pe-box .rm{opacity:1} }
+.pe-zoom{font-size:12.5px;font-weight:700;min-width:46px;text-align:center;
+  color:var(--text-mute);font-variant-numeric:tabular-nums}
 .pe-hint{font-size:12.5px;line-height:1.6;color:var(--text-mute);padding:9px 12px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm,10px)}
 `;
@@ -101,6 +122,7 @@ export function mount(tool) {
   const viewCanvas = el("canvas", {});
   const layer = el("div", { class: "pe-layer" });
   stage.append(viewCanvas, layer);
+  const scroller = el("div", { class: "pe-scroll" }, [stage]);
 
   let file = null;
   let pdf = null;            // เอกสารที่เปิดค้างไว้ ใช้เรนเดอร์หน้าที่เลือก
@@ -109,6 +131,8 @@ export function mount(tool) {
   let pageSize = null;       // ขนาดจริงของหน้าเป็นหน่วย PDF
   let edits = [];            // {page, kind:'cover'|'text', x,y,w,h, text,size,color,weight}
   let thumbData = [];
+  let zoom = 1;            // ระดับซูมปัจจุบัน ดูค่าที่ใช้ได้ที่ ZOOMS
+  let fitWidth = 0;        // ความกว้างที่ทำให้หน้าพอดีกล่องกลาง ใช้เป็นฐานของซูม 1 เท่า
 
   // ── เครื่องมือและค่าตั้ง ────────────────────────────────────────────────
   const modeSeg = segmentedModes();
@@ -154,6 +178,33 @@ export function mount(tool) {
     },
   });
 
+  const zoomOutBtn = button("−", { ghost: true, label: tr("ซูมออก", "Zoom out"), onclick: () => stepZoom(-1) });
+  const zoomLabel = el("span", { class: "pe-zoom" }, "100%");
+  const zoomInBtn = button("+", { ghost: true, label: tr("ซูมเข้า", "Zoom in"), onclick: () => stepZoom(1) });
+  const fitBtn = button(tr("พอดีหน้า", "Fit"), { ghost: true, onclick: () => setZoom(1) });
+
+  function stepZoom(dir) {
+    const i = ZOOMS.indexOf(zoom);
+    const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (i < 0 ? 1 : i) + dir))];
+    setZoom(next);
+  }
+  function setZoom(z) {
+    zoom = z;
+    applyZoom();
+    st.ok(tr(`ซูม ${Math.round(z * 100)}%`, `Zoom ${Math.round(z * 100)}%`));
+  }
+  /* ‼️ ซูมต้องเปลี่ยนแค่ "ความกว้างที่แสดง" ไม่ใช่เรนเดอร์ภาพใหม่
+     เรนเดอร์ใหม่ทุกครั้งที่กดซูมจะหน่วงเป็นวินาทีกับไฟล์ที่มีรูปเยอะ
+     ภาพที่เรนเดอร์ไว้ละเอียดกว่าจออยู่แล้ว ขยายด้วย CSS จึงยังคมพอ */
+  function applyZoom() {
+    if (!fitWidth) return;
+    stage.style.width = `${Math.round(fitWidth * zoom)}px`;
+    zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+    zoomOutBtn.disabled = zoom <= ZOOMS[0];
+    zoomInBtn.disabled = zoom >= ZOOMS[ZOOMS.length - 1];
+    drawOverlay();
+  }
+
   const undoBtn = button(tr("ย้อนล่าสุด", "Undo last"), { icon: "undo", ghost: true, onclick: undoLast });
   const clearBtn = button(tr("ล้างหน้านี้", "Clear page"), { icon: "trash", ghost: true, onclick: clearPage });
   const saveBtn = button(tr("บันทึก", "Save"), { onclick: save });
@@ -187,9 +238,9 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ PDF", "PDF file"), node: leftNode },
-    center: { node: stage, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อเริ่มแก้ไข", "No file yet. Choose a PDF to start") },
+    center: { node: scroller, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อเริ่มแก้ไข", "No file yet. Choose a PDF to start") },
     right: { title: tr("ตัวเลือก", "Options"), node: rightNode },
-    toolbar: [undoBtn, clearBtn],
+    toolbar: [zoomOutBtn, zoomLabel, zoomInBtn, fitBtn, el("div", { class: "sep" }), undoBtn, clearBtn],
     footer: [st.node, saveBtn],
   });
   ws.wrap.prepend(el("style", {}, STYLE));
@@ -285,7 +336,11 @@ export function mount(tool) {
     pageSize = { w: base.width, h: base.height };
     page.cleanup();
     stage.hidden = false;
-    stage.style.width = `${Math.min(vp.width, 900)}px`;
+    /* ‼️ ฐานของซูมคือ "กว้างเท่ากล่องกลาง" ไม่ใช่เลขตายตัว
+       เดิมตรึงไว้ที่ 900px ซึ่งบนจอแคบก็ล้น บนจอกว้างก็ไม่ได้ใช้ที่ที่มี */
+    const room = (scroller.clientWidth || 700) - 26;
+    fitWidth = Math.max(240, Math.min(vp.width, room));
+    applyZoom();
     renderThumbs();
     drawOverlay();
   }
@@ -309,15 +364,65 @@ export function mount(tool) {
         },
       }, [
         e.kind === "text" ? e.text : null,
+        e.kind === "cover" ? el("div", { class: "pe-grip", title: tr("ลากเพื่อปรับขนาด", "Drag to resize") }) : null,
         el("button", {
           class: "rm", type: "button", title: tr("เอาออก", "Remove"),
           "aria-label": tr("เอาการแก้นี้ออก", "Remove this edit"),
           onclick: (ev) => { ev.stopPropagation(); edits = edits.filter((x) => x !== e); drawOverlay(); syncButtons(); renderThumbs(); },
         }, "✕"),
       ]);
+      bindMove(box, e);
       layer.appendChild(box);
     });
     syncButtons();
+  }
+
+  /* ลากย้ายของที่วางไปแล้ว และลากมุมเพื่อปรับขนาดกล่องปิดทับ
+     ‼️ เดิมวางแล้วแก้ไม่ได้เลย ต้องลบทิ้งแล้วทำใหม่ ซึ่งกับงานจริงที่ต้องขยับทีละนิด
+        ให้พอดีคำ คือทรมานมาก
+     ‼️ ต้องหยุดไม่ให้เหตุการณ์ไหลไปถึงชั้นวาด ไม่งั้นการลากย้ายจะกลายเป็นสร้างกล่องใหม่ทับ */
+  function bindMove(node, e) {
+    let mode0 = null, from = null, orig = null;
+    const rel = (ev) => {
+      const r = layer.getBoundingClientRect();
+      return { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height };
+    };
+    node.addEventListener("pointerdown", (ev) => {
+      if (ev.target.closest(".rm")) return;
+      ev.stopPropagation();
+      ev.preventDefault();
+      mode0 = ev.target.closest(".pe-grip") ? "resize" : "move";
+      from = rel(ev);
+      orig = { x: e.x, y: e.y, w: e.w, h: e.h };
+      node.classList.add("moving");
+      node.setPointerCapture(ev.pointerId);
+    });
+    node.addEventListener("pointermove", (ev) => {
+      if (!mode0) return;
+      const p = rel(ev);
+      const dx = p.x - from.x, dy = p.y - from.y;
+      if (mode0 === "move") {
+        e.x = Math.max(0, Math.min(1, orig.x + dx));
+        e.y = Math.max(0, Math.min(1, orig.y + dy));
+      } else {
+        e.w = Math.max(0.004, orig.w + dx);
+        e.h = Math.max(0.004, orig.h + dy);
+      }
+      node.style.left = `${e.x * 100}%`;
+      node.style.top = `${e.y * 100}%`;
+      if (e.kind === "cover") {
+        node.style.width = `${e.w * 100}%`;
+        node.style.height = `${e.h * 100}%`;
+      }
+    });
+    const end = () => {
+      if (!mode0) return;
+      mode0 = null;
+      node.classList.remove("moving");
+      st.ok(tr("ย้ายแล้ว", "Moved"));
+    };
+    node.addEventListener("pointerup", end);
+    node.addEventListener("pointercancel", end);
   }
 
   function syncButtons() {

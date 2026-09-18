@@ -94,6 +94,50 @@ def main():
         unit = pg.eval_on_selector(".pe-box.cover", "n => n.style.left")
         ck(unit.endswith("%"), f"ตำแหน่งกล่องเก็บเป็นสัดส่วน ไม่ใช่พิกเซล (ได้ {unit})", unit)
 
+        # ‼️ ซูมต้องขยายภาพจริง ไม่ใช่แค่เปลี่ยนป้าย
+        #    เคยมี max-width:100% ที่เวที ผลคือกดซูมแล้วป้ายขึ้น 200% แต่ภาพเท่าเดิม
+        #    ซึ่งดูเผิน ๆ เหมือนปุ่มซูมเสีย
+        w0 = pg.eval_on_selector(".pe-stage", "n=>Math.round(n.getBoundingClientRect().width)")
+        pg.click("button[aria-label='ซูมเข้า']")
+        pg.wait_for_timeout(350)
+        w1 = pg.eval_on_selector(".pe-stage", "n=>Math.round(n.getBoundingClientRect().width)")
+        ck(w1 > w0 * 1.2, f"กดซูมเข้าแล้วภาพกว้างขึ้นจริง ({w0} เป็น {w1}px)", f"{w0} -> {w1}")
+        ck(pg.inner_text(".pe-zoom") == "150%", f"ป้ายบอกระดับซูมถูก (ได้ {pg.inner_text('.pe-zoom')})")
+
+        # ‼️ กล่องที่วางไว้ต้องไม่เลื่อนเมื่อซูม เพราะเก็บเป็นสัดส่วน
+        after_zoom = pg.eval_on_selector(".pe-box.cover", "n=>n.style.left")
+        ck(after_zoom == unit, f"ซูมแล้วกล่องยังอยู่ที่เดิม ({unit} เป็น {after_zoom})", f"{unit} -> {after_zoom}")
+        pg.click("button:has-text('พอดีหน้า')")
+        pg.wait_for_timeout(350)
+
+        # ‼️ ลากย้ายของที่วางแล้วต้องได้ และต้องไม่กลายเป็นสร้างกล่องใหม่ทับ
+        bb = pg.query_selector(".pe-box.cover").bounding_box()
+        pos0 = pg.eval_on_selector(".pe-box.cover", "n=>n.style.left")
+        pg.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
+        pg.mouse.down()
+        pg.mouse.move(bb["x"] + bb["width"] / 2 + 80, bb["y"] + bb["height"] / 2 + 40, steps=8)
+        pg.mouse.up()
+        pg.wait_for_timeout(350)
+        pos1 = pg.eval_on_selector(".pe-box.cover", "n=>n.style.left")
+        n_after = pg.eval_on_selector_all(".pe-box.cover", "n=>n.length")
+        ck(pos1 != pos0 and n_after == 1,
+           f"ลากย้ายกล่องได้ และไม่กลายเป็นสร้างใหม่ ({pos0} เป็น {pos1} จำนวน {n_after})",
+           f"{pos0} -> {pos1}, n={n_after}")
+
+        # ‼️ ปรับขนาดด้วยมือจับมุม
+        grip = pg.query_selector(".pe-grip")
+        ck(grip is not None, "มีมือจับมุมสำหรับปรับขนาดกล่องปิดทับ")
+        if grip:
+            w_before = pg.eval_on_selector(".pe-box.cover", "n=>parseFloat(n.style.width)")
+            g = grip.bounding_box()
+            pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2)
+            pg.mouse.down()
+            pg.mouse.move(g["x"] + 60, g["y"] + 35, steps=8)
+            pg.mouse.up()
+            pg.wait_for_timeout(350)
+            w_after = pg.eval_on_selector(".pe-box.cover", "n=>parseFloat(n.style.width)")
+            ck(w_after > w_before, f"ลากมุมแล้วกล่องใหญ่ขึ้นจริง ({w_before:.1f}% เป็น {w_after:.1f}%)")
+
         # ── พิมพ์ข้อความไทยแล้ววางทับ
         pg.fill(".pe-right input[type=text]", "๑๒ มีนาคม ๒๕๖๙")
         pg.click("button:has-text('ใส่ข้อความ')")

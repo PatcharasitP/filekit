@@ -253,6 +253,15 @@ body.tool .skip{display:none}
   border-radius:999px; font-size:16px; transition:color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
 }
 .iconbtn:hover{background:var(--card-hi); color:var(--text)}
+/* ‼️ ไอคอนบนหัวเว็บต้องมีกฎของตัวเองในไฟล์นี้ ห้ามพึ่ง tool.css
+   เพราะ tool.css โหลดเฉพาะตอนเปิดเครื่องมือ หน้าแรกจึงไม่มีกฎ
+   แล้ว SVG จะได้ค่าปริยาย fill:black stroke:none
+   พระอาทิตย์ (วงกลม+เส้นรัศมี) กลายเป็นจุดทึบ พระจันทร์กลายเป็นก้อนดำบนพื้นมืด
+   (พี่ปอนด์เห็นเองบนเว็บจริง 19/09/2026 — เป็นบั๊กเก่า ไม่ใช่ของใหม่) */
+.top .btn-ico,.iconbtn svg{
+  width:17px;height:17px;flex:none;display:block;
+  stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;
+}
 /* ‼️ ไอคอนปุ่มธีมอยู่ในหน้าตั้งแต่แรกทั้ง 3 แบบ แล้วเลือกโชว์ด้วย CSS ตาม data-theme
    ที่สคริปต์ก่อนวาดหน้าตั้งไว้ให้แล้ว — เดิม JS เป็นคนยัดไอคอนทีหลัง ปุ่มจึงว่างแวบหนึ่ง
    ทุกครั้งที่โหลดหน้า (เจ้าของเว็บเห็นเป็นอาการ "วูบ" ตอนกด Ctrl+Shift+R) */
@@ -466,7 +475,7 @@ main{max-width:var(--page-w); margin:0 auto; padding:clamp(18px,3.4vw,34px) var(
   box-shadow:var(--sh3), var(--ring-top); transition:border-color var(--t-micro) var(--ease);
 }
 .search:focus-within{border-color:var(--brand)}
-.search input{flex:1; min-width:0; border:0; background:none; color:var(--text); font-size:16px; outline:none; font-family:inherit; min-height:24px; padding-block:5px}
+.search input{flex:1; min-width:0; border:0; background:none; color:var(--text); font-size:14.5px; outline:none; font-family:inherit; min-height:24px; padding-block:5px}
 .search input::placeholder{color:var(--text-mute)}
 .search input::-webkit-search-cancel-button{display:none}
 .s-ico{width:19px;height:19px;flex:none;stroke:var(--text-mute);fill:none;stroke-width:1.9;
@@ -817,12 +826,11 @@ body.tool #home{display:none}
         <div class="hero-copy">
           <span class="kicker" data-en-html="<s></s>100% on your device"><s></s>ทำงานในเครื่องคุณ 100%</span>
           <h1 data-en-html="File tools<br><em>that upload nothing</em>">เครื่องมือจัดการไฟล์<br><em>ที่ไม่ส่งไฟล์คุณไปไหน</em></h1>
-          <p data-en="Convert, merge, split and compress PDF, Word, Excel, images">แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ</p>
           <div class="searchwrap">
             <div class="search" id="searchbox">
               <svg class="s-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8L21 21"/></svg>
-              <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวม PDF, บาทถ้วน, ไทยเพี้ยน" autocomplete="off"
-                     data-en-ph="Search tools, e.g. merge PDF, split, compress" data-en-al="Search tools"
+              <input id="q" type="search" placeholder="ค้นหาเครื่องมือ เช่น รวมไฟล์ PDF" autocomplete="off"
+                     data-en-ph="Search tools, e.g. merge PDF" data-en-al="Search tools"
                      aria-label="ค้นหาเครื่องมือ" aria-describedby="hits">
               <button class="clear" id="qclear" type="button" aria-label="ล้างคำค้นหา" data-en-al="Clear search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/></svg></button>
             </div>

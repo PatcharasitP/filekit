@@ -16,12 +16,24 @@ def _group_count():
     import subprocess, pathlib
     root = pathlib.Path(__file__).resolve().parent.parent
     out = subprocess.run(["node", "--input-type=module", "-e",
-        'import {GROUPS} from "./src/registry.js"; console.log(GROUPS.length)'],
+        # ‼️ นับ "ชิปกรองที่ไม่ซ้ำ" ไม่ใช่จำนวนหมวด — ตระกูล PDF สามหมวดใช้ชิปเดียวกัน
+        #    ตั้งแต่ 19/09/2026 (registry.js chip:"pdf") จำนวนชิปจึงน้อยกว่าจำนวนหมวด
+        'import {GROUPS} from "./src/registry.js";'
+        ' console.log(new Set(GROUPS.map(g => g.chip || g.id)).size)'],
         cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
     return int(out)
 
 N_TOOLS = _tool_count()
 N_GROUPS = _group_count()
+
+# ป้ายสั้นของหมวด — อ่านจากทะเบียน ป้ายเปลี่ยนได้โดยเทสไม่ต้องแก้
+def _group_short(gid):
+    import subprocess, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    return subprocess.run(["node", "--input-type=module", "-e",
+        'import {GROUPS} from "./src/registry.js";'
+        f' const g = GROUPS.find(x => x.id === "{gid}"); console.log(g.short || g.label)'],
+        cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
 
 # จำนวนเครื่องมือในหมวดหนึ่ง ๆ — อ่านจากทะเบียนเช่นกัน
 def _group_count(gid):
@@ -86,11 +98,13 @@ with sync_playwright() as p:
     ck("แถบสถิติโชว์จำนวนเครื่องมือจริง", pg.locator("#fact-n").inner_text(), str(N_TOOLS))
 
     print("\n━━ ② กรองตามหมวด ━━")
-    pg.locator(".cat", has_text="งานไทย").click(); pg.wait_for_timeout(250)
+    # ‼️ อ่านชื่อป้ายจากทะเบียน ไม่เขียนตายตัว — ป้ายเปลี่ยนจาก "งานไทย" เป็น "Thai" แล้ว 19/09/2026
+    _thai_label = _group_short("thai")
+    pg.locator(".cat", has_text=_thai_label).click(); pg.wait_for_timeout(250)
     _thai_n = _group_count("thai")
-    ck(f"กดหมวดงานไทย → เหลือ {_thai_n} ใบ", pg.locator("button.pill, button.card").count(), _thai_n)
-    ck("ปุ่มหมวดขึ้นสถานะถูกเลือก", pg.locator('.cat[aria-pressed="true"]').inner_text().replace("\n","").replace(" ",""), f"งานไทย{_thai_n}")
-    pg.locator(".cat", has_text="งานไทย").click(); pg.wait_for_timeout(250)
+    ck(f"กดหมวด{_thai_label} → เหลือ {_thai_n} ใบ", pg.locator("button.pill, button.card").count(), _thai_n)
+    ck("ปุ่มหมวดขึ้นสถานะถูกเลือก", pg.locator('.cat[aria-pressed="true"]').inner_text().replace("\n","").replace(" ",""), f"{_thai_label}{_thai_n}")
+    pg.locator(".cat", has_text=_thai_label).click(); pg.wait_for_timeout(250)
     ck(f"กดซ้ำ → กลับมาครบ {N_TOOLS}", pg.locator("button.pill, button.card").count(), N_TOOLS)
 
     print("\n━━ ③ ค้นหา ━━")
@@ -172,7 +186,7 @@ with sync_playwright() as p:
         pg.evaluate(f"document.documentElement.dataset.theme='{scheme}'"); pg.wait_for_timeout(120)
         for sel, name in [(".pill","ป้ายเครื่องมือ"), (".stage-h","หัวข้อในแผง"),
                           ("footer","ท้ายหน้า"), (".fact span","ป้ายในแถบสถิติ"), ('.cat:not([aria-pressed="true"])',"ปุ่มหมวดที่ยังไม่เลือก"),
-                          (".fact b","ตัวเลขในแถบสถิติ"), (".hero p","คำโปรย")]:
+                          (".fact b","ตัวเลขในแถบสถิติ"), (".fact span","ป้ายในแถบสถิติ")]:
             r = pg.evaluate(CONTRAST, sel)
             ck(f"{label} · {name} = {r}:1", r is not None and r >= 4.5, True)
     # ทุกหมวดมีสีของตัวเอง ต้องไล่ตรวจให้ครบทุกปุ่มตอน "ถูกเลือก" ไม่ใช่ดูแค่ปุ่มแรก

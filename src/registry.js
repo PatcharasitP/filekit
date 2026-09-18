@@ -8,14 +8,18 @@ import { LANG } from "./i18n.js";
 // accent = สีประจำตระกูล (ชื่อตัวแปร CSS ใน index.html) — หมวดตระกูลเดียวกันใช้สีเดียวกัน
 // จงใจไม่ให้สีละหมวด เพราะ 8 สีบนหน้าเดียวทำให้ลายตาและจำไม่ได้
 export const GROUPS = [
-  { id: "pdf",      label: "จัดการไฟล์ PDF",        short: "จัดการ PDF",  accent: "--g-pdf" },
-  { id: "from-pdf", label: "แปลงจาก PDF",           short: "จาก PDF",     accent: "--g-pdf" },
-  { id: "to-pdf",   label: "แปลงเป็น PDF",          short: "เป็น PDF",    accent: "--g-pdf" },
-  { id: "image",    label: "รูปภาพ",                short: "รูปภาพ",      accent: "--g-img" },
+  /* ‼️ สามหมวดนี้ใช้ชิปกรองอันเดียวกัน (chip:"pdf") เพราะป้ายอ่านแล้วเหมือนกันหมดว่า PDF
+     และกินความกว้างแถบไปเปล่า ๆ (พี่ปอนด์สั่งยุบ 19/09/2026)
+     หัวหมวดในกริดยังแยกสามหมวดเหมือนเดิม ความหมาย จัดการ/จาก/เป็น จึงไม่หายไปไหน
+     ยุบแค่ "ตัวกรอง" ไม่ได้ยุบ "การจัดกลุ่ม" */
+  { id: "pdf",      label: "จัดการไฟล์ PDF",        short: "PDF", chip: "pdf", accent: "--g-pdf" },
+  { id: "from-pdf", label: "แปลงจาก PDF",           short: "PDF", chip: "pdf", accent: "--g-pdf" },
+  { id: "to-pdf",   label: "แปลงเป็น PDF",          short: "PDF", chip: "pdf", accent: "--g-pdf" },
+  { id: "image",    label: "รูปภาพ",                short: "Images",      accent: "--g-img" },
   { id: "doc",      label: "เอกสารและจดหมายเวียน",  short: "Word",        accent: "--g-doc" },
   { id: "ppt",      label: "PowerPoint",            short: "PowerPoint",  accent: "--g-ppt" },
   { id: "excel",    label: "Excel และการคำนวณ",     short: "Excel",       accent: "--g-data" },
-  { id: "thai",     label: "งานเอกสารไทย",          short: "งานไทย",      accent: "--g-thai" },
+  { id: "thai",     label: "งานเอกสารไทย",          short: "Thai",        accent: "--g-thai" },
   // ตระกูล Power Platform ใช้สีเดียวกันทั้งสามหมวด ตามกฎเดียวกับตระกูล PDF ที่ใช้ 3 หมวด 1 สี
   // (เพิ่มสีใหม่ทุกครั้งที่เพิ่มหมวด = หน้าเดียวมีสิบสี ลายตาและจำไม่ได้)
   { id: "powerbi",  label: "Power BI",              short: "Power BI",    accent: "--g-powerbi" },
@@ -74,7 +78,7 @@ export const TOOLS = [
     accepts:["pdf","image"],
     libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร ตัวหนังสือ รูปภาพ ภาพถ่าย recognize", next:["pdf-to-text","pdf-to-word"] },
 
-  { id:"pdf-to-images",group:"from-pdf", icon:"🖼", title:"PDF → รูปภาพ",
+  { id:"pdf-to-images",group:"from-pdf", icon:"🖼", title:"PDF → Images",
     desc:"แปลงทุกหน้าเป็น PNG หรือ JPG เลือกความละเอียดได้",
     accepts:["pdf"],
     libs:["pdfjs","jszip"], keys:"image png jpg รูป ภาพ export", next:["image-resize","images-to-pdf"] },
@@ -109,7 +113,7 @@ export const TOOLS = [
     accepts:["xlsx","csv"],
     libs:["xlsx","jspdf","jspdfTable"], keys:"excel xlsx sheet ตาราง pdf", next:["pdf-merge","pdf-watermark"] },
 
-  { id:"images-to-pdf",group:"to-pdf", icon:"🧩", title:"รูปภาพ → PDF",
+  { id:"images-to-pdf",group:"to-pdf", icon:"🧩", title:"Images → PDF",
     desc:"รวมรูปหลายไฟล์เป็น PDF เดียว จัดขนาดหน้าอัตโนมัติ",
     accepts:["image"],
     libs:["pdflib"], keys:"image jpg png รูป รวม pdf", next:["pdf-compress","pdf-watermark"] },
@@ -385,3 +389,10 @@ if (LANG === "en") {
     if (e) { t.title = e[0]; t.desc = e[1]; }
   }
 }
+
+
+/** ชิปกรองของหมวดนี้ — หลายหมวดใช้ชิปเดียวกันได้ (เช่นตระกูล PDF สามหมวดใช้ชิป "pdf") */
+export const chipOf = (groupId) => {
+  const g = GROUPS.find((x) => x.id === groupId);
+  return (g && g.chip) || groupId;
+};

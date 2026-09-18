@@ -2,7 +2,7 @@
 // ไฟล์นี้คือ JavaScript ก้อนเดียวที่หน้าแรกโหลด (ไม่กี่ KB) โค้ดของเครื่องมือ
 // และไลบรารีหนัก ๆ จะถูกดึงก็ต่อเมื่อผู้ใช้แสดงเจตนาจะใช้จริงเท่านั้น
 
-import { TOOLS, GROUPS, byId } from "./registry.js";
+import { TOOLS, GROUPS, byId , chipOf } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
 import { el, $, $$, showVeil, filesFromClipboard } from "./dom.js";
@@ -69,10 +69,16 @@ function renderHome(q = "") {
   }
 
   hits.textContent = "";
-  const shown = TOOLS.filter((t) => !activeCat || t.group === activeCat);
+  const shown = TOOLS.filter((t) => !activeCat || chipOf(t.group) === activeCat);
+  /* ‼️ ชิปเดียวอาจครอบหลายหมวด (ตระกูล PDF) ถ้าซ่อนหัวหมวดตอนกรองจะแยกไม่ออก
+     ว่าอันไหนจัดการ อันไหนแปลงจาก อันไหนแปลงเป็น จึงโชว์หัวเมื่อชิปครอบเกินหนึ่งหมวด */
+  const catGroups = GROUPS.filter((g) => !activeCat || chipOf(g.id) === activeCat);
+  const showHeads = !activeCat || catGroups.length > 1;
+  const catName = activeCat
+    ? (GROUPS.find((g) => chipOf(g.id) === activeCat) || {}).short || activeCat
+    : "";
   if (stageH) stageH.textContent = activeCat
-    ? tr(`${(GROUPS.find((g) => g.id === activeCat) || {}).label}, ${shown.length} เครื่องมือ`,
-         `${(GROUPS.find((g) => g.id === activeCat) || {}).label}, ${shown.length} tools`)
+    ? tr(`${catName}, ${shown.length} เครื่องมือ`, `${catName}, ${shown.length} tools`)
     : tr(`${TOOLS.length} เครื่องมือ ทำงานในเครื่องคุณทั้งหมด`,
          `${TOOLS.length} tools, all of them run on your device`);
 
@@ -93,7 +99,7 @@ function renderHome(q = "") {
        แต่เปิดดูด้วยตาแล้วอ่านไม่รู้เรื่อง หัวข้อไปเกาะท้ายแถวของหมวดก่อนหน้า
        คนอ่านนึกว่าเป็นป้ายของกลุ่มซ้ายมือ ถอนออก 11/09/2026 อย่าลองซ้ำ
        ความสูงไปคุมที่เกณฑ์ความหนาแน่นต่อเครื่องมือใน tests/browser_ux.py แทน */
-    if (!activeCat) box.appendChild(el("div", { class: "pill-group" }, [g.label, el("s", {})]));
+    if (showHeads) box.appendChild(el("div", { class: "pill-group" }, [g.label, el("s", {})]));
     items.forEach((t) => box.appendChild(pillOf(t)));
   }
   grids.appendChild(box);
@@ -246,9 +252,15 @@ function renderCats() {
       onclick: () => { dropped = null; activeCat = activeCat === id ? "" : id; renderCats(); renderHome(search.value); },
     }, [label, el("b", {}, String(count))]);
   cats.appendChild(mk("", tr("ทั้งหมด", "All"), TOOLS.length, "var(--text)"));   // หมวดรวมใช้สีกลาง ไม่แย่งสีประจำหมวด
+  /* ‼️ หมวดที่ใช้ชิปเดียวกัน (เช่นตระกูล PDF สามหมวด) รวมเป็นชิปเดียวและนับรวมกัน
+     แถบหมวดจึงสั้นลงโดยที่การจัดกลุ่มในกริดยังแยกเหมือนเดิม */
+  const seen = new Set();
   for (const g of GROUPS) {
-    const n = TOOLS.filter((t) => t.group === g.id).length;
-    if (n) cats.appendChild(mk(g.id, g.short || g.label, n, accentOf(g.id)));
+    const cid = chipOf(g.id);
+    if (seen.has(cid)) continue;
+    seen.add(cid);
+    const n = TOOLS.filter((t) => chipOf(t.group) === cid).length;
+    if (n) cats.appendChild(mk(cid, g.short || g.label, n, accentOf(g.id)));
   }
 }
 

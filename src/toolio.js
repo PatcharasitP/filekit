@@ -150,7 +150,7 @@ export const TOOL_IO_ALL = {
  "pdf-merge": {
   "th": {
    "n": 2,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
    "outSize": "47 KB",
@@ -158,7 +158,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 2,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
    "outSize": "47 KB",
@@ -168,7 +168,7 @@ export const TOOL_IO_ALL = {
  "pdf-page-numbers": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
    "outSize": "26 KB",
@@ -176,7 +176,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
    "outSize": "26 KB",
@@ -185,26 +185,26 @@ export const TOOL_IO_ALL = {
  },
  "pdf-pages": {
   "th": {
-   "n": 1,
-   "inSize": "28 KB",
+   "n": 2,
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
-   "outSize": "25 KB",
-   "outMeta": "3 หน้า"
+   "outSize": "47 KB",
+   "outMeta": "5 หน้า"
   },
   "en": {
-   "n": 1,
-   "inSize": "28 KB",
+   "n": 2,
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
-   "outSize": "25 KB",
-   "outMeta": "3 pages"
+   "outSize": "47 KB",
+   "outMeta": "5 pages"
   }
  },
  "pdf-split": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
    "outSize": "25 KB",
@@ -212,7 +212,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
    "outSize": "25 KB",
@@ -222,7 +222,7 @@ export const TOOL_IO_ALL = {
  "pdf-to-excel": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "xlsx",
    "outSize": "21 KB",
@@ -230,7 +230,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "xlsx",
    "outSize": "21 KB",
@@ -240,7 +240,7 @@ export const TOOL_IO_ALL = {
  "pdf-to-images": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "png",
    "outSize": "100 KB",
@@ -248,7 +248,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "png",
    "outSize": "100 KB",
@@ -258,7 +258,7 @@ export const TOOL_IO_ALL = {
  "pdf-to-longimage": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "jpg",
    "outSize": "183 KB",
@@ -266,7 +266,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "jpg",
    "outSize": "183 KB",
@@ -276,7 +276,7 @@ export const TOOL_IO_ALL = {
  "pdf-to-word": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "docx",
    "outSize": "8.4 KB",
@@ -284,7 +284,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "docx",
    "outSize": "8.4 KB",
@@ -294,7 +294,7 @@ export const TOOL_IO_ALL = {
  "pdf-watermark": {
   "th": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
    "outSize": "46 KB",
@@ -302,7 +302,7 @@ export const TOOL_IO_ALL = {
   },
   "en": {
    "n": 1,
-   "inSize": "28 KB",
+   "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
    "outSize": "47 KB",

@@ -12,7 +12,15 @@ export function el(tag, attrs = {}, children = []) {
     if (k === "class") n.className = v;
     else if (k === "html") n.innerHTML = v;
     else if (k === "text") n.textContent = v;
-    else if (k === "style" && typeof v === "object") Object.assign(n.style, v);
+    /* ‼️ Object.assign ตั้งตัวแปร CSS ที่ขึ้นต้นด้วย -- ไม่ได้ (เจอจริง 18/09/2026)
+       มันเซ็ตลงไปเงียบ ๆ โดยไม่มี error แต่ค่าไม่ไปถึง element จริง
+       ต้องใช้ setProperty เท่านั้น ไม่งั้นสีที่ส่งผ่านตัวแปรจะหายไปแบบไม่มีใครรู้ */
+    else if (k === "style" && typeof v === "object") {
+      for (const [p, val] of Object.entries(v)) {
+        if (p.startsWith("--")) n.style.setProperty(p, val);
+        else n.style[p] = val;
+      }
+    }
     else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
     else n.setAttribute(k, v === true ? "" : v);
   }

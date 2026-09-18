@@ -25,9 +25,9 @@ export const GROUPS = [
 
 export const TOOLS = [
   { id:"pdf-pages",   group:"pdf", icon:"📑", title:"จัดการหน้า PDF",
-    desc:"เลือกเก็บ ลบ สลับลำดับ และหมุนหน้า พร้อมพรีวิวทุกหน้า",
+    desc:"หลายไฟล์มารวมกระดานเดียว เก็บ ลบ สลับลำดับ และหมุนหน้า",
     accepts:["pdf"],
-    libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ", next:["pdf-merge","pdf-compress"] },
+    libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์", next:["pdf-merge","pdf-compress"] },
 
   { id:"pdf-merge",   group:"pdf", icon:"🔗", title:"รวมไฟล์ PDF",
     desc:"รวมหลายไฟล์เป็นเล่มเดียว ลากสลับลำดับได้",

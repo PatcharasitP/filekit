@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""จัดการหน้า PDF ต้องรับหลายไฟล์แล้วบอกได้ว่าหน้าไหนมาจากไฟล์ไหน
+
+‼️ ทำไมต้องมีเทสนี้ (18/09/2026)
+   เดิมเครื่องมือนี้รับครั้งละ 1 ไฟล์ พอเปิดให้รับหลายไฟล์ มีของที่พังเงียบได้ 3 อย่าง
+   ① หน้าจากไฟล์ที่สองอาจไปคัดลอกจากไฟล์แรก เพราะเลขหน้าเริ่มนับใหม่ทุกไฟล์
+      ถ้าลืมจำว่าหน้านั้นมาจากไฟล์ไหน จะได้ไฟล์ผลลัพธ์ที่หน้าถูกต้องตามจำนวนแต่เนื้อหาผิด
+      ซึ่งดูจากจำนวนหน้าอย่างเดียวจับไม่ได้เลย
+   ② ลำดับที่ผู้ใช้ลากจัดไว้อาจหายตอนบันทึก เพราะคัดลอกทีละไฟล์เป็นก้อนเพื่อความเร็ว
+   ③ ป้ายบอกไฟล์อาจไม่ขึ้น ทำให้ผู้ใช้แยกไม่ออกว่าหน้าไหนของใคร
+
+‼️ สีอย่างเดียวเชื่อไม่ได้ จึงตรวจที่ "ตัวอักษร" A B C เป็นหลัก
+   วัดด้วย src/cvd.js แล้ว ชุดสี 5 สีขึ้นไปไม่มีทางแยกออกครบทุกแบบตาบอดสี
+
+รันปกติ:   FK_BASE=http://localhost:8899 ../.venv/bin/python tests/browser_pdfpages_multi.py
+รันพิสูจน์: FK_BASE=http://localhost:8899 ../.venv/bin/python tests/browser_pdfpages_multi.py --selftest
+"""
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from playwright.sync_api import sync_playwright
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas as rl_canvas
+
+BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
+SELFTEST = "--selftest" in sys.argv
+
+ok = fail = 0
+
+
+def ck(cond, label, detail=""):
+    global ok, fail
+    if cond:
+        ok += 1
+        print(f"  ✅ {label}")
+    else:
+        fail += 1
+        print(f"  ❌ {label}" + (f"  ({detail})" if detail else ""))
+
+
+def make_pdf(path, tag, pages):
+    """PDF ที่แต่ละหน้าเขียนข้อความบอกชัดว่าเป็นไฟล์ไหนหน้าไหน"""
+    c = rl_canvas.Canvas(str(path), pagesize=A4)
+    for p in range(1, pages + 1):
+        c.setFont("Helvetica-Bold", 64)
+        c.drawString(90, 520, f"{tag}{p}")
+        c.showPage()
+    c.save()
+
+
+def main():
+    tmp = Path(tempfile.mkdtemp())
+    a, b = tmp / "alpha.pdf", tmp / "bravo.pdf"
+    make_pdf(a, "A", 2)
+    make_pdf(b, "B", 3)
+    print(f"สร้างไฟล์ทดสอบ alpha.pdf 2 หน้า และ bravo.pdf 3 หน้า")
+
+    with sync_playwright() as p:
+        br = p.chromium.launch()
+        pg = br.new_page(viewport={"width": 1440, "height": 950})
+        pg.goto(f"{BASE}/#/pdf-pages", wait_until="load", timeout=60000)
+        pg.wait_for_timeout(1500)
+
+        if SELFTEST:
+            # จำลองบั๊กเดิม บังคับให้รับไฟล์เดียว เทสต้องจับได้
+            pg.evaluate("""() => {
+              const i = document.querySelector('.dz input[type=file]');
+              if (i) i.removeAttribute('multiple');
+            }""")
+
+        inp = pg.query_selector(".dz input[type=file]") or pg.query_selector("input[type=file]")
+        ck(inp is not None, "หาช่องใส่ไฟล์เจอ (หาไม่เจอ = ตก)")
+        if not inp:
+            br.close()
+            return
+
+        multiple = pg.evaluate("(el) => el.hasAttribute('multiple')", inp)
+        ck(multiple, "ช่องใส่ไฟล์เปิดให้เลือกหลายไฟล์", "ยังตั้งเป็นไฟล์เดียว")
+
+        try:
+            inp.set_input_files([str(a), str(b)])
+        except Exception as e:
+            # โหมดพิสูจน์ถอด multiple ออก เบราว์เซอร์จึงรับสองไฟล์ไม่ได้ ซึ่งคือสิ่งที่ต้องจับให้ได้
+            ck(False, "ใส่สองไฟล์พร้อมกันได้", str(e)[:90])
+            print(f"\nผ่าน {ok} · ตก {fail}")
+            br.close()
+            sys.exit(1)
+        pg.wait_for_timeout(700)
+        pg.wait_for_function("() => document.querySelectorAll('.pg').length > 0", timeout=60000)
+        pg.wait_for_timeout(1200)
+
+        cards = pg.query_selector_all(".pg")
+        ck(len(cards) == 5, f"หน้าจากทั้งสองไฟล์มาครบ 5 ใบ (พบ {len(cards)})", f"พบ {len(cards)}")
+
+        tags = pg.eval_on_selector_all(".pg .src", "ns => ns.map(n => n.textContent.trim())")
+        ck(tags[:5] == ["A", "A", "B", "B", "B"],
+           f"ป้ายบอกไฟล์ถูกต้องตามลำดับ A A B B B (ได้ {tags})", str(tags))
+
+        colors = pg.eval_on_selector_all(
+            ".pg",
+            "ns => [...new Set(ns.map(n => getComputedStyle(n).getPropertyValue('--fc').trim()))]")
+        real = [c for c in colors if c]
+        ck(len(real) == 2, f"สองไฟล์ได้คนละสี (พบ {len(real)} สี)", str(colors))
+
+        # ‼️ ป้ายต้องไปเกาะกับรายการไฟล์เดิมที่กล่องเลือกไฟล์วาดไว้ ไม่ใช่รายการใหม่ที่ทำซ้ำ
+        rowtags = pg.eval_on_selector_all(".file-row .pp-tag", "ns => ns.map(n => n.textContent.trim())")
+        ck(rowtags == ["A", "B"], f"ป้ายไปเกาะกับรายการไฟล์เดิมครบทุกแถว (ได้ {rowtags})", str(rowtags))
+        ck(pg.query_selector(".pp-files") is None,
+           "ไม่มีรายการไฟล์ซ้อนอันที่สอง (ชื่อไฟล์ต้องขึ้นที่เดียว)")
+        # ป้ายต้องลอยทับ ไม่ไปแย่งที่จนขนาดไฟล์ตกบรรทัด
+        onerow = pg.eval_on_selector(".file-row .pp-tag", "n => getComputedStyle(n).position")
+        ck(onerow == "absolute", f"ป้ายลอยทับ ไม่แย่งพื้นที่ในแถว (ได้ {onerow})", onerow)
+
+        # สลับไฟล์ทีละหน้า ต้องได้ A B A B B
+        btn = pg.query_selector("text=สลับไฟล์ทีละหน้า")
+        ck(btn is not None, "มีปุ่มสลับไฟล์ทีละหน้า")
+        if btn:
+            btn.click()
+            pg.wait_for_timeout(600)
+            tags2 = pg.eval_on_selector_all(".pg .src", "ns => ns.map(n => n.textContent.trim())")
+            ck(tags2 == ["A", "B", "A", "B", "B"],
+               f"สลับไฟล์ทีละหน้าแล้วได้ A B A B B (ได้ {tags2})", str(tags2))
+
+        # บันทึกจริง แล้วต้องได้ลิงก์ดาวน์โหลดพร้อมจำนวนหน้าถูกต้อง
+        save = pg.query_selector(".ws-footer button:has-text('บันทึก')")
+        ck(save is not None and save.is_visible(), "หาปุ่มบันทึกที่กดได้จริงเจอ")
+        if save:
+            save.click()
+            # ‼️ ปุ่มดาวน์โหลดของโปรเจกต์นี้เป็น <button> ที่เรียก download() ไม่ใช่ <a download>
+            #    เทสรุ่นแรกหา a[download] แล้วรายงานว่าบันทึกไม่ได้ ทั้งที่ไฟล์ออกมาแล้วจริง
+            try:
+                pg.wait_for_selector(".result button:has-text('ดาวน์โหลด')", timeout=90000)
+                got = True
+            except Exception:
+                got = False
+            ck(got, "กดบันทึกแล้วได้ไฟล์ผลลัพธ์ออกมาจริง")
+            if got:
+                txt = pg.inner_text(".result")
+                ck("5" in txt, f"ไฟล์ผลลัพธ์บอกว่ามี 5 หน้า (ข้อความ: {txt[:60]})", txt[:80])
+
+                # ‼️ ข้อที่สำคัญที่สุดของเทสนี้ เปิดไฟล์จริงอ่านข้อความทีละหน้า
+                #    เพราะบั๊กหยิบหน้าจากไฟล์ผิด จะได้จำนวนหน้าถูกแต่เนื้อหาผิด
+                #    ซึ่งทุกข้อข้างบนผ่านหมดโดยไม่มีใครรู้
+                out = tmp / "out.pdf"
+                with pg.expect_download(timeout=60000) as dl:
+                    pg.click(".result button:has-text('ดาวน์โหลด')")
+                dl.value.save_as(str(out))
+                import fitz
+                doc = fitz.open(str(out))
+                got_pages = [d.get_text().strip() for d in doc]
+                doc.close()
+                ck(got_pages == ["A1", "B1", "A2", "B2", "B3"],
+                   f"เนื้อหาในไฟล์ตรงกับลำดับที่จัดไว้ A1 B1 A2 B2 B3 (ได้ {got_pages})",
+                   str(got_pages))
+
+        br.close()
+
+    print(f"\nผ่าน {ok} · ตก {fail}")
+    sys.exit(1 if fail else 0)
+
+
+main()

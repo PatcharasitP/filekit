@@ -16,7 +16,11 @@ const tagOf = (fi) => String.fromCharCode(65 + (fi % 26)) + (fi >= 26 ? String(M
 
 // สไตล์เสริมเฉพาะหน้านี้ — ห้ามแก้ assets/css/tool.css จึงฝังไว้ในโมดูลแทน
 const STYLE = `
-.pp-left,.pp-right{display:flex;flex-direction:column;gap:10px}
+.pp-left{display:flex;flex-direction:column;gap:10px}
+/* ‼️ มีที่มากขึ้นแล้วจากการเลิกใช้แผงขวา จึงตั้งการ์ดขั้นต่ำให้ใหญ่ขึ้นด้วย
+   ที่ 210px บนพื้นที่ราว 1060px จะได้ 4 คอลัมน์ การ์ดกว้างราว 255px
+   ซึ่งใหญ่กว่าเดิมที่ได้ 3 คอลัมน์ 215px ทั้งที่เห็นหน้าได้มากกว่า */
+@media (min-width:1100px){ .pages{ grid-template-columns:repeat(auto-fill,minmax(210px,1fr)) } }
 .pp-stats{font-size:12.5px;line-height:1.6;color:var(--text-mute);padding:9px 12px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm,10px)}
 .pp-stats b{color:var(--text);font-variant-numeric:tabular-nums}
@@ -52,11 +56,29 @@ export function mount(tool) {
 
   const dz = dropzone({
     expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
-    accept: "application/pdf,.pdf", multiple: true,
-    hint: tr("หลายไฟล์ได้ ทุกหน้ามารวมกันในกระดานเดียว", "Multiple files, all pages on one board"),
+    accept: "application/pdf,.pdf", multiple: true, reorder: true,
+    hint: tr("หลายไฟล์ได้ ลากสลับลำดับไฟล์ได้", "Multiple files, drag to reorder"),
     onChange: (f) => {
-      files = [...(f || [])];
+      const next = [...(f || [])];
       results.innerHTML = "";
+      /* ‼️ สลับลำดับไฟล์ ไม่ต้องเรนเดอร์ภาพใหม่ (18/09/2026)
+         กล่องเลือกไฟล์แจ้ง onChange ทุกครั้งที่ลากสลับ ถ้าเรนเดอร์ใหม่ทุกครั้ง
+         ไฟล์ 14 หน้า 3.7 MB จะรอหลายวินาทีต่อการลากหนึ่งครั้ง ซึ่งใช้งานไม่ไหว
+         ถ้าเป็นชุดไฟล์เดิมแค่สลับที่ ให้ย้ายภาพที่มีอยู่แล้วตามไป พร้อมแก้เลขไฟล์ต้นทาง */
+      const sameSet = next.length === files.length && next.length > 0
+        && next.every((x) => files.includes(x));
+      if (sameSet && items.length) {
+        const order = next.map((x) => files.indexOf(x));   // ตำแหน่งใหม่ -> ตำแหน่งเดิม
+        const remap = new Map(order.map((oldIdx, newIdx) => [oldIdx, newIdx]));
+        items.forEach((it) => { it.fi = remap.get(it.fi); });
+        items.sort((a, b) => (a.fi - b.fi) || (a.index - b.index));
+        files = next;
+        renderFiles();
+        render();
+        st.ok(tr("สลับลำดับไฟล์แล้ว หน้าเรียงตามไฟล์ใหม่", "Files reordered, pages regrouped"));
+        return;
+      }
+      files = next;
       if (files.length) loadPreview();
       else { items = []; selected = null; pagesGrid.innerHTML = ""; st.clear(); setLoaded(false); renderFiles(); updateSummary(); ws.showCanvas(false); }
     },
@@ -64,6 +86,7 @@ export function mount(tool) {
 
   // ── แผงซ้าย: เลือกไฟล์ + รายชื่อไฟล์ + สรุปจำนวนหน้า ─────────────────
   const leftNode = el("div", { class: "pp-left" }, [dz.container, extra, summary]);
+  // ตัวเลือกย้ายมาต่อท้ายแผงซ้ายตอนสร้างเสร็จ ดูหมายเหตุที่ rightNode
 
   // ── แถบเครื่องมือลอย: ทำงานกับหน้าที่เลือกอยู่ ──────────────────────
   const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: tr("หมุนซ้าย", "Rotate left"), onclick: () => rotateSelected(270) });
@@ -84,14 +107,17 @@ export function mount(tool) {
     el("div", { class: "row" }, [byFileBtn, zipBtn]),
     el("small", {}, tr("เรียงทีละไฟล์ คือไฟล์ A จนหมดแล้วต่อ B", "Group by file puts all of A, then all of B")),
   ]);
-  const rightNode = el("div", { class: "pp-right" }, [
-    el("div", {}, [
-      field(tr("เก็บเฉพาะหน้า", "Keep only these pages"), rangeInput, tr("หน้านอกช่วงจะถูกทำเครื่องหมายลบอัตโนมัติ",
-        "Pages outside the range are marked for removal automatically")),
-      rangeBtn,
-    ]),
+  /* ‼️ ตัวเลือกอยู่แผงซ้าย ไม่ใช่แผงขวา (18/09/2026)
+     เดิมมีแผงขวากว้าง 340px เพื่อใส่ของแค่ช่องเดียวกับปุ่มสามปุ่ม
+     แต่งานของเครื่องมือนี้คือ "ดูภาพแล้วลากสลับ" พื้นที่ภาพจึงสำคัญที่สุด
+     วัดจริงแล้วแผงขวากินไป 340px ทำให้กริดเหลือ 708px ได้แค่ 3 คอลัมน์
+     ย้ายมาต่อท้ายแผงซ้ายซึ่งยังมีที่ว่าง แล้วคืนพื้นที่ให้ภาพทั้งหมด */
+  leftNode.append(
+    field(tr("เก็บเฉพาะหน้า", "Keep only these pages"), rangeInput, tr("หน้านอกช่วงจะถูกทำเครื่องหมายลบอัตโนมัติ",
+      "Pages outside the range are marked for removal automatically")),
+    rangeBtn,
     sortGroup,
-  ]);
+  );
 
   const saveBtn = button(tr("บันทึก", "Save"), { onclick: save });
   saveBtn.disabled = true;
@@ -99,7 +125,6 @@ export function mount(tool) {
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ PDF", "PDF files"), node: leftNode },
     center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูตัวอย่าง", "No file yet. Choose a PDF to preview") },
-    right: { title: tr("ตัวเลือก", "Options"), node: rightNode },
     toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }), resetBtn],
     footer: [st.node, saveBtn],
   });

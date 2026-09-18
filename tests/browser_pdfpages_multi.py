@@ -113,6 +113,18 @@ def main():
         onerow = pg.eval_on_selector(".file-row .pp-tag", "n => getComputedStyle(n).position")
         ck(onerow == "absolute", f"ป้ายลอยทับ ไม่แย่งพื้นที่ในแถว (ได้ {onerow})", onerow)
 
+        # ‼️ สลับลำดับไฟล์แล้วหน้าต้องตามไป และห้ามเรนเดอร์ภาพใหม่ทั้งหมด
+        rows = pg.query_selector_all(".file-row")
+        btns = rows[1].query_selector_all(".icon-btn") if len(rows) > 1 else []
+        if btns:
+            before = pg.eval_on_selector_all(".pg .src", "ns=>ns.map(n=>n.getAttribute('title'))")
+            btns[0].click()
+            pg.wait_for_timeout(1200)
+            after = pg.eval_on_selector_all(".pg .src", "ns=>ns.map(n=>n.getAttribute('title'))")
+            ck(after and after[0] != before[0] and "bravo" in (after[0] or ""),
+               f"เลื่อนไฟล์ขึ้นแล้วหน้าตามไปด้วย (หน้าแรกมาจาก {after[0] if after else 'ไม่มี'})",
+               f"{before[:1]} -> {after[:1]}")
+
         # สลับไฟล์ทีละหน้า ต้องได้ A B A B B
         btn = pg.query_selector("text=สลับไฟล์ทีละหน้า")
         ck(btn is not None, "มีปุ่มสลับไฟล์ทีละหน้า")
@@ -120,8 +132,25 @@ def main():
             btn.click()
             pg.wait_for_timeout(600)
             tags2 = pg.eval_on_selector_all(".pg .src", "ns => ns.map(n => n.textContent.trim())")
-            ck(tags2 == ["A", "B", "A", "B", "B"],
-               f"สลับไฟล์ทีละหน้าแล้วได้ A B A B B (ได้ {tags2})", str(tags2))
+            # ‼️ ตอนนี้ไฟล์ A คือ bravo ซึ่งมี 3 หน้า ส่วนไฟล์ B คือ alpha มี 2 หน้า
+            #    เพราะขั้นก่อนหน้าเลื่อน bravo ขึ้นมาเป็นไฟล์แรกแล้ว
+            #    สลับทีละหน้าจึงได้ A B A B A ไม่ใช่ A B A B B
+            ck(tags2 == ["A", "B", "A", "B", "A"],
+               f"สลับไฟล์ทีละหน้าแล้วได้ A B A B A (ได้ {tags2})", str(tags2))
+
+        # ‼️ กริดต้องได้ 4 คอลัมน์บนจอกว้าง และการ์ดต้องไม่เล็กลงกว่าเดิม
+        #    เดิมได้ 3 คอลัมน์ การ์ด 215px เพราะแผงขวากินที่ไป 340px
+        #    ทั้งที่แผงนั้นมีแค่ช่องเดียวกับปุ่มสามปุ่ม ย้ายไปแผงซ้ายแล้วได้ 4 คอลัมน์ 249px
+        grid = pg.evaluate("""() => {
+          const g = document.querySelector('.pages');
+          const c = document.querySelector('.pg');
+          return {cols: getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length,
+                  cardW: Math.round(c.getBoundingClientRect().width),
+                  hasRight: !!document.querySelector('.ws-right')};
+        }""")
+        ck(grid["cols"] >= 4, f"จอกว้างแสดงอย่างน้อย 4 คอลัมน์ (ได้ {grid['cols']})", str(grid))
+        ck(grid["cardW"] >= 215, f"การ์ดไม่เล็กลงกว่าเดิม 215px (ได้ {grid['cardW']}px)", str(grid))
+        ck(not grid["hasRight"], "ไม่มีแผงขวามาแย่งพื้นที่ภาพแล้ว")
 
         # บันทึกจริง แล้วต้องได้ลิงก์ดาวน์โหลดพร้อมจำนวนหน้าถูกต้อง
         save = pg.query_selector(".ws-footer button:has-text('บันทึก')")
@@ -151,8 +180,11 @@ def main():
                 doc = fitz.open(str(out))
                 got_pages = [d.get_text().strip() for d in doc]
                 doc.close()
-                ck(got_pages == ["A1", "B1", "A2", "B2", "B3"],
-                   f"เนื้อหาในไฟล์ตรงกับลำดับที่จัดไว้ A1 B1 A2 B2 B3 (ได้ {got_pages})",
+                # ‼️ ข้อความในหน้ายังเป็น A กับ B ตามไฟล์ต้นฉบับ ไม่ใช่ตามป้ายบนจอ
+                #    bravo เขียน B1 B2 B3 อยู่แล้ว และตอนนี้มันเป็นไฟล์แรก
+                #    ลำดับที่ถูกจึงเป็น B1 A1 B2 A2 B3 ซึ่งพิสูจน์ว่าหน้ามาจากไฟล์ที่ถูกต้องจริง
+                ck(got_pages == ["B1", "A1", "B2", "A2", "B3"],
+                   f"เนื้อหาในไฟล์ตรงกับลำดับที่จัดไว้ B1 A1 B2 A2 B3 (ได้ {got_pages})",
                    str(got_pages))
 
         br.close()

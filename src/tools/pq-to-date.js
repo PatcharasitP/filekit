@@ -45,7 +45,7 @@ const STYLE = `
 
 .pqd-hint{font-size:12px;color:var(--text-mute);line-height:1.7;margin:6px 0 0}
 .pqd-add{margin-top:6px}
-.pqd-sect{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.pqd-sect{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .pqd-sect:first-child{margin-top:0}
 

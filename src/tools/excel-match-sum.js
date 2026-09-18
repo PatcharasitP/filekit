@@ -42,7 +42,7 @@ const STYLE = `
 .ms-pair .ms-num{flex:1;min-width:0}
 .ms-pair span{font-size:12.5px;color:var(--text-mute);flex:none}
 
-.ms-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.ms-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .ms-group-title:first-child{margin-top:0}
 .ms-switch-field{display:flex;align-items:center;justify-content:space-between;gap:10px;

@@ -61,7 +61,7 @@ const STYLE = `
 .pqg-chip:has(input:focus-visible){outline:2px solid var(--brand);outline-offset:2px}
 @media (pointer:coarse){ .pqg-chip{min-height:36px} }
 
-.pqg-sect{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.pqg-sect{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .pqg-sect:first-child{margin-top:0}
 

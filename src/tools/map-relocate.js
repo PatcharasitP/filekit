@@ -30,7 +30,7 @@ const STYLE = `
 .mr-chip b{color:var(--text);font-weight:700}
 .mr-chip.warn{border-color:var(--warn,#c98a00);color:var(--text);white-space:normal;line-height:1.5}
 
-.mr-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.mr-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .mr-group-title:first-child{margin-top:0}
 .mr-hint{display:block;font-size:12px;color:var(--text-mute);line-height:1.6;margin:-2px 0 6px}

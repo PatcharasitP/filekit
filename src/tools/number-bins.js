@@ -33,7 +33,7 @@ const STYLE = `
 .nb-chip b{color:var(--text);font-weight:700}
 .nb-chip.warn{border-color:var(--warn,#c98a00);color:var(--text)}
 
-.nb-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.nb-group-title{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .nb-group-title:first-child{margin-top:0}
 .nb-hint{display:block;font-size:12px;color:var(--text-mute);line-height:1.6;margin:-2px 0 6px}

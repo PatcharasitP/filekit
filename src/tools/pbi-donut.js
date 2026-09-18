@@ -67,7 +67,7 @@ const STYLE = `
 
 .pbid-right{display:flex;flex-direction:column;gap:18px}
 .pbid-group{display:flex;flex-direction:column;gap:10px}
-.pbid-group-title{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-mute)}
+.pbid-group-title{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-mute)}
 
 .pbid-range-row{display:flex;align-items:center;gap:10px}
 .pbid-range-row input[type=range]{flex:1;accent-color:var(--g-powerbi,var(--brand))}
@@ -103,7 +103,7 @@ ${DIRTYMARK_CSS}
 ${CODEVIEW_CSS}
 
 .pbid-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
-.pbid-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.pbid-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .pbid-own-hint{font-size:12px;color:var(--text-mute);line-height:1.65;margin:0 0 10px}
 .pbid-own input[type=file]{width:100%;font-size:12.5px;color:var(--text)}

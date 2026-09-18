@@ -31,7 +31,7 @@ const STYLE = `
 .pqm-src{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);
   padding:11px 12px;margin-bottom:10px}
 .pqm-src-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.pqm-src-no{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute)}
+.pqm-src-no{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-mute)}
 .pqm-src-btns{display:flex;gap:4px}
 .pqm-mini{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:6px;
   width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px}
@@ -61,7 +61,7 @@ ${PRESETS_CSS}
 /* ‼️ คลาสสองชุดนี้ยืมชื่อมาจากเครื่องมือกราฟโดนัท แต่ CSS ของมันฝังอยู่ในโมดูลนั้น
    หน้านี้ไม่ได้โหลดโมดูลนั้น จึงต้องประกาศเองซ้ำ ไม่งั้นสวิตช์กลายเป็นช่องติ๊กเปล่า
    (เจอจริงตอนดูจอ 11/09/2026) กฎของโปรเจกต์คือสไตล์อยู่ในโมดูลตัวเอง ห้ามไปแก้ tool.css */
-.pbid-group-title{margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.pbid-group-title{margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .pbid-switch-field{display:flex;align-items:center;justify-content:space-between;flex-direction:row;gap:10px}
 .pbid-switch{position:relative;display:inline-block;width:42px;height:24px;flex:none}

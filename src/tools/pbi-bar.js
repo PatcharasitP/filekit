@@ -66,7 +66,7 @@ const STYLE = `
 
 .pbib-right{display:flex;flex-direction:column;gap:18px}
 .pbib-group{display:flex;flex-direction:column;gap:10px}
-.pbib-group-title{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-mute)}
+.pbib-group-title{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-mute)}
 
 .pbib-range-row{display:flex;align-items:center;gap:10px}
 .pbib-range-row input[type=range]{flex:1;accent-color:var(--g-powerbi,var(--brand))}
@@ -96,7 +96,7 @@ ${DIRTYMARK_CSS}
 ${CODEVIEW_CSS}
 
 .pbib-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
-.pbib-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.pbib-own-title{margin:0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .pbib-own-hint{font-size:12px;color:var(--text-mute);line-height:1.65;margin:0 0 10px}
 .pbib-own input[type=file]{width:100%;font-size:12.5px;color:var(--text)}

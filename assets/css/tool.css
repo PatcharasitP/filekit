@@ -830,7 +830,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   max-height:min(74vh,720px); overflow:hidden;
 }
 .ws-head{display:flex;align-items:center;gap:10px;padding:13px 15px 10px}
-.ws-head h2{margin:0;font-size:12px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--text-mute)}
+.ws-head h2{margin:0;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-mute)}
 .ws-head > :last-child:not(h2){margin-inline-start:auto}
 .ws-hint{margin:0 15px 8px;font-size:12px;color:var(--text-mute);line-height:1.6}
 .ws-scroll{overflow:auto;padding:0 15px 15px;display:flex;flex-direction:column;gap:9px}

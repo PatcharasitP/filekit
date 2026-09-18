@@ -121,7 +121,7 @@ const STYLE = `
 .gf-card{border:1px solid var(--line); border-radius:var(--r); background:var(--bg-soft); overflow:hidden}
 .gf-head{padding:14px 16px}
 .gf-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px}
-.gf-tag{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+.gf-tag{font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
   color:var(--g-powerbi); border:1px solid color-mix(in srgb,var(--g-powerbi) 42%,transparent);
   border-radius:999px; padding:3px 9px; line-height:1.5}
 .gf-size{margin-inline-start:auto; font-size:11.5px; font-weight:700; color:var(--text-mute);

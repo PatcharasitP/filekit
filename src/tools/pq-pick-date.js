@@ -46,7 +46,7 @@ const STYLE = `
 
 .pqp-hint{font-size:12px;color:var(--text-mute);line-height:1.7;margin:6px 0 0}
 .pqp-add{margin-top:6px}
-.pqp-sect{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.pqp-sect{margin:18px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 .pqp-sect:first-child{margin-top:0}
 
@@ -54,7 +54,7 @@ const STYLE = `
 .pqp-layer{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);
   padding:11px 12px;margin-bottom:10px}
 .pqp-layer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.pqp-layer-no{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute)}
+.pqp-layer-no{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-mute)}
 .pqp-layer .field{margin-bottom:8px}
 .pqp-layer .field:last-child{margin-bottom:0}
 .pqp-two{display:flex;gap:8px}

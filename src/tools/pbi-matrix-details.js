@@ -109,7 +109,7 @@ const STYLE = `
 .pmd-preview td.detail{white-space:pre-wrap;word-break:break-word;color:var(--text)}
 .pmd-steps{font-size:12.5px;color:var(--text);line-height:1.85;margin:0;padding-left:18px}
 .pmd-steps strong{color:var(--text)}
-.pmd-group-title{margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+.pmd-group-title{margin:0 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
   text-transform:uppercase;color:var(--text-mute)}
 ` + CODE_TOKEN_CSS;
 

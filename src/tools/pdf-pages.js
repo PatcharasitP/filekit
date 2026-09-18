@@ -339,25 +339,41 @@ export function mount(tool) {
   pagesGrid.addEventListener("dragstart", (e) => {
     dragging = e.target.closest(".pg");
     dragging?.classList.add("dragging");
+    pagesGrid.classList.add("is-dragging");
   });
   pagesGrid.addEventListener("dragend", () => {
-    pagesGrid.querySelectorAll(".pg").forEach((n) => n.classList.remove("dragging", "over"));
+    pagesGrid.querySelectorAll(".pg").forEach((n) => n.classList.remove("dragging", "over", "after"));
+    pagesGrid.classList.remove("is-dragging");
     dragging = null;
   });
+  /* ‼️ ต้องรู้ว่าจะแทรก "ก่อน" หรือ "หลัง" ใบที่ชี้อยู่ ไม่ใช่แค่ชี้โดน
+     ตัดสินจากตำแหน่งเมาส์เทียบกับกึ่งกลางใบนั้น แล้วขีดเส้นฝั่งที่ตรงกัน
+     ไม่งั้นผู้ใช้ลากไปวางแล้วผลไม่ตรงกับที่เห็น ซึ่งคือที่พี่ปอนด์บอกว่าไม่รู้ว่าเปลี่ยนไหม */
+  const dropSide = (e, node) => {
+    const r = node.getBoundingClientRect();
+    return e.clientX > r.left + r.width / 2 ? "after" : "before";
+  };
   pagesGrid.addEventListener("dragover", (e) => {
     e.preventDefault();
     const over = e.target.closest(".pg");
     if (!over || over === dragging) return;
-    pagesGrid.querySelectorAll(".pg").forEach((n) => n.classList.remove("over"));
+    pagesGrid.querySelectorAll(".pg").forEach((n) => n.classList.remove("over", "after"));
     over.classList.add("over");
+    if (dropSide(e, over) === "after") over.classList.add("after");
   });
   pagesGrid.addEventListener("drop", (e) => {
     e.preventDefault();
     const over = e.target.closest(".pg");
     if (!over || !dragging) return;
-    const from = +dragging.dataset.i, to = +over.dataset.i;
+    const from = +dragging.dataset.i;
+    let to = +over.dataset.i;
+    if (dropSide(e, over) === "after") to += 1;
+    if (to > from) to -= 1;          // ถอนของเดิมออกก่อน ตำแหน่งปลายทางจึงเลื่อนมาหนึ่ง
+    if (to === from) return;
     items.splice(to, 0, items.splice(from, 1)[0]);
+    selected = null;
     render();
+    st.ok(tr(`ย้ายหน้าไปตำแหน่งที่ ${to + 1} แล้ว`, `Moved to position ${to + 1}`));
   });
 
   async function save() {

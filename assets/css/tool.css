@@ -315,8 +315,19 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 }
 .pg canvas,.pg img{display:block;width:100%;height:auto;background:#fff}
 .pg.dropped{opacity:.3;border-style:dashed}
-.pg.dragging{opacity:.45}
-.pg.over{border-color:var(--brand)}
+/* ‼️ ตอนลากสลับหน้า ต้องรู้ว่า "จะไปวางตรงไหน" ไม่ใช่แค่ "ชี้อยู่ที่ใบไหน" (18/09/2026)
+   พี่ปอนด์บอกตรง ๆ ว่า "ไม่รู้ว่าที่เราลากเปลี่ยนมันเปลี่ยนไหม"
+   เดิมบอกด้วยการเปลี่ยนสีขอบใบที่ชี้อยู่เท่านั้น ซึ่งเบามากและไม่ได้บอกตำแหน่งวาง
+   ตอนนี้ขีดเส้นหนาตรงขอบที่จะแทรกเข้าไป เหมือนเคอร์เซอร์ตอนพิมพ์ */
+.pg.dragging{opacity:.4;transform:scale(.97)}
+.pg.over{position:relative;border-color:var(--brand)}
+.pg.over::after{
+  content:""; position:absolute; inset-block:-3px; inset-inline-start:-8px; width:4px;
+  border-radius:3px; background:var(--brand); box-shadow:0 0 0 2px var(--bg);
+}
+/* ลากไปทางขวา เส้นต้องอยู่ขอบขวาของใบปลายทาง ไม่ใช่ขอบซ้าย */
+.pg.over.after::after{ inset-inline-start:auto; inset-inline-end:-8px }
+.pages.is-dragging .pg:not(.dragging){ transition:transform .12s var(--ease-snap,ease) }
 .pg .num{position:absolute;top:5px;inset-inline-start:5px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;padding:1px 7px;border-radius:99px}
 .pg .tools{position:absolute;bottom:0;inset-inline:0;display:flex;gap:4px;justify-content:center;padding:5px;background:linear-gradient(transparent,rgba(0,0,0,.6))}
 .pg .tools button{border:0;background:rgba(255,255,255,.9);color:#111;border-radius:6px;width:26px;height:24px;cursor:pointer;font-size:12px}

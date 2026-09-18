@@ -152,6 +152,48 @@ def main():
         ck(grid["cardW"] >= 215, f"การ์ดไม่เล็กลงกว่าเดิม 215px (ได้ {grid['cardW']}px)", str(grid))
         ck(not grid["hasRight"], "ไม่มีแผงขวามาแย่งพื้นที่ภาพแล้ว")
 
+        # ‼️ ลากสลับหน้าต้องบอกให้เห็นว่าจะไปวางตรงไหน และผลต้องตรงกับที่เห็น
+        #    เดิมบอกด้วยการเปลี่ยนสีขอบเท่านั้น ผู้ใช้จึงไม่รู้ว่าลากแล้วเปลี่ยนไหม
+        cards = pg.query_selector_all(".pg")
+        if len(cards) >= 4:
+            # ‼️ alt อย่างเดียวซ้ำได้ เพราะสองไฟล์ต่างก็มี "หน้า 1"
+            #    ต้องรวมกับไฟล์ต้นทางเป็นลายเซ็นที่ไม่ซ้ำ ไม่งั้นตัวตรวจหาผิดใบ
+            JS_ALT = """ns => ns.map(n => {
+              const card = n.closest('.pg');
+              const src = card.querySelector('.src');
+              return (src ? src.getAttribute('title') + ' ' : '') + n.getAttribute('alt');
+            })"""
+            before_alt = pg.eval_on_selector_all(".pg img", JS_ALT)
+            c0, c3 = cards[0].bounding_box(), cards[3].bounding_box()
+            pg.mouse.move(c0["x"] + c0["width"] / 2, c0["y"] + c0["height"] / 2)
+            pg.mouse.down()
+            pg.mouse.move(c3["x"] + c3["width"] * 0.8, c3["y"] + c3["height"] / 2, steps=10)
+            pg.wait_for_timeout(250)
+            mark = pg.evaluate("""() => {
+              const o = document.querySelector('.pg.over');
+              if (!o) return null;
+              const cs = getComputedStyle(o, '::after');
+              return {side: o.classList.contains('after') ? 'after' : 'before',
+                      w: cs.width, shown: cs.content !== 'none'};
+            }""")
+            ck(bool(mark) and mark["shown"] and mark["side"] == "after",
+               f"ตอนลากมีเส้นบอกตำแหน่งวาง และบอกฝั่งถูก (ได้ {mark})", str(mark))
+            pg.mouse.up()
+            pg.wait_for_timeout(500)
+            after_alt = pg.eval_on_selector_all(".pg img", JS_ALT)
+            moved = before_alt[0]
+            ck(after_alt.index(moved) == 3,
+               f"วางแล้วหน้าไปอยู่ตำแหน่งที่เส้นบอกจริง ({moved} ไปอยู่ลำดับ {after_alt.index(moved) + 1})",
+               f"{before_alt} -> {after_alt}")
+            # ลากกลับที่เดิม จะได้ทดสอบบันทึกด้วยลำดับที่รู้ผลแน่นอน
+            cards2 = pg.query_selector_all(".pg")
+            src, dst = cards2[3].bounding_box(), cards2[0].bounding_box()
+            pg.mouse.move(src["x"] + src["width"] / 2, src["y"] + src["height"] / 2)
+            pg.mouse.down()
+            pg.mouse.move(dst["x"] + dst["width"] * 0.2, dst["y"] + dst["height"] / 2, steps=10)
+            pg.mouse.up()
+            pg.wait_for_timeout(500)
+
         # บันทึกจริง แล้วต้องได้ลิงก์ดาวน์โหลดพร้อมจำนวนหน้าถูกต้อง
         save = pg.query_selector(".ws-footer button:has-text('บันทึก')")
         ck(save is not None and save.is_visible(), "หาปุ่มบันทึกที่กดได้จริงเจอ")

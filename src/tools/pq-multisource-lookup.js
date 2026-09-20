@@ -46,7 +46,14 @@ const STYLE = `
 .pqm-grid{display:flex;flex-direction:column;gap:8px}
 .pqm-row{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);padding:9px 11px}
 .pqm-row-head{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.pqm-row-head input{flex:1}
+/* ‼️ ต้องมี min-width:0 คู่กับ flex:1 เสมอเมื่อมีปุ่มอยู่ข้าง ๆ (20/09/2026)
+   แถวนี้คือ [ช่องพิมพ์ชื่อ, ปุ่มลบ] รูปร่างเดียวกับบั๊กที่เจอใน pa-html-table เป๊ะ ๆ
+   ซึ่งที่นั่นปุ่มลบถูกดันออกไปนอกแผงจนกดไม่ได้เลย
+   ตอนนี้แถวนี้ยังพอดีอยู่ (tests/browser_overflow.py ยืนยันที่ 1440 และ 390px)
+   แต่ห่างจากการพังแค่แผงแคบลงนิดเดียว จึงปิดช่องไว้ก่อน
+   ‼️ สังเกตว่าบรรทัด .pqm-from input ข้างล่างใส่ min-width:0 ไว้แล้ว แปลว่าเคยมีคนรู้กับดักนี้
+   แต่แก้เฉพาะจุดที่เห็นปัญหา ไม่ได้กวาดให้หมด นั่นคือสาเหตุที่มันกลับมาอีก */
+.pqm-row-head input{flex:1;min-width:0}
 .pqm-from{display:flex;flex-direction:column;gap:6px}
 .pqm-from label{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-mute)}
 .pqm-from span{flex:0 0 40%;word-break:break-word}

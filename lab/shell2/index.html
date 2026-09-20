@@ -72,6 +72,13 @@ button{font-family:inherit;cursor:pointer}
 .frame{width:100%;max-width:1600px;background:var(--bg);border-radius:12px;overflow:hidden;
   box-shadow:0 10px 40px rgba(0,0,0,.35);color:var(--text)}
 body[data-view="mobile"] .frame{max-width:390px}
+/* ‼️ กรอบต้องสูงเท่าที่เหลือจริงหลังหักแถบควบคุม ไม่งั้นต้นแบบจะโกหกว่าหน้ายังต้องเลื่อน
+   ทั้งที่ของจริงไม่มีแถบนี้ จุดขายข้อ "สถานะทำงานพอดีจอ" จะพิสูจน์ไม่ได้เลย */
+body[data-view="desktop"] .frame{height:calc(100dvh - var(--lab-h,50px) - 36px);
+  display:flex;flex-direction:column}
+body[data-view="desktop"] .hd{flex:none}
+body[data-view="desktop"] .landing{flex:1 1 auto;min-height:0;overflow:auto}
+body[data-view="desktop"] .work{flex:1 1 auto;min-height:0;height:auto;max-height:none}
 
 /* ── แถบหัวกลาง 60px ─────────────────────────────────────────── */
 .hd{height:var(--hd-h);display:flex;align-items:center;gap:var(--sp4);padding-inline:var(--sp4);
@@ -140,9 +147,14 @@ body[data-view="mobile"] .frame{max-width:390px}
 .fold .faq div::after{content:"›";color:var(--text-mute);font-size:18px}
 
 /* ── สถานะ B ทำงาน กริดผืนงาน + แผงขวา ───────────────────────── */
-.work{display:grid;grid-template-columns:1fr var(--side-w);height:calc(100dvh - var(--hd-h));
-  min-height:560px;max-height:860px}
-.canvas{background:var(--surf-3);display:flex;flex-direction:column;min-width:0;position:relative}
+/* ‼️ ต้องมี grid-template-rows:minmax(0,1fr) คู่กับ min-height:0 ที่ลูกทุกตัว
+   ไม่งั้นแถวของกริดจะขยายตามเนื้อหา ลูกจึงสูงเกินแม่โดยไม่มีอะไรฟ้อง
+   วัดเจอจริงที่จอ 1366x768 (จอโน้ตบุ๊กออฟฟิศไทย) ผืนงานสูงเกินแม่ 87px
+   แล้วดันปุ่มหลักหลุดจอไป ทั้งที่แม่คำนวณความสูงถูกแล้ว
+   เป็นญาติกับกฎเดิมของโปรเจกต์ที่ว่า flex:1 ต้องมาคู่กับ min-width:0 เสมอ */
+.work{display:grid;grid-template-columns:1fr var(--side-w);grid-template-rows:minmax(0,1fr);
+  height:calc(100dvh - var(--hd-h));min-height:0;max-height:860px}
+.canvas{background:var(--surf-3);display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
 .tbar{height:48px;flex:none;display:flex;align-items:center;gap:4px;padding-inline:12px;
   background:var(--surf-2);border-bottom:1px solid var(--line-soft);overflow:hidden}
 .tbar button{height:32px;border:1px solid transparent;background:transparent;color:var(--text);
@@ -191,7 +203,7 @@ body[data-view="mobile"] .frame{max-width:390px}
 
 /* แผงขวา */
 .side{background:var(--surf-1);border-inline-start:1px solid var(--line-soft);
-  display:flex;flex-direction:column;min-width:0}
+  display:flex;flex-direction:column;min-width:0;min-height:0}
 .side-hd{flex:none;padding:14px 18px 10px;display:flex;align-items:flex-start;gap:10px}
 .side-hd h2{margin:0;font-size:20px;font-weight:700;line-height:1.3;flex:1 1 auto}
 .side-hd button{border:0;background:none;color:var(--brand-text);font-size:13px;padding:2px 0;

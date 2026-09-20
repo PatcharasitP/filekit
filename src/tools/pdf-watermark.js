@@ -4,6 +4,7 @@ import { el, dropzone, statusBar, button, field, select, downloadButton,
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
+import { decodeImage } from "../imgdecode.js";
 
 // วาดข้อความลายน้ำลง canvas โปร่งใสแล้วฝังเป็นภาพ PNG
 // ทำแบบนี้เพื่อให้ "ข้อความไทยใช้ได้ทันที"โดยไม่ต้องฝังฟอนต์เข้า PDF
@@ -117,7 +118,7 @@ export function mount(tool) {
    * และแปลงเป็น PNG เสมอเพื่อรักษาพื้นโปร่งใสของโลโก้ (JPG ไม่มี alpha) */
   const LOGO_MAX = 1200;
   async function readLogo(f) {
-    const bmp = await createImageBitmap(f);
+    const bmp = await decodeImage(f);
     const s = Math.min(1, LOGO_MAX / Math.max(bmp.width, bmp.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bmp.width * s));

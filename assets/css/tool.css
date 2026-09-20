@@ -296,9 +296,9 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .status.show{display:block}
 /* เดิมไม่มีเส้นขอบเลย มีแค่พื้นย้อมสี — ในขณะที่กล่องแจ้งเตือนแบบอื่นในหน้าเดียวกัน
    (.fail-box, .wrong-type, .stat) ทุกกล่องมีเส้นขอบย้อมสีคู่กับพื้นเสมอ ทำให้ .status ดูจางกว่าเพื่อนแบบไม่มีเหตุผล */
-.status.info{background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand);border-color:color-mix(in srgb,var(--brand) 30%,transparent)}
-.status.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 32%,transparent)}
-.status.err{background:color-mix(in srgb,var(--err) 15%,transparent);color:var(--err);border-color:color-mix(in srgb,var(--err) 32%,transparent)}
+.status.info{background:color-mix(in srgb,var(--brand) 14%,transparent);color:color-mix(in srgb,var(--brand) 62%,var(--text));border-color:color-mix(in srgb,var(--brand) 30%,transparent)}
+.status.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:color-mix(in srgb,var(--ok) 62%,var(--text));border-color:color-mix(in srgb,var(--ok) 32%,transparent)}
+.status.err{background:color-mix(in srgb,var(--err) 15%,transparent);color:color-mix(in srgb,var(--err) 62%,var(--text));border-color:color-mix(in srgb,var(--err) 32%,transparent)}
 /* จุดสีหน้าข้อความ — ใช้ currentColor เกาะสีของ .info/.ok/.err ที่มีอยู่แล้วเอง ไม่ต้องเพิ่มไอคอน SVG
    (แก้ไฟล์นี้ไฟล์เดียว ต่อ JS ไม่ได้) แต่ทำให้กล่องสถานะดูตั้งใจออกแบบขึ้นแทนที่จะเป็นแถบสีเรียบ ๆ */
 .status::before{content:"";position:absolute;inset-inline-start:15px;top:50%;translate:0 -50%;
@@ -657,7 +657,7 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   color:var(--text-dim); background:transparent; border:1px dashed var(--line)}
 .rail-md:hover{color:var(--text); border-color:var(--text-mute); border-style:solid}
 .rail-md:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
-.rail-md .ico-svg{width:15px; height:15px; flex:none}
+.rail-md .ico-svg{width:17px; height:17px; flex:none}
 .rail-md-st{display:block; margin-top:6px; font-size:11.5px; line-height:1.6; color:var(--g-data)}
 .rail-jump{display:flex; flex-direction:column; gap:2px; margin-top:12px;
   padding-top:10px; border-top:1px solid var(--line-soft)}
@@ -749,6 +749,20 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   color:var(--ac);line-height:1.2}
 .next-carry[hidden]{display:none}
 .next-carry .ico-svg{width:11px;height:11px;stroke-width:2.2}
+
+/* ‼️ เสนอทุกเครื่องมือที่ใช้กับไฟล์นี้ได้ แต่โชว์แค่ 6 ใบแรก
+   หมวด PDF ต่อกันได้ 15 ตัว ถ้าเรียงออกมาหมดจะเป็นกำแพงการ์ดที่ไม่มีใครอ่าน
+   ซ่อนที่เหลือไว้ใต้ปุ่ม ใครอยากดูค่อยกด (รสนิยมเดียวกับแผงตั้งค่าที่พับได้) */
+.next-row > .next-card:nth-child(n+7){display:none}
+.next-row.all > .next-card{display:inline-flex}
+.next-more{
+  margin-top:10px;border:1px dashed var(--line);background:none;color:var(--text-dim);
+  border-radius:999px;padding:8px 16px;font:600 12.5px/1.4 var(--font);cursor:pointer;min-height:36px;
+}
+.next-more:hover{border-style:solid;border-color:var(--text-mute);color:var(--text)}
+.next-more[hidden]{display:none}
+.next-note{margin:0 0 12px;font-size:12.5px;color:var(--text-mute);line-height:1.6}
+.next-note[hidden]{display:none}
 
 /* ── ปุ่มหยุดระหว่างประมวลผล ── */
 .prog-row{display:flex;align-items:center;gap:10px}
@@ -1244,7 +1258,7 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 /* ‼️ ตัวหนังสือสีเน้นล้วนบนพื้นที่ย้อมสีเน้นได้แค่ 4.38:1 (tests/browser_visible.py จับได้ 13/09)
    ผสมกับสีตัวอักษรของธีม 30% ให้เข้มขึ้นในโหมดสว่างและสว่างขึ้นในโหมดมืดพร้อมกัน */
 .faq-top-n{background:color-mix(in srgb,var(--ac,var(--brand)) 14%,transparent);
-  color:color-mix(in srgb,var(--ac,var(--brand)) 70%,var(--text)); border-radius:6px; padding:2px 8px; font-size:12px}
+  color:color-mix(in srgb,var(--ac,var(--brand)) 55%,var(--text)); border-radius:6px; padding:2px 8px; font-size:12px}
 
 /* ── ท้ายหน้าเครื่องมือเป็นภาษาเดียวกัน (13/09/2026 พี่ปอนด์: "เหลืออีกนิดนึง กำลังจะดีละ") ──
    ก่อนหน้านี้ท้ายหน้ามี 3 ภาษาปนกัน: หัวข้อแถบสี+ขีดเส้นใต้หนัก, FAQ แถวเส้นบางลูกศรขวา,
@@ -1289,3 +1303,71 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 
 /* ปุ่มเลือกโหมดที่กำลังใช้อยู่ — เน้นด้วยเส้นขอบสีเครื่องมือ ไม่ใช่พื้นทึบ (ธีมสว่างอ่านง่ายกว่า) */
 .btn.ghost.on{border-color:var(--ac,var(--brand));color:var(--ac,var(--brand));font-weight:700}
+
+
+/* ── หัวกลุ่มในแผงตั้งค่า พับได้ (แบบแผง Format ของ Power BI) ──────────────
+   ‼️ ที่มา 19/09/2026 แผงกราฟโดนัทมีเนื้อหา 1990px ในช่องมอง 654px = ต้องเลื่อน 3 รอบ
+      ย่อขนาดไปรอบหนึ่งแล้วก็ยังยาว เพราะของมันเยอะจริง ไม่ใช่เพราะเปลือง
+   ‼️ ปุ่มกินเต็มความกว้าง กดโดนง่าย ไม่ต้องเล็งหัวข้อเล็ก ๆ
+   ‼️ ไม่ใช้ <details> เพราะต้องคุมสถานะเองเพื่อจำข้ามการเปิดหน้า และใส่จุดบอกค่าที่แก้ไว้
+   ‼️ เส้นคั่นกลุ่มมาอยู่ที่ "ปุ่มหัวข้อ" ไม่ใช่กล่องรอบนอก เพราะแผงส่วนใหญ่วางหัวข้อ
+      เรียงแบนปนกับช่องกรอก ไม่มีกล่องรอบกลุ่มให้ใส่เส้น (ตรวจของจริงครบ 51 ตัว) */
+.ws-fold-btn{
+  display:flex;align-items:center;gap:7px;width:100%;
+  background:none;border:0;cursor:pointer;font:inherit;color:inherit;text-align:start;
+  margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--line-soft);min-height:36px;
+}
+.ws-fold-btn.ws-fold-first{margin-top:0;padding-top:0;border-top:0}
+.ws-fold-btn h3{margin:0;flex:1;min-width:0}
+.ws-fold-btn:hover h3{color:var(--ac,var(--brand))}
+.ws-fold-btn:focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:7px}
+.ws-fold-caret{flex:none;display:grid;place-items:center;color:var(--text-mute);
+  transition:transform .16s var(--ease,ease)}
+.ws-fold-svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.ws-fold-btn.folded .ws-fold-caret{transform:rotate(-90deg)}
+/* ‼️ กลุ่มที่พับแล้วเป็นการ์ดพื้นอ่อนเรียงซ้อนกัน เหมือนแผง Format ของ Power BI
+   เพราะหัวข้อที่พับกับที่กางต้องแยกออกด้วยตาเปล่า ไม่ต้องอ่านทิศลูกศรก่อน
+   ตอนพับตัดเส้นคั่นทิ้งแล้วใช้พื้นการ์ดแทน ไม่งั้นได้ทั้งเส้นทั้งพื้นซ้อนกันจนรก */
+.ws-fold-btn.folded{
+  /* ‼️ --bg-soft เป็นค่าตายตัว ธีมสว่างมันเข้มกว่าพื้นแผงพอดี (1.16:1) แต่ธีมมืด
+     มันเข้มกว่าพื้นอีก เหลือต่างกัน 1.07:1 การ์ดเลยแทบหายไป
+     ผสมจากสีตัวอักษรแทน จะเข้มขึ้นในธีมสว่างและสว่างขึ้นในธีมมืดเองอัตโนมัติ
+     เพราะสีตัวอักษรกลับด้านตามธีมอยู่แล้ว ไม่ต้องเขียนกฎแยกสองชุดให้ลืมอัปเดตข้างใดข้างหนึ่ง */
+  background:color-mix(in srgb, var(--text) 8%, transparent);
+  border:1px solid var(--line-soft);border-radius:9px;
+  padding:0 9px;margin-top:6px;min-height:34px;
+}
+.ws-fold-btn.folded + .ws-fold-btn.folded{margin-top:5px}
+.ws-fold-btn.folded:hover{border-color:var(--line)}
+/* จุดบอกว่ากลุ่มที่พับไว้มีค่าที่ถูกแก้ ไม่งั้นพับแล้วลืมว่าตั้งอะไรไว้ */
+.ws-fold-dot{flex:none;width:7px;height:7px;border-radius:999px;background:var(--ac,var(--brand))}
+/* ‼️ บนจอสัมผัส หัวข้อคือปุ่มที่ต้องกดจริง 32px เตี้ยเกินสำหรับนิ้วโป้ง
+   ขยายเฉพาะจอสัมผัส เมาส์ยังได้แผงที่แน่นเหมือนเดิม */
+@media (pointer:coarse){
+  .ws-fold-btn{min-height:40px}
+  .ws-fold-btn.folded{min-height:42px}
+}
+/* ‼️ หดกลับได้เฉพาะจอกว้างที่ใช้เมาส์จริง สูตรเดียวกับที่แผงตั้งค่าใช้อยู่
+   จอแคบต้องได้ 36px เสมอ ไม่ว่าเบราว์เซอร์จะรายงานว่าเป็นจอสัมผัสหรือไม่
+   (เทส browser_layout วัดจอ 390px โดยไม่จำลองการสัมผัส ซึ่งตรงกับเครื่องจริงหลายรุ่น) */
+@media (min-width:1001px) and (pointer:fine){
+  .ws-fold-btn{min-height:32px}
+}
+
+/* ── แถบเตือนตอนเปิดจากแอปแชท (20/09/2026) ────────────────────────────────
+   โผล่เฉพาะใน LINE/Facebook/Instagram ที่บล็อกการดาวน์โหลดไฟล์
+   ‼️ ใช้สีเตือนของธีม ไม่ใช่สีใหม่ และวางเป็นแถบบางไม่ทับเนื้อหา */
+.ia-bar{
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+  margin:0 auto var(--sp3);padding:9px 14px;max-width:1096px;
+  border-radius:var(--r-md,10px);border:1px solid color-mix(in srgb,var(--warn,#b8860b) 32%,transparent);
+  background:color-mix(in srgb,var(--warn,#b8860b) 10%,transparent);
+  color:var(--text);font-size:13px;line-height:1.55;
+}
+.ia-bar .ia-go{
+  flex:none;padding:7px 13px;border-radius:999px;min-height:40px;display:inline-flex;align-items:center;
+  background:var(--text);color:var(--bg);text-decoration:none;font-weight:600;font-size:13px;
+}
+.ia-bar .ia-how{flex:none;color:var(--text-dim);font-weight:600}
+@media (max-width:640px){ .ia-bar{margin-inline:12px;font-size:12.5px} }

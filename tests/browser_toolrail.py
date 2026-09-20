@@ -44,7 +44,9 @@ with sync_playwright() as p:
     br = p.chromium.launch()
     errs = []
     seen = {}
-    for w in (1100, 1440, 1600, 1920):
+    # ‼️ เกณฑ์จริงใน tool.css คือ 1820px ไม่ใช่ 1500 (ดูคอมเมนต์การคำนวณในไฟล์นั้น)
+    #    1600 จึงต้อง "ไม่มีราง" ไม่ใช่ "มีราง" — เทสเดิมค้างอยู่ที่เกณฑ์เก่าแล้วระเบิด
+    for w in (1100, 1440, 1600, 1840, 1920):
         ctx = br.new_context(viewport={"width": w, "height": 950})
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -53,14 +55,18 @@ with sync_playwright() as p:
         seen[w] = pg.evaluate(GEO)
         ctx.close()
 
-    for w in (1100, 1440):
+    for w in (1100, 1440, 1600):
         d = seen[w]
         ck(f"① จอ {w}px ไม่มีราง และยังมีหัวเรื่องเดิม", not d["rail"] and d["head"], str(d))
-    for w in (1600, 1920):
+    for w in (1840, 1920):
         d = seen[w]
         ck(f"② จอ {w}px มีราง และหัวเรื่องใหญ่หายไป", d["rail"] and not d["head"], str(d))
-        ck(f"③ จอ {w}px รางไม่ทับพื้นที่ทำงาน (รางจบที่ {d['railBox']['r']}, งานเริ่มที่ {d['body']['l']})",
-           d["railBox"]["r"] <= d["body"]["l"], str(d))
+        # ‼️ อ่านค่ากล่องเฉพาะตอนมีรางจริง ไม่งั้นเทสระเบิดแทนที่จะรายงานว่าตก
+        if d["railBox"] and d["body"]:
+            ck(f"③ จอ {w}px รางไม่ทับพื้นที่ทำงาน (รางจบที่ {d['railBox']['r']}, งานเริ่มที่ {d['body']['l']})",
+               d["railBox"]["r"] <= d["body"]["l"], str(d))
+        else:
+            ck(f"③ จอ {w}px วัดตำแหน่งรางได้", False, str(d))
 
     widths = {w: seen[w]["body"]["w"] for w in (1440, 1600, 1920)}
     ck(f"③ พื้นที่ทำงานกว้างเท่าเดิมทุกจอ {widths}", len(set(widths.values())) == 1, str(widths))

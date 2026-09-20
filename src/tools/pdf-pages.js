@@ -593,7 +593,8 @@ export function mount(tool) {
     rotateRBtn.disabled = !has;
     toggleBtn.disabled = !has;
     toggleBtn.replaceChildren(uiIcon(has && selected.dropped ? "undo" : "trash", "btn-ico"));
-    toggleBtn.title = has && selected.dropped ? tr("เอากลับ", "Restore") : tr("ลบหน้านี้", "Remove this page");
+    // ‼️ ใช้ ariaLabel อย่างเดียว เว็บนี้ไม่ใช้ tooltip ของเบราว์เซอร์
+    toggleBtn.ariaLabel = has && selected.dropped ? tr("เอากลับ", "Restore") : tr("ลบหน้านี้", "Remove this page");
   }
 
   function applyRange() {

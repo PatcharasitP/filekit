@@ -4,6 +4,7 @@ import { tr, pl } from "../i18n.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, tableToBlob } from "../sheetpick.js";
 import { decimalsOf, toInt, fromInt, groupByValue, search } from "../subsetsum.js";
+import { stateKit, shareButton } from "../statekit.js";
 
 /* ‼️ ทำไมต้องมีเครื่องมือนี้
  * งานกระทบยอดเจอทุกเดือน: เงินโอนเข้าก้อนเดียว 257,425.30 แต่ในระบบเป็นใบเล็ก ๆ หลายใบ
@@ -199,6 +200,35 @@ export function mount(tool) {
     if (isExcel) renderExcelGuide();
   };
 
+  /* ── จำเงื่อนไขไว้ และส่งต่อด้วยลิงก์ ────────────────────────────────────
+     ‼️ เก็บเฉพาะช่องในแผง "เงื่อนไข" เท่านั้น ไม่เก็บชีต คอลัมน์ หรือหัวตาราง
+        เพราะสามอย่างนั้นผูกกับไฟล์ที่เปิดอยู่ คนเปิดลิงก์ใช้อีกไฟล์แล้วจะเพี้ยนทันที
+        งานกระทบยอดตั้งเงื่อนไขเดิมทุกเดือน การต้องตั้ง 10 ช่องใหม่ทุกครั้งคือความเจ็บจริง */
+  const RULES = () => ({
+    target: targetIn.value, tol: tolIn.value,
+    minCount: minCountIn.value, maxCount: maxCountIn.value,
+    minVal: minValIn.value, maxVal: maxValIn.value,
+    want: wantIn.value, time: timeIn.value,
+    neg: negSw.input.checked, reuse: reuseSw.input.checked,
+  });
+  const store = stateKit(tool.id, {
+    defaults: RULES(),
+    collect: RULES,
+    apply: (v) => {
+      const set = (node, key) => { if (v[key] !== undefined) node.value = v[key]; };
+      set(targetIn, "target"); set(tolIn, "tol");
+      set(minCountIn, "minCount"); set(maxCountIn, "maxCount");
+      set(minValIn, "minVal"); set(maxValIn, "maxVal");
+      set(wantIn, "want"); set(timeIn, "time");
+      if (v.neg !== undefined) negSw.input.checked = !!v.neg;
+      if (v.reuse !== undefined) reuseSw.input.checked = !!v.reuse;
+    },
+  });
+  store.restore();
+  for (const n of [targetIn, tolIn, minCountIn, maxCountIn, minValIn, maxValIn, wantIn, timeIn])
+    n.addEventListener("input", () => store.save());
+  for (const n of [negSw.input, reuseSw.input]) n.addEventListener("change", () => store.save());
+
   const goBtn = button(tr("ค้นหาชุดที่รวมกันได้", "Find matching sets"), { icon: "play", onclick: run });
   const dlBtn = button(tr("ดาวน์โหลดผลเป็น Excel", "Download results as Excel"), { icon: "download", ghost: true, onclick: downloadAll });
   dlBtn.hidden = true;
@@ -214,7 +244,7 @@ export function mount(tool) {
       empty: tr("เปิดไฟล์หรือวางตัวเลข แล้วใส่ยอดเป้าหมายทางขวา", "Open a file or paste numbers, then set the target on the right"),
     },
     right: { title: tr("เงื่อนไข", "Conditions"), node: rightBody },
-    footer: [goBtn, dlBtn, st.node],
+    footer: [goBtn, shareButton(store, st, button), dlBtn, st.node],
   });
   ws.body.prepend(styleEl);
   // ‼️ ต้องสั่งซ่อนผืนงานตั้งแต่ต้น ไม่งั้นแท็บผลลัพธ์กับข้อความ "ยังไม่มีไฟล์" จะโผล่ซ้อนกัน

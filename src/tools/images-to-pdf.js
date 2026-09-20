@@ -1,6 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, downloadButton,
          stripExt, segmented, eachFileConcurrent, failedBox, fmtBytes } from "../ui.js";
 import { tr, pl } from "../i18n.js";
+import { decodeImage } from "../imgdecode.js";
 
 const PAGE_SIZES = { auto: null, a4: [595.28, 841.89], letter: [612, 792] };
 
@@ -125,7 +126,7 @@ function stripJpegExif(u8) {
       /* ทางนี้ส่งไบต์ดิบเข้า pdf-lib ตรง ๆ (เร็วสุด ไม่เสียคุณภาพ) — โครงสร้างผ่านแล้ว
        * เหลือแค่กันไฟล์ที่หัวถูกแต่เนื้อในเป็นขยะจริง ๆ ให้เบราว์เซอร์ลองถอดรหัสดูก่อน */
       let probe;
-      try { probe = await createImageBitmap(file); }
+      try { probe = await decodeImage(file); }
       catch { throw new Error(tr("ไฟล์รูปเสียหาย เปิดไม่ได้", "This image file is damaged")); }
       probe.close?.();
       // ‼️ ทางลัดนี้ฝังไบต์ JPEG ดิบตรง ๆ — ถ้าไม่ตัด EXIF ก่อน พิกัด GPS/ชื่อกล้อง/ผู้ถ่าย
@@ -135,7 +136,7 @@ function stripJpegExif(u8) {
     }
     let bmp;
     // ระบุ from-image ให้ชัด ไม่พึ่งค่าตั้งต้น เพราะเบราว์เซอร์รุ่นเก่าเคยตั้งต้นเป็น none
-    try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+    try { bmp = await decodeImage(file, { imageOrientation: "from-image" }); }
     catch { throw new Error(tr("ไฟล์รูปเสียหาย เปิดไม่ได้", "This image file is damaged")); }
     const canvas = document.createElement("canvas");
     canvas.width = bmp.width; canvas.height = bmp.height;

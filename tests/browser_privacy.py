@@ -605,6 +605,19 @@ def static_checks():
 
 
 # ═════════════════════════════════════════════════════════════════════════
+def free_port():
+    """หาพอร์ตที่ "ปิดอยู่จริง" แบบไม่ชนรายการพอร์ตต้องห้ามของ Chromium
+    ‼️ ห้ามฮาร์ดโค้ดพอร์ตต่ำ ๆ อย่าง 1 หรือ 9 เพราะ Chromium ปฏิเสธตั้งแต่ในเบราว์เซอร์
+       (ERR_UNSAFE_PORT) คำขอจึงไม่เคยกลายเป็นคำขอเครือข่าย แล้ว requestfailed ก็ไม่ยิง
+       ตัวตรวจจะรายงานว่าตัวเองเชื่อไม่ได้ ทั้งที่ของที่ตรวจไม่ได้ผิดอะไรเลย"""
+    import socket
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
 def main():
     start_server()
     files = make_magic_files()
@@ -613,6 +626,7 @@ def main():
     all_requests = []     # จาก context "request": scenario/url/method/resource_type/post_data
     finished_log = []     # จาก context "requestfinished": scenario/url/status
     failed_log = []       # จาก context "requestfailed": scenario/url/failure
+    dead_port = free_port()   # พอร์ตที่ปิดอยู่จริงและไม่อยู่ในรายการต้องห้ามของ Chromium
     ws_events = []        # จาก page "websocket": scenario/url
     js_calls_log = []     # harvest ของ window.__calls ต่อฉาก (ระดับ JS API — เสริม)
     page_errs = []
@@ -671,11 +685,10 @@ def main():
             before_reqs = len(all_requests)
             before_failed = len(failed_log)
             pg.evaluate("""(args) => {
-                const [secret, mark] = args;
+                const [secret, mark, deadPort] = args;
                 // fetch — same-origin (เสิร์ฟจาก http.server ของเราเอง คาด 404 แต่ไม่ออกนอกเครื่อง)
                 fetch('/' + mark + '/fetch?leak=' + secret).catch(()=>{});
                 // fetch ไป loopback พอร์ตปิด — พิสูจน์ requestfailed (ต่อไม่ติด แต่ "พยายามยิง" ต้องถูกจับ)
-                fetch('http://127.0.0.1:1/' + mark + '-http?leak=' + secret).catch(()=>{});
                 // XHR — same-origin
                 try {
                     const x = new XMLHttpRequest();
@@ -690,7 +703,7 @@ def main():
                 try { new WebSocket('ws://127.0.0.1:1/' + mark + '/' + secret); } catch(e) {}
                 // localStorage
                 try { localStorage.setItem('__fk_canary_key__', 'leak=' + secret); } catch(e) {}
-            }""", [MAGIC_SECRET, CANARY_MARK])
+            }""", [MAGIC_SECRET, CANARY_MARK, dead_port])
             pg.wait_for_timeout(1500)
 
             calls = pg.evaluate("() => window.__calls || {}")
@@ -712,11 +725,21 @@ def main():
                     any(MAGIC_SECRET in r["url"] for r in new_reqs))
 
             # requestfailed ต้องจับ canary ที่ยิงไป loopback พอร์ตปิดได้ (รอให้ล้มเหลวจริงก่อน)
+            # ‼️ ต้องยิงจากแท็บเปล่าที่ไม่มี CSP — วัดแล้วพบว่ายิงจากหน้าเว็บจริงถูก CSP บล็อก
+            #    (console ขึ้น "violates the following Content Security Policy") คำขอจึงไม่เคย
+            #    ออกไปถึงชั้นเครือข่าย แล้ว requestfailed ก็ไม่ยิง ตัวตรวจจะสรุปว่าตัวเองเชื่อไม่ได้
+            #    ทั้งที่ความจริงคือ "เว็บเราบล็อกได้จริง" ซึ่งคือสิ่งที่เทสนี้ต้องการพิสูจน์พอดี
+            probe = ctx.new_page()
+            probe.goto("about:blank")
+            probe.evaluate("(args) => { const [mark, port, secret] = args;"
+                           " fetch('http://127.0.0.1:' + port + '/' + mark + '-http?leak=' + secret).catch(()=>{}); }",
+                           [CANARY_MARK, dead_port, MAGIC_SECRET])
             deadline = time.time() + 10
-            while time.time() < deadline and not any(CANARY_MARK in r["url"] and "127.0.0.1:1" in r["url"] for r in failed_log[before_failed:]):
+            while time.time() < deadline and not any(CANARY_MARK in r["url"] and f"127.0.0.1:{dead_port}" in r["url"] for r in failed_log[before_failed:]):
                 pg.wait_for_timeout(200)
             ck_true("canary — context.on('requestfailed') จับ request ที่ยิงไม่สำเร็จได้จริง (loopback พอร์ตปิด)",
                     any(CANARY_MARK in r["url"] for r in failed_log[before_failed:]))
+            probe.close()
 
             # เก็บกวาดร่องรอย canary ออกจาก localStorage จริง กันปนกับผลตรวจตอนท้าย
             pg.evaluate("() => { try { localStorage.removeItem('__fk_canary_key__'); } catch(e) {} }")

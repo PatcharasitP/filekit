@@ -42,7 +42,12 @@ MIN_TOOLS = 30
 #   pdf-remove-blank ไฟล์ตัวอย่างไม่มีหน้าว่างเลย จึงไม่มีอะไรให้ตัด
 #   word-replace    ยังไม่ได้กรอกคู่คำที่จะแทนที่ (โค้ดเช็ค getPairs().length > 0)
 #   word-mailmerge  ต้องมีทั้ง Word และ Excel ตัวอย่างให้แค่ Word กล่องที่สองยังว่าง
-NEEDS_MORE_THAN_A_FILE = {"pdf-sign", "pdf-remove-blank", "word-replace", "word-mailmerge"}
+# เครื่องมือที่ "มีไฟล์แล้ว" ยังลงมือไม่ได้ เพราะต้องการของเพิ่มอีกอย่างจริง ๆ
+# ‼️ map-coverage ต้องใช้สองไฟล์ (จุดศูนย์กลาง + จุดบริวาร) พิสูจน์แล้วด้วยการใส่ทีละช่อง
+#    ช่องแรก ปุ่มยังกดไม่ได้ · ครบสองช่อง ปุ่มกดได้และคำนวณถูก (12 วง กับ 12 จุด)
+#    ตัวตรวจนี้ใส่ไฟล์ให้ช่องแรกช่องเดียว จึงต้องยกเว้น
+NEEDS_MORE_THAN_A_FILE = {"pdf-sign", "pdf-remove-blank", "word-replace", "word-mailmerge",
+                          "map-coverage"}
 
 def tools_needing_files():
     src = open("src/registry.js", encoding="utf-8").read()

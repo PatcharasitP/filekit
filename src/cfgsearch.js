@@ -35,7 +35,8 @@ const norm = (s) => stripTone(String(s || "").toLowerCase().replace(/\s+/g, " ")
 export function configSearch(cfg) {
   /* ‼️ ช่องอาจถูกห่อด้วย .dm-field (กล่องที่ติดป้ายว่าคุมพารามิเตอร์ไหน) อีกชั้น
      ต้องเลือกกล่องห่อเป็นหน่วยของการซ่อน ไม่งั้นซ่อนช่องแล้วปุ่มคืนค่ายังลอยค้างอยู่ */
-  const { scope, groupSel, fieldSel = ".dm-field, .field, [class*='-switch-field']", keep = [] } = cfg;
+  const { scope, groupSel, fieldSel = ".dm-field, .field, [class*='-switch-field']", keep = [],
+          fieldsOf = null, beforeRun = null, groupText = null } = cfg;
 
   const input = el("input", {
     type: "search", class: "cfs-input", autocomplete: "off", spellcheck: "false",
@@ -49,7 +50,9 @@ export function configSearch(cfg) {
   }, [uiIcon("close", "cfs-clear-ico")]);
   const count = el("div", { class: "cfs-count", role: "status", "aria-live": "polite" });
   const node = el("div", { class: "cfs-wrap" }, [
-    el("div", { class: "cfs-box" }, [input, clearBtn]), count,
+    /* แว่นขยายหน้าช่อง บอกว่าช่องนี้คือช่องค้นหา ไม่ใช่ช่องกรอกค่าอีกช่อง
+       (ถอดจากแผง Format ของ Power BI ที่พี่ปอนด์ส่งมา 19/09/2026) */
+    el("div", { class: "cfs-box" }, [uiIcon("search", "cfs-ico"), input, clearBtn]), count,
   ]);
 
   let items = [];   // { field, group, text }
@@ -67,9 +70,14 @@ export function configSearch(cfg) {
   function reindex() {
     items = [];
     for (const g of scope.querySelectorAll(groupSel)) {
-      for (const f of g.querySelectorAll(fieldSel)) {
+      /* ‼️ พ่วงชื่อกลุ่มเข้าไปในข้อความที่ใช้ค้นด้วย คนพิมพ์ชื่อกลุ่มต้องเจอทั้งกลุ่ม
+         (พิมพ์ "สี" แล้วไม่เจอกลุ่ม "สีและขนาด" เลยสักช่อง เพราะป้ายช่องข้างในไม่มีคำนี้) */
+      const gt = groupText ? ` ${groupText(g)}` : "";
+      /* ‼️ แผงส่วนใหญ่ของเราไม่มีกล่องรอบกลุ่ม หัวข้อกับช่องเรียงแบนปนกันอยู่
+         กรณีนั้นผู้เรียกส่ง fieldsOf มาบอกเองว่าช่องไหนเป็นของกลุ่มไหน */
+      for (const f of (fieldsOf ? fieldsOf(g) : g.querySelectorAll(fieldSel))) {
         // ข้อความที่ใช้ค้น รวมทั้งป้ายชื่อและคำอธิบายใต้ช่อง เพราะคนมักพิมพ์คำพ้อง
-        items.push({ field: f, group: g, text: f.textContent || "" });
+        items.push({ field: f, group: g, text: (f.textContent || "") + gt });
       }
     }
   }
@@ -98,6 +106,9 @@ export function configSearch(cfg) {
   function run() {
     const rawQ = input.value.trim();
     const q = norm(rawQ);
+    /* ‼️ ตะขอก่อนค้น ให้ผู้เรียกกางกลุ่มที่พับไว้ก่อน ไม่งั้นของที่อยู่ในกลุ่มพับ
+       จะถูกนับว่า "เครื่องมือซ่อนไว้เอง" แล้วค้นยังไงก็ไม่เจอ ทั้งที่มันมีอยู่จริง */
+    if (beforeRun) beforeRun(q);
     clearBtn.hidden = !rawQ;
     scope.classList.toggle("cfs-on", !!q);
     for (const k of keep) if (k) k.hidden = !!q;   // ชุดพร้อมใช้ไม่เกี่ยวกับการค้น ซ่อนตอนค้น
@@ -141,7 +152,9 @@ export function configSearch(cfg) {
 export const CFGSEARCH_CSS = `
 .cfs-wrap{margin-bottom:14px}
 .cfs-box{position:relative;display:flex;align-items:center}
-.cfs-input{width:100%;box-sizing:border-box;padding-inline-end:34px}
+.cfs-input{width:100%;box-sizing:border-box;padding-inline-start:34px;padding-inline-end:34px}
+.cfs-ico{position:absolute;inset-inline-start:11px;width:15px;height:15px;pointer-events:none;
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;color:var(--text-mute);display:block}
 .cfs-input::-webkit-search-cancel-button{display:none}
 .cfs-clear{position:absolute;inset-inline-end:6px;width:26px;height:26px;display:grid;
   place-items:center;border:0;background:transparent;color:var(--text-mute);cursor:pointer;

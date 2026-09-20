@@ -1,4 +1,5 @@
 import { workspace } from "../workspace.js";
+import { stateKit, shareButton } from "../statekit.js";
 import { el, statusBar, button, field, select, segmented, dropzone, download } from "../ui.js";
 import { tr, pl, IS_EN } from "../i18n.js";
 import { readWorkbook, sheetToTable, tablesToBlob } from "../sheetpick.js";
@@ -187,6 +188,36 @@ export function mount(tool) {
   ], "0");
   const unitIn = el("input", { class: "mr-num", type: "text", value: tr(" กม.", " km") });
 
+  /* ── จำค่าการแสดงผลไว้ และส่งต่อด้วยลิงก์ ───────────────────────────────
+     ‼️ ไม่เก็บชีตกับคอลัมน์ เพราะผูกกับไฟล์ที่เปิดอยู่ คนเปิดลิงก์ใช้ไฟล์ตัวเองแล้วจะเพี้ยน
+     ‼️ หน่วย (unitIn) ค่าเริ่มต้นเปลี่ยนตามภาษา จึงคิดเป็นค่าเริ่มต้นตอน mount
+        ถ้าผู้ใช้ไม่ได้แก้ จะไม่ถูกเก็บเลย ลิงก์จึงไม่พาหน่วยภาษาไทยไปทับหน้าอังกฤษ */
+  const LOOK = () => ({
+    colorOld: colorOld.value, colorNew: colorNew.value, dotSize: dotSize.value,
+    lineMode: lineMode.value, labelMode: labelMode.value, labelTop: labelTop.value,
+    radiusOn: radiusSw.input.checked, radiusKm: radiusKm.value,
+    provOn: provSw.input.checked, extent: extentSel.value,
+    minKm: minKmIn.value, top: topSel.value, unit: unitIn.value,
+  });
+  const store = stateKit(tool.id, {
+    defaults: LOOK(), collect: LOOK,
+    apply: (v) => {
+      for (const [node, key] of [[colorOld, "colorOld"], [colorNew, "colorNew"], [dotSize, "dotSize"],
+                                 [lineMode, "lineMode"], [labelMode, "labelMode"], [labelTop, "labelTop"],
+                                 [radiusKm, "radiusKm"], [extentSel, "extent"], [minKmIn, "minKm"],
+                                 [topSel, "top"], [unitIn, "unit"]])
+        if (v[key] !== undefined) node.value = v[key];
+      if (v.radiusOn !== undefined) radiusSw.input.checked = !!v.radiusOn;
+      if (v.provOn !== undefined) provSw.input.checked = !!v.provOn;
+    },
+  });
+  store.restore();
+  for (const n of [colorOld, colorNew, radiusKm, unitIn, minKmIn])
+    n.addEventListener("input", () => store.save());
+  for (const n of [dotSize, lineMode, labelMode, labelTop, extentSel, topSel,
+                   radiusSw.input, provSw.input, minKmIn])
+    n.addEventListener("change", () => store.save());
+
   [colorOld, colorNew].forEach((c) => c.addEventListener("input", () => draw()));
   [dotSize, lineMode, labelMode, labelTop, extentSel].forEach((s) => (s.onchange = () => draw()));
   radiusSw.input.addEventListener("change", () => draw());
@@ -262,7 +293,7 @@ export function mount(tool) {
     left: { title: tr("ไฟล์พิกัด", "Coordinate file"), node: leftBody },
     center: { node: centerNode, empty: tr("เปิดไฟล์ที่มีพิกัดจุดเดิมและจุดใหม่ แล้วจะเห็นแผนที่ทันที", "Open a file with the old and new coordinates to see the map") },
     right: { title: tr("ปรับแต่ง", "Adjust"), node: rightBody },
-    footer: [goPng, goXlsx, goCsv, st.node],
+    footer: [goPng, goXlsx, goCsv, shareButton(store, st, button), st.node],
   });
   ws.body.prepend(styleEl);
 

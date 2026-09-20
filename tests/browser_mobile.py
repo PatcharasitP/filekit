@@ -8,7 +8,7 @@
 "หลัง" กดปุ่ม "ลองด้วยไฟล์ตัวอย่าง" (ทุกปุ่มบนหน้า — บางเครื่องมือมี 2 dropzone เช่น word-mailmerge)
 แล้วตรวจ 5 เรื่องตาม brief:
   ① ไม่มีสกอลล์แนวนอน
-  ② ปุ่มลงมือทำอยู่ในจอทุกจังหวะเลื่อน (scrollY=0 / กลางหน้า / ท้ายหน้า) หลังใส่ไฟล์
+  ② ปุ่มลงมือทำอยู่ในจอทุกจังหวะเลื่อน (scrollY=0 / กลางหน้า / ท้ายพื้นที่ทำงาน) หลังใส่ไฟล์
   ③ ไม่มีกับดักสกอลล์ซ้อน (inner overflow-y ที่สูง <70% จอ)
   ④ tap target ปุ่ม/ลิงก์/checkbox/radio/select ≥36×36px (เน้นหลังใส่ไฟล์ ที่ browser_layout.py ไม่ครอบ)
   ⑤ ท้ายหน้าไม่ถูกแถบลอย (position:fixed/sticky) บัง
@@ -355,9 +355,24 @@ def check_tool(pg, base, tid, results):
     record_scan(results, f"{tid}·หลังใส่ไฟล์", s2)
 
     # ② ปุ่มลงมือทำต้องอยู่ในจอทุกจังหวะเลื่อน (scrollY=0 / กลางหน้า / ท้ายหน้า)
-    for label in ("scrollY=0(บนสุด)", "กลางหน้า", "ท้ายหน้า"):
+    for label in ("scrollY=0(บนสุด)", "กลางหน้า", "ท้ายพื้นที่ทำงาน"):
         h = pg.evaluate("document.documentElement.scrollHeight")
-        target = 0 if label.startswith("scrollY") else (h / 2 if label == "กลางหน้า" else h)
+        # ‼️ จุดเลื่อนต้องอ้างอิง "พื้นที่ทำงาน" ไม่ใช่ทั้งเอกสาร
+        #    ใต้พื้นที่ทำงานคือส่วนเลือกเครื่องมือถัดไปกับคำถามที่เจอบ่อย ซึ่งไม่ใช่ตอนกำลังทำงานแล้ว
+        #    tool.css ออกแบบให้แถบปุ่มหลุดลอยขึ้นไปพอดีตรงนั้น (มีคอมเมนต์อธิบายไว้ในไฟล์)
+        ws = pg.evaluate("""() => { const b = document.querySelector('.ws-body, .panel');
+          if (!b) return null; const r = b.getBoundingClientRect();
+          return {top: Math.round(r.top + scrollY), bottom: Math.round(r.bottom + scrollY)}; }""")
+        vh = VIEWPORT["height"]
+        if label.startswith("scrollY"):
+            target = 0
+        elif ws is None:
+            target = h / 2 if label == "กลางหน้า" else h
+        elif label == "กลางหน้า":
+            target = max(0, ws["top"] + (ws["bottom"] - ws["top"] - vh) / 2)
+        else:
+            target = max(0, ws["bottom"] - vh)          # ท้ายพื้นที่ทำงานอยู่ "ขอบล่าง" ของจอ
+        target = max(0, min(h, target))
         scroll_to(pg, target)
         info, seen = btn_rects_stable(pg)     # รอให้ตำแหน่งนิ่งก่อนตัดสิน (ดูเหตุผลที่ btn_rects_stable)
         if not info["hasContainer"]:
@@ -408,7 +423,7 @@ def check_mobile(base):
        len(results["hscroll"]) == 0,
        "\n      " + "\n      ".join(results["hscroll"][:10]))
 
-    ck(f"② ปุ่มลงมือทำอยู่ในจอทุกจังหวะเลื่อน หลังใส่ไฟล์ (พบ {len(results['btn_off'])} จุด)",
+    ck(f"② ปุ่มลงมือทำอยู่ในจอทุกจังหวะเลื่อนของพื้นที่ทำงาน หลังใส่ไฟล์ (พบ {len(results['btn_off'])} จุด)",
        len(results["btn_off"]) == 0,
        "\n      " + "\n      ".join(results["btn_off"][:15]))
 

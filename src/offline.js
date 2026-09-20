@@ -74,8 +74,10 @@ export function offlineBar() {
       // ‼️ ประโยคเดิมยาว 2 บรรทัดและขึ้นต้นด้วยขีดยาว — พี่ปอนด์ทักว่าอ่านแล้วรก
       //    เหลือเฉพาะสิ่งที่ผู้ใช้ต้องรู้: ได้อะไร กินที่เท่าไร · รายละเอียดที่เหลือไม่จำเป็น
       el("span", { class: "ob-detail" },
-        tr("  โหลดเครื่องมือทั้งหมดไว้ล่วงหน้า (5 MB)",
-           "  Download every tool in advance (5 MB)")),
+        /* ‼️ ตัวเลขนี้ต้องตรงกับของจริง วัดใหม่ทุกครั้งที่เพิ่มไลบรารี
+           20/09/2026 เพิ่มตัวถอด HEIC 960 KB ทำให้รวมเป็น 6.3 MB จาก 5.3 MB */
+        tr("  โหลดเครื่องมือทั้งหมดไว้ล่วงหน้า (6 MB)",
+           "  Download every tool in advance (6 MB)")),
     ]));
     bar.appendChild(el("button", { class: "btn ob-btn", type: "button", onclick: run }, tr("โหลดไว้ใช้ออฟไลน์", "Download for offline")));
   };

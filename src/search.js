@@ -51,17 +51,30 @@ const STOP = new Set(["ที่","ใน","ให้","เป็น","จาก
   "ได้","แล้ว","อยาก","ต้องการ","ช่วย","ขอ","หน่อย","ด้วย","ทำ","มี","อัน","ตัว","แบบ",
   "the","a","an","to","of","for","my","me","i"]);
 
+const STOP_N = new Set([...STOP].map(norm));
+
 let _seg = null;
-/** ตัดคำค้นเป็นคำ ๆ · ไทยใช้ Intl.Segmenter · ถ้าเบราว์เซอร์ไม่มีก็ตัดด้วยช่องว่างแทน */
-function segWords(s) {
+/**
+ * ตัดคำค้นเป็นคำ ๆ · ไทยใช้ Intl.Segmenter · ถ้าเบราว์เซอร์ไม่มีก็ตัดด้วยช่องว่างแทน
+ *
+ * ‼️ ต้องรับ "ข้อความต้นฉบับที่ยังมีวรรณยุกต์" แล้วค่อยตัดวรรณยุกต์ทีละคำหลังตัดคำเสร็จ
+ *    ห้ามส่งข้อความที่ตัดวรรณยุกต์ไปแล้วเข้ามา เพราะวรรณยุกต์คือสิ่งที่บอกตัวตัดคำ
+ *    ว่าคำจบตรงไหน วัดจริง 19/09/2026:
+ *      "pdf เป็นรูปภาพ" ตัดได้ [pdf, เป็น, รูปภาพ]  ถูกต้อง
+ *      "pdf เปนรูปภาพ" (ตัดวรรณยุกต์ก่อน) ตัดได้ [pdf, เป, นรูป, ภาพ]  พัง
+ *    "นรูป" ไม่ใช่คำ แต่มันไปตรงกับเศษคำในคำค้นสำรองของเครื่องมืออื่น
+ *    ทำให้เครื่องมือที่ไม่เกี่ยวได้คะแนนเต็มเพดาน
+ *    (หลักเดียวกับที่ cfgsearch.js เขียนไว้ ตัดวรรณยุกต์ได้เฉพาะตอนเทียบ ห้ามใช้ตอนหาตำแหน่ง)
+ */
+function segWords(raw) {
   let words;
   try {
     if (!_seg) _seg = new Intl.Segmenter("th", { granularity: "word" });
-    words = [..._seg.segment(s)].filter((x) => x.isWordLike).map((x) => x.segment);
+    words = [..._seg.segment(String(raw))].filter((x) => x.isWordLike).map((x) => x.segment);
   } catch {
-    words = s.split(/[\s,.]+/);
+    words = String(raw).split(/[\s,.]+/);
   }
-  return words.filter((w) => w.length >= 2 && !STOP.has(w));
+  return words.map(norm).filter((w) => w.length >= 2 && !STOP_N.has(w));
 }
 
 /** คำนี้อยู่ในกองข้อความไหม · ยอมตัดหางคำได้บ้าง ("หน้าที่" -> "หน้า")
@@ -77,6 +90,44 @@ function hasWord(hay, w) {
  * ให้คะแนนความเข้ากันของเครื่องมือกับคำค้น (สูง = ตรงกว่า) · 0 = ไม่ตรงเลย
  * ลำดับความสำคัญ: ชื่อขึ้นต้นตรง > ชื่อมีคำนี้ > คำสำคัญ/คำอธิบายมีคำนี้ > ข้ามตัวอักษรในชื่อ
  */
+/* ── ทิศทางของการแปลงไฟล์ ────────────────────────────────────────────────
+   ‼️ เว็บนี้มีเครื่องมือ "A เป็น B" เต็มไปหมด ทิศทางคือความหมาย ไม่ใช่คำเกิน
+      แต่คำว่า "เป็น" อยู่ในรายการคำหยุด จึงถูกตัดทิ้งตอนตัดคำ ผลคือ
+      "รูปภาพเป็น pdf" กับ "pdf เป็นรูปภาพ" กลายเป็นคำค้นเดียวกันในสายตาตัวค้นหา
+      (วัดจริง: พิมพ์ "รูปภาพเป็น pdf" แล้ว PDF เป็นภาพยาว ขึ้นก่อน Images เป็น PDF)
+   ‼️ ดูแค่ "ลำดับของชื่อฟอร์แมต" ไม่ได้พยายามเข้าใจประโยค เพราะชื่อฟอร์แมตคือ
+      สิ่งเดียวที่ระบุทิศได้แน่นอน ส่วนคำเชื่อมภาษาไทยเขียนได้หลายแบบเกินกว่าจะไล่ครบ */
+const FORMAT_PAT = [
+  ["pdf",   /pdf/g],
+  ["word",  /word|docx/g],
+  ["excel", /excel|xlsx/g],
+  ["image", /images?|รูป|ภาพ|jpg|jpeg|png|webp/g],
+  ["ppt",   /powerpoint|pptx|สไลด์/g],
+  ["text",  /ข้อความ|txt/g],
+];
+/** คำนี้หมายถึงชื่อฟอร์แมตไหน (คืน RegExp ไว้ใช้ตรวจอีกฝั่ง) หรือ null ถ้าไม่ใช่ */
+function formatOf(w) {
+  for (const [, re] of FORMAT_PAT) {
+    const one = new RegExp(`^(?:${re.source})$`);
+    if (one.test(w)) return re;
+  }
+  return null;
+}
+
+/** คืนชื่อฟอร์แมตที่พบ เรียงตามตำแหน่งที่ปรากฏ และตัดตัวซ้ำที่ติดกันออก */
+function formatOrder(s) {
+  const found = [];
+  for (const [name, re] of FORMAT_PAT) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(s))) found.push([m.index, name]);
+  }
+  found.sort((a, b) => a[0] - b[0]);
+  const out = [];
+  for (const [, name] of found) if (out[out.length - 1] !== name) out.push(name);
+  return out;
+}
+
 export function scoreTool(t, rawQ) {
   const q = norm(rawQ);
   if (!q) return 1;
@@ -85,13 +136,14 @@ export function scoreTool(t, rawQ) {
   const desc = norm(t.desc || "");
   const id = norm(t.id);
 
-  const tries = [q];
+  // ‼️ เก็บคู่กัน [ตัดวรรณยุกต์แล้ว, ต้นฉบับ] เพราะการตัดคำต้องใช้ต้นฉบับ
+  const tries = [[q, String(rawQ)]];
   const alt = enToThai(rawQ);
-  if (alt) tries.push(norm(alt));
+  if (alt) tries.push([norm(alt), alt]);
 
   let best = 0;
   for (let k = 0; k < tries.length; k++) {
-    const s = tries[k];
+    const [s, rawS] = tries[k];
     const penalty = k ? 12 : 0;               // ผลจากการเดาแป้นพิมพ์ ให้คะแนนน้อยกว่าที่พิมพ์ตรง
     // คิดคะแนนทุกทางแล้วเอาสูงสุด — ห้ามใช้ if-else ต่อกันเป็นลูกโซ่ เพราะทางที่ตรงกว่า
     // อาจอยู่ล่างสุดแล้วถูกทางที่หยาบกว่าตัดหน้าไปก่อน (เจอจริงตอนเทส: "รวมpdf")
@@ -115,22 +167,47 @@ export function scoreTool(t, rawQ) {
     //    ตรงเมื่อ "คำเนื้อหา" ตรงตั้งแต่ครึ่งหนึ่งขึ้นไปและอย่างน้อย 2 คำ
     //    ‼️ ต้องบังคับ 2 คำขึ้นไป ไม่งั้นคำมั่ว ๆ ที่บังเอิญตัดได้ 1 คำจะหลุดมาทันที
     if (!sc) {
-      const toks = segWords(s);
+      const toks = segWords(rawS);
       if (toks.length >= 2) {
-        const hay = `${title} ${keys} ${desc} ${id}`;
-        let hitN = 0, longHit = false;
+        /* ‼️ ต้องดูด้วยว่าคำไปตรงที่ "ช่องไหน" ไม่ใช่แค่ตรงกี่คำ
+           เดิมให้คะแนนตามจำนวนคำอย่างเดียว ผลคือเครื่องมือ 8 ตัวได้ 36 คะแนนเท่ากันหมด
+           (วัดจริงกับคำค้น "รูป pdf") พอเสมอกันก็เรียงตามลำดับในทะเบียน
+           เครื่องมือ PDF ที่ประกาศไว้ก่อนจึงขึ้นก่อนเสมอ ทั้งที่ไม่เกี่ยวกับรูปเลย
+           ชื่อเครื่องมือคือสิ่งที่คนอ่านและจำ จึงหนักกว่าคำค้นสำรอง และหนักกว่าคำอธิบายมาก */
+        const FIELDS = [[title, 15], [id, 11], [keys, 8], [desc, 3]];
+        let hitN = 0, longHit = false, weight = 0;
         for (const w of toks) {
-          if (!hasWord(hay, w)) continue;
+          // ‼️ ชื่อฟอร์แมตข้ามภาษาได้ "รูป" กับ "Images" คือสิ่งเดียวกัน
+          //    ไม่งั้นชื่อเครื่องมือที่เป็นอังกฤษจะไม่เคยตรงกับคำไทยที่คนพิมพ์เลย
+          const fmt = formatOf(w);
+          let best = 0;
+          for (let f = 0; f < FIELDS.length; f++) {
+            if (FIELDS[f][1] <= best) continue;
+            if (hasWord(FIELDS[f][0], w)) { best = FIELDS[f][1]; continue; }
+            if (fmt) { fmt.lastIndex = 0; if (fmt.test(FIELDS[f][0])) best = FIELDS[f][1]; }
+          }
+          if (!best) continue;
           hitN++;
+          weight += best;
           if (w.length >= 3) longHit = true;
         }
         // ‼️ ต้องมีคำยาว 3 ตัวขึ้นไปตรงอย่างน้อยหนึ่งคำ
         //    คำไทย 2 ตัวอักษรไม่มีความหมายในตัวเอง มันโผล่แทรกในคำอื่นตลอด
         //    ถ้านับแต่จำนวนคำ คำที่พิมพ์ผิดแป้นจะได้ 2 คำสั้น ๆ แล้วหลุดมาทันที
-        if (hitN >= 2 && longHit && hitN * 2 >= toks.length) bump(30 + Math.min(hitN, 4) * 3);
+        // ‼️ เพดาน 72 ตั้งใจให้ต่ำกว่าการตรงทั้งวลีในชื่อ (78-100) การเดาจากคำแยกจึงไม่แซงของที่ตรงจริง
+        if (hitN >= 2 && longHit && hitN * 2 >= toks.length) bump(Math.min(72, 20 + weight));
       }
     }
-    if (sc) best = Math.max(best, sc - penalty);
+    /* ‼️ หักคะแนนเมื่อทิศทางกลับกัน เช่นพิมพ์ "รูปภาพเป็น pdf" แต่เครื่องมือคือ "PDF เป็น Images"
+       ทำเฉพาะตอนที่ทั้งคำค้นและชื่อเครื่องมือมีชื่อฟอร์แมตตั้งแต่ 2 ตัวขึ้นไป
+       ซึ่งก็คือกรณีเครื่องมือแปลงพอดี เครื่องมืออื่นจึงไม่ได้รับผลกระทบเลย */
+    if (sc) {
+      const qf = formatOrder(s), tf = formatOrder(title);
+      if (qf.length >= 2 && tf.length >= 2 && qf[0] !== tf[0] && qf.includes(tf[0]) && tf.includes(qf[0])) {
+        sc -= 20;
+      }
+    }
+    if (sc > 0) best = Math.max(best, sc - penalty);
   }
   return best;
 }

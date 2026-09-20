@@ -2,6 +2,7 @@ import { workspace } from "../workspace.js";
 import { el, statusBar, button, field, select, segmented, dropzone, download } from "../ui.js";
 import { tr, IS_EN } from "../i18n.js";
 import { readWorkbook, sheetToTable, tablesToBlob } from "../sheetpick.js";
+import { stateKit, shareButton } from "../statekit.js";
 import {
   distanceKm, circleWKT, toCoord, buildGrid, withinKm, nearestOf, coverageOf,
   mercator, fitProjection, boundsOf,
@@ -156,12 +157,35 @@ export function mount(tool) {
   const goPng = button(tr("บันทึกภาพ", "Save image"), { icon: "image", onclick: savePng });
   const goXlsx = button(tr("ไฟล์สำหรับ Power BI", "File for Power BI"), { icon: "download", onclick: saveXlsx, ghost: true });
 
+  /* ── จำค่าการแสดงผลไว้ และส่งต่อด้วยลิงก์ ───────────────────────────────
+     ‼️ เก็บเฉพาะรัศมี ขนาดจุด สี และสวิตช์แสดงผล
+        ไม่เก็บชีตกับคอลัมน์ (shC latC lonC idC shS latS lonS lat2S lon2S idS)
+        เพราะผูกกับไฟล์ที่เปิดอยู่ คนเปิดลิงก์ใช้ไฟล์ของตัวเองแล้วคอลัมน์จะเพี้ยน */
+  const LOOK = () => ({
+    radius: radius.value, dotSize: dotSize.value,
+    showOut: showOut.value, showNew: showNew.value,
+    showLink: showLink.value, showCount: showCount.value,
+    cCenter: cCenter.value, cOld: cOld.value, cNew: cNew.value,
+  });
+  const store = stateKit(tool.id, {
+    defaults: LOOK(), collect: LOOK,
+    apply: (v) => {
+      for (const [node, key] of [[radius, "radius"], [dotSize, "dotSize"], [showOut, "showOut"],
+                                 [showNew, "showNew"], [showLink, "showLink"], [showCount, "showCount"],
+                                 [cCenter, "cCenter"], [cOld, "cOld"], [cNew, "cNew"]])
+        if (v[key] !== undefined) node.value = v[key];
+    },
+  });
+  store.restore();
+  for (const n of [radius, dotSize, cCenter, cOld, cNew]) n.addEventListener("input", () => store.save());
+  for (const n of [showOut, showNew, showLink, showCount]) n.addEventListener("change", () => store.save());
+
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์พิกัด", "Coordinate files"), node: leftBody },
     center: { node: centerNode, empty: tr("เปิดไฟล์จุดศูนย์กลางและจุดบริวาร แล้วจะเห็นแผนที่ทันที",
                                           "Open both files to see the map") },
     right: { title: tr("ปรับแต่ง", "Adjust"), node: rightBody },
-    footer: [goPng, goXlsx, st.node],
+    footer: [goPng, goXlsx, shareButton(store, st, button), st.node],
   });
   ws.body.prepend(styleEl);
 

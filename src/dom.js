@@ -5,10 +5,37 @@ import { IS_EN } from "./i18n.js";
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+/* ‼️ ของที่กดได้ ถ้าถอด title ออกแล้วไม่มีชื่ออย่างอื่น โปรแกรมอ่านหน้าจอจะอ่านไม่ออก
+   จึงย้าย title ไปเป็น aria-label ให้เฉพาะพวกนี้ ส่วนของที่ไม่ได้กดก็ทิ้งไปเลย */
+const NEEDS_NAME = new Set(["button", "a", "input", "select", "textarea", "summary"]);
+
+/** ของชิ้นนี้มีข้อความให้เห็นไหม (ตัวหนังสือตรง ๆ หรือลูกที่มีตัวหนังสือ) */
+function hasText(children) {
+  for (const c of [].concat(children)) {
+    if (c === null || c === undefined || c === false) continue;
+    if (typeof c === "object") { if (c.textContent && c.textContent.trim()) return true; }
+    else if (String(c).trim()) return true;
+  }
+  return false;
+}
+
 export function el(tag, attrs = {}, children = []) {
   const n = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (v === null || v === undefined || v === false) continue;
+    /* ‼️ ไม่ใส่ tooltip ของเบราว์เซอร์อีกแล้ว (พี่ปอนด์สั่งเอาออกทั้งเว็บ 19/09/2026)
+       ป้ายลอยขึ้นมาบังของที่กำลังจะกด หน่วงเป็นวินาทีกว่าจะขึ้น และบนมือถือไม่ขึ้นเลย
+       ข้อความที่สำคัญจริงต้องอยู่บนหน้าให้เห็น ไม่ใช่ซ่อนไว้ใต้เมาส์ */
+    if (k === "title") {
+      /* ‼️ ย้ายเป็น aria-label เฉพาะของที่ไม่มีข้อความให้เห็น (ปุ่มไอคอนล้วน)
+         ถ้าของนั้นมีข้อความอยู่แล้ว การใส่ aria-label จะไป "ทับ" ข้อความนั้น
+         ชิป "กระชับ" ที่มี title เป็นคำอธิบายยาว ๆ จะกลายเป็นชื่อยาวแทนคำว่ากระชับ
+         คนที่ใช้เสียงสั่งงานจะสั่งไม่ได้อีกเลย */
+      if (NEEDS_NAME.has(tag) && !attrs["aria-label"] && !attrs["aria-labelledby"] && !hasText(children)) {
+        n.setAttribute("aria-label", v);
+      }
+      continue;
+    }
     if (k === "class") n.className = v;
     else if (k === "html") n.innerHTML = v;
     else if (k === "text") n.textContent = v;

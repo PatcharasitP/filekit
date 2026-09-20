@@ -1,9 +1,10 @@
 import { detectType, wrongTypeMessage, typeLabel } from "./filetype.js";
 import { $, $$, el, showVeil, filesFromClipboard } from "./dom.js";
-import { byId, GROUPS } from "./registry.js";
+import { byId, GROUPS, TOOLS } from "./registry.js";
 import { TOOL_IO } from "./toolio.js";
 import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
 import { tr, pl } from "./i18n.js";
+import { inApp, saveViaShare } from "./inapp.js";
 
 /* ‼️ 09/09/2026 พี่ปอนด์ทักเอง: "ไฟล์ควรคลิกดูข้อมูลข้างในได้ไหม" — เดิมกดดูได้เฉพาะ
  * ภาพย่อของรูป ส่วนแถวไฟล์ Excel/Word กดไม่ได้เลย ทั้งที่คนหยิบผิดไฟล์บ่อยกว่ารูปด้วยซ้ำ
@@ -44,14 +45,26 @@ export const yieldToBrowser = (() => {
 
 export const readBuffer = (file) => file.arrayBuffer();
 
-export function download(blob, filename) {
+function plainDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = el("a", { href: url, download: filename });
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-  announceResult(blob, filename); // ผลลัพธ์นี้พร้อมพาไปเครื่องมือถัดไปแล้ว — ดู "ผลลัพธ์ล่าสุด" ด้านล่าง
+}
+
+/**
+ * บันทึกไฟล์ผลลัพธ์ลงเครื่องผู้ใช้
+ * ‼️ ในเบราว์เซอร์ของแอปแชท (LINE ฯลฯ) ลิงก์ดาวน์โหลดถูกบล็อกทั้งหมด
+ *   จึงลองส่งผ่าน share sheet ของระบบก่อน ซึ่งเซฟหรือส่งต่อได้เลยโดยไม่ผ่านตัวจัดการดาวน์โหลด
+ *   ‼️ ทำเฉพาะในแอปแชทเท่านั้น บนเบราว์เซอร์ปกติการดาวน์โหลดตรง ๆ ดีกว่าและคาดเดาได้กว่า
+ *   ‼️ ห้ามมี await ก่อนเรียก navigator.share เพราะจะหลุดจากการกดของผู้ใช้แล้วถูกปฏิเสธ
+ */
+export function download(blob, filename) {
+  announceResult(blob, filename); // ประกาศก่อนเสมอ ผลลัพธ์พร้อมพาไปเครื่องมือถัดไปแม้เซฟไม่สำเร็จ
+  if (!inApp()) { plainDownload(blob, filename); return; }
+  saveViaShare(blob, filename).then((how) => { if (how === "download") plainDownload(blob, filename); });
 }
 
 /**
@@ -90,8 +103,10 @@ export function toolShell(tool) {
       el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc), toolMeta(tool), toolExample(tool)]),
     ]),
     body,
-    toolFaq(tool),
+    /* ‼️ "ทำอะไรต่อดี" มาก่อนคำถามที่เจอบ่อย เพราะคนที่เพิ่งทำงานเสร็จกำลังจะทำขั้นต่อไป
+       ไม่ได้กำลังจะอ่านคำถาม การให้เลื่อนผ่าน FAQ ก่อนคือด่านที่ไม่มีเหตุผล */
     nextSteps(tool),
+    toolFaq(tool),
     toolRail(tool),
   ]);
   return { wrap, body };
@@ -111,9 +126,11 @@ export function toolShell(tool) {
  * ‼️ aria-hidden ไม่ได้ เพราะมีลิงก์ข้ามส่วนที่คนใช้คีย์บอร์ดควรใช้ได้
  *    แต่ชื่อเครื่องมือซ้ำกับ h1 จึงไม่ทำเป็นหัวเรื่องซ้ำอีกชั้น */
 export function toolRail(tool) {
+  // ‼️ เรียงตามที่ตาเห็นบนหน้าเสมอ (ทำอะไรต่อดี ย้ายขึ้นมาก่อน FAQ แล้ว 19/09/2026)
+  //    ลิงก์ข้ามส่วนที่เรียงไม่ตรงกับหน้า ทำให้กดแล้วกระโดดย้อนขึ้นลงจนงง
   const jump = [["ws-top", tr("พื้นที่ทำงาน", "Workspace")],
-                ["faq-h", tr("คำถามที่เจอบ่อย", "Common questions")],
-                ["next-h", tr("ทำอะไรต่อดี", "What next?")]];
+                ["next-h", tr("ทำอะไรต่อดี", "What next?")],
+                ["faq-h", tr("คำถามที่เจอบ่อย", "Common questions")]];
   return el("aside", { class: "tool-rail", "aria-label": tr("ข้อมูลเครื่องมือนี้", "About this tool") }, [
     el("div", { class: "rail-id" }, [
       el("span", { class: "rail-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
@@ -327,43 +344,86 @@ export function toolMeta(tool) {
 
 /** แถว "ทำอะไรต่อดี"ท้ายหน้าเครื่องมือ — งานเอกสารจริงแทบไม่มีขั้นตอนเดียวจบ
  *  เช่นรวม PDF เสร็จมักตามด้วยบีบอัดหรือเซ็นชื่อ · เดิมผู้ใช้ต้องกดกลับหน้าแรกไปหาเอง */
+/**
+ * แถวเครื่องมือที่ทำต่อกับไฟล์นี้ได้ พร้อมพาไฟล์ไปด้วย
+ *
+ * ‼️ ที่มา 19/09/2026 พี่ปอนด์: "เครื่องมือเยอะมาก รวมกันได้ไหม ทำทีละเครื่องมือมันไม่สะดวก"
+ *    วัดจริงก่อนแก้: เครื่องมือหนึ่งตัวทำงานต่อบนไฟล์เดิมได้เฉลี่ย 11 ตัว (หมวด PDF 15.3)
+ *    แต่หน้าเครื่องมือเสนอให้แค่ 2.1 ตัวจากรายการที่จดไว้เอง = มองไม่เห็น 86% ของทางเลือก
+ *    ผู้ใช้จึงต้องกลับหน้าแรก หาเครื่องมือใหม่ แล้วเลือกไฟล์ซ้ำทุกครั้ง
+ * ‼️ ไม่ได้รวมโค้ดเครื่องมือเข้าด้วยกัน เพราะ "แยกไว้ดีอยู่แล้ว" (พี่ปอนด์พูดเอง)
+ *    สิ่งที่ขาดคือ **ไฟล์ไม่ตามไป** กับ **มองไม่เห็นว่าทำอะไรต่อได้** แก้สองข้อนี้ก็พอ
+ * ‼️ ดูจากชนิดของไฟล์ที่ถืออยู่จริงตอนนี้ ไม่ใช่ชนิดที่เครื่องมือนี้รับ
+ *    เพราะหลังแปลงเสร็จชนิดเปลี่ยน เช่นทำ PDF เป็น Images แล้วควรเสนอเครื่องมือรูป
+ * ‼️ โชว์แค่ 6 ตัวแรก ที่เหลือซ่อนไว้ใต้ปุ่ม เพราะ 15 ใบเรียงกันรกเกินไป
+ */
+const NEXT_VISIBLE = 6;
 export function nextSteps(tool) {
-  const list = (tool.next || []).map(byId).filter(Boolean);
-  if (!list.length) return null;
   ensureResultLifecycle();
   const accent = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
+  const row = el("div", { class: "next-row" });
+  const more = el("button", { class: "next-more", type: "button", hidden: true,
+    onclick: () => { row.classList.add("all"); more.hidden = true; } });
+  const head = Object.assign(sectionHead(tr("ทำอะไรต่อดี", "What next?")), { id: "next-h" });
+  const note = el("p", { class: "next-note", hidden: true });
+  const nav = el("nav", { class: "next-steps", "aria-label": tr("เครื่องมือที่ทำต่อกับไฟล์นี้ได้", "Tools that continue with this file") },
+    [head, note, row, more]);
 
-  const cards = list.map((t) => {
-    // ป้ายเล็ก ๆ บอกว่ากดแล้วไฟล์ผลลัพธ์ล่าสุดจะตามไปด้วย — ซ่อนไว้ก่อน โผล่เฉพาะตอนมีผลลัพธ์
-    // ที่ชนิดตรงกับเครื่องมือปลายทางนี้จริง ๆ (เดิม hidden ในตอนสร้าง ค่อยเปิดทีหลังด้วย sync())
-    const carryTag = el("span", { class: "next-carry", hidden: true }, [
-      uiIcon("download", "ico-svg"),
-      tr("พาไฟล์ไปด้วย", "Brings your file"),
-    ]);
-    const a = el("a", {
-      class: "next-card", href: "#/" + t.id, style: `--ac:${accent(t)}`,
-      onclick: () => {
-        const carried = resultFilesFor(t);
-        if (carried) stashFiles(carried); // ไฟล์ตามไปเฉพาะตอนชนิดเข้ากันได้จริง — การ์ดอื่นทำงานปกติ
-      },
-    }, [
-      el("span", { class: "next-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
-      el("span", { class: "next-label" }, [el("span", { class: "next-title" }, t.title), carryTag]),
-    ]);
-    return { t, a, carryTag };
-  });
+  let lastKey = "";
+  function build() {
+    const carried = carryFiles();
+    const types = new Set((carried || []).map(detectType));
+    const curated = (tool.next || []).map(byId).filter(Boolean);
+    // เครื่องมือที่รับชนิดไฟล์ที่เราถืออยู่ได้จริง — ถ้ายังไม่มีไฟล์ ใช้รายการที่จดไว้ตามเดิม
+    const compat = types.size
+      ? TOOLS.filter((t) => t.id !== tool.id && t.accepts && t.accepts.some((x) => types.has(x)))
+      : [];
+    const seen = new Set();
+    const list = [];
+    for (const t of [...curated, ...compat]) {
+      if (t.id === tool.id || seen.has(t.id)) continue;
+      seen.add(t.id); list.push(t);
+    }
+    const key = list.map((t) => t.id).join("|") + "@" + (carried ? carried.length : 0);
+    if (key === lastKey) return;
+    lastKey = key;
 
-  function sync() {
-    for (const { t, carryTag } of cards) carryTag.hidden = !resultFilesFor(t);
+    row.innerHTML = "";
+    row.classList.remove("all");
+    for (const t of list) {
+      const takes = carried && carried.filter((f) => t.accepts && t.accepts.includes(detectType(f)));
+      const carry = takes && takes.length ? takes : null;
+      row.appendChild(el("a", {
+        class: "next-card", href: "#/" + t.id, style: `--ac:${accent(t)}`,
+        onclick: () => { if (carry) stashFiles(carry); },
+      }, [
+        el("span", { class: "next-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
+        el("span", { class: "next-label" }, [
+          el("span", { class: "next-title" }, t.title),
+          carry ? el("span", { class: "next-carry" }, [uiIcon("download", "ico-svg"),
+            tr("พาไฟล์ไปด้วย", "Brings your file")]) : null,
+        ]),
+      ]));
+    }
+    const hidden = list.length - NEXT_VISIBLE;
+    more.hidden = hidden <= 0;
+    more.textContent = tr(`อีก ${hidden} เครื่องมือ`, `${hidden} more`);
+    note.hidden = !carried;
+    if (carried) {
+      note.textContent = tr(
+        `ไฟล์ที่ทำอยู่จะตามไปด้วย ไม่ต้องเลือกใหม่ (${list.length} เครื่องมือใช้กับไฟล์นี้ได้)`,
+        `Your file comes along, no need to pick it again (${list.length} tools work with it)`);
+    }
   }
-  sync();
-
-  const nav = el("nav", { class: "next-steps", "aria-label": tr("เครื่องมือที่มักใช้ต่อ", "Tools people use next") }, [
-    Object.assign(sectionHead(tr("ทำอะไรต่อดี", "What next?")), { id: "next-h" }),
-    el("div", { class: "next-row" }, cards.map((c) => c.a)),
-  ]);
-  // อัปเดตป้ายทันทีที่มีผลลัพธ์ใหม่ (ผู้ใช้กดดาวน์โหลดหลังจากแถวนี้วาดไปแล้ว) — ถอดตัวเองเมื่อแถวนี้หลุดจากหน้า
-  resultWatchers.add({ dead: () => !nav.isConnected, fn: sync });
+  build();
+  /* ‼️ "ยังไม่ได้เข้าหน้า" ไม่เท่ากับ "ตายแล้ว" — หน้าเครื่องมือถูกประกอบเสร็จก่อนแล้วค่อยใส่ลงหน้า
+     ถ้าตัดสินจาก isConnected ตรง ๆ ตัวเฝ้าจะถูกถอดทิ้งตั้งแต่การแจ้งเตือนครั้งแรก
+     แล้วไฟล์ที่ตามมาจากเครื่องมือก่อนหน้าจะไม่เคยทำให้แถบนี้อัปเดตเลย */
+  let wasLive = false;
+  resultWatchers.add({
+    dead: () => { if (nav.isConnected) { wasLive = true; return false; } return wasLive; },
+    fn: build,
+  });
   return nav;
 }
 
@@ -636,6 +696,11 @@ function emitFileState(file, state) {
  * โดยไม่กดรวม-zip) จะพาไปแค่ไฟล์ล่าสุดที่กด ไม่ใช่ทุกไฟล์ — ยอมรับได้ ดีกว่าไม่พาไปเลย
  */
 let resultFiles = null;
+/* ‼️ ไฟล์ที่ "กำลังโหลดอยู่ในกล่อง" ของเครื่องมือที่เปิดอยู่
+   เดิมพาไฟล์ไปเครื่องมืออื่นได้เฉพาะไฟล์ผลลัพธ์ที่ดาวน์โหลดแล้ว
+   แต่คนมักอยากเปลี่ยนเครื่องมือตั้งแต่ยังไม่ได้ลงมือ (หยิบไฟล์มาแล้วเพิ่งนึกออกว่าจะทำอะไร)
+   ล้างพร้อมกับไฟล์ผลลัพธ์ทุกครั้งที่สลับเครื่องมือ ด้วยตัวเฝ้าตัวเดียวกัน */
+let inputFiles = null;
 const resultWatchers = new Set();
 function notifyResultWatchers() {
   for (const w of resultWatchers) { if (w.dead()) resultWatchers.delete(w); else w.fn(); }
@@ -644,6 +709,13 @@ export function setResultFiles(files) {
   resultFiles = files && files.length ? [...files] : null;
   notifyResultWatchers();
 }
+/** กล่องรับไฟล์เรียกเองทุกครั้งที่รายการไฟล์เปลี่ยน — เครื่องมือไม่ต้องรู้เรื่องนี้เลย */
+export function setInputFiles(files) {
+  inputFiles = files && files.length ? [...files] : null;
+  notifyResultWatchers();
+}
+/** ไฟล์ที่พาไปเครื่องมืออื่นได้ตอนนี้ — ผลลัพธ์มาก่อน ถ้ายังไม่มีก็ใช้ไฟล์ที่โหลดอยู่ */
+export function carryFiles() { return resultFiles || inputFiles || null; }
 function announceResult(blob, filename) {
   try { setResultFiles([new File([blob], filename, { type: blob.type })]); }
   catch { /* เบราว์เซอร์เก่ามาก ๆ ที่ไม่รองรับ File ตรง ๆ — ไม่ใช่จุดคอขวด ปล่อยผ่านเงียบ ๆ */ }
@@ -663,6 +735,9 @@ function ensureResultLifecycle() {
   if (!host) return; // ยังไม่มี #tool ในหน้า (ไม่ควรเกิด แต่กันพังไว้)
   resultLifecycleReady = true;
   new MutationObserver((muts) => {
+    // ‼️ ล้างเฉพาะไฟล์ผลลัพธ์ ส่วนไฟล์ที่โหลดอยู่ปล่อยให้กล่องรับไฟล์ตัวใหม่ตั้งค่าเอง
+    //    ถ้าล้างตรงนี้ด้วย จะไปล้างไฟล์ที่เพิ่งตามมาจากเครื่องมือก่อนหน้า เพราะลำดับ microtask
+    //    ของตัวเฝ้ากับของกล่องรับไฟล์ไม่แน่นอน (เจอจริง ไฟล์หายตั้งแต่การสลับครั้งที่สอง)
     if (muts.some((m) => m.removedNodes.length)) setResultFiles(null);
   }).observe(host, { childList: true });
 }
@@ -683,6 +758,9 @@ export function dropzone(opts = {}) {
   } = opts;
 
   let files = [];
+  /* ‼️ ประกาศออกไปทุกครั้งที่รายการไฟล์เปลี่ยน ไม่ใช่แค่บอกเครื่องมือเจ้าของกล่อง
+     เพื่อให้แถบ "ทำต่อกับไฟล์นี้" รู้ว่าตอนนี้ถือไฟล์อะไรอยู่ */
+  const fireChange = () => { setInputFiles(files); onChange(files); };
   // ‼️ ภาพย่อคงอยู่ข้าม render() (คีย์ด้วยตัว File เอง) — ไม่งั้นทุกครั้งที่มีไฟล์เพิ่ม/ลบ/สลับลำดับ
   //    list.innerHTML="" ใน render() จะล้างภาพที่คำนวณไปแล้วทิ้ง ต้องมาคำนวณใหม่ทุกรอบ
   const thumbCache = new Map();  // File -> { kind, node, pending }
@@ -828,7 +906,7 @@ export function dropzone(opts = {}) {
     if (!multiple) files.forEach(revokeThumb); // โหมดไฟล์เดียว — ไฟล์เก่าถูกแทนที่ ต้องคืนหน่วยความจำก่อน
     files = multiple ? files.concat(usable) : usable.slice(0, 1);
     render();
-    onChange(files);
+    fireChange();
   }
 
   /** เอา objectURL ของภาพย่อไฟล์นี้คืนหน่วยความจำ (ถ้ามี) — เรียกทุกครั้งที่ไฟล์หลุดจากลิสต์ */
@@ -923,7 +1001,7 @@ export function dropzone(opts = {}) {
     warn.appendChild(box);
   }
   function remove(i) { revokeThumb(files[i]); pageCounts.delete(files[i]); pagePending.delete(files[i]);
-    states.delete(files[i]); files.splice(i, 1); render(); onChange(files); }
+    states.delete(files[i]); files.splice(i, 1); render(); fireChange(); }
 
   /** ป้ายสถานะท้ายแถว — ยังไม่เริ่มทำ = ไม่ต้องมีป้าย (แถวเปล่าอ่านง่ายกว่าป้าย "รอ" เต็มจอ) */
   function stateBadge(st) {
@@ -936,7 +1014,7 @@ export function dropzone(opts = {}) {
   function move(from, to) {
     if (from === to || from < 0 || to < 0) return;
     files.splice(to, 0, files.splice(from, 1)[0]);
-    render(); onChange(files);
+    render(); fireChange();
   }
 
   stateWatchers.add({
@@ -1006,7 +1084,7 @@ export function dropzone(opts = {}) {
       // ‼️ การลากวางแบบ HTML5 ใช้ไม่ได้เลยบนมือถือและกับคนที่ใช้คีย์บอร์ดอย่างเดียว
       //    จึงต้องมีปุ่มขึ้น-ลงคู่กันเสมอ ไม่ใช่ทางเลือกเสริม
       const move = (d) => { const j = i + d; if (j < 0 || j >= files.length) return;
-        [files[i], files[j]] = [files[j], files[i]]; render(); onChange(files); };
+        [files[i], files[j]] = [files[j], files[i]]; render(); fireChange(); };
       /* ‼️ มีไฟล์เดียวก็ไม่มีอะไรให้สลับ (เจอจริง 18/09/2026)
          ปุ่มขึ้นลงกับที่จับลากยังโผล่อยู่ทั้งที่กดแล้วไม่เกิดอะไร
          และมันเบียดแถวจนขนาดไฟล์ตกบรรทัดเป็น "4.5" กับ "KB" คนละบรรทัด */
@@ -1162,8 +1240,11 @@ export function dropzone(opts = {}) {
      หลังจากเรียก dropzone() จบ ถ้ายิงทันทีจะยังหาปุ่มไม่เจอ */
   requestAnimationFrame(syncActionButtons);
 
+  /* ‼️ กล่องใหม่เกิด = เริ่มนับไฟล์ที่ถืออยู่ใหม่ ต้องอยู่ก่อนการหยิบไฟล์ที่ฝากไว้
+     (การหยิบเป็น microtask จึงมาทีหลังเสมอ) กล่องเดียวต่อหนึ่งหน้าเครื่องมืออยู่แล้ว */
+  setInputFiles(files);
   return { container, get files() { return files; },
-           clear() { files = []; warn.innerHTML = ""; render(); onChange(files); } };
+           clear() { files = []; warn.innerHTML = ""; render(); fireChange(); } };
 }
 
 /** แปลง "1-3,5,8-"เป็นอาร์เรย์เลขหน้า (ฐาน 1) — ใช้ร่วมหลายเครื่องมือ */

@@ -1,6 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser, eachFileConcurrent, failedBox } from "../ui.js";
 import { tr, pl } from "../i18n.js";
+import { decodeImage } from "../imgdecode.js";
 
 const TYPES = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp", ico: "image/png" };
 
@@ -100,7 +101,7 @@ export function mount(tool) {
       // แปลงหลายใบพร้อมกันได้ (งานหนักอยู่ฝั่ง codec ของเบราว์เซอร์) แต่เก็บผลตามลำดับไฟล์เดิม
       const failed = await eachFileConcurrent(files, st, {
         prepare: async (f) => {
-        const bmp = await createImageBitmap(f, { imageOrientation: "from-image" });
+        const bmp = await decodeImage(f, { imageOrientation: "from-image" });
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
         /** วาดลงผืนผ้าใบขนาดที่ต้องการแล้วคืนเป็น blob */
@@ -141,7 +142,10 @@ export function mount(tool) {
         commit: (r) => { made.push(r); },
       });
       st.progress(null);
-      if (!made.length) throw new Error(tr("แปลงไม่สำเร็จ ตรวจว่าเป็นรูปจริง", "Could not convert. Check they're valid images."));
+      /* ‼️ ห้ามขึ้นต้นด้วย "แปลงไม่สำเร็จ" ซ้ำกับคำนำหน้าใน catch ด้านล่าง
+         พี่ปอนด์เห็นกับตาบนมือถือว่าขึ้น "แปลงไม่สำเร็จ: แปลงไม่สำเร็จ ตรวจว่าเป็นรูปจริง"
+         และคำว่า "ตรวจว่าเป็นรูปจริง" ก็โทษผู้ใช้ทั้งที่ไฟล์ HEIC จาก iPhone เป็นรูปจริงทุกประการ */
+      if (!made.length) throw new Error(tr("ไม่มีไฟล์ไหนอ่านได้เลย", "None of the files could be read"));
       st.ok(tr(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? `, ข้าม ${failed.length} ไฟล์` : ""),
         `Done, ${pl(made.length, "file", "files")}` + (failed.length ? `, skipped ${failed.length}` : "")));
       const fb = failedBox(failed); if (fb) results.appendChild(fb);

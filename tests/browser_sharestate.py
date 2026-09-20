@@ -96,11 +96,58 @@ def set_wm(pg):
     r.dispatch_event("input")
 
 
+# ── เพิ่ม 19/09/2026: สามตัวที่ค่าส่วนใหญ่ "ไม่" ผูกกับไฟล์ แม้เครื่องมือจะรับไฟล์ก็ตาม
+#    บันทึกเดิมเหมาว่าทั้งสามผูกกับไฟล์เลยไม่ทำ แต่พอไล่ดูช่องจริงพบว่าที่ผูกกับไฟล์
+#    มีแค่ชีตกับคอลัมน์ซึ่งอยู่แผงซ้าย ส่วนแผงขวาเป็นเงื่อนไขและหน้าตาล้วน
+READ_MATCHSUM = """() => {
+  const r = document.querySelector('.ws-right');
+  return { a: r.querySelector('input.ms-num').value,
+           b: r.querySelector('.ms-switch input').checked ? 'on' : 'off' };
+}"""
+
+
+def set_matchsum(pg):
+    t = pg.locator(".ws-right input.ms-num").first
+    t.fill("987654.25")
+    t.dispatch_event("input")
+    pg.wait_for_timeout(200)
+    pg.locator(".ws-right .ms-switch input").first.check()
+
+
+READ_COVERAGE = """() => ({ a: document.querySelector('input[type=range]').value,
+                            b: document.querySelector('input[type=color]').value })"""
+
+
+def set_coverage(pg):
+    r = pg.locator("input[type=range]").first
+    r.fill("11.5")
+    r.dispatch_event("input")
+    pg.wait_for_timeout(200)
+    c = pg.locator("input[type=color]").first
+    c.fill("#118844")
+    c.dispatch_event("input")
+
+
+READ_RELOCATE = """() => ({ a: document.querySelector('.mr-color').value,
+                            b: document.querySelector('.ws-right select').value })"""
+
+
+def set_relocate(pg):
+    c = pg.locator(".mr-color").first
+    c.fill("#aa2288")
+    c.dispatch_event("input")
+    pg.wait_for_timeout(200)
+    pg.locator(".ws-right select").first.select_option("6")
+
+
 TOOLS = [
     ("pbi-theme", READ_THEME, set_theme, {"a": "ธีมของพี่ปอนด์", "b": "2560"}),
     ("number-bins", READ_BINS, set_bins, {"a": "quantile", "b": "กม."}),
     ("pdf-page-numbers", READ_PAGENUM, set_pagenum, {"a": "16", "b": "7"}),
     ("pdf-watermark", READ_WM, set_wm, {"a": "ห้ามคัดลอก", "b": "45"}),
+    ("excel-match-sum", READ_MATCHSUM, set_matchsum, {"a": "987654.25", "b": "on"}),
+    ("map-coverage", READ_COVERAGE, set_coverage, {"a": "11.5", "b": "#118844"}),
+    ("map-relocate", READ_RELOCATE, set_relocate, {"a": "#aa2288", "b": "6"}),
 ]
 
 print(f"\n━━ จำค่า + แชร์ลิงก์ ({BASE}) ━━")
@@ -139,36 +186,57 @@ with sync_playwright() as p:
         ctx2.close()
         ctx.close()
 
-    # ④ ค่าที่ผูกกับไฟล์ต้องไม่ติดไปกับลิงก์ของ number-bins
+    # ④ ค่าที่ผูกกับไฟล์ต้องไม่ติดไปกับลิงก์ — ตรวจทุกตัวที่รับไฟล์ ไม่ใช่แค่ตัวเดียว
+    #    ‼️ ข้อนี้คือด่านที่กันไม่ให้ใครเผลอใส่ชีต/คอลัมน์ลง collect() ในอนาคต
+    #       ถ้าใส่ไป ลิงก์จะพาคอลัมน์ของไฟล์คนหนึ่งไปทับไฟล์ของอีกคน แล้วผลเพี้ยนเงียบ ๆ
     import base64
     import json as js
-    ctx = b.new_context(viewport={"width": 1440, "height": 950},
-                        permissions=["clipboard-read", "clipboard-write"])
-    pg = ctx.new_page()
-    pg.goto(f"{BASE}/#number-bins", wait_until="domcontentloaded", timeout=60000)
-    pg.wait_for_timeout(2600)
-    set_bins(pg)
-    pg.wait_for_timeout(1200)
-    pg.locator("button", has_text="คัดลอกลิงก์ค่านี้").first.click()
-    pg.wait_for_timeout(800)
-    link = pg.evaluate("() => navigator.clipboard.readText()") or ""
-    # ‼️ ลิงก์หน้าตาเป็น .../?s=XXXX#/number-bins ต้องตัดทั้ง & และ # ออก
-    #    รอบแรกลืมตัด # แล้วถอดรหัสพัง เทสเลย "ผ่านแบบหลอก" เพราะเซตว่างตัดกับอะไรก็ว่าง
-    raw = link.split("?s=")[-1].split("&")[0].split("#")[0] if "?s=" in link else ""
-    keys, err = [], None
-    if raw:
+
+    BANNED = {"sheet", "col", "key", "overrides", "locks", "sheetSel", "colSel", "keySel",
+              "lat", "lon", "id", "lat2", "lon2", "header", "label", "column", "columns"}
+
+    def keys_in_link(tid, setter):
+        ctx = b.new_context(viewport={"width": 1440, "height": 950},
+                            permissions=["clipboard-read", "clipboard-write"])
+        pg = ctx.new_page()
+        pg.goto(f"{BASE}/#{tid}", wait_until="domcontentloaded", timeout=60000)
+        pg.wait_for_timeout(2600)
+        # ‼️ ต้องเปิดไฟล์ตัวอย่างก่อน ไม่งั้นด่านนี้จับอะไรไม่ได้เลย (บทเรียน 19/09/2026)
+        #    ตอนไม่มีไฟล์ ช่องชีตกับคอลัมน์ยังว่างเท่ากับค่าเริ่มต้น statekit จึงไม่ใส่ลงลิงก์อยู่แล้ว
+        #    ก่อวินาศกรรมใส่ col กับ sheet ลง collect() ตรง ๆ แล้วเทสยังเขียว = ด่านหลอก
+        #    พอโหลดไฟล์ตัวอย่างก่อน คอลัมน์มีค่าจริงต่างจากค่าเริ่มต้น ด่านนี้ถึงแดงได้
+        sample = pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง")
+        for i in range(sample.count()):
+            btn = sample.nth(i)
+            if not btn.is_visible():
+                continue          # บางช่องโผล่ทีหลัง ข้ามไปก่อน ไม่ต้องรอจนหมดเวลา
+            btn.click(timeout=10000)
+            pg.wait_for_timeout(2600)
+        setter(pg)
+        pg.wait_for_timeout(1200)
+        pg.locator("button", has_text="คัดลอกลิงก์ค่านี้").first.click()
+        pg.wait_for_timeout(800)
+        link = pg.evaluate("() => navigator.clipboard.readText()") or ""
+        ctx.close()
+        # ‼️ ลิงก์หน้าตาเป็น .../?s=XXXX#/<tool> ต้องตัดทั้ง & และ # ออก
+        #    รอบแรกลืมตัด # แล้วถอดรหัสพัง เทสเลย "ผ่านแบบหลอก" เพราะเซตว่างตัดกับอะไรก็ว่าง
+        raw = link.split("?s=")[-1].split("&")[0].split("#")[0] if "?s=" in link else ""
+        if not raw:
+            return [], "ไม่มี ?s= ในลิงก์"
         pad = raw.replace("-", "+").replace("_", "/")
         pad += "=" * (-len(pad) % 4)
         try:
-            keys = sorted(js.loads(base64.b64decode(pad).decode()).get("v", {}).keys())
+            return sorted(js.loads(base64.b64decode(pad).decode()).get("v", {}).keys()), None
         except Exception as e:
-            err = str(e)
-    # ถอดรหัสไม่ออก = ตัวตรวจพัง ต้องแดง ห้ามปล่อยผ่าน
-    ck("④ ถอดสถานะในลิงก์ออกมาอ่านได้", (err is None) and len(keys) > 0, True)
-    banned = {"sheet", "col", "key", "overrides", "locks", "sheetSel", "colSel", "keySel"}
-    ck("④ ลิงก์ต้องไม่พกค่าที่ผูกกับไฟล์ (ชีต คอลัมน์ ล็อก)", sorted(set(keys) & banned), [])
-    print(f"      คีย์ที่อยู่ในลิงก์: {keys}{' · ถอดรหัสพลาด: ' + err if err else ''}")
-    ctx.close()
+            return [], str(e)
+
+    for tid, setter in [("number-bins", set_bins), ("excel-match-sum", set_matchsum),
+                        ("map-coverage", set_coverage), ("map-relocate", set_relocate)]:
+        keys, err = keys_in_link(tid, setter)
+        # ถอดรหัสไม่ออก = ตัวตรวจพัง ต้องแดง ห้ามปล่อยผ่าน
+        ck(f"④ [{tid}] ถอดสถานะในลิงก์ออกมาอ่านได้", (err is None) and len(keys) > 0, True)
+        ck(f"④ [{tid}] ลิงก์ต้องไม่พกค่าที่ผูกกับไฟล์", sorted(set(keys) & BANNED), [])
+        print(f"      คีย์ที่อยู่ในลิงก์: {keys}{' , ถอดรหัสพลาด: ' + err if err else ''}")
     b.close()
 
 print(f"\nผ่าน {ok} · ตก {fail}")

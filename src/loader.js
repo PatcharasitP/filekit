@@ -62,6 +62,17 @@ const REG = {
     local: "vendor/tesseract.min.js",
     cdn: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
   },
+  /* ‼️ ตัวถอดรูป HEIC ของ iPhone — โหลดเฉพาะตอนเจอไฟล์ HEIC จริงเท่านั้น (20/09/2026)
+     เบราว์เซอร์บนแอนดรอยด์กับเดสก์ท็อปอ่าน HEIC เองไม่ได้ ส่วน Safari อ่านได้
+     โค้ดจึงต้องลอง createImageBitmap ก่อนเสมอ แล้วค่อยตกมาใช้ตัวนี้ คนใช้ Safari จะได้ไม่ต้องโหลด 960 KB ฟรี
+     ‼️ global ตัวนี้เป็น "ฟังก์ชันโรงงาน" ไม่ใช่ตัวโมดูล ต้องเรียก libheif() ก่อนถึงจะได้ HeifDecoder
+     ‼️ ไฟล์ .wasm ต้องอยู่ข้าง ๆ .js เพราะมันหาไฟล์จาก document.currentScript.src ของตัวเอง */
+  libheif: {
+    global: "libheif",
+    local: "vendor/libheif.js",
+    extra: ["vendor/libheif.wasm"],
+    cdn: "https://cdn.jsdelivr.net/npm/libheif-js@1.18.2/libheif-wasm/libheif.js",
+  },
   // ‼️ ลำดับต้องเป็น vega → vega-lite → vega-embed เท่านั้น (embed ต้องการอีกสองตัวอยู่บน
   // window ก่อนตัวมันเองรัน) ใช้ needs ไล่โซ่ให้อัตโนมัติ ไม่ต้องพึ่งลำดับที่ tool.js เรียก
   vega: {
@@ -125,6 +136,8 @@ const SRI = {
     "sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3",
   "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js":
     "sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F",
+  "https://cdn.jsdelivr.net/npm/libheif-js@1.18.2/libheif-wasm/libheif.js":
+    "sha384-nnDO7i14Thh8zH4u0th9k9WfU/79T55wFDGPTs/MG+dOlNJ05QYkoRT73F3qfsDB",
   "https://cdnjs.cloudflare.com/ajax/libs/vega/6.4.0/vega.min.js":
     "sha384-VKdcJr3ZaBIJMbVcopTAI/JEuUkSY6qnwVu9iLuw0DnQ9gQ1JjsfZJhXFQAgNi43",
   "https://cdnjs.cloudflare.com/ajax/libs/vega-lite/6.4.3/vega-lite.min.js":

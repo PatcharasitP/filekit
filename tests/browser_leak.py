@@ -413,6 +413,11 @@ def main():
             heap_per_round = []
             for i, pdf_path in enumerate([PDF_A, PDF_B, PDF_A, PDF_B, PDF_A]):
                 expect_pages = 3 if pdf_path == PDF_A else 2
+                # ‼️ ต้องล้างไฟล์เดิมก่อนทุกรอบ เพราะ pdf-pages "เพิ่มเอกสาร" ไม่ได้ "แทนที่"
+                #    (โหลด A 3 หน้า แล้วโหลด B 2 หน้าต่อ จะได้ 5 การ์ด ไม่ใช่ 2)
+                #    เจตนาของเทสคือวัดการสะสมเมื่อโหลดซ้ำ จึงต้องเริ่มรอบใหม่จากสภาพว่างเสมอ
+                remove_all_rows(page)
+                page.wait_for_timeout(120)
                 page.locator("input[type=file]").first.set_input_files(pdf_path)
                 page.wait_for_function(
                     f"() => document.querySelectorAll('.pg').length === {expect_pages}", timeout=15000

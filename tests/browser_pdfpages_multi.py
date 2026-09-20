@@ -135,13 +135,15 @@ def main():
         rows = pg.query_selector_all(".file-row")
         btns = rows[1].query_selector_all(".icon-btn") if len(rows) > 1 else []
         if btns:
-            before = pg.eval_on_selector_all(".pg .src", "ns=>ns.map(n=>n.getAttribute('title'))")
+            before = pg.eval_on_selector_all(".pg .src", "ns=>ns.map(n=>n.textContent.trim())")
             btns[0].click()
             pg.wait_for_timeout(1200)
-            after = pg.eval_on_selector_all(".pg .src", "ns=>ns.map(n=>n.getAttribute('title'))")
-            ck(after and after[0] != before[0] and "bravo" in (after[0] or ""),
-               f"เลื่อนไฟล์ขึ้นแล้วหน้าตามไปด้วย (หน้าแรกมาจาก {after[0] if after else 'ไม่มี'})",
-               f"{before[:1]} -> {after[:1]}")
+            after = pg.eval_on_selector_all(".pg .src", "ns=>ns.map(n=>n.textContent.trim())")
+            first_row = pg.eval_on_selector(".file-row", "n => n.textContent")
+            ck(before == ["A", "A", "B", "B", "B"] and after == ["A", "A", "A", "B", "B"]
+               and "bravo" in first_row,
+               "เลื่อนไฟล์ขึ้นแล้วหน้าตามไปด้วย (ลำดับแท็บเปลี่ยนจาก A A B B B เป็น A A A B B)",
+               f"{before} -> {after} · แถวไฟล์แรกตอนนี้ {first_row[:32]!r}")
 
         # สลับไฟล์ทีละหน้า ต้องได้ A B A B B
         btn = pg.query_selector("text=สลับไฟล์ทีละหน้า")
@@ -179,7 +181,7 @@ def main():
             JS_ALT = """ns => ns.map(n => {
               const card = n.closest('.pg');
               const src = card.querySelector('.src');
-              return (src ? src.getAttribute('title') + ' ' : '') + n.getAttribute('alt');
+              return (src ? src.textContent.trim() + ' ' : '') + n.getAttribute('alt');
             })"""
             before_alt = pg.eval_on_selector_all(".pg img", JS_ALT)
             c0, c3 = cards[0].bounding_box(), cards[3].bounding_box()

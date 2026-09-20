@@ -232,7 +232,8 @@ def main():
                   const g = ins.find(i => i.placeholder && (i.placeholder.includes('หมวด') || i.placeholder.includes('group')));
                   k.value = code; g.value = group;
                 }""", [code, group])
-                pg.locator(".ws-right button", has_text="ล็อก").first.click()
+                # ‼️ ข้ามปุ่มหัวข้อกลุ่มที่พับได้ ไม่งั้นจะไปกดพับกลุ่ม "ล็อกรายตัว" แทน
+                pg.locator(".ws-right button:not(.ws-fold-btn)", has_text="ล็อก").first.click()
                 pg.wait_for_timeout(500)
 
             add_lock("KKN1013", "> 7")          # ค่า 0.498 แต่บังคับไปกลุ่มบนสุดที่มีอยู่แล้ว

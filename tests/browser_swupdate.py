@@ -94,8 +94,13 @@ def edit_hero_marker(site_dir, marker):
 def edit_registry_marker(site_dir, marker):
     rp = site_dir / "src/registry.js"
     text = rp.read_text(encoding="utf-8")
-    old = 'label: "จัดการไฟล์ PDF"'
-    assert text.count(old) == 1, f"label กลุ่ม pdf เดิมไม่พบ/ไม่ยูนีก ({text.count(old)} ครั้ง)"
+    # ‼️ ยึดจาก id ของหมวด ไม่ใช่ข้อความบนป้าย เพราะป้ายเปลี่ยนได้ทุกครั้งที่จัดหมวดใหม่
+    #    (19/09/2026 ยุบสามหมวด PDF เหลือหมวดเดียว ป้ายเปลี่ยนจาก "จัดการไฟล์ PDF" เป็น "PDF")
+    import re as _re
+    m = _re.search(r'\{ id: "pdf",\s*label: "([^"]+)"', text)
+    assert m, "หา label ของหมวด pdf ในทะเบียนไม่เจอ"
+    old = f'label: "{m.group(1)}"'
+    assert text.count(old) == 1, f"label กลุ่ม pdf ไม่ยูนีก ({text.count(old)} ครั้ง)"
     rp.write_text(text.replace(old, f'label: "{marker}"'), encoding="utf-8")
 
 

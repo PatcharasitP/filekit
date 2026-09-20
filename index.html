@@ -14,7 +14,7 @@
      ‼️ blob: กับ wasm-unsafe-eval จำเป็นสำหรับตัวอ่านข้อความจากสแกน (Tesseract ใช้ worker + WASM) -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'wasm-unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'sha256-Cc0W0CwhZzN7hIDklSuJ+Qs16/OVIJT4eHeIM2+c1js=' 'sha256-+WV7M4JC5RBwOo7oWvLiLqllHEOz4BRSD1jtfIUdJHE=' 'sha256-gEr3oGeVWgicPLsqe0CuJ60oD88rCyHmQgHf0Q4pgxs=';
+  script-src 'self' 'wasm-unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'sha256-Cc0W0CwhZzN7hIDklSuJ+Qs16/OVIJT4eHeIM2+c1js=' 'sha256-+WV7M4JC5RBwOo7oWvLiLqllHEOz4BRSD1jtfIUdJHE=' 'sha256-jYErVviiStzQQLE+XIVZY9LRv6iSq702HBUT9Apr+Qw=';
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob:;
   font-src 'self' data:;
@@ -37,21 +37,28 @@
      ทางแก้ที่วัดแล้ว: preload แบบคงที่ทำ FCP บนเน็ตมือถือจำลองช้าลง 536 เป็น 824 ms (ฟอนต์ 53KB แย่ง app.js)
      และ fetchpriority=low ไม่ช่วย (896 ms) จึง preload เฉพาะตอนที่ SW คุมหน้า = ฟอนต์อยู่ใน Cache Storage แน่
      (มาถึงใน 2-10 ms ก่อนเฟรมแรก) ส่วนครั้งแรกสุด/hard reload ไม่ preload ให้ FCP เท่าเดิม แล้วพึ่ง font-display fallback
+     ‼️ เพิ่ม 19/09/2026: preload ตอนยังไม่มี SW ด้วย "ถ้าเน็ตเร็วพอ" (rtt กับ downlink ของ navigator.connection)
+     เหตุผล: Sarabun จริงกว้างกว่าฟอนต์สำรองเฉลี่ย 2.3% (บางป้ายถึง 8.2%) พอการ์ดเครื่องมือ 53 ใบเรียงแบบไหลตามความยาวคำ
+     ส่วนต่างสะสมจนการ์ดใบท้ายแถวตกบรรทัด วัดได้ CLS 0.045 ถึง 0.154 ทุกความกว้างจอ (ก่อนรวมกลุ่มเครื่องมือมันแค่โชคดี
+     ที่ไม่มีแถวไหนอยู่พอดีขอบ จอ 1152 ก็เคยพุ่ง 0.167 มาก่อนแล้ว) preload แก้ให้ CLS เป็น 0 ได้ทุกความกว้าง
+     แต่วัดแล้วบนเน็ตมือถือช้า FCP 340 เป็น 492-496 ms (ไฟล์เดียวหรือสามไฟล์ก็เท่ากัน = ติดที่ latency ไม่ใช่ขนาด)
+     จึงเช็คความเร็วก่อน: เน็ตเร็ว (rtt ≤50 ms, downlink ≥5 Mbps, ไม่เปิดประหยัดเน็ต) = จ่ายค่าฟอนต์เพื่อไม่ให้จอกระตุก
+     เน็ตช้า = ไม่ preload ให้เห็นหน้าเว็บไวไว้ก่อน · เบราว์เซอร์ที่ไม่มี navigator.connection (Safari/Firefox) = ไม่ preload เหมือนเดิม
      ‼️ สคริปต์นี้ถูก hash ไว้ใน CSP (script-src sha256) แก้ตัวอักษรใดก็ตามต้องคำนวณ hash ใหม่ (tests/accepts.test.mjs จับ)
      ‼️ ต้องมี crossOrigin แม้ same-origin ไม่งั้น Chrome ยิงซ้ำ 2 ครั้ง -->
-<script>if(navigator.serviceWorker&&navigator.serviceWorker.controller){for(const w of["Regular","SemiBold","Bold"]){const l=document.createElement("link");l.rel="preload";l.as="font";l.type="font/woff2";l.crossOrigin="";l.href="vendor/fonts/Sarabun-"+w+".woff2";document.head.appendChild(l)}}</script>
+<script>var c=navigator.connection;if((navigator.serviceWorker&&navigator.serviceWorker.controller)||(c&&!c.saveData&&c.rtt<=50&&c.downlink>=5)){for(const w of["Regular","SemiBold","Bold"]){const l=document.createElement("link");l.rel="preload";l.as="font";l.type="font/woff2";l.crossOrigin="";l.href="vendor/fonts/Sarabun-"+w+".woff2";document.head.appendChild(l)}}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="canonical" href="https://patcharasitp.github.io/filekit/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FileKit">
 <meta property="og:locale" content="th_TH">
 <meta property="og:title" content="FileKit - เครื่องมือจัดการไฟล์ ที่ไม่ส่งไฟล์คุณไปไหน">
-<meta property="og:description" content="51 เครื่องมือ แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
+<meta property="og:description" content="53 เครื่องมือ แปลง รวม แยก บีบอัด PDF, Word, Excel, รูปภาพ ทำงานในเบราว์เซอร์ของคุณเอง ไฟล์ไม่ถูกอัปโหลด ฟรี ไม่ต้องสมัคร">
 <meta property="og:url" content="https://patcharasitp.github.io/filekit/">
 <meta property="og:image" content="https://patcharasitp.github.io/filekit/assets/social/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="FileKit - 51 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
+<meta property="og:image:alt" content="FileKit - 53 เครื่องมือจัดการไฟล์ ทำงานในเบราว์เซอร์ ไฟล์ไม่ออกจากเครื่องคุณ">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
@@ -71,7 +78,7 @@
  "applicationCategory":"UtilitiesApplication","operatingSystem":"Any web browser",
  "inLanguage":["th-TH","en"],"isAccessibleForFree":true,
  "browserRequirements":"ต้องเปิดใช้งาน JavaScript",
- "description":"51 เครื่องมือแปลง รวม แยก บีบอัด PDF, Word, Excel, PowerPoint, รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
+ "description":"53 เครื่องมือแปลง รวม แยก บีบอัด PDF, Word, Excel, PowerPoint, รูปภาพ และเครื่องมือเอกสารไทย ทุกอย่างประมวลผลในเบราว์เซอร์ของผู้ใช้เอง ไฟล์ไม่ถูกส่งขึ้นเซิร์ฟเวอร์",
  "offers":{"@type":"Offer","price":"0","priceCurrency":"THB"},
  "featureList":["รวมไฟล์ PDF","แยกไฟล์ PDF","บีบอัดไฟล์ PDF","จัดการหน้า PDF","เซ็นชื่อบน PDF","ใส่ลายน้ำ PDF","OCR อ่านข้อความจากสแกน","PDF เป็น Word","PDF เป็น Excel","PDF เป็นรูปภาพ","PDF เป็นข้อความ","Word เป็น PDF","Excel เป็น PDF","PowerPoint เป็น PDF","PowerPoint เป็น Word","รูปภาพเป็น PDF","ย่อและบีบอัดรูปภาพ","แปลงชนิดไฟล์รูป","รวมไฟล์ Word","ค้นหาและแทนที่ทั้งชุด","ตรวจเอกสารก่อนส่ง","จดหมายเวียน Word กับ Excel","สลับ Excel กับ CSV","ซ่อมไฟล์ไทยเพี้ยน","สลับปี พ.ศ. กับ ค.ศ.","ตรวจเลขบัตรประชาชน","ตัวเลขเป็นบาทถ้วน"]}
 ]}
@@ -584,16 +591,49 @@ main{max-width:var(--page-w); margin:0 auto; padding:clamp(18px,3.4vw,34px) var(
   box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ac) 55%,transparent), 0 2px 4px rgba(0,0,0,.09), 0 14px 26px -10px color-mix(in srgb,var(--ac) 50%,rgba(0,0,0,.42))}
 .pill:active{transform:translateY(0)}
 .pill:focus-visible{outline:2.5px solid #fff; outline-offset:3px}
-.pill i{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;
+.pill i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;
   background:color-mix(in srgb,var(--ac) 13%,#fff); color:var(--ac)}
 .ico-svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.75;
   stroke-linecap:round;stroke-linejoin:round;display:block}
-.pill .ico-svg{width:16px;height:16px;stroke-width:1.9}
+/* ‼️ ไอคอนในการ์ดเคยแสดงที่ 16px จากผืน 24 = 1 หน่วยเหลือ 0.67px เส้นจึงคร่อมพิกเซลตลอด
+   วัดบนจอ 1x: พิกเซลที่เป็นเส้นจริง (เข้มเกือบเต็ม) มีแค่ 52% ที่เหลือเป็นขอบเบลอ
+   ลองหลายขนาดแล้ว 20px เส้น 2.0 ได้ 64% และยังไม่ข่มตัวหนังสือ (22px เริ่มข่ม) */
+.pill .ico-svg{width:20px;height:20px;stroke-width:2}
 .pill mark{background:color-mix(in srgb,var(--ac) 22%,transparent);color:inherit;border-radius:3px;padding:0 1px}
-/* ป้าย "ใหม่" — ชิปดำบนป้ายขาว (คอนทราสต์ 17:1) · line-height 1.4 กันไม้เอกของ "ใหม่" ถูกตัด */
+/* ป้าย "ใหม่" — ทองจางแบบ thepexcel แต่ยืมผิวโลหะมาจากแบบทองทึบ
+   (พี่ปอนด์เคาะ 20/09/2026 "B มันเด่นเกิน เอา C แต่ใช้ข้อดีของ B")
+   ‼️ สีแกน rgb(212,168,75) ของ thepexcel จริง ดูดจากหน้าเว็บที่เก็บไว้ ไม่ได้เดาเอง
+      เขาใช้ทองตัวนี้ที่ความจาง 5 ระดับ ของเราใช้ 2 ระดับซ้อนเป็นไล่เฉดบาง ๆ ให้มีประกายแต่ไม่แย่งสายตา
+   ‼️ ป้ายนี้มี 17 ใบบนหน้าแรก ถ้าทึบจะกลายเป็นจุดเด่น 17 จุดพร้อมกัน = ไม่มีจุดเด่น
+   ‼️ คอนทราสต์ตัวอักษร #7a5c12 กับทุกจุดในไล่เฉด วัดแล้ว 5.62 / 5.14 / 5.40 : 1 ผ่าน AA
+      (ตัวอักษร 10px ต้องได้ 4.5:1 · ลองอ่อนกว่านี้เป็น #8a6a1a แล้วตกที่ 4.16)
+   ‼️ ขอบทำด้วย inset box-shadow ไม่ใช่ border เพราะ border เพิ่มความกว้างป้าย 2px
+      การ์ดเรียงแบบไหลตามความยาวคำ ความกว้างที่เปลี่ยนดันแถวตกบรรทัดได้ (ดู CLS ใน PROVEN.md)
+   line-height 1.4 กันไม้เอกของ "ใหม่" ถูกตัด */
 .pill .new{flex:none;margin-inline-start:2px;padding:1px 7px;border-radius:999px;
-  background:#14161c;color:#fff;font:700 10px/1.4 var(--font);letter-spacing:.04em;text-transform:uppercase}
+  background:linear-gradient(180deg,rgba(255,224,154,.42) 0%,rgba(212,168,75,.26) 55%,rgba(212,168,75,.20) 100%);
+  color:#7a5c12;
+  box-shadow:inset 0 0 0 1px rgba(212,168,75,.55), inset 0 1px 0 rgba(255,255,255,.7);
+  font:700 10px/1.4 var(--font);letter-spacing:.04em;text-transform:uppercase}
 .stage-f{color:var(--stage-dim);font-size:13px;margin-top:var(--sp5)}
+/* ── ส่วน "ตรวจเองได้" (20/09/2026) ────────────────────────────────────────
+   ‼️ ต้องบางและจาง ไม่ใช่กล่องหนา เพราะมันอยู่ใต้รายการเครื่องมือ
+      คนที่มาหาเครื่องมือต้องไม่รู้สึกว่ามีอะไรมาขวาง คนที่สงสัยเรื่องความปลอดภัยถึงจะอ่าน
+   ‼️ ป้ายหัวเรื่องเล็กด้านบน (eyebrow) ถอดแบบมาจาก kob-ui ใช้บอกว่าส่วนนี้คือเรื่องอะไร
+      ก่อนจะอ่านหัวเรื่องจริง ช่วยให้กวาดตาผ่านได้เร็วถ้าไม่สนใจ */
+.trust{max-width:1096px;margin:var(--sp6) auto 0;padding:0 var(--sp4)}
+/* ‼️ สีแบรนด์ล้วนบนพื้นสว่างได้แค่ 2.82:1 ตกเกณฑ์ตัวอักษรเล็ก (ต้อง 4.5:1)
+   ผสมเข้าหาสีตัวอักษรของธีม กฎเดียวพอทั้งสองธีม วัดได้ 5.2:1 สว่าง และ 8.9:1 มืด
+   (ลอง 70% ได้ 4.70 ซึ่งเฉียดเกินไป เผื่อไว้ที่ 65%) */
+.trust-eye{margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:color-mix(in srgb,var(--brand) 65%,var(--text))}
+.trust-h{margin:0 0 var(--sp4);font-size:clamp(19px,2.2vw,25px);font-weight:700;line-height:1.45;color:var(--text)}
+.trust-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.trust-card{padding:14px 16px;border-radius:var(--r-md,12px);
+  border:1px solid var(--line-soft);background:var(--bg-soft)}
+.trust-card b{display:block;font-size:13.5px;font-weight:700;line-height:1.5;margin-bottom:5px;color:var(--text)}
+.trust-card span{display:block;font-size:12.5px;line-height:1.7;color:var(--text-dim)}
+@media (max-width:640px){ .trust{margin-top:var(--sp5)} .trust-card{padding:13px 14px} }
 .stage .empty{color:var(--stage-dim)}
 .stage .empty b{color:#fff}
 /* หัวหมวดคั่นในแผง — โผล่เฉพาะตอนดูทั้งหมด */
@@ -659,7 +699,7 @@ main{max-width:var(--page-w); margin:0 auto; padding:clamp(18px,3.4vw,34px) var(
   .pill{flex:1 1 calc(50% - 4px); min-width:0; white-space:normal; padding:9px 12px 9px 9px;
     font-size:13px; line-height:1.45; align-items:center; border-radius:11px}
   .pill i{width:26px;height:26px;border-radius:7px}
-  .pill .ico-svg{width:15px;height:15px}
+  .pill .ico-svg{width:18px;height:18px}
   .pill .new{margin-inline-start:auto}
   .pill-group{margin:var(--sp4) 0 var(--sp1); font-size:14px}
   .stage-h{font-size:11px; margin-bottom:var(--sp4)}
@@ -814,7 +854,7 @@ body.tool #home{display:none}
     <button class="langopt" type="button" data-lang="th" lang="th">ไทย</button>
     <button class="langopt" type="button" data-lang="en" lang="en">EN</button>
   </div>
-  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" title="สลับธีม" data-en-al="Switch theme"><svg class="btn-ico th-ic th-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/></svg><svg class="btn-ico th-ic th-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/></svg></button>
+  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" data-en-al="Switch theme"><svg class="btn-ico th-ic th-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/></svg><svg class="btn-ico th-ic th-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/></svg></button>
   <button class="back" id="back" type="button" aria-label="กลับไปหน้าเครื่องมือทั้งหมด"
     data-en-al="Back to all tools"><span aria-hidden="true">←</span><b data-en="All tools">เครื่องมือทั้งหมด</b></button>
 </header>
@@ -837,7 +877,7 @@ body.tool #home{display:none}
             <div class="hits" id="hits" role="status" aria-live="polite"></div>
           </div>
           <div class="facts">
-            <div class="fact"><b id="fact-n">51</b><span data-en="tools">เครื่องมือ</span></div>
+            <div class="fact"><b id="fact-n">53</b><span data-en="tools">เครื่องมือ</span></div>
             <div class="fact"><b>0</b><span data-en="files uploaded">ไฟล์ที่ถูกอัปโหลด</span></div>
             <div class="fact"><b data-en="$0">฿0</b><span data-en="free, no ads">ฟรี ไม่มีโฆษณา</span></div>
           </div>
@@ -867,7 +907,36 @@ body.tool #home{display:none}
       <div id="tools" tabindex="-1"></div>
       <div class="stage-f" data-en="No sign-up&nbsp;&nbsp; No ads&nbsp;&nbsp; Free, unlimited">ไม่ต้องสมัคร&nbsp;&nbsp; ไม่มีโฆษณา&nbsp;&nbsp; ใช้ฟรีไม่จำกัด</div>
     </div>
+    <!-- ‼️ ส่วน "ตรวจเองได้" เพิ่ม 20/09/2026 หลังพี่ปอนด์ให้ไปศึกษา kob-ui.com
+         สิ่งที่ถอดมาจากเขาคือวินัยข้อเดียว: ทุกคำอ้างต้องมีตัวเลขที่วัดจริงกำกับ
+         ("10,000 แถวเรียงใน 20 ms", "551 kB gzipped", "ทุกคู่สีผ่าน 4.5:1 ทั้ง 5 ธีม")
+         ก่อนหน้านี้หน้าแรกของเราพูดว่า "ไม่ส่งไฟล์คุณไปไหน" แล้วจบ ไม่มีตรงไหนรองรับเลย
+         ทั้งที่เรามีหลักฐานมากกว่าเว็บทั่วไป แต่ไปกองอยู่ในไฟล์เทสที่ผู้ใช้ไม่มีวันเห็น
+         ‼️ ตัวเลขทุกตัวในนี้ต้องวัดใหม่เมื่อของเปลี่ยน ไม่ใช่เขียนทิ้งไว้ (tests/browser_trust.py จับ) -->
+    <section class="trust" aria-labelledby="trust-h">
+      <p class="trust-eye" data-en="Check it yourself">ตรวจเองได้ ไม่ต้องเชื่อคำโฆษณา</p>
+      <h2 class="trust-h" id="trust-h" data-en="Files never leave your device, and you can prove it">ไฟล์ไม่ออกจากเครื่องคุณ และคุณพิสูจน์เองได้</h2>
+      <div class="trust-grid">
+        <div class="trust-card">
+          <b data-en="Nothing is ever uploaded">ไฟล์ไม่เคยถูกส่งออกไปไหน</b>
+          <span data-en="Open the Network tab and use any tool. No file ever goes out.">เปิดแท็บ Network ของเบราว์เซอร์แล้วลองใช้ดู จะไม่เห็นไฟล์ถูกส่งออกสักครั้ง</span>
+        </div>
+        <div class="trust-card">
+          <b data-en="Works with the internet off">ปิดเน็ตแล้วยังใช้ได้</b>
+          <span data-en="Download 6 MB once, then all 53 tools keep working with no signal.">โหลดไว้ใช้ออฟไลน์ครั้งเดียว 6 MB แล้วใช้ได้ครบทั้ง 53 เครื่องมือแม้ไม่มีสัญญาณ</span>
+        </div>
+        <div class="trust-card">
+          <b data-en="Fast because it loads only what you use">เปิดเร็วเพราะโหลดเท่าที่ใช้</b>
+          <span data-en="The home page loads no library at all. On a slow mobile line it paints in 0.4 seconds.">หน้าแรกไม่โหลดไลบรารีสักตัว วัดบนเน็ตมือถือช้าแล้วเห็นหน้าแรกใน 0.4 วินาที</span>
+        </div>
+        <div class="trust-card">
+          <b data-en="The code is open to inspect">โค้ดเปิดให้ตรวจ</b>
+          <span data-en="Read every line on GitHub. 75 automated test suites must pass before anything ships.">อ่านโค้ดทั้งหมดได้บน GitHub มีชุดทดสอบอัตโนมัติ 75 ชุดที่ต้องผ่านครบก่อนปล่อยของ</span>
+        </div>
+      </div>
+    </section>
   </section>
+
 
   <section id="tool" aria-live="polite"></section>
 </main>

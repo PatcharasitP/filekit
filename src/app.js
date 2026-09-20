@@ -8,6 +8,7 @@ import { searchTools, highlightRange } from "./search.js";
 import { el, $, $$, showVeil, filesFromClipboard } from "./dom.js";
 import { toolIcon, uiIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic, pl } from "./i18n.js";
+import { inAppBanner } from "./inapp.js";
 
 const toolBox = $("#tool"), grids = $("#tools");
 const search = $("#q"), searchBox = $("#searchbox"), hits = $("#hits"), cats = $("#cats");
@@ -463,7 +464,8 @@ function applyTheme(v) {
   store.set("fk-theme", v);
   // ไอคอนทั้ง 3 แบบอยู่ในหน้าแล้ว CSS เลือกโชว์เอง — JS ไม่ต้องยัดทีหลัง (กันปุ่มว่างแวบ)
   const name = THEME_NAME[v] || tr("ตามเครื่อง", "system");
-  themeBtn.title = themeBtn.ariaLabel = tr(`ธีม: ${name} (กดเพื่อสลับ)`, `Theme: ${name} (click to switch)`);
+  // ‼️ ไม่ตั้ง .title แล้ว เว็บนี้ไม่ใช้ tooltip ของเบราว์เซอร์ (พี่ปอนด์สั่ง 19/09/2026)
+  themeBtn.ariaLabel = tr(`ธีม: ${name} (กดเพื่อสลับ)`, `Theme: ${name} (click to switch)`);
 }
 /* ‼️ ค่าเริ่มต้นยังเป็น "ตามระบบ" (ไม่เขียนลง localStorage จนกว่าผู้ใช้จะกดเลือกเอง)
    แต่ปุ่มมีแค่ 2 สถานะให้กดสลับ — คนกดปุ่มธีมเพราะอยากได้สว่างหรือมืด ไม่มีใครกดเพื่อขอ
@@ -666,3 +668,15 @@ for (const a of $$(".sites a[data-gocat]")) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
+
+
+/* ‼️ แถบเตือนตอนเปิดจากแอปแชท ต้องขึ้นตั้งแต่เปิดหน้า ไม่ใช่ตอนกดดาวน์โหลดแล้วพัง
+   พี่ปอนด์เจอเองกับ LINE: ย่อรูปเสร็จ กดโหลด แล้ว LINE บอกว่าโหลดไม่ได้
+   งานที่ทำมาเสียเปล่าทั้งหมด บอกตั้งแต่แรกผู้ใช้จะได้ย้ายไปเบราว์เซอร์จริงก่อนลงมือ */
+(() => {
+  const bar = inAppBanner();
+  if (!bar) return;
+  const head = document.querySelector("header.top");
+  if (head && head.parentNode) head.parentNode.insertBefore(bar, head.nextSibling);
+  else document.body.prepend(bar);
+})();

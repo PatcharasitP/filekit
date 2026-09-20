@@ -3,6 +3,7 @@ import { el, dropzone, statusBar, button, field, select, download,
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
+import { decodeImage } from "../imgdecode.js";
 
 // สไตล์เฉพาะของแผงลอยเครื่องมือนี้ — ฝังในโมดูลเพราะห้ามแก้ assets/css/tool.css
 // (โมดูลนี้ import ครั้งเดียวต่อเซสชัน จึง <style> ไม่มีทางถูกแทรกซ้ำ)
@@ -188,7 +189,7 @@ export function mount(tool) {
 
   /** ประมวลผลไฟล์เดียว — ใช้ร่วมกันทั้งพรีวิวสดและตอนกดประมวลผลจริง กันเลขไม่ตรงกัน */
   async function processOne(f) {
-    const bmp = await createImageBitmap(f);
+    const bmp = await decodeImage(f);
     const bmpW = bmp.width, bmpH = bmp.height;
     const [w, h] = targetSize(bmpW, bmpH);
     const canvas = document.createElement("canvas");
@@ -392,7 +393,7 @@ export function mount(tool) {
       st.progress(null);
       failedNote.innerHTML = "";
       const fb = failedBox(failed); if (fb) failedNote.appendChild(fb);
-      if (!made.length) throw new Error(tr("ไม่สำเร็จ ตรวจว่าเป็นรูปจริง", "Could not process. Check they're valid images."));
+      if (!made.length) throw new Error(tr("ไม่มีไฟล์ไหนอ่านได้เลย", "None of the files could be read"));
       const saved = before ? Math.round((1 - after / before) * 100) : 0;
       const keptCount = made.filter((m) => m.kept).length;
       const verdict = saved > 0 ? tr(`เล็กลง ${saved}%`, `${saved}% smaller`) : saved < 0 ? tr(`ใหญ่ขึ้น ${-saved}%`, `${-saved}% larger`) : tr("ขนาดเท่าเดิม", "Same size");

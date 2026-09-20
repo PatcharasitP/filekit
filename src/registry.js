@@ -8,13 +8,13 @@ import { LANG } from "./i18n.js";
 // accent = สีประจำตระกูล (ชื่อตัวแปร CSS ใน index.html) — หมวดตระกูลเดียวกันใช้สีเดียวกัน
 // จงใจไม่ให้สีละหมวด เพราะ 8 สีบนหน้าเดียวทำให้ลายตาและจำไม่ได้
 export const GROUPS = [
-  /* ‼️ สามหมวดนี้ใช้ชิปกรองอันเดียวกัน (chip:"pdf") เพราะป้ายอ่านแล้วเหมือนกันหมดว่า PDF
-     และกินความกว้างแถบไปเปล่า ๆ (พี่ปอนด์สั่งยุบ 19/09/2026)
-     หัวหมวดในกริดยังแยกสามหมวดเหมือนเดิม ความหมาย จัดการ/จาก/เป็น จึงไม่หายไปไหน
-     ยุบแค่ "ตัวกรอง" ไม่ได้ยุบ "การจัดกลุ่ม" */
-  { id: "pdf",      label: "จัดการไฟล์ PDF",        short: "PDF", chip: "pdf", accent: "--g-pdf" },
-  { id: "from-pdf", label: "แปลงจาก PDF",           short: "PDF", chip: "pdf", accent: "--g-pdf" },
-  { id: "to-pdf",   label: "แปลงเป็น PDF",          short: "PDF", chip: "pdf", accent: "--g-pdf" },
+  /* ‼️ เดิมแยกเป็นสามหมวด จัดการ/แปลงจาก/แปลงเป็น แล้วยุบเหลือชิปเดียว
+     รอบนี้ยุบหัวหมวดในกริดด้วย เหลือ "PDF" อันเดียว (พี่ปอนด์สั่ง 19/09/2026)
+     ‼️ กติกาใหม่ที่ตามมา: **เครื่องมือแปลงอยู่ในหมวดของไฟล์ต้นทาง ไม่ใช่ปลายทาง**
+        เพราะคนเริ่มจากไฟล์ที่ถืออยู่ในมือ คนมี Excel แล้วอยากได้ PDF
+        จะกดหมวด Excel ก่อน ไม่ใช่หมวด PDF ซึ่งยังไม่มีไฟล์อะไรอยู่เลย
+        ดังนั้น PDF → X อยู่หมวด PDF · X → PDF ไปอยู่หมวด X */
+  { id: "pdf",      label: "PDF",                   short: "PDF", accent: "--g-pdf" },
   { id: "image",    label: "รูปภาพ",                short: "Images",      accent: "--g-img" },
   { id: "doc",      label: "เอกสารและจดหมายเวียน",  short: "Word",        accent: "--g-doc" },
   { id: "ppt",      label: "PowerPoint",            short: "PowerPoint",  accent: "--g-ppt" },
@@ -63,6 +63,11 @@ export const TOOLS = [
     accepts:["pdf"],
     libs:["pdflib"], keys:"watermark ลายน้ำ ประทับ ลับ confidential ตราประทับ", next:["pdf-compress","pdf-sign"] },
 
+  { id:"pdf-unstamp", group:"pdf", icon:"🧽", title:"ลบชั้นที่ทับบนหน้า PDF",
+    desc:"เอาลายน้ำหรือตราที่ถูกวางทับออก เห็นผลทันทีก่อนบันทึก และไม่มีทางลบเนื้อหาจริงพลาด",
+    accepts:["pdf"],
+    libs:["pdfjs","pdflib"], keys:"remove watermark stamp layer ลบลายน้ำ เอาลายน้ำออก ลบตรา ลบชั้น ลบโลโก้ทับ overlay", next:["pdf-watermark","pdf-compress"] },
+
   { id:"pdf-page-numbers", group:"pdf", icon:"🔢", title:"ใส่เลขหน้า PDF",
     desc:"ใส่เลขหน้าให้ทุกหน้า เลือกตำแหน่ง รูปแบบ และใช้เลขไทยได้ ข้ามหน้าปกได้",
     accepts:["pdf"],
@@ -78,45 +83,30 @@ export const TOOLS = [
     accepts:["pdf","image"],
     libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร ตัวหนังสือ รูปภาพ ภาพถ่าย recognize", next:["pdf-to-text","pdf-to-word"] },
 
-  { id:"pdf-to-images",group:"from-pdf", icon:"🖼", title:"PDF → Images",
+  { id:"pdf-to-images",group:"pdf", icon:"🖼", title:"PDF เป็น Images",
     desc:"แปลงทุกหน้าเป็น PNG หรือ JPG เลือกความละเอียดได้",
     accepts:["pdf"],
     libs:["pdfjs","jszip"], keys:"image png jpg รูป ภาพ export", next:["image-resize","images-to-pdf"] },
 
-  { id:"pdf-to-longimage", group:"from-pdf", icon:"📜", title:"PDF เป็นภาพยาวแผ่นเดียว",
+  { id:"pdf-to-longimage", group:"pdf", icon:"📜", title:"PDF เป็นภาพยาวแผ่นเดียว",
     desc:"ต่อทุกหน้าเป็นภาพเดียวยาว ๆ ส่งในไลน์แล้วเลื่อนอ่านรวดเดียวจบ ไม่ต้องกดโหลด",
     accepts:["pdf"],
     libs:["pdfjs"], keys:"long image ภาพยาว ต่อภาพ ไลน์ line แชท ส่งรูป สกรีนช็อต pdf เป็นรูป", next:["image-resize","images-to-pdf"] },
 
-  { id:"pdf-to-text", group:"from-pdf", icon:"📄", title:"PDF → ข้อความ",
+  { id:"pdf-to-text", group:"pdf", icon:"📄", title:"PDF เป็นข้อความ",
     desc:"ดึงข้อความออกมาเป็นไฟล์ TXT พร้อมคัดลอกได้ทันที",
     accepts:["pdf"],
     libs:["pdfjs"], keys:"text txt ข้อความ ดึง copy", next:["pdf-to-word","pdf-ocr"] },
 
-  { id:"pdf-to-word", group:"from-pdf", icon:"📝", title:"PDF → Word",
+  { id:"pdf-to-word", group:"pdf", icon:"📝", title:"PDF เป็น Word",
     desc:"แปลงเนื้อหาเป็นเอกสาร DOCX ที่แก้ไขต่อได้",
     accepts:["pdf"],
     libs:["pdfjs","docx"], keys:"word docx เอกสาร แก้ไข", next:["word-clean","word-to-pdf"] },
 
-  { id:"pdf-to-excel",group:"from-pdf", icon:"📊", title:"PDF → Excel",
+  { id:"pdf-to-excel",group:"pdf", icon:"📊", title:"PDF เป็น Excel",
     desc:"จับตารางในไฟล์ PDF ออกมาเป็น XLSX",
     accepts:["pdf"],
     libs:["pdfjs","xlsx"], keys:"excel xlsx ตาราง table sheet", next:["excel-csv","thai-date"] },
-
-  { id:"word-to-pdf", group:"to-pdf", icon:"📘", title:"Word → PDF",
-    desc:"แปลง DOCX เป็น PDF รองรับภาษาไทยเต็มรูปแบบ ทำได้ทีละหลายไฟล์",
-    accepts:["docx"],
-    libs:["mammoth","jspdf"], keys:"word docx pdf แปลง", next:["pdf-merge","pdf-sign"] },
-
-  { id:"excel-to-pdf",group:"to-pdf", icon:"📕", title:"Excel → PDF",
-    desc:"แปลงแต่ละชีทเป็นตารางในไฟล์ PDF",
-    accepts:["xlsx","csv"],
-    libs:["xlsx","jspdf","jspdfTable"], keys:"excel xlsx sheet ตาราง pdf", next:["pdf-merge","pdf-watermark"] },
-
-  { id:"images-to-pdf",group:"to-pdf", icon:"🧩", title:"Images → PDF",
-    desc:"รวมรูปหลายไฟล์เป็น PDF เดียว จัดขนาดหน้าอัตโนมัติ",
-    accepts:["image"],
-    libs:["pdflib"], keys:"image jpg png รูป รวม pdf", next:["pdf-compress","pdf-watermark"] },
 
   { id:"image-convert",group:"image", icon:"🔄", title:"แปลงชนิดไฟล์รูป",
     desc:"สลับระหว่าง PNG, JPG, WEBP พร้อมปรับคุณภาพ และทำไฟล์ .ico สำหรับใช้เป็น favicon ของเว็บ",
@@ -126,7 +116,17 @@ export const TOOLS = [
   { id:"image-resize",group:"image", icon:"📐", title:"ย่อและบีบอัดรูปภาพ",
     desc:"ย่อขนาดและลดน้ำหนักไฟล์รูปทีละหลายไฟล์ เห็นขนาดก่อนกับหลัง",
     accepts:["image"],
-    libs:["jszip"], keys:"resize compress ย่อ ลดขนาด บีบอัด รูป", next:["image-convert","images-to-pdf"] },
+    libs:["jszip"], keys:"resize compress ย่อ ลดขนาด บีบอัด รูป", next:["image-convert","image-bg-remove"] },
+
+  { id:"image-bg-remove",group:"image", icon:"✂", title:"ลบพื้นหลังรูปภาพ",
+    desc:"ทำพื้นหลังให้โปร่งใส ใช้ได้กับลายเซ็นที่ถ่ายบนกระดาษ ตราประทับ โลโก้ และของบนพื้นเรียบ",
+    accepts:["image"],
+    libs:["jszip"], keys:"background remove transparent โปร่งใส ลบพื้นหลัง ตัดพื้นหลัง ลายเซ็น ตราประทับ โลโก้ png ฉากหลัง", next:["pdf-sign","image-convert"] },
+
+  { id:"images-to-pdf",group:"image", icon:"🧩", title:"Images เป็น PDF",
+    desc:"รวมรูปหลายไฟล์เป็น PDF เดียว จัดขนาดหน้าอัตโนมัติ",
+    accepts:["image"],
+    libs:["pdflib"], keys:"image jpg png รูป รวม pdf", next:["pdf-compress","pdf-watermark"] },
 
   { id:"word-join",group:"doc", icon:"🔗", title:"รวมไฟล์ Word",
     desc:"ต่อเอกสารหลายไฟล์เป็นเล่มเดียว พร้อมรูปภาพครบ ลากจัดลำดับได้",
@@ -148,12 +148,17 @@ export const TOOLS = [
     accepts:["docx"],
     libs:["jszip","xlsx"], keys:"mailmerge mail merge จดหมายเวียน เทมเพลต template word excel ใบรับรอง ใบเสร็จ เวียน", next:["thai-number","word-to-pdf","word-clean"] },
 
-  { id:"powerpoint-to-word",group:"ppt", icon:"📽", title:"PowerPoint → Word",
+  { id:"word-to-pdf", group:"doc", icon:"📘", title:"Word เป็น PDF",
+    desc:"แปลง DOCX เป็น PDF รองรับภาษาไทยเต็มรูปแบบ ทำได้ทีละหลายไฟล์",
+    accepts:["docx"],
+    libs:["mammoth","jspdf"], keys:"word docx pdf แปลง", next:["pdf-merge","pdf-sign"] },
+
+  { id:"powerpoint-to-word",group:"ppt", icon:"📽", title:"PowerPoint เป็น Word",
     desc:"ดึงข้อความทุกสไลด์ หัวข้อย่อย และโน้ตผู้บรรยาย เป็นเอกสาร Word",
     accepts:["pptx"],
     libs:["jszip","docx"], keys:"powerpoint ppt pptx สไลด์ word docx โน้ต presentation แปลง", next:["word-clean","word-to-pdf"] },
 
-  { id:"powerpoint-to-pdf",group:"ppt", icon:"🖥", title:"PowerPoint → PDF",
+  { id:"powerpoint-to-pdf",group:"ppt", icon:"🖥", title:"PowerPoint เป็น PDF",
     desc:"จัดสไลด์เป็นไฟล์ PDF อ่านง่าย 1 สไลด์ = 1 หน้า เลือกธีมได้",
     accepts:["pptx"],
     libs:["jszip","jspdf"], keys:"powerpoint ppt pptx สไลด์ pdf presentation แปลง แจก", next:["pdf-merge","pdf-compress"] },
@@ -179,6 +184,11 @@ export const TOOLS = [
     desc:"ต่อแถวจากหลายไฟล์เป็นไฟล์เดียว จับคู่คอลัมน์ด้วยชื่อหัวตาราง ไม่ใช่ตำแหน่ง",
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"merge รวม ต่อ combine consolidate หลายไฟล์ สาขา excel", next:["excel-split","excel-to-pdf"] },
+  { id:"excel-to-pdf",group:"excel", icon:"📕", title:"Excel เป็น PDF",
+    desc:"แปลงแต่ละชีทเป็นตารางในไฟล์ PDF",
+    accepts:["xlsx","csv"],
+    libs:["xlsx","jspdf","jspdfTable"], keys:"excel xlsx sheet ตาราง pdf", next:["pdf-merge","pdf-watermark"] },
+
   { id:"excel-to-pq", group:"powerquery", icon:"🔤", title:"ตารางเป็นสูตร Power Query",
     desc:"ลากไฟล์ Excel, PDF, Word หรือรูปถ่ายตารางเข้ามา ได้โค้ด #table พร้อมวาง กำหนดชนิดข้อมูลรายคอลัมน์ได้",
     accepts:["xlsx","csv","pdf","docx","image"],
@@ -209,8 +219,8 @@ export const TOOLS = [
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"ที่อยู่ จังหวัด อำเภอ ตำบล เขต แขวง รหัสไปรษณีย์ address province district subdistrict postcode แยกที่อยู่", next:["word-mailmerge","thai-name"] },
 
-  { id:"thai-number", group:"thai", icon:"🔢", title:"ตัวเลข → บาทถ้วน / เลขไทย",
-    desc:"128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
+  { id:"thai-number", group:"thai", icon:"🔢", title:"ตัวเลขเป็นบาทถ้วน / เลขไทย",
+    desc:"128,400 เป็นหนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, สลับเลขไทย ๑๒๓ กับ 123 ได้ทั้งคอลัมน์",
     accepts:["xlsx","csv"],
     libs:["xlsx"], keys:"บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค", next:["word-mailmerge","thai-date"] },
 
@@ -312,9 +322,7 @@ export const byId = (id) => TOOLS.find((t) => t.id === id);
    ‼️ keys ไม่ต้องแปล: ตอนเป็นอังกฤษ title/desc กลายเป็นอังกฤษอยู่แล้ว ค้นเจอเอง
    ───────────────────────────────────────────────────────────────────────── */
 const EN_GROUPS = {
-  "pdf":      ["PDF tools", "PDF"],
-  "from-pdf": ["Convert from PDF", "From PDF"],
-  "to-pdf":   ["Convert to PDF", "To PDF"],
+  "pdf":      ["PDF", "PDF"],
   "image":    ["Images", "Images"],
   "doc":      ["Documents & mail merge", "Word"],
   "ppt":      ["PowerPoint", "PowerPoint"],
@@ -332,26 +340,28 @@ const EN_TOOLS = {
   "pdf-split":        ["Split a PDF", "Split by page range, every N pages, or one file per page"],
   "pdf-compress":     ["Compress a PDF", "Shrink scans and image-heavy files. See the size before and after"],
   "pdf-sign":         ["Sign a PDF", "Draw a signature or upload an image, then drag it onto the page. Saved for reuse"],
+  "pdf-unstamp":      ["Remove layers stamped on a PDF", "Take off a watermark or stamp that was placed on top. See the result before saving, and your real content can never be removed by mistake"],
   "pdf-watermark":    ["Watermark a PDF", "Stamp text on every page. Choose the position, colour and opacity"],
   "pdf-page-numbers": ["Add page numbers to a PDF", "Number every page. Pick the position and format, use Thai numerals, and skip the cover"],
   "pdf-remove-blank": ["Remove blank pages from a scan", "Duplex scans leave a blank page between every sheet. Each page is checked for you, and you can keep or drop any of them yourself"],
   "pdf-ocr":          ["OCR (read text from scans)", "Read Thai and English text out of scanned PDFs as plain text or a searchable PDF"],
-  "pdf-to-images":    ["PDF → images", "Turn every page into PNG or JPG at the resolution you choose"],
+  "pdf-to-images":    ["PDF to images", "Turn every page into PNG or JPG at the resolution you choose"],
   "pdf-to-longimage": ["PDF to one long image", "Stack every page into a single tall image, ready to send in a chat with no download step"],
-  "pdf-to-text":      ["PDF → text", "Pull the text out as a TXT file, ready to copy"],
-  "pdf-to-word":      ["PDF → Word", "Turn the content into an editable DOCX document"],
-  "pdf-to-excel":     ["PDF → Excel", "Capture the tables inside a PDF as an XLSX file"],
-  "word-to-pdf":      ["Word → PDF", "Convert DOCX to PDF with full Thai support, several files at a time"],
-  "excel-to-pdf":     ["Excel → PDF", "Lay every sheet out as a table in a PDF"],
-  "images-to-pdf":    ["Images → PDF", "Combine many images into one PDF, page size fitted automatically"],
+  "pdf-to-text":      ["PDF to text", "Pull the text out as a TXT file, ready to copy"],
+  "pdf-to-word":      ["PDF to Word", "Turn the content into an editable DOCX document"],
+  "pdf-to-excel":     ["PDF to Excel", "Capture the tables inside a PDF as an XLSX file"],
+  "word-to-pdf":      ["Word to PDF", "Convert DOCX to PDF with full Thai support, several files at a time"],
+  "excel-to-pdf":     ["Excel to PDF", "Lay every sheet out as a table in a PDF"],
+  "images-to-pdf":    ["Images to PDF", "Combine many images into one PDF, page size fitted automatically"],
   "image-convert":    ["Convert image format", "Move between PNG, JPG, WEBP and set the quality, or build a .ico file to use as your site favicon"],
+  "image-bg-remove":  ["Remove image background", "Make the background transparent. Works on signatures photographed on paper, stamps, logos and objects on a plain backdrop"],
   "image-resize":     ["Resize & compress images", "Shrink dimensions and file size in bulk. See before and after"],
   "word-join":        ["Merge Word files", "Join several documents into one, images intact, drag to reorder"],
   "word-replace":     ["Find & replace in bulk", "Change the same wording across many files: a company name or a year, all at once"],
   "word-clean":       ["Check a document before sending", "Find leftover comments, tracked changes and author names, then clear them in one click"],
   "word-mailmerge":   ["Mail merge (Word + Excel)", "Fill a Word template from Excel row by row and get the whole set of documents at once"],
-  "powerpoint-to-word": ["PowerPoint → Word", "Pull the text, bullets and speaker notes from every slide into a Word document"],
-  "powerpoint-to-pdf":  ["PowerPoint → PDF", "Lay the deck out as a readable PDF. One slide per page, pick a theme"],
+  "powerpoint-to-word": ["PowerPoint to Word", "Pull the text, bullets and speaker notes from every slide into a Word document"],
+  "powerpoint-to-pdf":  ["PowerPoint to PDF", "Lay the deck out as a readable PDF. One slide per page, pick a theme"],
   "map-coverage":     ["Map of what is around a point", "Drop in a file of centre points such as customer calls, then drag the radius bar. The map and the numbers move with it. Tells you which point is nearest and which circles are empty, then exports the sheets Icon Map Pro needs so Power BI can slice by radius"],
   "map-relocate":     ["Map of site moves", "Turn a file of old and new coordinates into a Thailand map with dots, joining lines and distances. Style it yourself, save it as an image for a deck, or export the sheets Icon Map Pro needs in Power BI"],
   "number-bins":      ["Group numbers into bands", "See the real spread first, compare four ways to cut the groups, drag any cut point by hand, lock chosen rows into a group of your own, and always get the sort column that keeps charts in the right order"],
@@ -365,7 +375,7 @@ const EN_TOOLS = {
   "thai-id":          ["Check Thai ID / tax numbers", "Verify the check digit of every 13-digit number in a file and see which rows are mistyped"],
   "thai-name":        ["Split Thai name into columns", "Break a full name into title, first name and surname, ready to sort or mail-merge"],
   "thai-address":     ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
-  "thai-number":      ["Numbers → Thai baht text", "128,400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
+  "thai-number":      ["Numbers to Thai baht text", "128,400 to หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
   "freebies":         ["Ready made files, free to take", "Deneb specs and a Power Query function this site actually uses, take them as they are without opening each tool"],
   "pbi-matrix-details": ["Matrix transaction details in one column", "Fold several columns into a single matrix column while the row headers stay frozen, every data type is turned into text first so zeros and FALSE never vanish"],
   "pbi-bar":          ["Deneb horizontal bar chart", "Tweak the bars, value labels and target line live, with bar length always true to the real numbers, then copy the spec into Deneb"],

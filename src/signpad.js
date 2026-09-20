@@ -4,6 +4,7 @@
 // — ข้อมูลไม่ออกจากเครื่องเช่นเดียวกับส่วนอื่นของเว็บ
 
 import { el } from "./dom.js";
+import { decodeImage } from "./imgdecode.js";
 
 const KEY = "filekit-signatures";
 
@@ -102,7 +103,7 @@ export function signaturePad({ width = 560, height = 200, onChange } = {}) {
 
 /** แปลงไฟล์รูปลายเซ็นเป็น PNG พื้นโปร่งใส โดยถอดพื้นขาวออก */
 export async function imageToSignature(file, { threshold = 232 } = {}) {
-  const bmp = await createImageBitmap(file);
+  const bmp = await decodeImage(file);
   const canvas = document.createElement("canvas");
   canvas.width = bmp.width; canvas.height = bmp.height;
   const ctx = canvas.getContext("2d");

@@ -129,6 +129,27 @@ export function stateKit(toolId, cfg) {
   return { restore, save, forget, shareLink, dropLinkParam, hasLink: () => readLink() !== null };
 }
 
+/**
+ * ปุ่ม "คัดลอกลิงก์ค่านี้" สำเร็จรูป
+ * ‼️ ก่อนหน้านี้ทุกเครื่องมือเขียนก้อนนี้เองคนละ 10 บรรทัด ซึ่งเป็นที่ที่ข้อความจะเพี้ยนกันเงียบ ๆ
+ *    (เครื่องมือหนึ่งบอกว่าคัดลอกแล้ว อีกเครื่องมือไม่บอกอะไรเลย) รวมไว้ที่เดียวจะพูดเหมือนกันเสมอ
+ * @param store  ตัวที่ stateKit() คืนมา
+ * @param st     statusBar() ของเครื่องมือนั้น
+ * @param mkButton  ตัวสร้างปุ่มของโปรเจกต์ (ส่ง button จาก ui.js เข้ามา กันไม่ให้ statekit ต้องพึ่ง ui.js)
+ */
+export function shareButton(store, st, mkButton) {
+  return mkButton(tr("คัดลอกลิงก์ค่านี้", "Copy link to these settings"), {
+    ghost: true,
+    onclick: async () => {
+      const link = store.shareLink();
+      try {
+        await navigator.clipboard.writeText(link);
+        st.ok(link.includes("?s=") ? SHARE_MSG.ok() : SHARE_MSG.plain());
+      } catch { st.err(SHARE_MSG.fail()); }
+    },
+  });
+}
+
 /** ข้อความบอกผลตอนกดปุ่มแชร์ ใช้ร่วมกันทุกเครื่องมือจะได้พูดเหมือนกัน */
 export const SHARE_MSG = {
   ok: () => tr("คัดลอกลิงก์แล้ว คนที่เปิดลิงก์นี้จะเห็นค่าที่ตั้งไว้เหมือนกันเป๊ะ",

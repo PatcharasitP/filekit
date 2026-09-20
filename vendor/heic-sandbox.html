@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- ‼️ ห้องขังของตัวถอด HEIC (20/09/2026)
+     libheif ใช้ Embind ซึ่งสร้างฟังก์ชันด้วย new Function จึงต้องการ 'unsafe-eval'
+     ซึ่งเป็นสิ่งที่ทั้งเว็บของเราห้ามเด็ดขาด (คำสัญญา "ไฟล์ไม่ออกจากเครื่องคุณ"
+     พึ่ง CSP ที่เข้มเป็นด่านสุดท้าย เปิด unsafe-eval ทั้งเว็บ = รื้อด่านนั้นทิ้ง)
+     จึงย้ายมันมาอยู่ในหน้านี้หน้าเดียว ที่มี CSP ของตัวเอง
+     default-src 'none' แปลว่าหน้านี้ต่อเน็ตไม่ได้เลย ส่งอะไรออกไปไหนไม่ได้
+     รับไบต์เข้ามาทาง postMessage แล้วส่งภาพที่ถอดแล้วกลับไปทางเดิมอย่างเดียว -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; base-uri 'none'; form-action 'none'">
+<title>HEIC decoder sandbox</title>
+<script src="libheif.js"></script>
+<script src="heic-sandbox.js"></script>

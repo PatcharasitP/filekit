@@ -346,6 +346,7 @@ export function toolShell2(tool, cfg = {}) {
        inert ปิดทั้งการโฟกัส การกด และซ่อนจากโปรแกรมอ่านหน้าจอในคำสั่งเดียว
        (จับได้เพราะเทสนับ "ของกดได้ในจอ" แล้วหน้าเปล่าได้ 36 ชิ้นทั้งที่ตาเห็นแค่ 4) */
     grid.inert = s === "landing";
+    if (panelMode) requestAnimationFrame(syncSideEmpty);
     restart.hidden = s === "result";
     if (s !== "work") setSheet(false);
     /* ‼️ ย้ายโฟกัสเมื่อสถานะเปลี่ยน ไม่งั้นคนใช้คีย์บอร์ดจะค้างอยู่กับปุ่มที่หายไปแล้ว */
@@ -475,9 +476,18 @@ export function toolShell2(tool, cfg = {}) {
     const st = wrap.querySelector(".s2-stage > .status-wrap");
     if (st && !sideFoot.contains(st)) sideFoot.insertBefore(el("div", { class: "s2-stat" }, [st]), ctaWhy);
   }
+  /* ‼️ เครื่องมือแบบ panel ที่ยังไม่ได้ย้ายตัวเลือกเข้าแผง จะเหลือแผงขวาว่างเปล่าทั้งแถบ
+     ซึ่งดูเหมือนของพังมากกว่าดูเหมือนดีไซน์ (เห็นกับตาบนเว็บสด: แผงกว้าง 384px มีแต่ชื่อกับปุ่ม)
+     ถ้าแผงไม่มีเนื้อหาจริง ให้ยุบแผงทิ้งแล้วเอาปุ่มหลักไปไว้แถบล่างเต็มความกว้างแทน
+     ‼️ วัดจากเนื้อหาจริงในแผง ไม่ใช่จากชนิดเครื่องมือ เพราะเครื่องมือเติมของเข้าแผงทีหลังได้ */
+  function syncSideEmpty() {
+    const has = sideBody.querySelector("input,select,textarea,button,canvas,.file-row,.dz-wrap,.field,li,tr");
+    grid.classList.toggle("side-empty", !has && state !== "result");
+  }
   if (panelMode) {
-    requestAnimationFrame(liftActions);
-    new MutationObserver(liftActions).observe(stage, { childList: true, subtree: true });
+    requestAnimationFrame(() => { liftActions(); syncSideEmpty(); });
+    new MutationObserver(() => { liftActions(); syncSideEmpty(); })
+      .observe(stage, { childList: true, subtree: true });
   }
 
   requestAnimationFrame(syncState);

@@ -361,3 +361,20 @@ body.tool{overflow:hidden}
   body.tool .s2-menubtn > span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
   body.tool .top{gap:8px; padding-inline:10px}
 }
+
+/* ── เครื่องมือที่แผงขวายังว่าง: ยุบแผงแล้วเอาปุ่มลงแถบล่างเต็มกว้าง ──────
+ * ระหว่างช่วงย้าย เครื่องมือแบบเดิมยังวางตัวเลือกไว้ในผืนงาน แผงจึงเหลือแต่ชื่อกับปุ่ม
+ * แถบล่างเต็มกว้างตรงกับที่ Smallpdf ทำกับเครื่องมือที่ไม่มีตัวเลือก และดูตั้งใจกว่าแผงเปล่า */
+.s2-work.side-empty{grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto; display:flex; flex-direction:column}
+.s2-work.side-empty .s2-canvas{flex:1 1 auto; min-height:0}
+.s2-work.side-empty .s2-side{flex:none; border-inline-start:0; border-block-start:1px solid var(--line-soft)}
+.s2-work.side-empty .s2-side-hd,.s2-work.side-empty .s2-side-bd{display:none}
+.s2-work.side-empty .s2-side-ft{display:flex; align-items:center; gap:12px; padding:12px 18px}
+.s2-work.side-empty .s2-cta-row{max-width:420px; margin-inline-start:auto}
+.s2-work.side-empty .s2-stat{margin:0; flex:1 1 auto; min-width:0}
+
+/* มือถือสถานะผลลัพธ์: แผงผลลัพธ์แสดงเต็มอยู่แล้ว ไม่ต้องมีกล่องสรุปในผืนงานซ้ำอีก */
+@media (max-width:860px){
+  .s2[data-state="result"] .s2-done-big{display:none !important}
+  .s2[data-state="result"] .s2-canvas{display:none}
+}

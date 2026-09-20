@@ -55,7 +55,12 @@ const STYLE = `
 .pbib-ds-note{font-size:12px;color:var(--text-mute);margin-top:5px;line-height:1.6;
   padding-left:9px;border-left:2px solid color-mix(in srgb,var(--g-powerbi,var(--brand)) 55%,var(--line))}
 
-.pbib-chart-box{position:relative;width:100%;min-height:300px}
+/* ‼️ ผืนพรีวิวเป็นสีขาวเสมอ ไม่ตามธีมของเว็บ (แก้ 20/09/2026 เห็นกับตาในภาพธีมมืด)
+   สเปก Deneb ฝังสีตัวอักษร #252423 ไว้ตรง ๆ ซึ่ง "ถูกแล้ว" เพราะผืนรายงาน Power BI เป็นสีขาว
+   แต่พอเว็บเราเป็นธีมมืด ตัวเลขกลางวงกับคำอธิบายกลายเป็นเทาเข้มบนพื้นดำ อ่านไม่ออกเลยสักตัว
+   จะไปแก้สีในสเปกก็ไม่ได้ เพราะสเปกคือของที่ผู้ใช้จะคัดลอกไปวางใน Power BI จริง ๆ
+   แก้ที่ผืนแทน และได้ผลพลอยได้คือพรีวิวตรงกับของจริงที่จะเห็นใน Power BI ทุกเม็ด */
+.pbib-chart-box{position:relative;width:100%;min-height:300px;background:#fff;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px color-mix(in srgb,#252423 10%,transparent)}
 .pbib-chart{width:100%;height:100%}
 .pbib-chart .vega-embed{width:100%;height:100%}
 .pbib-note{border:1px solid var(--line);border-left:3px solid var(--g-powerbi,var(--brand));

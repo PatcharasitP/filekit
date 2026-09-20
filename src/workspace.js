@@ -182,10 +182,82 @@ export function workspace(tool, cfg = {}) {
   body.classList.add("ws-body");
   body.id = "ws-top";        // จุดหมายของลิงก์ "พื้นที่ทำงาน" ในรางซ้าย
 
+  /* ── ปุ่มย้ายแผงตั้งค่าขึ้นไปเป็นริบบอนด้านบน (20/09/2026) ────────────────
+   * ‼️ พี่ปอนด์ขอริบบอนแบบ Power BI สำหรับ "การตั้งค่า" ของแต่ละเครื่องมือ
+   *   วัดแล้วได้พื้นที่เอกสารคืนมา 11% บนเครื่องมือ PDF (แผงขวากิน 340px)
+   *   และคืนได้มากกว่านั้นมากบนเครื่องมือที่เนื้อหาตรงกลางเป็นตารางหรือกราฟ
+   *
+   * ‼️ ทำเป็นโหมดที่สลับได้ ไม่ใช่บังคับ เพราะแผงแนวตั้งดีกว่าเมื่อค่าตั้งเยอะ
+   *   และจำไว้รายเครื่องมือ เพราะเครื่องมือที่มี 3 ช่องกับ 25 ช่องต้องการคนละแบบ
+   * ‼️ จอแคบกลับไปเป็นแนวตั้งเสมอ ริบบอนแนวนอนบนจอ 390px ใช้ไม่ได้จริง (กติกาอยู่ใน CSS) */
+  const RIB_KEY = `filekit-cfg-ribbon-${tool.id}`;
+  /* ‼️ ค่าเริ่มต้นต้องวัดของจริง ไม่ใช่เดาจากจำนวนช่อง (บทเรียน 20/09/2026)
+     รอบแรกฟ้าใช้ "จำนวนช่องไม่เกิน 12" เป็นเกณฑ์ ซึ่งเดาผิดกับ pdf-sign ทันที
+     มันมีแค่ 2 ช่อง แต่มีแผ่นวาดลายเซ็นใหญ่ ริบบอนจึงสูง 353px
+     ‼️ ต้นทุนจริงของริบบอนคือ "ความสูงที่มันกิน" ไม่ใช่ "จำนวนช่องที่มันมี" จึงต้องวัดอันนั้นตรง ๆ
+     ความสูงคือของหายากในหน้าเครื่องมือเอกสาร ส่วนความกว้างคือของที่เหลือเฟือ
+     ‼️ ถ้าผู้ใช้เคยเลือกเองแล้ว ความตั้งใจของผู้ใช้ชนะค่าเริ่มต้นเสมอ */
+  const RIB_MAX_H = 220;
+  let userChose = null;
+  try { const v = localStorage.getItem(RIB_KEY); if (v !== null) userChose = v === "1"; } catch { /* โหมดส่วนตัว */ }
+  let asRibbon = userChose !== null ? userChose : !!cfg.right;
+
+  const ribBtn = el("button", { type: "button", class: "ws-ribbtn" },
+    [uiIcon("rows", "ico-svg")]);
+
+  /* ── พับแผงข้างเก็บเป็นแถบไอคอน (พี่ปอนด์ขอ 20/09/2026 ตามผังของ Power BI) ────
+   * Power BI ไม่ได้ให้เลือกระหว่าง "มีแผง" กับ "ไม่มีแผง" แต่พับแผงเป็นแถบบาง ๆ
+   * ที่ยังอยู่ในสายตาและกดกลับมาได้ทันที ต่างจากการซ่อนหายไปเลยซึ่งผู้ใช้จะหาไม่เจอ
+   * ‼️ แถบที่พับแล้วต้องมีชื่อแผงในแนวตั้ง ไม่ใช่ไอคอนเปล่า เพราะงานวิจัยของเราเอง
+   *   ระบุว่า "หาไม่เจอ" คือสาเหตุ 45% ของงานที่ทำไม่สำเร็จ ไอคอนเปล่าแปลว่าต้องเดา
+   * ‼️ จำรายเครื่องมือ เพราะแต่ละเครื่องมือใช้แผงซ้ายและขวาไม่เหมือนกันเลย
+   * ‼️ ปุ่มพับกับแถบไอคอนคือปุ่มคนละตัวที่สลับกันโผล่ จึงต้องย้ายโฟกัสตามไปด้วย
+   *   ไม่งั้นคนที่ใช้คีย์บอร์ดกดพับแล้วโฟกัสหายไปอยู่ต้นเอกสาร */
+  const PANE_KEY = (side) => `filekit-pane-${side}-${tool.id}`;
+  const folded = { left: false, right: false };
+  const foldBtn = {}, rail = {};
+  for (const side of ["left", "right"]) {
+    if (!cfg[side]) continue;
+    try { folded[side] = localStorage.getItem(PANE_KEY(side)) === "1"; } catch { /* โหมดส่วนตัว */ }
+    foldBtn[side] = el("button", { type: "button", class: "ws-panefold" }, [uiIcon("chev", "ico-svg")]);
+    rail[side] = el("button", { type: "button", class: `ws-rail ws-rail-${side}` }, [
+      uiIcon(side === "left" ? "stack" : "sliders", "ws-rail-ico"),
+      el("span", { class: "ws-rail-txt" }, cfg[side].title),
+    ]);
+    const flip = () => {
+      folded[side] = !folded[side];
+      try { localStorage.setItem(PANE_KEY(side), folded[side] ? "1" : "0"); } catch { /* ไม่เป็นไร */ }
+      applyPanes();
+      (folded[side] ? rail[side] : foldBtn[side]).focus();
+    };
+    foldBtn[side].addEventListener("click", flip);
+    rail[side].addEventListener("click", flip);
+  }
+  /* ‼️ แผงขวาที่ถูกย้ายขึ้นไปเป็นริบบอนแล้ว ห้ามพับซ้อนอีกชั้น
+     ไม่งั้นจะได้ทั้งริบบอนข้างบนและแถบไอคอนด้านขวาพร้อมกัน ซึ่งคือของชิ้นเดียวกันสองที่ */
+  function applyPanes() {
+    for (const side of ["left", "right"]) {
+      if (!cfg[side]) continue;
+      const on = folded[side] && !(side === "right" && asRibbon);
+      grid.classList.toggle(`fold-${side}`, on);
+      const t = cfg[side].title;
+      const lbl = on ? tr(`เปิดแผง ${t}`, `Show ${t}`) : tr(`พับแผง ${t} เก็บ`, `Collapse ${t}`);
+      for (const b of [foldBtn[side], rail[side]]) {
+        b.setAttribute("aria-expanded", String(!on));
+        b.setAttribute("aria-label", lbl);
+        b.title = lbl;
+      }
+    }
+  }
+
   const panel = (side, spec) => spec ? el("aside", { class: `ws-panel ws-${side}` }, [
     el("div", { class: "ws-head" }, [
       el("h2", {}, spec.title),
       spec.aside || null,
+      el("div", { class: "ws-head-act" }, [
+        side === "right" ? ribBtn : null,
+        foldBtn[side],
+      ]),
     ]),
     spec.hint ? el("p", { class: "ws-hint" }, spec.hint) : null,
     el("div", { class: "ws-scroll" }, [spec.node]),
@@ -201,13 +273,41 @@ export function workspace(tool, cfg = {}) {
     el("div", { class: "ws-stage-in" }, [emptyBox, cfg.center ? cfg.center.node : null]),
   ]);
 
+  /* ‼️ แถบไอคอนวางไว้ติดกับแผงที่มันแทน แล้วให้ CSS โชว์ทีละอัน
+     จึงได้อยู่ในช่องกริดเดียวกันเสมอ ไม่ต้องคำนวณตำแหน่งเอง */
   const grid = el("div", { class: "ws-grid" }, [
     panel("left", cfg.left),
+    rail.left || null,
     el("section", { class: "ws-center" }, [canvas]),
     panel("right", cfg.right),
+    rail.right || null,
   ]);
   if (!cfg.left) grid.classList.add("no-left");
   if (!cfg.right) grid.classList.add("no-right");
+
+  /* ‼️ ย้ายด้วยการสลับที่ใน DOM จริง ไม่ใช่ซ่อนอันหนึ่งสร้างอีกอัน
+     เพราะเครื่องมือถือ reference ของ node ในแผงไว้ ถ้าสร้างใหม่ค่าที่ผู้ใช้ตั้งไว้จะหายหมด
+     ‼️ ใส่กลับต้องต่อท้าย grid เสมอ เพราะผังเรียงตามลำดับ ซ้าย กลาง ขวา */
+  const leftPanel = grid.querySelector(".ws-left");
+  const rightPanel = grid.querySelector(".ws-right");
+  function applyRibbon() {
+    if (!rightPanel) return;
+    rightPanel.classList.toggle("as-ribbon", asRibbon);
+    grid.classList.toggle("ribbon-mode", asRibbon);
+    if (asRibbon) { if (rightPanel.parentNode !== body) body.insertBefore(rightPanel, grid); }
+    else if (rightPanel.parentNode !== grid) grid.appendChild(rightPanel);
+    ribBtn.setAttribute("aria-expanded", String(asRibbon));
+    ribBtn.setAttribute("aria-label", asRibbon
+      ? tr("ย้ายการตั้งค่ากลับไปด้านขวา", "Move settings back to the right")
+      : tr("ย้ายการตั้งค่าขึ้นไปด้านบน", "Move settings to the top"));
+    ribBtn.title = ribBtn.getAttribute("aria-label");
+    applyPanes();
+  }
+  ribBtn.addEventListener("click", () => {
+    asRibbon = !asRibbon;
+    try { localStorage.setItem(RIB_KEY, asRibbon ? "1" : "0"); } catch { /* ไม่เป็นไร */ }
+    applyRibbon();
+  });
 
   /* ‼️ แถบปุ่มล่างกินจอมือถือมากเกินไป (วัดจริง 18/09/2026)
    *   ปุ่มเรียงด้วย flex-wrap ปุ่มละบรรทัด พอเครื่องมือมี 6-7 ปุ่มจึงสูงถึง 362px
@@ -264,6 +364,23 @@ export function workspace(tool, cfg = {}) {
     }
   }
   body.append(grid, footer);
+  applyRibbon();
+  applyPanes();
+  /* วัดของจริงหลังวาดเสร็จ ถ้าริบบอนสูงเกินเกณฑ์ ถอยกลับไปเป็นแผงข้างให้เอง
+     ‼️ ต้องเฝ้าดู ไม่ใช่วัดครั้งเดียว เพราะเครื่องมือหลายตัวเติมเนื้อหาในแผงทีหลัง
+        (pbi-bar โหลด Vega แล้วค่อยวาดตัวเลือก) วัดครั้งเดียวตอนมันยังเตี้ยจะตัดสินผิด
+     ‼️ เลิกเฝ้าเมื่อพลิกไปแล้ว หรือเมื่อครบ 6 วินาที จะได้ไม่เฝ้าค้างทั้งชีวิตหน้า
+        และเฉพาะตอนที่ผู้ใช้ยังไม่เคยเลือกเอง ความตั้งใจของผู้ใช้ห้ามถูกทับ */
+  if (userChose === null && asRibbon && rightPanel && window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      if (!asRibbon) return ro.disconnect();
+      if (rightPanel.getBoundingClientRect().height > RIB_MAX_H) {
+        asRibbon = false; applyRibbon(); ro.disconnect();
+      }
+    });
+    ro.observe(rightPanel);
+    setTimeout(() => ro.disconnect(), 6000);   // ตัวจับเวลานี้คือเพดานสูงสุดของการเฝ้า
+  }
   if (cfg.note) body.appendChild(el("div", { class: "note" }, cfg.note));
 
   /* ‼️ ต้องเรียกหลังแผงถูกประกอบครบแล้ว และหน่วงหนึ่งเฟรม
@@ -274,9 +391,14 @@ export function workspace(tool, cfg = {}) {
      จึงเฝ้าดูแผงแล้วสแกนซ้ำเมื่อมีของเพิ่ม ตัวสแกนข้ามกล่องที่ทำไปแล้วจึงเรียกซ้ำได้
      ‼️ หน่วงด้วย rAF ก่อนสแกนทุกครั้ง กันกรณีเครื่องมือทยอยต่อ DOM ทีละชิ้น
         แล้วเราไปสแกนกลางคัน เจอหัวข้อที่ยังไม่มีเนื้อในกลุ่ม */
-  for (const side of ["left", "right"]) {
-    const sc = grid.querySelector(`.ws-${side} .ws-scroll`);
+  /* ‼️ ต้องหาจาก node ของแผงตรง ๆ ห้าม querySelector จาก grid (บั๊ก 20/09/2026)
+     โหมดริบบอนย้ายแผงขวาออกไปอยู่นอก grid ตั้งแต่ตอนวาดเสร็จ
+     grid.querySelector จึงคืน null แล้วกลุ่มพับได้ไม่ถูกสร้างเลยสักกลุ่ม
+     เทส foldpanes จับได้ว่ากราฟโดนัทเหลือ 0 กลุ่มจากเดิม 4 กลุ่ม */
+  for (const [side, node] of [["left", leftPanel], ["right", rightPanel]]) {
+    const sc = node && node.querySelector(".ws-scroll");
     if (!sc) continue;
+    void side;
     let queued = false;
     const watch = { childList: true, subtree: true };
     const scan = () => {

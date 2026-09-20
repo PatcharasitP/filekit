@@ -813,16 +813,24 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 
 /* ══ โครงแผงลอย (workspace) — ใช้กับเครื่องมือที่มีพรีวิว ══ */
 .ws-body{padding:0;background:none;border:0;box-shadow:none}
+/* ‼️ ความกว้างสองคอลัมน์ข้างเก็บเป็นตัวแปร (20/09/2026)
+   เพราะตอนนี้มีสี่อย่างที่แย่งกันกำหนดความกว้างเดียวกัน คือจอกว้าง จอแคบ
+   ไม่มีแผง และพับแผง ถ้าเขียนเป็น grid-template-columns ทุกกรณีจะได้ 12 บรรทัด
+   ที่ต้องเรียงลำดับให้ถูกเป๊ะ ๆ และพังทันทีที่เพิ่มกรณีที่ 5
+   ‼️ ของเดิมพังอยู่แล้วด้วยเหตุนี้ กฎ .no-left ในจอ 1280px ถูกกฎ .no-left
+   ที่อยู่ล่างกว่าในไฟล์ทับตลอด แผงขวาจึงไม่เคยกว้าง 340px เลยตอนไม่มีแผงซ้าย */
 .ws-grid{
   display:grid; gap:14px; align-items:start;
-  grid-template-columns:minmax(210px,250px) minmax(0,1fr) minmax(230px,290px);
+  --ws-col-l:minmax(210px,250px);
+  --ws-col-r:minmax(230px,290px);
+  --ws-rail-w:46px;
+  grid-template-columns:var(--ws-col-l) minmax(0,1fr) var(--ws-col-r);
 }
 /* ‼️ จอกว้างพอ ให้แผงตั้งค่ากว้างขึ้นด้วย (18/09/2026)
    เพดาน 290px ทำให้ป้ายภาษาไทยยาว ๆ ต้องตัดบรรทัด และแบ่งสองคอลัมน์ไม่ได้เลย
    วัดจริงกราฟโดนัทต้องเลื่อนแผง 3.16 เท่า ทั้งที่จอมีที่ว่างเหลือ */
 @media (min-width:1280px){
-  .ws-grid{grid-template-columns:minmax(210px,260px) minmax(0,1fr) minmax(280px,340px)}
-  .ws-grid.no-left{grid-template-columns:minmax(0,1fr) minmax(280px,340px)}
+  .ws-grid{--ws-col-l:minmax(210px,260px); --ws-col-r:minmax(280px,340px)}
 }
 
 /* ‼️ หัวกลุ่มในแผงตั้งค่าต้องเด่นกว่าป้ายช่อง (18/09/2026)
@@ -873,8 +881,8 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
    ‼️ จดไว้กันคนถัดไปเสนอซ้ำ ไอเดียนี้ดูสมเหตุสมผลมากบนกระดาษ แต่ของจริงไม่ผ่าน
    ถ้าจะทำจริงต้องบังคับความสูงช่องให้เท่ากันก่อน ซึ่งกระทบทุกเครื่องมือ ไม่คุ้ม */
 }
-.ws-grid.no-left{grid-template-columns:minmax(0,1fr) minmax(230px,290px)}
-.ws-grid.no-right{grid-template-columns:minmax(210px,250px) minmax(0,1fr)}
+.ws-grid.no-left{grid-template-columns:minmax(0,1fr) var(--ws-col-r)}
+.ws-grid.no-right{grid-template-columns:var(--ws-col-l) minmax(0,1fr)}
 /* ‼️ ไม่มีแผงข้างทั้งสองด้าน (หน้าที่เป็นเนื้อหาล้วน เช่นของแจก)
    เดิมตกไปโดนกฎ no-left ที่ยังจองที่ให้แผงขวา เนื้อหาจึงถูกบีบเหลือ 230px
    บนจอ 1440px แล้วเหลือพื้นที่ว่างครึ่งจอ (เจอจริงตอนทำหน้าของแจก)
@@ -1434,3 +1442,96 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 .rb-tab.at{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
 .rb-tab.at::after{content:"";display:block;height:2px;margin:5px 2px -5px;border-radius:2px;
   background:color-mix(in srgb,var(--brand) 70%,var(--text))}
+
+/* ── แผงตั้งค่าในโหมดริบบอน (20/09/2026) ──────────────────────────────────
+   ถอดโครงจากริบบอนของ Power BI ตามที่พี่ปอนด์ขอ คือค่าตั้งเรียงแนวนอนอยู่ด้านบน
+   ‼️ ทำด้วย CSS ล้วน ไม่ต้องรื้อ markup ของทั้ง 53 เครื่องมือ
+      เพราะทุกเครื่องมือใช้โครงเดียวกันคือ .ws-head กับ .ws-scroll อยู่แล้ว */
+.ws-ribbtn{flex:none;width:36px;height:36px;border:0;border-radius:8px;background:transparent;
+  cursor:pointer;color:var(--text-mute);display:grid;place-items:center;margin-inline-start:auto}
+.ws-ribbtn:hover{background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text)}
+.ws-ribbtn:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
+/* ‼️ ปุ่มริบบอนกับปุ่มพับแผงอยู่ติดกันในหัวแผงเดียวกัน (แก้ 20/09/2026)
+   ตอนแรกใช้ลูกศรทั้งคู่ เห็นกับตาในภาพว่าได้ ">" สองอันเรียงกัน แยกไม่ออกเลยว่าอันไหนทำอะไร
+   ปุ่มริบบอนจึงเปลี่ยนเป็นไอคอนสองแถบนอน ซึ่งบอกรูปร่างของผลลัพธ์ตรง ๆ
+   และบอกสถานะด้วยพื้นสีแบรนด์ตอนเปิดอยู่ ไม่ใช่หมุนลูกศรซึ่งมองไม่ออกว่าหมุนแล้วแปลว่าอะไร */
+.ws-ribbtn svg{width:16px;height:16px}
+.ws-panel.as-ribbon .ws-ribbtn{background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand)}
+/* ริบบอนอยู่บนสุดเต็มความกว้างอยู่แล้ว พับเก็บเข้าข้างไม่ได้ ปุ่มพับจึงต้องหายไป */
+.ws-panel.as-ribbon .ws-panefold{display:none}
+
+.ws-panel.as-ribbon{width:auto;max-width:none;margin:0 0 var(--sp3)}
+.ws-panel.as-ribbon .ws-head{padding-bottom:6px}
+/* ‼️ ต้องปลด max-height กับ overflow ของคอลัมน์ ไม่งั้นริบบอนจะมีสกรอลล์ของตัวเองซ้อนอยู่ */
+.ws-panel.as-ribbon .ws-scroll{max-height:none;overflow:visible}
+/* เนื้อในของเครื่องมือห่ออยู่อีกชั้น จึงต้องพลิกชั้นนั้นเป็นแถวแนวนอน */
+.ws-panel.as-ribbon .ws-scroll > *{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px}
+.ws-panel.as-ribbon .ws-scroll .field{width:auto;min-width:140px;max-width:240px;margin:0}
+.ws-panel.as-ribbon .ws-scroll .field input[type=range]{min-width:130px}
+/* หัวข้อกลุ่มกลายเป็นป้ายคั่นเต็มแถว แบบชื่อกลุ่มใต้ริบบอนของ Office */
+.ws-panel.as-ribbon .ws-scroll h3{width:100%;margin:2px 0 -4px;font-size:11.5px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-mute)}
+.ws-panel.as-ribbon .ws-scroll .seg{flex:none}
+/* ‼️ จอแคบกลับไปเป็นแนวตั้งเสมอ ริบบอนแนวนอนบนจอ 390px ใช้ไม่ได้จริง
+   กฎนี้ต้องมาทีหลังเพื่อให้ชนะกฎข้างบนทั้งหมด */
+@media (max-width:1000px){
+  .ws-panel.as-ribbon .ws-scroll > *{display:block}
+  .ws-panel.as-ribbon .ws-scroll .field{width:auto;max-width:none}
+}
+/* ‼️ ตอนย้ายการตั้งค่าขึ้นข้างบน กริดต้องเลิกจองที่ให้คอลัมน์ขวาด้วย
+   ไม่งั้นย้ายแล้วตรงกลางไม่ได้พื้นที่เพิ่มเลย ซึ่งคือเหตุผลทั้งหมดที่ย้าย
+   ต้องเขียนทั้งกรณีมีแผงซ้ายและไม่มี เพราะกฎเดิมแยกกันอยู่แล้ว (ดูบทเรียน no-left.no-right ใน PROVEN.md) */
+.ws-grid.ribbon-mode{grid-template-columns:var(--ws-col-l) minmax(0,1fr)}
+.ws-grid.ribbon-mode.no-left{grid-template-columns:minmax(0,1fr)}
+@media (max-width:1000px){ .ws-grid.ribbon-mode,.ws-grid.ribbon-mode.no-left{grid-template-columns:minmax(0,1fr)} }
+/* ‼️ เพดานความสูงของริบบอน วัดแล้วว่าเครื่องมือที่มี 18-22 ช่องทำริบบอนสูง 714-720px
+   ซึ่งกินเกินครึ่งจอจนแย่กว่าแผงข้าง จำกัดไว้แล้วให้เลื่อนในตัวมันเอง
+   ผู้ใช้ที่เลือกโหมดนี้เองจะได้ไม่เจอเซอร์ไพรส์ว่าหน้าจอหายไปครึ่งหนึ่ง */
+.ws-panel.as-ribbon .ws-scroll{max-height:min(30vh,300px);overflow-y:auto}
+
+/* ── พับแผงข้างเป็นแถบไอคอน (พี่ปอนด์ขอ 20/09/2026 ตามผังของ Power BI) ───────
+   ‼️ แถบกับแผงอยู่ในช่องกริดเดียวกัน สลับกันโผล่ด้วย display ล้วน
+      ไม่มีการย้าย node จึงไม่มีทางที่ของในแผงจะหายหรือถูกสร้างใหม่ */
+.ws-panefold{flex:none;width:36px;height:36px;border:0;border-radius:8px;background:transparent;
+  cursor:pointer;color:var(--text-mute);display:grid;place-items:center}
+.ws-panefold:hover{background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text)}
+.ws-panefold:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
+.ws-panefold svg{width:15px;height:15px;transition:transform .18s}
+.ws-left .ws-panefold svg{transform:rotate(90deg)}
+.ws-right .ws-panefold svg{transform:rotate(-90deg)}
+.ws-head-act{flex:none;display:flex;align-items:center;gap:2px;margin-inline-start:auto}
+
+.ws-rail{display:none}
+.ws-grid.fold-left > .ws-rail-left,
+.ws-grid.fold-right > .ws-rail-right{
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  width:100%; padding:12px 4px; border:1px solid var(--line-soft); border-radius:var(--r-lg);
+  background:var(--card); box-shadow:var(--sh1), var(--ring-top);
+  cursor:pointer; color:var(--text-dim); align-self:start;
+}
+.ws-grid.fold-left > .ws-left,
+.ws-grid.fold-right > .ws-right{display:none}
+.ws-grid.fold-left{--ws-col-l:var(--ws-rail-w)}
+.ws-grid.fold-right{--ws-col-r:var(--ws-rail-w)}
+.ws-rail:hover{border-color:var(--line);color:var(--text)}
+.ws-rail:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
+.ws-rail-ico{width:19px;height:19px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;color:var(--brand)}
+/* ‼️ ชื่อแผงในแนวตั้ง ไม่ใช่ไอคอนเปล่า คนจะได้ไม่ต้องเดาว่าแถบนี้คืออะไร
+   sideways-rl ทำให้อ่านจากบนลงล่างโดยตัวอักษรไทยไม่ล้ม (ลองแล้ว vertical-rl สระลอยผิดที่) */
+.ws-rail-txt{writing-mode:vertical-rl;text-orientation:sideways;
+  font-size:12.5px;font-weight:600;letter-spacing:.02em;line-height:1.2;
+  max-height:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ‼️ ทิศการอ่านต่างกันสองข้าง ตามแบบที่ Office กับ Visual Studio ใช้มานาน
+   แถบซ้ายอ่านล่างขึ้นบน แถบขวาอ่านบนลงล่าง ตัวหนังสือจะได้ "เอียงเข้าหา" เนื้อหาตรงกลางทั้งคู่
+   ถ้าใช้ทิศเดียวกันทั้งสองข้าง ข้างหนึ่งจะเอียงหนีออกนอกจอเสมอ */
+.ws-rail-left .ws-rail-txt{transform:rotate(180deg)}
+/* ‼️ จอแคบกริดเหลือคอลัมน์เดียวอยู่แล้ว การพับจึงไม่ช่วยอะไรและทำให้หาของไม่เจอ
+   กฎนี้ต้องมาทีหลังกฎข้างบนทั้งหมดเพื่อให้ชนะ */
+@media (max-width:1000px){
+  .ws-grid.fold-left > .ws-left,
+  .ws-grid.fold-right > .ws-right{display:flex}
+  .ws-grid.fold-left > .ws-rail-left,
+  .ws-grid.fold-right > .ws-rail-right{display:none}
+  .ws-panefold{display:none}
+}

@@ -70,26 +70,30 @@ function menuColumns() {
   return cols;
 }
 
-/** เมนูรวมเครื่องมือ คืน { node, btn, close } */
-export function toolMenu(tool) {
-  const panel = el("nav", { class: "s2-menu", hidden: true,
-    "aria-label": tr("เครื่องมือทั้งหมด", "All tools") });
-  const btn = el("button", {
-    type: "button", class: "s2-menubtn", "aria-expanded": "false",
-    onclick: (e) => { e.stopPropagation(); toggle(); },
-  }, [el("span", {}, tr("เครื่องมือทั้งหมด", "All tools")), uiIcon("chev", "s2-chev")]);
+/** ต่อเมนูรวมเครื่องมือเข้ากับปุ่มถาวรในแถบหัวของเว็บ
+ * ‼️ ปุ่มกับกล่องเมนูอยู่ใน index.html ถาวร ไม่ได้สร้างใหม่ต่อเครื่องมือ
+ *   เพราะแอปเก็บ DOM ของเครื่องมือไว้ใช้ซ้ำ ของที่สร้างต่อเครื่องมือจะติดอยู่กับตัวมัน
+ *   พอสลับเครื่องมือแล้วสลับกลับ ของนั้นไม่กลับมาที่แถบหัวอีก
+ *   (บั๊กจริงที่ tests/browser_shell2.py จับได้ 21/09: ปุ่มภาษากับธีมหายทุกเครื่องมือยกเว้นตัวแรก)
+ * ‼️ v2 จึงใช้แถบหัวเดิมของเว็บเป็นแถบหัวของหน้าเครื่องมือเลย ไม่สร้างแถบที่สอง
+ *   ได้ทั้งความสูง 60px ตามเป้า และปุ่มธีมกับภาษายังอยู่ที่เดิมโดยไม่ต้องย้ายอะไร */
+let menuWired = false;
+export function wireToolMenu(tool) {
+  const btn = document.getElementById("toolmenu");
+  const panel = document.getElementById("toolmenupanel");
+  if (!btn || !panel) return { close: () => {}, isOpen: () => false };
+  /* ‼️ ต้องถอด hidden ด้วย JS ไม่ใช่ CSS เพราะโปรเจกต์นี้ประกาศ [hidden]{display:none !important}
+     ไว้เป็นกฎกลาง (บทเรียน 09/09: กฎของเบราว์เซอร์แพ้ display ที่เราเขียนเอง จึงต้องมี !important)
+     กฎที่มี !important จะชนะทุก selector ที่ไม่มี การซ่อนหรือแสดงของชิ้นนี้จึงทำผ่าน JS เท่านั้น */
+  btn.hidden = false;
 
-  let built = false;
-  function build() {
-    if (built) return;
-    built = true;
+  if (!panel.dataset.built) {
+    panel.dataset.built = "1";
     for (const c of menuColumns()) {
       panel.appendChild(el("div", { class: "s2-col" }, [
         el("h4", {}, c.head),
         ...c.tools.map((t) => el("a", {
-          class: "s2-mi" + (t.id === tool.id ? " here" : ""),
-          href: "#/" + t.id, style: `--gc:var(${c.accent})`,
-          "aria-current": t.id === tool.id ? "page" : null,
+          class: "s2-mi", href: "#/" + t.id, "data-id": t.id, style: `--gc:var(${c.accent})`,
         }, [
           el("span", { class: "s2-mi-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
           el("span", { class: "s2-mi-tx" }, t.title),
@@ -97,91 +101,53 @@ export function toolMenu(tool) {
       ]));
     }
   }
-  function toggle(force) {
+  for (const a of panel.querySelectorAll(".s2-mi")) {
+    const on = a.dataset.id === tool.id;
+    a.classList.toggle("here", on);
+    if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  }
+
+  const toggle = (force) => {
     const open = force !== undefined ? force : panel.hidden;
-    if (open) build();
     panel.hidden = !open;
     btn.setAttribute("aria-expanded", String(open));
-    if (open) {
-      /* ‼️ ลูกศรขึ้นลงเดินในคอลัมน์ ซ้ายขวาข้ามคอลัมน์ Esc ปิดแล้วคืนโฟกัสให้ปุ่ม
-         ยกตรรกะ roving tabindex มาจาก toolRibbon เดิมซึ่งผ่าน WCAG มาแล้ว */
-      const first = panel.querySelector(".s2-mi");
-      if (first) first.focus();
-    }
-  }
-  panel.addEventListener("keydown", (e) => {
-    const items = [...panel.querySelectorAll(".s2-mi")];
-    const i = items.indexOf(document.activeElement);
-    if (i < 0) return;
-    const col = document.activeElement.closest(".s2-col");
-    const inCol = [...col.querySelectorAll(".s2-mi")];
-    const ci = inCol.indexOf(document.activeElement);
-    const cols = [...panel.querySelectorAll(".s2-col")];
-    const colIdx = cols.indexOf(col);
-    let to = null;
-    if (e.key === "ArrowDown") to = inCol[Math.min(ci + 1, inCol.length - 1)];
-    else if (e.key === "ArrowUp") to = inCol[Math.max(ci - 1, 0)];
-    else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-      const next = cols[colIdx + (e.key === "ArrowRight" ? 1 : -1)];
-      if (next) { const l = [...next.querySelectorAll(".s2-mi")]; to = l[Math.min(ci, l.length - 1)]; }
-    } else if (e.key === "Home") to = items[0];
-    else if (e.key === "End") to = items[items.length - 1];
-    if (!to) return;
-    e.preventDefault();
-    to.focus();
-  });
-  return { node: panel, btn, close: () => toggle(false), isOpen: () => !panel.hidden };
-}
-
-/* ── แถบหัวกลาง 60px ───────────────────────────────────────────────────
- * แทนของเดิมสามอย่างรวด: แถบหมวด (50px), ริบบอนเครื่องมือ (พับ 50 กาง 145),
- * และปุ่ม "เครื่องมือทั้งหมด" มุมขวาบน · ได้ความสูงคืนทุกหน้า 50 ถึง 145px
- * ‼️ ช่องค้นหาไทยที่ยอมพิมพ์ผิดของเรายังอยู่ ซึ่งทั้ง iLovePDF และ Smallpdf ไม่มี
- *   (ของเขาต้องเข้าเมนูหรือกลับหน้าแรกอย่างเดียว) */
-function toolHeader(tool, menu) {
-  /* ‼️ ปุ่มภาษากับปุ่มธีมต้องมาอยู่ในแถบนี้ด้วย
-     v2 ซ่อนแถบหัวของเว็บ (.top) เพราะสองแถบซ้อนกัน = 120px ซึ่งขัดหลักข้อ 3
-     แต่ถ้าซ่อนเฉย ๆ ผู้ใช้จะสลับธีมหรือภาษาบนหน้าเครื่องมือไม่ได้เลย = ถอยหลัง
-     จึง **ยืมปุ่มตัวจริง** มาวางในแถบใหม่ ไม่ได้สร้างปุ่มใหม่
-     เพราะ app.js ผูก event ไว้กับตัวปุ่มเอง (ไม่ได้อ้างตำแหน่งใน DOM)
-     การยืมจึงปลอดภัย และตอนกลับหน้าแรกเราคืนให้ที่เดิมเป๊ะ */
-  const borrowed = el("div", { class: "s2-hd-right" });
-  const lang = document.getElementById("lang");
-  const theme = document.getElementById("theme");
-  const home = { lang: lang && lang.parentNode, theme: theme && theme.parentNode,
-    langNext: lang && lang.nextSibling, themeNext: theme && theme.nextSibling };
-  if (lang) borrowed.appendChild(lang);
-  if (theme) borrowed.appendChild(theme);
-  /* คืนของกลับที่เดิมเมื่อเครื่องมือถูกถอดออกจากหน้า (กลับหน้าแรก หรือสลับเครื่องมือ)
-     ‼️ ต้องคืนให้ตำแหน่งเดิม ไม่ใช่ append ท้าย ไม่งั้นลำดับปุ่มในแถบหัวหน้าแรกจะสลับ */
-  const putBack = () => {
-    /* ‼️ nextSibling ที่จำไว้อาจไม่ใช่ลูกของพ่อแล้ว (เครื่องมือตัวก่อนหน้ายืมไปวางที่อื่น)
-       insertBefore กับ node ที่ไม่ใช่ลูก จะโยน error ทุกครั้ง ต้องถอยไป append แทน */
-    const back = (node, parent, next) => {
-      if (!node || !parent || node.parentNode === parent) return;
-      if (next && next.parentNode === parent) parent.insertBefore(node, next);
-      else parent.appendChild(node);
-    };
-    back(lang, home.lang, home.langNext);
-    back(theme, home.theme, home.themeNext);
+    if (open) { const f = panel.querySelector(".s2-mi"); if (f) f.focus(); }
   };
 
-  const hd = el("header", { class: "s2-hd" }, [
-    el("a", { class: "s2-logo", href: "#", "aria-label": tr("กลับหน้าแรก", "Back to home") }, [
-      el("span", { class: "s2-logo-ico", "aria-hidden": "true" }, "F"),
-      el("b", {}, "FileKit"),
-    ]),
-    menu.btn,
-    el("button", {
-      class: "s2-search", type: "button",
-      onclick: () => { location.hash = ""; setTimeout(() => document.getElementById("q")?.focus(), 60); },
-    }, [uiIcon("search", "s2-search-ico"), el("span", {}, tr("ค้นหาเครื่องมือ", "Search tools"))]),
-    borrowed,
-    menu.node,
-  ]);
-  hd.__putBack = putBack;
-  return hd;
+  if (!menuWired) {
+    menuWired = true;
+    btn.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+    panel.addEventListener("click", () => toggle(false));
+    document.addEventListener("click", (e) => {
+      if (!panel.hidden && !e.target.closest("#toolmenupanel") && !e.target.closest("#toolmenu")) toggle(false);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !panel.hidden) { toggle(false); btn.focus(); }
+    });
+    /* ลูกศรขึ้นลงเดินในคอลัมน์ ซ้ายขวาข้ามคอลัมน์ (ยกตรรกะมาจากริบบอนเดิมที่ผ่าน WCAG แล้ว) */
+    panel.addEventListener("keydown", (e) => {
+      const cur = document.activeElement;
+      if (!cur || !cur.classList || !cur.classList.contains("s2-mi")) return;
+      const col = cur.closest(".s2-col");
+      const inCol = [...col.querySelectorAll(".s2-mi")];
+      const ci = inCol.indexOf(cur);
+      const cols = [...panel.querySelectorAll(".s2-col")];
+      const colIdx = cols.indexOf(col);
+      let to = null;
+      if (e.key === "ArrowDown") to = inCol[Math.min(ci + 1, inCol.length - 1)];
+      else if (e.key === "ArrowUp") to = inCol[Math.max(ci - 1, 0)];
+      else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        const next = cols[colIdx + (e.key === "ArrowRight" ? 1 : -1)];
+        if (next) { const l = [...next.querySelectorAll(".s2-mi")]; to = l[Math.min(ci, l.length - 1)]; }
+      }
+      if (!to) return;
+      e.preventDefault();
+      to.focus();
+    });
+  }
+  return { close: () => toggle(false), isOpen: () => !panel.hidden };
 }
+
 
 /* ── หน้าเปล่า ────────────────────────────────────────────────────────
  * ‼️ เป็นชั้นลอยทับพื้นที่ทำงาน ไม่ใช่การย้ายกล่องรับไฟล์มาไว้ตรงนี้
@@ -265,7 +231,7 @@ function resultBlock(tool, files, onAgain, onBack) {
  * @returns { wrap, body, grid, canvas, side, setBusy, showCanvas }  (เข้ากันได้กับของเดิม)
  */
 export function toolShell2(tool, cfg = {}) {
-  const menu = toolMenu(tool);
+  const menu = wireToolMenu(tool);
   const panelMode = !cfg.center && !cfg.right && !cfg.left;
 
   /* ผืนงาน */
@@ -337,10 +303,8 @@ export function toolShell2(tool, cfg = {}) {
   ctaRow.append(sheetBtn, mainBtn || el("span"));
   if (subBtns.length) sideFoot.appendChild(el("div", { class: "s2-subrow" }, subBtns));
 
-  const header = toolHeader(tool, menu);
   const wrap = el("div", { class: "s2", "data-state": "landing",
     style: `--ac:${accentOf(tool)}` }, [
-    header,
     landingBlock(tool, forward),
     grid,
     cfg.note ? el("div", { class: "s2-note" }, cfg.note) : null,
@@ -370,11 +334,18 @@ export function toolShell2(tool, cfg = {}) {
   let domResultShown = false;  // เคยย้ายแถวผลลัพธ์จากผืนงานมาแผงขวาแล้วหรือยัง
 
   function setState(s) {
-    if (state === s) return;
+    /* ‼️ ห้ามข้ามเมื่อสถานะเท่าเดิม เพราะรอบแรกสุดสถานะเริ่มต้นก็เป็น landing อยู่แล้ว
+       ถ้าข้าม ผลข้างเคียงของ landing (เช่น inert ที่กันโฟกัสหลงเข้าไปในแผงที่ถูกบัง)
+       จะไม่เคยถูกตั้งเลยจนกว่าจะสลับสถานะไปกลับ (จับได้เพราะ gridInert เป็น false ทั้งที่อยู่หน้าเปล่า) */
     state = s;
     wrap.dataset.state = s;
     resultHost.hidden = s !== "result";
     sideBody.hidden = s === "result";
+    /* ‼️ หน้าเปล่าเป็นชั้นลอยทับ ของที่อยู่ข้างหลังจึงยังโฟกัสด้วย Tab ได้ทั้งที่มองไม่เห็น
+       คนใช้คีย์บอร์ดจะกด Tab แล้วหลงเข้าไปในแผงที่ถูกบังอยู่ โดยไม่มีอะไรบอกว่าอยู่ตรงไหน
+       inert ปิดทั้งการโฟกัส การกด และซ่อนจากโปรแกรมอ่านหน้าจอในคำสั่งเดียว
+       (จับได้เพราะเทสนับ "ของกดได้ในจอ" แล้วหน้าเปล่าได้ 36 ชิ้นทั้งที่ตาเห็นแค่ 4) */
+    grid.inert = s === "landing";
     restart.hidden = s === "result";
     if (s !== "work") setSheet(false);
     /* ‼️ ย้ายโฟกัสเมื่อสถานะเปลี่ยน ไม่งั้นคนใช้คีย์บอร์ดจะค้างอยู่กับปุ่มที่หายไปแล้ว */
@@ -471,7 +442,10 @@ export function toolShell2(tool, cfg = {}) {
   const ghosts = new Map();
   function liftActions() {
     if (!panelMode) return;
-    const acts = [...wrap.querySelectorAll(".s2-stage .actions")];
+    /* ‼️ ต้องรับชื่อคลาสของแถบปุ่มมากกว่าหนึ่งแบบ เครื่องมือบางตัวตั้งชื่อเอง
+       (pbi-theme ใช้ .ts-actions) แล้วปุ่มดาวน์โหลดธีมจะไม่ถูกยกขึ้นมาเป็นปุ่มหลักเลย
+       จับได้เพราะเทสถามว่า "สถานะนี้มีปุ่มลงมือทำที่มองเห็นไหม" กับทั้ง 53 ตัว */
+    const acts = [...wrap.querySelectorAll('.s2-stage .actions, .s2-stage [class$="-actions"]')];
     const reals = acts.flatMap((a) => [...a.querySelectorAll("button")]).filter((b) => !ghosts.has(b));
     for (const real of reals) {
       const first = ghosts.size === 0;
@@ -514,19 +488,6 @@ export function toolShell2(tool, cfg = {}) {
     requestAnimationFrame(() => { resScan = false; syncState(); });
   }).observe(stage, { childList: true, subtree: true });
 
-  /* ‼️ คืนปุ่มภาษากับธีมให้แถบหัวเว็บทันทีที่เครื่องมือถูกถอดออกจากหน้า
-     ไม่งั้นกลับหน้าแรกแล้วปุ่มหายไปกับเครื่องมือที่ถูกเก็บเข้าแคช
-     (app.js เก็บ DOM ของเครื่องมือไว้ใช้ซ้ำ ไม่ได้ทิ้ง จึงต้องคืนตอน "ถูกถอด" ไม่ใช่ตอน "ถูกทำลาย")
-     ใช้ตัวเฝ้าตัวเดียวทั้งหน้า ผูกกับ #tool ซึ่งเป็นที่ที่เครื่องมือถูกสลับเข้าออก */
-  const host = document.getElementById("tool");
-  if (host && header.__putBack) {
-    new MutationObserver(() => { if (!wrap.isConnected) header.__putBack(); })
-      .observe(host, { childList: true });
-    window.addEventListener("hashchange", () => {
-      // กลับหน้าแรก (hash ว่าง) = เครื่องมือกำลังจะถูกถอด คืนปุ่มก่อนหน้าถูกวาดใหม่
-      if (!location.hash.replace(/^#\/?/, "")) header.__putBack();
-    });
-  }
 
   /* Esc ปิดเมนูกับแผ่นล่าง แล้วคืนโฟกัส */
   wrap.addEventListener("keydown", (e) => {

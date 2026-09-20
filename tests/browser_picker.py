@@ -44,6 +44,18 @@ TOOL_IDS_JS = """async (base) => {
 }"""
 
 CHECK_JS = """() => {
+  /* ‼️ โครง v2 วางปุ่มยักษ์ไว้ในหน้าเปล่าที่ลอยทับกล่องรับไฟล์จริง (โดยตั้งใจ)
+     ปุ่มนั้นส่งต่อการกดไปยังกล่องอีกที · เจตนาของเทสนี้คือ "ผู้ใช้มีที่ให้เลือกไฟล์ไหม"
+     ซึ่งปุ่มยักษ์ตอบโจทย์นั้นเต็ม ๆ จึงนับเป็นทางเข้าที่ถูกต้อง (แก้ 21/09/2026)
+     ‼️ แต่ยังต้องเช็คว่ากล่องจริงมีอยู่ใน DOM ด้วย ไม่งั้นปุ่มยักษ์จะกดแล้วไม่เกิดอะไร */
+  const big = document.querySelector('.s2[data-state="landing"] .s2-cta-big');
+  if (big) {
+    const r = big.getBoundingClientRect();
+    const cs = getComputedStyle(big);
+    const okBig = r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'
+                  && !!document.querySelector('.dz-wrap');
+    if (okBig) return { hasPicker: true, skip: false, viaBigButton: true };
+  }
   const wraps = [...document.querySelectorAll('.dz-wrap')];
   if (!wraps.length) return { hasPicker: false, skip: true };
 
@@ -99,9 +111,14 @@ def run(tools, widths, selftest=False):
                     pass
                 pg.wait_for_timeout(500)     # เผื่อเครื่องมือที่ต่อ DOM ต่อหลังวาดรอบแรก
                 if selftest:
-                    # ‼️ จำลองบั๊กเดิมเป๊ะ ๆ ซ่อนแถบหัวที่กล่องรับไฟล์ถูกย้ายไปอยู่
-                    pg.evaluate("""() => { const h = document.querySelector('.tool-head');
-                                           if (h && h.querySelector('.dz-wrap')) h.style.display = 'none'; }""")
+                    # ‼️ จำลองบั๊กเดิมเป๊ะ ๆ คือ "ของที่ครอบกล่องรับไฟล์ถูกซ่อน"
+                    # ต้องครอบทั้งสองโครง เพราะ v1 ซ่อน .tool-head ส่วน v2 ต้องซ่อนทั้งปุ่มยักษ์และกล่อง
+                    pg.evaluate("""() => {
+                      const h = document.querySelector('.tool-head');
+                      if (h && h.querySelector('.dz-wrap')) h.style.display = 'none';
+                      const big = document.querySelector('.s2-cta-big'); if (big) big.style.display = 'none';
+                      for (const w of document.querySelectorAll('.dz-wrap')) w.style.display = 'none';
+                    }""")
                     pg.wait_for_timeout(120)
                 m = pg.evaluate(CHECK_JS)
                 if m.get("skip"):

@@ -384,6 +384,9 @@ async function go(id, push = true) {
 function goHome(push = true) {
   swap(() => {
     document.body.classList.remove("tool");
+    /* ปุ่มเมนูรวมเครื่องมือเป็นของหน้าเครื่องมือเท่านั้น หน้าแรกมีกริดเครื่องมือเต็ม ๆ อยู่แล้ว */
+    const tm = document.getElementById("toolmenu"); if (tm) tm.hidden = true;
+    const tp = document.getElementById("toolmenupanel"); if (tp) tp.hidden = true;
     document.title = tr("FileKit - เครื่องมือจัดการไฟล์ในเบราว์เซอร์",
                         "FileKit - file tools that run in your browser");
     sleepCurrent();
@@ -595,6 +598,19 @@ function installShell2() {
     .catch((e) => { console.error("shell2 โหลดไม่ได้ ใช้โครงเดิมแทน", e); });
   return shell2Job;
 }
+
+/* ‼️ ความสูงจริงของแถบหัวเว็บ ต้องวัด ไม่ใช่ฝังเลข เพราะมันเปลี่ยนตามขนาดจอและภาษา
+   โครง v2 เอาไปคำนวณความสูงของหน้าเครื่องมือ (ต้องพอดีจอ ไม่เลื่อน) */
+function syncTopHeight() {
+  const top = document.querySelector("header.top");
+  if (!top) return;
+  const set = () => document.documentElement.style.setProperty("--top-h", top.offsetHeight + "px");
+  set();
+  if (window.ResizeObserver) new ResizeObserver(set).observe(top);
+}
+if (useV2()) (document.readyState === "loading"
+  ? document.addEventListener("DOMContentLoaded", syncTopHeight, { once: true })
+  : syncTopHeight());
 
 function loadToolCss() {
   if (loadToolCss.p) return loadToolCss.p;

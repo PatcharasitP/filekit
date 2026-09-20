@@ -79,16 +79,24 @@ with tempfile.TemporaryDirectory() as td:
             pg.set_input_files("input[type=file]", files)
             pg.wait_for_timeout(4500)
             d = pg.evaluate("""() => {
-              const a = document.querySelector('.actions');
-              const btn = a && a.querySelector('.btn:not(.ghost)');
+              /* ‼️ โครง v2 ย้ายปุ่มลงมือทำไปไว้ท้ายแผงขวาซึ่งตรึงอยู่แล้วโดยโครงสร้าง
+                 จึงไม่มี .actions ลอยอีกต่อไป · เจตนาเดิมของข้อนี้คือ "ปุ่มต้องอยู่ในสายตา
+                 แม้ใส่ไฟล์เยอะ" ซึ่งยังตรวจได้เหมือนเดิม แค่เปลี่ยนที่หา (แก้ 21/09/2026) */
+              const a = document.querySelector('.s2-side-ft') || document.querySelector('.actions');
+              const btn = a && (a.querySelector('.s2-cta') || a.querySelector('.btn:not(.ghost)'));
               if (!btn) return null;
               const r = btn.getBoundingClientRect();
               return {inView: r.top < innerHeight && r.bottom > 0,
+                      fullyInView: r.bottom <= innerHeight + 1 && r.top >= -1,
                       pos: getComputedStyle(a).position, rows: document.querySelectorAll('.file-row').length};
             }""")
             ck(f"② {label}: ใส่ {d and d['rows']} ไฟล์แล้วปุ่มลงมือทำยังอยู่ในจอ",
                bool(d and d["inView"]), True)
-            ck(f"② {label}: แถบปุ่มต้องตรึง (sticky)", d and d["pos"], "sticky")
+            # ‼️ v2 ไม่ต้องตรึงแถบปุ่ม เพราะแผงขวาสูงเท่าจอพอดีและไม่เลื่อนทั้งแผง
+            # เจตนาจริงของข้อนี้คือ "ปุ่มต้องไม่เลื่อนหลุดไปกับเนื้อหา" ซึ่งวัดได้ตรงกว่า
+            # ด้วยพิกัดจริง จึงยอมรับทั้งแบบตรึง และแบบอยู่ในโครงที่ไม่เลื่อน
+            ck(f"② {label}: ปุ่มต้องไม่เลื่อนหลุดไปกับเนื้อหา",
+               bool(d and (d["pos"] in ("sticky", "fixed") or d["fullyInView"])), True)
             pg.close()
 
         # ── ④ แผงตั้งค่าแบบแน่น: เมาส์ได้เล็ก นิ้วต้องได้เท่าเดิม
@@ -108,7 +116,12 @@ with tempfile.TemporaryDirectory() as td:
             except Exception:
                 pass
             sizes[tag] = pg.evaluate("""() => {
-              const n = document.querySelector('.ws-right .field select, .ws-right .field input');
+              /* ‼️ บนมือถือ โครง v2 ซ่อนแผงตั้งค่าไว้หลังปุ่ม "ตัวเลือก" ต้องเปิดก่อนถึงจะวัดได้
+                 ถ้าไม่เปิด จะวัดได้ 0 แล้วเข้าใจผิดว่าช่องกรอกหาย ทั้งที่แค่ยังไม่ได้กางแผ่น */
+              const sb = document.querySelector('.s2-sheetbtn');
+              if (sb && getComputedStyle(sb).display !== 'none') sb.click();
+              const n = document.querySelector('.s2-side-bd .field select, .s2-side-bd .field input')
+                        || document.querySelector('.ws-right .field select, .ws-right .field input');
               return n ? Math.round(n.getBoundingClientRect().height) : null;
             }""")
             ctx.close()
@@ -124,7 +137,7 @@ with tempfile.TemporaryDirectory() as td:
         pg = b.new_page(viewport={"width": 1440, "height": 950})
         pg.goto(f"{BASE}/#pdf-ocr", wait_until="domcontentloaded", timeout=60000)
         pg.wait_for_timeout(2600)
-        pos = pg.evaluate("""() => { const a = document.querySelector('.actions');
+        pos = pg.evaluate("""() => { const a = document.querySelector('.s2-side-ft') || document.querySelector('.actions');
           return a ? getComputedStyle(a).position : 'ไม่มีแถบปุ่ม'; }""")
         ck("③ ยังไม่มีไฟล์ แถบปุ่มต้องไม่ลอย", pos, "static")
         pg.close()

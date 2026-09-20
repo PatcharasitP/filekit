@@ -21,7 +21,7 @@
      หลักข้อ 4 ของ v2 คือสถานะทำงานเป็นโหมดแอป หน้าเว็บไม่เลื่อน
      ‼️ 100dvh ไม่ใช่ 100vh — แถบที่อยู่เว็บบนมือถือยืดหดได้ vh จึงเกินจอจริงเสมอ
      หน้าเปล่าเลื่อนได้ในตัวเอง (.s2-land มี overflow:auto) จึงไม่เสียเนื้อหาใต้จอแรก */
-  height:100dvh; overflow:hidden;
+  height:calc(100dvh - var(--top-h,60px)); overflow:hidden;
 }
 /* ‼️ ต้องประกาศสองที่เสมอ ให้ทั้ง "ตามระบบ" และ "ผู้ใช้เลือกเอง" ทำงานถูกทั้งคู่
    (กติกาเดียวกับที่ index.html ใช้กับ token ชุดหลัก) */
@@ -33,11 +33,14 @@
  * แถบหัวของ v2 ทำหน้าที่แทน .top ทั้งหมดแล้ว (โลโก้ เมนู ค้นหา) ส่วนธีมกับภาษา
  * ยังอยู่ที่ .top ของหน้าแรก ซึ่งผู้ใช้ตั้งครั้งเดียวแล้วจำไว้ทั้งเว็บ
  * ‼️ ห้ามแตะหน้าแรก (body ที่ไม่มี .tool) เด็ดขาด */
-body.tool > header.top,
+/* ‼️ ไม่ซ่อนแถบหัวของเว็บอีกต่อไป v2 ใช้มันเป็นแถบหัวของหน้าเครื่องมือเลย
+   (เดิมซ่อนแล้วสร้างแถบใหม่ ซึ่งทำให้ปุ่มธีมกับภาษาหายไปทุกเครื่องมือยกเว้นตัวแรก) */
 body.tool > footer,
 body.tool > .network{display:none}
 body.tool #main{max-width:none; margin:0; padding:0}
 body.tool{overflow:hidden}
+/* ปุ่มเมนูรวมเครื่องมือ โผล่เฉพาะบนหน้าเครื่องมือ (สลับด้วย JS ดู wireToolMenu) */
+.top{position:relative}
 
 /* ── แถบหัวกลาง ─────────────────────────────────────────────────────── */
 .s2-hd{
@@ -65,12 +68,12 @@ body.tool{overflow:hidden}
 
 /* เมนูรวมเครื่องมือ การ์ดลอย ไม่ดันเนื้อหา (ถอดจาก iLovePDF) */
 .s2-menu{
-  position:absolute; inset-block-start:calc(var(--hd-h) - 4px);
-  inset-inline-start:var(--sp4); inset-inline-end:var(--sp4);
+  position:absolute; inset-block-start:calc(100% - 4px);
+  inset-inline-start:clamp(14px,4vw,32px); inset-inline-end:clamp(14px,4vw,32px);
   background:var(--surf-1); border:1px solid var(--line); border-radius:12px;
   box-shadow:0 18px 50px rgba(0,0,0,.18); padding:18px 20px; z-index:30;
   display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:4px 14px;
-  max-height:calc(100dvh - var(--hd-h) - 24px); overflow:auto;
+  max-height:calc(100dvh - var(--top-h,60px) - 24px); overflow:auto;
 }
 :root[data-theme="dark"] .s2-menu{box-shadow:0 18px 50px rgba(0,0,0,.6)}
 .s2-col{display:flex; flex-direction:column; min-width:0}
@@ -94,7 +97,7 @@ body.tool{overflow:hidden}
 .s2{position:relative}
 .s2-land{display:none}
 .s2[data-state="landing"] .s2-land{
-  display:block; position:absolute; inset-block-start:var(--hd-h); inset-inline:0; inset-block-end:0;
+  display:block; position:absolute; inset:0;
   z-index:10; overflow:auto; background:var(--surf-2);
 }
 .s2-land-in{max-width:640px; margin:0 auto; padding:clamp(28px,6vh,60px) var(--sp4) 48px; text-align:center}
@@ -280,7 +283,8 @@ body.tool{overflow:hidden}
 /* ‼️ ต้องครอบทุกระดับ ไม่ใช่แค่ลูกตรง เพราะหลายเครื่องมือสร้าง .actions ชุดที่สอง
    ไว้ในกล่องผลลัพธ์ของตัวเอง (เช่นปุ่มดาวน์โหลด ZIP ของ pdf-to-images)
    ซึ่ง liftActions ยกมาแผงขวาแล้ว ถ้าไม่ซ่อนตัวจริงจะเห็นปุ่มเดียวกันสองที่ */
-.s2 .s2-stage .actions{position:absolute; width:1px; height:1px; overflow:hidden;
+.s2 .s2-stage .actions,
+.s2 .s2-stage [class$="-actions"]{position:absolute; width:1px; height:1px; overflow:hidden;
   clip-path:inset(50%); white-space:nowrap}
 .s2 .s2-stage > .status-wrap{margin-top:12px}
 
@@ -306,3 +310,20 @@ body.tool{overflow:hidden}
 .s2[data-state="result"] .s2-subrow,
 .s2[data-state="result"] .s2-stat{display:none}
 .s2[data-state="result"] .s2-side-ft{border-top:0; padding-block:0}
+
+/* ── แผงตั้งค่าแบบแน่นบนเมาส์ (ยกกฎเดิมของ .ws-right มาใช้กับแผงใหม่) ─────
+ * ‼️ ห้ามผูกกับความกว้างจออย่างเดียว ต้องมี pointer:fine ด้วย
+ *   ไม่งั้นจอแคบที่ใช้นิ้วจะได้ของเล็กจนกดพลาด (บทเรียนเดิมของโปรเจกต์)
+ * ‼️ และห้ามผูกกับ pointer อย่างเดียวเช่นกัน เพราะเทสบางตัวเปิดจอ 390px โดยไม่จำลองนิ้ว */
+@media (min-width:1001px) and (pointer:fine){
+  .s2-side-bd .field{gap:3px}
+  .s2-side-bd .field input,.s2-side-bd .field select,.s2-side-bd .field textarea{
+    min-height:32px; font-size:13.5px; padding:5px 10px;
+  }
+  .s2-side-bd .row{margin-top:11px; row-gap:10px}
+  .s2-side-bd .row + .row{margin-top:10px}
+  .s2-side-bd .btn{padding:5px 12px; font-size:13px; min-height:30px}
+  .s2-side-bd .field small{font-size:11px; line-height:1.45}
+  .s2-side-bd .cfs-wrap{margin-block-end:6px}
+  .s2-side-bd .ps-wrap{margin-bottom:8px}
+}

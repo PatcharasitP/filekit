@@ -857,6 +857,15 @@ body.tool #home{display:none}
     <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12,4 L31,4 L36,9 L36,14 L22,14 L22,20 L31,20 L31,30 L22,30 L22,44 L12,44 Z"/></svg></span>
     <span>FileKit</span>
   </button>
+  <!-- ‼️ ปุ่มเมนูรวมเครื่องมือกับช่องค้นหาของหน้าเครื่องมือ (โครง v2)
+       อยู่ถาวรใน markup แล้วโผล่เฉพาะบนหน้าเครื่องมือ แทนที่จะให้ JS ยืมปุ่มไปมา
+       ‼️ เหตุผล: แอปเก็บ DOM ของเครื่องมือไว้ใช้ซ้ำ การยืมปุ่มจึงใช้ได้แค่ตัวแรก
+       พอสลับกลับมาตัวเดิม ปุ่มที่ยืมไปแล้วไม่กลับมาอีก (จับได้ด้วย tests/browser_shell2.py) -->
+  <button class="s2-menubtn" id="toolmenu" type="button" aria-expanded="false" hidden>
+    <span data-en="All tools">เครื่องมือทั้งหมด</span>
+    <svg class="s2-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
+  </button>
+  <nav class="s2-menu" id="toolmenupanel" aria-label="เครื่องมือทั้งหมด" data-en-al="All tools" hidden></nav>
   <span class="spacer"></span>
   <div class="langsw" id="lang" role="group" aria-label="เลือกภาษา" data-en-al="Choose language">
     <button class="langopt" type="button" data-lang="th" lang="th">ไทย</button>

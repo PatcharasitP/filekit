@@ -127,7 +127,13 @@ export function mount(tool) {
     summary, colsBox, codeBox, st.node, actions);
   /* ‼️ กล่องความรู้ต้องอยู่ต่อจากแผงงานทันที ก่อน FAQ (13/09/2026 เดิมแทรกก่อนรางซ้ายจึงไปโผล่หลัง "ทำอะไรต่อดี")
      ให้ลำดับท้ายหน้าเหมือน pbi-bar: แผง → ความรู้ของเครื่องมือ → คำถามที่เจอบ่อย → ทำอะไรต่อดี */
-  wrap.querySelector(".panel").after(teachPanel());
+  /* ‼️ โครง v2 ไม่มี .panel อีกแล้ว (ผืนงานคือ body ตรง ๆ) เครื่องมือนี้เป็นตัวเดียวใน 53 ตัว
+     ที่ไปค้นหาโครงของเปลือกหน้าเพื่อหาที่วางของตัวเอง แล้วพังทั้งเครื่องมือเมื่อโครงเปลี่ยน
+     ("Cannot read properties of null (reading 'after')" เปิดเครื่องมือไม่ได้เลย)
+     ‼️ บทเรียน: เครื่องมือไม่ควรรู้จักโครงของเปลือกหน้า ให้ต่อของลง body ของตัวเองเท่านั้น */
+  const panelHost = wrap.querySelector(".panel");
+  if (panelHost) panelHost.after(teachPanel());
+  else body.appendChild(teachPanel());
   sheetField.hidden = true;
 
   sheetSel.onchange = () => { pickSheet(+sheetSel.value); };

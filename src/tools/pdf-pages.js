@@ -107,7 +107,15 @@ export function mount(tool) {
 
   // ── แผงซ้าย: เลือกไฟล์ + รายชื่อไฟล์ + สรุปจำนวนหน้า ─────────────────
   const leftNode = el("div", { class: "pp-left" }, [dz.container, extra, summary]);
-  // ตัวเลือกย้ายมาต่อท้ายแผงซ้ายตอนสร้างเสร็จ ดูหมายเหตุที่ rightNode
+  /* ── แผงขวา: ตัวเลือกทั้งหมด (ย้ายกลับมาขวา 20/09/2026 ตามที่พี่ปอนด์ทัก) ──
+   * ‼️ เคยย้ายไปต่อท้ายแผงซ้ายเมื่อ 8efcdbe เพราะแผงขวากิน 340px
+   *   แล้วการ์ดเหลือ 3 คอลัมน์ 215px ทั้งที่งานของเครื่องมือนี้คือดูภาพแล้วลากสลับ
+   * ‼️ เหตุผลนั้นหมดไปแล้ว เพราะตอนนี้แผงข้างพับเก็บเป็นแถบไอคอนได้
+   *   กดครั้งเดียวได้ความกว้างคืนครบ จึงไม่ต้องแลกผังที่ถูกต้องกับพื้นที่อีกต่อไป
+   * ‼️ และผังที่ถูกต้องคือ ไฟล์เข้าอยู่ซ้าย ตัวเลือกอยู่ขวา ตามแบบ Power BI
+   *   ซึ่งเครื่องมืออีก 23 ตัวในเว็บนี้ทำแบบนั้นอยู่แล้ว เหลือตัวนี้ตัวเดียวที่ผิดแบบ
+   *   ความสม่ำเสมอสำคัญกว่าการปรับจูนรายตัว เพราะคนใช้หลายเครื่องมือในวันเดียวกัน */
+  const rightNode = el("div", {});
 
   // ── แถบเครื่องมือลอย: ทำงานกับหน้าที่เลือกอยู่ ──────────────────────
   const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: tr("หมุนซ้าย", "Rotate left"), onclick: () => rotateSelected(270) });
@@ -206,7 +214,7 @@ export function mount(tool) {
     st.ok(tr(`เก็บ ${keep.size} หน้า ตามที่เลือก`, `Keeping ${pl(keep.size, "page", "pages")}`));
   }
 
-  leftNode.append(
+  rightNode.append(
     el("div", {}, [
       el("h3", {}, tr("อยากเก็บหน้าไหนไว้บ้าง", "Which pages do you want to keep")),
       quickWrap,
@@ -224,6 +232,10 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์ PDF", "PDF files"), node: leftNode },
+    /* ‼️ เปิดมาพับไว้ เพราะงานหลักของเครื่องมือนี้คือดูภาพหน้าแล้วลากสลับ
+       วัดจริง แผงขวากาง = 3 คอลัมน์ การ์ด 215px · พับไว้ = 4 คอลัมน์ การ์ด 249px
+       ตัวเลือกยังอยู่ครบในแถบไอคอนขวา กดครั้งเดียวกางออกมา และจำที่ผู้ใช้เลือกไว้ */
+    right: { title: tr("ตัวเลือก", "Options"), node: rightNode, folded: true },
     center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูตัวอย่าง", "No file yet. Choose a PDF to preview") },
     toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }),
               cropBtn, cropAllBtn, blankBtn, el("div", { class: "sep" }), editTextBtn, resetBtn],

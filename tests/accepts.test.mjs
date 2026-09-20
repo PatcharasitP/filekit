@@ -336,5 +336,38 @@ ck(middotHits.length + htmlMiddot.length === 0,
   }
 }
 
+/* ── วงเล็บปีกกาในไฟล์ CSS ต้องสมดุล ─────────────────────────────────────────
+   ‼️ ที่มา 20/09/2026 เจอ } เกินมาหนึ่งตัวใน tool.css ซึ่งมีมาก่อนหน้านั้นนานแล้ว
+   CSS ไม่พังทั้งไฟล์เวลาเจอ error มันกู้คืนด้วยการ "กลืนจนถึง } ตัวถัดไป"
+   ผลคือกฎที่อยู่ถัดจากจุดผิดหายไปเงียบ ๆ ทั้งอัน ไม่มี error ไม่มีอะไรเตือน
+   ของจริงที่หายคือ .ws-grid.no-left{grid-template-columns:...} ตายสนิทมานาน
+   ไม่มีใครเห็น เพราะเครื่องมือที่ไม่มีแผงซ้ายส่วนใหญ่ก็ไม่มีแผงขวาด้วย
+   จึงตกไปโดนกฎ .no-left.no-right ที่อยู่ถัดลงไปและยังดีอยู่
+   ‼️ ตรวจนับหลังตัดคอมเมนต์และสตริงออกแล้ว ไม่งั้นปีกกาในคอมเมนต์จะทำให้เพี้ยน */
+{
+  const strip = (css) => css
+    .replace(/\/\*[\s\S]*?\*\//g, "")      // คอมเมนต์
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')   // สตริงคู่
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''");  // สตริงเดี่ยว
+  const files = readdirSync("assets/css").filter((f) => f.endsWith(".css"));
+  ck(files.length > 0, `มีไฟล์ CSS ให้ตรวจจริง (พบ ${files.length})`);
+  for (const f of files) {
+    const t = strip(readFileSync(`assets/css/${f}`, "utf8"));
+    let d = 0, badLine = 0, line = 1;
+    for (const ch of t) {
+      if (ch === "\n") line++;
+      else if (ch === "{") d++;
+      else if (ch === "}") { d--; if (d < 0 && !badLine) badLine = line; }
+    }
+    ck(d === 0 && !badLine,
+       `${f} วงเล็บปีกกาสมดุล (ค้าง ${d}${badLine ? `, เกินครั้งแรกบรรทัด ${badLine}` : ""})`);
+  }
+  /* พิสูจน์ว่าตัวตรวจจับได้จริง ไม่ใช่ผ่านเพราะมองไม่เห็น */
+  const probe = (css) => { const t = strip(css); let d = 0;
+    for (const ch of t) { if (ch === "{") d++; else if (ch === "}") d--; } return d; };
+  ck(probe("a{b:c}}") === -1, "ตัวตรวจจับ } เกินได้จริง");
+  ck(probe("a{b:c} /* } */") === 0, "ตัวตรวจไม่นับปีกกาที่อยู่ในคอมเมนต์");
+}
+
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);
 process.exit(fail.length ? 1 : 0);

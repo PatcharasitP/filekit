@@ -218,7 +218,13 @@ export function workspace(tool, cfg = {}) {
   const foldBtn = {}, rail = {};
   for (const side of ["left", "right"]) {
     if (!cfg[side]) continue;
-    try { folded[side] = localStorage.getItem(PANE_KEY(side)) === "1"; } catch { /* โหมดส่วนตัว */ }
+    /* ‼️ เครื่องมือตั้งค่าเริ่มต้นว่า "เปิดมาพับไว้" ได้ ด้วย cfg.<side>.folded (20/09/2026)
+       ใช้กับเครื่องมือที่งานหลักคือดูภาพ เช่นจัดการหน้า PDF ที่วัดไว้ว่าแผงขวากิน 340px
+       แล้วการ์ดเหลือ 3 คอลัมน์ 215px จากที่ควรได้ 4 คอลัมน์ 249px
+       ‼️ ความตั้งใจของผู้ใช้ชนะเสมอ ถ้าเคยกดเองแล้วค่าใน localStorage จะทับค่านี้ */
+    folded[side] = !!cfg[side].folded;
+    try { const v = localStorage.getItem(PANE_KEY(side)); if (v !== null) folded[side] = v === "1"; }
+    catch { /* โหมดส่วนตัว */ }
     foldBtn[side] = el("button", { type: "button", class: "ws-panefold" }, [uiIcon("chev", "ico-svg")]);
     rail[side] = el("button", { type: "button", class: `ws-rail ws-rail-${side}` }, [
       uiIcon(side === "left" ? "stack" : "sliders", "ws-rail-ico"),
@@ -390,6 +396,53 @@ export function workspace(tool, cfg = {}) {
     }
   }
   body.append(grid, footer);
+
+  /* ── ย้ายกล่องรับไฟล์ขึ้นไปอยู่ในที่ว่างของแถบหัวเครื่องมือ (พี่ปอนด์ทัก 20/09/2026) ──
+   * พี่ปอนด์ตีกรอบที่ว่างครึ่งขวาของแถบหัวแล้วถามว่า "เอามาไว้ตรงนี้แทนไหม มันโล่งอยู่ดี"
+   * วัดจริงก่อนทำ แถบหัวกว้าง 1336px ใช้เนื้อหาจริงเฉลี่ยแค่ 485px **ว่าง 851px = 64%**
+   * ทุกหน้า ทุกเครื่องมือ สูง 140-182px ทิ้งเปล่ามาตลอด
+   *
+   * ‼️ ต้องย้ายทั้ง .dz-wrap ห้ามย้ายเฉพาะ .dz (เกือบพลาด)
+   *   เพราะกฎยุบกล่องตอนมีไฟล์แล้วเขียนเป็น `.dz-wrap.has-files .dz`
+   *   ย้ายเฉพาะลูกออกมา = กล่องใหญ่ค้างเต็มจอตลอดกาลหลังใส่ไฟล์
+   *   (รากเดียวกับบั๊กอีก 2 ตัวของวันนี้ คือ "ย้าย node แล้วของที่อ้างตำแหน่งพัง")
+   * ‼️ ย้ายเฉพาะตอนมีกล่องเดียว เครื่องมือที่มีสองกล่อง (เทมเพลต+ข้อมูล) ต้องอยู่คู่กันในแผง
+   * ‼️ ไม่ลบแผงซ้ายทิ้ง แค่ซ่อนเมื่อมันว่างจริง และเฝ้าดูเผื่อเครื่องมือเติมของทีหลัง
+   *   (เช่นกล่องขอรหัสผ่านที่โผล่มาเฉพาะไฟล์ล็อก) ลบทิ้งแล้วของที่มาทีหลังจะหายไปเงียบ ๆ
+   *   วัดแล้ว 8 เครื่องมือแผงซ้ายว่างสนิทหลังย้าย จึงได้ความกว้างคืนเต็ม ๆ */
+  const head = wrap.querySelector(".tool-head");
+  const dzWraps = leftPanel ? leftPanel.querySelectorAll(".dz-wrap") : [];
+  if (head && dzWraps.length === 1) {
+    head.classList.add("has-dz");
+    /* ‼️ ต้องจำ "พ่อเดิม" ของกล่องไว้ก่อนย้าย แล้วคืนรายชื่อไฟล์ให้พ่อคนนั้น
+       ไม่ใช่โยนเข้า .ws-scroll เฉย ๆ เพราะเครื่องมือค้นแถวไฟล์จากกล่องของตัวเอง
+       (เช่น `leftNode.querySelectorAll(".file-row")`) ซึ่งเป็นลูกของ .ws-scroll อีกชั้น
+       วางผิดชั้นเดียว แถวก็อยู่นอกขอบเขตการค้นของเครื่องมือทันที */
+    const dzHome = dzWraps[0].parentNode;
+    head.appendChild(dzWraps[0]);
+    const lsc = leftPanel.querySelector(".ws-scroll");
+    /* ‼️ รายชื่อไฟล์ต้องอยู่ในแผงซ้ายเหมือนเดิม ห้ามตามกล่องขึ้นไปด้วย (แก้ 20/09/2026)
+       เครื่องมือหลายตัวค้นแถวไฟล์ด้วย `leftNode.querySelectorAll(".file-row")`
+       พอแถวย้ายตามขึ้นไปอยู่ในแถบหัว มันหาไม่เจอ แล้วป้ายกำกับไฟล์ไม่ขึ้นเลย
+       (browser_pdfpages_multi จับได้ว่าป้าย A/B หายไปทั้งคู่)
+       ‼️ นี่คือรากเดียวกับบั๊กอีกสองตัวของวันนี้ คือย้าย node แล้วของที่อ้างตำแหน่งพัง
+       และรายชื่อไฟล์ยาวได้ไม่จำกัด อยู่ในคอลัมน์ที่เลื่อนได้เหมาะกว่าอยู่ในแถบหัวอยู่แล้ว
+       ‼️ คลาส has-files ยังอยู่ที่ .dz-wrap ที่ย้ายขึ้นไป กฎยุบกล่องจึงทำงานเหมือนเดิม */
+    const fileList = dzWraps[0].querySelector(".files");
+    if (fileList && dzHome) dzHome.appendChild(fileList);
+    /* ‼️ เกณฑ์ "ว่าง" นับเฉพาะของที่กดได้หรือข้อมูลจริง ไม่นับหัวข้อหรือคำบอกสถานะ
+       เพราะหลายเครื่องมือทิ้งหัวข้อกับประโยค "ยังไม่ได้เลือกไฟล์" ไว้รอ
+       ซึ่งกินคอลัมน์ 260px เพื่อแสดงคำเดียว (เห็นกับตาที่ pdf-edit เหลือคำว่า "หน้าในไฟล์")
+       พอโหลดไฟล์จริงแล้วรายการจะโผล่ ตัวเฝ้าจะพาแผงกลับมาเองทันที */
+    const syncLeft = () => {
+      const bare = !lsc.querySelector(
+        "input,button,select,textarea,canvas,img,svg,.file-row,li,tr,.chip,.seg");
+      grid.classList.toggle("no-left", bare);
+    };
+    syncLeft();
+    new MutationObserver(syncLeft).observe(lsc, { childList: true, subtree: true, characterData: true });
+  }
+
   applyRibbon();
   applyPanes();
   /* วัดของจริงหลังวาดเสร็จ ถ้าริบบอนสูงเกินเกณฑ์ ถอยกลับไปเป็นแผงข้างให้เอง

@@ -412,15 +412,24 @@ def main():
         # -- (ก) หน้าที่ตั้งใจ "ซ่อม" .btn.ghost ให้เด่นชัดแน่นอน → ต้องเขียว --
         pg_fix = b.new_page(viewport={"width": 1280, "height": 950})
         pg_fix.goto(f"{BASE}#/pdf-pages", wait_until="networkidle")
-        total_ghost = pg_fix.locator(".btn.ghost").count()
+        # ‼️ ปุ่มที่อยู่ในแถบหัวเครื่องมือต้องยกเว้นจากการพิสูจน์ชุดนี้ (20/09/2026)
+        #    แถบหัวเป็นพื้นมืดเสมอทั้งสองธีม จึงประกาศ --card เป็นสีโปร่งของตัวเอง
+        #    การฉีด background:var(--card) ตรงนั้นจึงได้พื้นจาง ๆ ที่ "ยังเห็นอยู่จริง"
+        #    ไม่ได้กลืนพื้นแบบที่การพิสูจน์ต้องการ ตัวตรวจไม่จับ = ถูกต้องแล้ว
+        #    ‼️ ไม่ใช่การผ่อนเกณฑ์ ปุ่มนอกแถบหัว 13 ตัวยังต้องถูกจับครบทุกตัวเหมือนเดิม
+        mark_head = "() => document.querySelectorAll('.tool-head .btn.ghost')" \
+                    ".forEach(e => e.classList.add('in-head'))"
+        not_head = lambda lst: [c for c in lst if "in-head" not in c["cls"].split()]
+        pg_fix.evaluate(mark_head)
+        total_ghost = pg_fix.locator(".btn.ghost:not(.in-head)").count()
         pg_fix.add_style_tag(content=(
             ".btn.ghost{background:var(--brand) !important;color:#fff !important;"
             "border-color:transparent !important;box-shadow:none !important}"
         ))
         pg_fix.wait_for_timeout(150)
         r_fix = pg_fix.evaluate(SCAN_JS)
-        ghost_bad_fix = [c for c in r_fix["clickables"]
-                         if "btn" in c["cls"].split() and "ghost" in c["cls"].split()]
+        ghost_bad_fix = not_head([c for c in r_fix["clickables"]
+                                  if "btn" in c["cls"].split() and "ghost" in c["cls"].split()])
         ck(f"[ก่อนมีบั๊ก] ฉีดพื้นสีต่างชัดเจนให้ .btn.ghost ทั้ง {total_ghost} ตัว → ไม่มีตัวไหนถูกจับว่าล่องหน (เขียว)",
            total_ghost > 0 and len(ghost_bad_fix) == 0,
            f"\n      พบว่ายังตก {len(ghost_bad_fix)}/{total_ghost} ตัว: " + str(ghost_bad_fix[:3]))
@@ -429,14 +438,15 @@ def main():
         # -- (ข) หน้าที่ฉีด "บั๊กจริง" ตามที่บรีฟระบุ (background:var(--card) เหมือนแผง) → ต้องแดง --
         pg_bug = b.new_page(viewport={"width": 1280, "height": 950})
         pg_bug.goto(f"{BASE}#/pdf-pages", wait_until="networkidle")
+        pg_bug.evaluate(mark_head)
         pg_bug.add_style_tag(content=(
             ".btn.ghost{background:var(--card) !important;"
             "border-color:transparent !important;box-shadow:none !important}"
         ))
         pg_bug.wait_for_timeout(150)
         r_bug = pg_bug.evaluate(SCAN_JS)
-        ghost_bad_bug = [c for c in r_bug["clickables"]
-                         if "btn" in c["cls"].split() and "ghost" in c["cls"].split()]
+        ghost_bad_bug = not_head([c for c in r_bug["clickables"]
+                                  if "btn" in c["cls"].split() and "ghost" in c["cls"].split()])
         ck(f"[ฉีดบั๊กจริงตามบรีฟ] .btn.ghost ทั้ง {total_ghost} ตัวถูกจับว่าล่องหนครบ (แดง)",
            total_ghost > 0 and len(ghost_bad_bug) == total_ghost,
            f"\n      จับได้จริง {len(ghost_bad_bug)}/{total_ghost} ตัว")

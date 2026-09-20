@@ -36,6 +36,11 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
      และ --text-mute ชุดสว่าง #626771 เหลือ 2.88:1 (วัดจริง 12/09/2026)
      กฎคือ: บล็อกไหนตั้งพื้นเองแบบไม่ตามธีม ต้องตั้ง token สีทุกตัวที่ลูกของมันใช้ */
   --text-mute:#949ba7; --line:#39404e; --line-soft:#2b313d; --brand-text:#8aa3ff;
+  /* ‼️ เพิ่ม 3 ตัวนี้ตอนย้ายกล่องรับไฟล์เข้ามา (20/09/2026) ซึ่งคือเคสที่หมายเหตุข้างบนทำนายไว้เป๊ะ
+     ก่อนหน้านี้ไม่มีลูกคนไหนใช้ --card/--bg-soft แถบนี้เลยรอดมาตลอด
+     พอย้ายกล่องเข้ามาจริง วัดได้ทันที ปุ่ม "ลองด้วยไฟล์ตัวอย่าง" ได้พื้นขาวชุดสว่าง
+     ตัวอักษรสีอ่อนบนพื้นขาวเหลือ 1.06:1 คือหายไปทั้งปุ่ม */
+  --card:rgba(255,255,255,.07); --card-hi:rgba(255,255,255,.12); --bg-soft:rgba(255,255,255,.05);
   --g-pdf:#e8613c; --g-img:#3ab7d8; --g-doc:#6c8cff; --g-ppt:#c77dff;
   --g-data:#3ec98a; --g-thai:#ff6b81; --g-powerbi:#e0a72e;
   display:flex; gap:var(--sp4); align-items:flex-start;
@@ -880,7 +885,13 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
    บวกช่องไฟระหว่างคอลัมน์ที่เพิ่มเข้ามา รวมแล้วเสียมากกว่าได้
    ‼️ จดไว้กันคนถัดไปเสนอซ้ำ ไอเดียนี้ดูสมเหตุสมผลมากบนกระดาษ แต่ของจริงไม่ผ่าน
    ถ้าจะทำจริงต้องบังคับความสูงช่องให้เท่ากันก่อน ซึ่งกระทบทุกเครื่องมือ ไม่คุ้ม */
-}
+/* ‼️ ตรงนี้เคยมี } เกินมาหนึ่งตัวตั้งแต่ก่อน 20/09/2026 (พิสูจน์ที่ commit 83669b3)
+   ผลคือ CSS กู้คืนจาก error ด้วยการกลืนกฎถัดไปทั้งอัน
+   .ws-grid.no-left{grid-template-columns:...} จึงตายสนิทมานาน ไม่เคยทำงานเลย
+   ไม่มีใครเห็น เพราะเครื่องมือที่ไม่มีแผงซ้ายส่วนใหญ่ก็ไม่มีแผงขวาด้วย
+   จึงตกไปโดนกฎ .no-left.no-right ที่อยู่ถัดลงไปและยังดีอยู่
+   ‼️ วิธีจับ อ่านกฎที่เบราว์เซอร์ parse ได้จริงจาก document.styleSheets
+   แล้วเทียบกับไฟล์ อย่าเชื่อว่าเขียนแล้วได้ใช้ */
 .ws-grid.no-left{grid-template-columns:minmax(0,1fr) var(--ws-col-r)}
 .ws-grid.no-right{grid-template-columns:var(--ws-col-l) minmax(0,1fr)}
 /* ‼️ ไม่มีแผงข้างทั้งสองด้าน (หน้าที่เป็นเนื้อหาล้วน เช่นของแจก)
@@ -1535,3 +1546,52 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
   .ws-grid.fold-right > .ws-rail-right{display:none}
   .ws-panefold{display:none}
 }
+
+/* ── กล่องรับไฟล์ย้ายขึ้นไปอยู่ในแถบหัวเครื่องมือ (20/09/2026) ────────────────
+   ‼️ วัดก่อนทำ แถบหัวกว้าง 1336px ใช้จริงเฉลี่ย 485px ว่าง 851px = 64% ทุกหน้า
+   ‼️ แถบหัวเป็นพื้นมืดเสมอทั้งสองธีม กล่องรับไฟล์จึงต้องตั้งสีของตัวเองใหม่ทั้งชุด
+      ใช้ token ของแถบหัวที่ประกาศไว้แล้ว (--text, --text-mute, --line) ไม่ตั้งเลขดิบซ้ำ */
+.tool-head.has-dz{align-items:center}
+.tool-head.has-dz > div:nth-of-type(2){flex:0 1 auto;min-width:0}
+.tool-head.has-dz > .dz-wrap{
+  flex:1 1 420px; min-width:0; margin-inline-start:auto; max-width:620px;
+}
+/* กล่องแนวนอน ไอคอนซ้าย ข้อความกลาง ปุ่มขวา แทนที่จะเป็นกองสูงแบบในแผง */
+/* ‼️ ต้องตั้ง color ตรง ๆ ไม่ใช่หวังพึ่ง --text ที่แถบหัวประกาศไว้
+   เพราะ color:var(--text) ถูกคำนวณที่ body ไปแล้ว ค่าที่ไหลลงมาเป็นสีดำชุดสว่าง
+   ตัวแปรที่ประกาศทีหลังไม่ย้อนไปแก้ค่าที่คำนวณไปแล้ว (วัดได้ 1.07:1 = มองไม่เห็นเลย) */
+.tool-head .dz{color:var(--text)}
+.tool-head .dz{
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+  grid-template-areas:"ico main btn" "ico hint btn" "ico safe btn";
+  align-items:center; gap:1px 14px; text-align:start;
+  padding:14px 16px;
+  background:rgba(255,255,255,.045);
+  border-color:color-mix(in srgb,var(--ac,var(--brand)) 40%,var(--line));
+}
+.tool-head .dz:hover,.tool-head .dz:focus-visible{background:rgba(255,255,255,.08)}
+.tool-head .dz:hover{transform:none;box-shadow:none}
+.tool-head .dz-ico{grid-area:ico;width:42px;height:42px;margin:0}
+.tool-head .dz-main{grid-area:main;margin:0;font-size:15px}
+.tool-head .dz-btn{grid-area:btn;margin:0}
+.tool-head .dz-hint{grid-area:hint;margin:0}
+.tool-head .dz-safe{grid-area:safe;margin:2px 0 0}
+.tool-head .dz-more{grid-area:main}
+/* ของที่เหลือใน .dz-wrap (ปุ่มไฟล์ตัวอย่าง, คำเตือน, จำนวน, รายชื่อไฟล์) เรียงต่อลงมา */
+.tool-head .dz-sample{margin-top:9px}
+.tool-head .files{margin-top:9px}
+/* ‼️ แถบหัวไม่ได้ตั้ง --bg-soft/--card ใหม่ แถวไฟล์จึงจะกลายเป็นการ์ดขาวบนพื้นมืด
+   ตั้งให้โปร่งแทน ให้เข้ากับแถบ และยังอ่านออกเพราะ token ตัวอักษรเป็นชุดสว่างอยู่แล้ว */
+.tool-head .file-row{background:rgba(255,255,255,.05);border-color:var(--line)}
+/* ‼️ จอแคบกลับไปวางซ้อนลงมาเหมือนเดิม แถบหัวแคบเกินกว่าจะแบ่งสองคอลัมน์ได้จริง */
+@media (max-width:900px){
+  .tool-head.has-dz{flex-wrap:wrap}
+  .tool-head.has-dz > .dz-wrap{flex:1 1 100%;max-width:none;margin-inline-start:0;margin-top:14px}
+  .tool-head .dz{grid-template-columns:auto minmax(0,1fr);
+    grid-template-areas:"ico main" "ico hint" "ico safe" "btn btn"}
+  .tool-head .dz-btn{margin-top:10px;justify-self:stretch}
+}
+/* ‼️ แผงซ้ายที่ว่างสนิทหลังย้ายกล่องออก ต้องหายไปจากผังด้วย ไม่งั้นจองที่ไว้เปล่า ๆ
+   ใช้คลาส no-left เดิมที่มีกฎคอลัมน์อยู่แล้ว เพิ่มแค่การซ่อนโหนด */
+.ws-grid.no-left > .ws-left,
+.ws-grid.no-left > .ws-rail-left{display:none}

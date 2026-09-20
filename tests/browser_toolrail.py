@@ -29,13 +29,26 @@ def ck(label, ok, detail=""):
         fails.append(label + (f" — {detail}" if detail else ""))
 
 GEO = """() => {
-  const vis = e => !!e && getComputedStyle(e).display !== 'none';
+  /* ‼️ ต้องใช้ checkVisibility ไม่ใช่ getComputedStyle ของตัวมันเอง (แก้ 21/09/2026)
+     display ของลูก ไม่สะท้อนว่าพ่อถูกซ่อนอยู่ ตัวตรวจรุ่นก่อนหน้าจึงรายงานว่า
+     "หัวเรื่องยังแสดงอยู่" ทั้งที่กล่องที่ครอบมันถูกซ่อนไปแล้ว
+     (checkVisibility ใช้กับ position:fixed ได้ ไม่ใช่กับดัก offsetParent ที่หัวไฟล์เตือนไว้) */
+  const vis = e => !!e && (e.checkVisibility ? e.checkVisibility({checkVisibilityCSS: true})
+                                             : getComputedStyle(e).display !== 'none');
   const box = e => { const r = e.getBoundingClientRect();
     return {l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width), t: Math.round(r.top + scrollY)}; };
   const rail = document.querySelector('.tool-rail');
   const head = document.querySelector('.tool-head');
   const body = document.querySelector('.ws-body');
-  return { rail: vis(rail), head: vis(head),
+  /* ‼️ ต้องแยก "แถบหัว" ออกจาก "หัวเรื่อง" (แก้ 21/09/2026)
+     เดิมเทสนี้ถือว่าแถบหัวหายไป = หัวเรื่องไม่ซ้ำกับราง ซึ่งเคยจริงตอนแถบมีแต่หัวเรื่อง
+     แต่ workspace.js ย้ายกล่องรับไฟล์เข้ามาอยู่ในแถบนี้ด้วย ตัวแทนเดิมจึงบังคับให้
+     "ซ่อนแถบทั้งก้อน" ซึ่งซ่อนกล่องรับไฟล์ไปด้วย = เครื่องมือ 16 ตัวใช้งานไม่ได้ที่จอกว้าง
+     เจตนาจริงของข้อนี้คือ "ห้ามมีหัวเรื่องซ้ำสองที่" จึงต้องวัดหัวเรื่องตรง ๆ */
+  const title = document.querySelector('.tool-head h1');
+  const dz = document.querySelector('.tool-head .dz-wrap');
+  return { rail: vis(rail), head: vis(head), title: vis(title), headDz: vis(dz),
+           headH: head ? Math.round(head.getBoundingClientRect().height) : 0,
            railBox: vis(rail) ? box(rail) : null,
            body: body ? box(body) : null };
 }"""
@@ -60,7 +73,13 @@ with sync_playwright() as p:
         ck(f"① จอ {w}px ไม่มีราง และยังมีหัวเรื่องเดิม", not d["rail"] and d["head"], str(d))
     for w in (1840, 1920):
         d = seen[w]
-        ck(f"② จอ {w}px มีราง และหัวเรื่องใหญ่หายไป", d["rail"] and not d["head"], str(d))
+        ck(f"② จอ {w}px มีราง และหัวเรื่องใหญ่หายไป (ไม่ซ้ำกับราง)",
+           d["rail"] and not d["title"], str(d))
+        # ‼️ ข้อนี้คือด่านกันบั๊ก 20/09/2026 ที่ซ่อนแถบหัวทั้งก้อนจนกล่องรับไฟล์หายไปด้วย
+        #    ต้องคู่กับข้อ ② เสมอ ถ้ามีแต่ ② ใครก็ตามที่ "แก้ให้ผ่าน" ด้วยการซ่อนทั้งแถบ
+        #    จะทำบั๊กเดิมกลับมาโดยเทสยังเขียว (ตัวเต็มอยู่ที่ tests/browser_picker.py)
+        ck(f"②ก จอ {w}px กล่องรับไฟล์ในแถบหัวต้องยังอยู่ ห้ามหายไปกับหัวเรื่อง",
+           d["headDz"], str(d))
         # ‼️ อ่านค่ากล่องเฉพาะตอนมีรางจริง ไม่งั้นเทสระเบิดแทนที่จะรายงานว่าตก
         if d["railBox"] and d["body"]:
             ck(f"③ จอ {w}px รางไม่ทับพื้นที่ทำงาน (รางจบที่ {d['railBox']['r']}, งานเริ่มที่ {d['body']['l']})",
@@ -80,9 +99,18 @@ with sync_playwright() as p:
     ck(f"③ รางโผล่มาแล้วพื้นที่ทำงานต้องไม่ถูกหดเลย (1600 -> 1840)",
        widths[1840] >= widths[1600], f"{widths[1600]} -> {widths[1840]}")
 
+    # ‼️ เกณฑ์เดิมคือ "ได้คืนเกิน 80px" ซึ่งตั้งไว้ตอนที่แถบหัวหายไปทั้งก้อนที่จอกว้าง
+    #    วันที่ตั้งเกณฑ์ ไม่มีใครรู้ว่าการหายไปทั้งก้อนนั้นพากล่องรับไฟล์หายไปด้วย
+    #    = ตัวเลข 80 วัดมาจากสภาพที่หน้าใช้งานไม่ได้ จึงไม่ใช่เป้าที่ถูกต้องตั้งแต่แรก
+    #    ความจริงที่ถูกคือ: ที่จอกว้าง แถบหัวเหลือหน้าที่เดียวคือรับไฟล์ จึงต้องเตี้ยที่สุด
+    #    วัดได้ 21/09/2026 แถบหัว 204px เหลือ 126px แผงงานขึ้นจาก 377 เป็น 299 (คืน 78px)
+    #    ‼️ ห้ามผ่อนเกณฑ์ลงอีกเพื่อให้ผ่าน ถ้าวันไหนคืนได้น้อยกว่านี้แปลว่าแถบหัวอ้วนขึ้น
     narrow_top, wide_top = seen[1440]["body"]["t"], seen[1920]["body"]["t"]
     ck(f"④ จอกว้างแผงงานขยับขึ้นจริง จาก {narrow_top}px เหลือ {wide_top}px (ได้คืน {narrow_top - wide_top}px)",
-       wide_top < narrow_top - 80, f"{narrow_top} → {wide_top}")
+       wide_top <= narrow_top - 70, f"{narrow_top} → {wide_top}")
+    ck(f"④ก จอกว้างแถบหัวต้องเตี้ยกว่าจอแคบจริง ({seen[1920]['headH']}px เทียบ {seen[1440]['headH']}px)",
+       seen[1920]["headH"] <= 140 and seen[1920]["headH"] < seen[1440]["headH"],
+       f"{seen[1440]['headH']} → {seen[1920]['headH']}")
 
     # ⑤ ลิงก์ข้ามส่วนต้องไม่ทำให้หลุดออกจากหน้าเครื่องมือ
     ctx = br.new_context(viewport={"width": 1920, "height": 950})

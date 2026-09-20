@@ -621,8 +621,32 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
     /* แถบสีประจำตระกูลด้านซ้าย เหมือนที่ thepexcel ใช้กับการ์ดสารบัญของเขา */
     border-inline-start:3px solid var(--ac,var(--brand));
   }
-  /* หัวเรื่องใหญ่ถูกย้ายมาอยู่ในรางแล้ว ไม่ต้องแสดงซ้ำ */
-  body.tool .tool-head{display:none}
+  /* หัวเรื่องใหญ่ถูกย้ายมาอยู่ในรางแล้ว ไม่ต้องแสดงซ้ำ
+     ‼️ แต่ห้ามซ่อน "ทั้งแถบ" ถ้าแถบนั้นมีกล่องรับไฟล์อยู่ (บั๊กจริงบนเว็บสด v127 20/09/2026)
+        workspace.js ย้าย .dz-wrap เข้ามาอยู่ในแถบนี้เพื่อใช้ที่ว่างครึ่งขวาที่เคยทิ้งเปล่า
+        พอแถบถูกซ่อนที่จอกว้าง กล่องรับไฟล์หายไปด้วย เครื่องมือ 16 ตัวจึง
+        **ไม่มีอะไรให้กดเลือกไฟล์เลย** ทั้งที่ผืนงานยังเขียนว่า "เลือก PDF เพื่อดูตัวอย่าง"
+        (ตัวรับ drop ระดับหน้าใน app.js ทำงานเฉพาะหน้าแรก จึงลากวางก็ไม่ได้)
+        ‼️ รากเดียวกับบทเรียนเดิม "ย้าย node แล้วของที่อ้างตำแหน่งพังเงียบ ๆ"
+        คราวนี้ของที่อ้างตำแหน่งคือกฎ CSS ไม่ใช่โค้ด JS
+     วิธีแก้: ซ่อนเฉพาะ "หัวเรื่อง" ที่ซ้ำกับราง แล้วให้กล่องรับไฟล์ยืนเต็มแถบแทน
+     ‼️ ต้องคงพื้นมืดของแถบไว้ ห้ามถอด เพราะกล่อง .dz ข้างในตั้งสีตัวอักษรไว้สำหรับพื้นมืด
+        (.tool-head .dz{color:var(--text)} = #f0f1f3) ถอดพื้นออกเมื่อไร ตัวหนังสือหายทันที
+        ซึ่งเป็นกับดักเดียวกับที่คอมเมนต์ของ .tool-head เตือนไว้เองตั้งแต่ 12/09 */
+  body.tool .tool-head:not(.has-dz){display:none}
+  body.tool .tool-head.has-dz > .tool-ico,
+  body.tool .tool-head.has-dz > div:nth-of-type(2){display:none}
+  body.tool .tool-head.has-dz > .dz-wrap{flex:1 1 100%; max-width:none; margin-inline-start:0}
+  /* ‼️ ที่จอกว้าง ความกว้างคือของเหลือเฟือ ความสูงคือของหายาก
+     (หลักเดียวกับที่ workspace.js ยึดตอนตัดสินว่าอะไรควรขึ้นริบบอน)
+     กล่องรับไฟล์จึงต้องกางออกแนวนอน ไม่ใช่กองสูง ปุ่มลองไฟล์ตัวอย่างขึ้นมาอยู่แถวเดียวกัน
+     วัดจริง: dz-wrap 164px เหลือ 102px และแถบหัวทั้งก้อน 204px เหลือ 126px
+     เหตุผลที่ต้องแคร์: หัวเรื่องย้ายไปรางแล้ว แถบนี้จึงเหลือหน้าที่เดียวคือรับไฟล์
+     ถ้าปล่อยให้สูงเท่าเดิม = ยึดพื้นที่แนวตั้งไว้โดยไม่ได้ทำงานอะไรเพิ่ม */
+  body.tool .tool-head.has-dz{padding-block:12px}
+  body.tool .tool-head.has-dz > .dz-wrap{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+  body.tool .tool-head.has-dz > .dz-wrap > .dz{flex:1 1 420px; min-width:0}
+  body.tool .tool-head.has-dz > .dz-wrap > .dz-sample{flex:0 0 auto; margin-top:0}
 }
 .rail-id{display:flex; align-items:center; gap:9px; margin-bottom:8px}
 .rail-ico{flex:none; width:28px; height:28px; display:grid; place-items:center;

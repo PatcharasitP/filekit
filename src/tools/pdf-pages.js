@@ -239,6 +239,10 @@ export function mount(tool) {
     center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูตัวอย่าง", "No file yet. Choose a PDF to preview") },
     toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }),
               cropBtn, cropAllBtn, blankBtn, el("div", { class: "sep" }), editTextBtn, resetBtn],
+    /* ‼️ ชื่อกลุ่มตอบคำถามที่ปุ่มตอบเองไม่ได้ คือ "ทำกับอะไร"
+       ครอบขอบขาว อยู่กลุ่มทั้งเล่ม ส่วนหมุนกับลบ อยู่กลุ่มหน้าที่เลือก
+       ก่อนมีชื่อกลุ่ม สองอย่างนี้หน้าตาเหมือนกันหมด ต้องกดลองเองถึงจะรู้ */
+    toolbarGroups: [tr("หน้าที่เลือก", "Selected pages"), tr("ทั้งเล่ม", "Whole document"), tr("อื่น ๆ", "More")],
     footer: [st.node, saveBtn],
   });
   ws.wrap.prepend(el("style", {}, STYLE));

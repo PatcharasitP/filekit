@@ -1531,7 +1531,8 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 /* ‼️ ชื่อแผงในแนวตั้ง ไม่ใช่ไอคอนเปล่า คนจะได้ไม่ต้องเดาว่าแถบนี้คืออะไร
    sideways-rl ทำให้อ่านจากบนลงล่างโดยตัวอักษรไทยไม่ล้ม (ลองแล้ว vertical-rl สระลอยผิดที่) */
 .ws-rail-txt{writing-mode:vertical-rl;text-orientation:sideways;
-  font-size:12.5px;font-weight:600;letter-spacing:.02em;line-height:1.2;
+  /* ‼️ 1.3 ขึ้นไปเสมอ แม้เป็นข้อความแนวตั้ง สระไทยยังชนกันเหมือนเดิมทุกประการ */
+  font-size:12.5px;font-weight:600;letter-spacing:.02em;line-height:1.35;
   max-height:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* ‼️ ทิศการอ่านต่างกันสองข้าง ตามแบบที่ Office กับ Visual Studio ใช้มานาน
    แถบซ้ายอ่านล่างขึ้นบน แถบขวาอ่านบนลงล่าง ตัวหนังสือจะได้ "เอียงเข้าหา" เนื้อหาตรงกลางทั้งคู่
@@ -1595,3 +1596,26 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
    ใช้คลาส no-left เดิมที่มีกฎคอลัมน์อยู่แล้ว เพิ่มแค่การซ่อนโหนด */
 .ws-grid.no-left > .ws-left,
 .ws-grid.no-left > .ws-rail-left{display:none}
+
+/* ── แถบเครื่องมือแบบริบบอน มีชื่อกลุ่มกำกับใต้แถบ (20/09/2026 พี่ปอนด์ขอตามภาพ Power BI) ──
+   ‼️ ชื่อกลุ่มเล็กและจาง เพราะมันเป็นป้ายบอกทาง ไม่ใช่เนื้อหา ปุ่มต้องเด่นกว่าเสมอ
+      วัดแล้ว 10.5px สี --text-mute บนพื้น --card ได้ 5.24:1 ผ่านเกณฑ์ตัวอักษรเล็ก
+   ‼️ align-items:flex-end เพื่อให้ปุ่มในทุกกลุ่มอยู่ระดับเดียวกัน
+      แม้กลุ่มที่ไม่มีชื่อจะเตี้ยกว่ากลุ่มที่มีชื่อ */
+.ws-toolbar:has(.ws-tbgroup){align-items:flex-end}
+.ws-tbgroup{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.ws-tbrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
+.ws-tblabel{
+  /* ‼️ line-height ห้ามต่ำกว่า 1.3 เด็ดขาด สระบนกับวรรณยุกต์ไทยจะชนกัน
+     (เพดานนี้เป็นกฎของโปรเจกต์ มีเทส browser_layout จับ ตกทันที 22 จุดตอนใส่ 1.2) */
+  font-size:10.5px;line-height:1.35;letter-spacing:.04em;color:var(--text-mute);
+  text-align:center;white-space:nowrap;padding-bottom:1px;
+}
+/* เส้นคั่นต้องสูงเท่ากลุ่มที่มีชื่อ ไม่ใช่สูงแค่ปุ่ม ไม่งั้นมันลอยอยู่กลางอากาศ */
+.ws-toolbar:has(.ws-tbgroup) .sep{height:40px;align-self:center}
+/* ‼️ จอแคบซ่อนชื่อกลุ่ม แถบเครื่องมือบนมือถือกินความสูงมากอยู่แล้ว
+   และบนจอแคบปุ่มขึ้นบรรทัดใหม่จนกลุ่มแตกอยู่ดี ชื่อกลุ่มจึงชี้ผิดมากกว่าช่วย */
+@media (max-width:760px){
+  .ws-tblabel{display:none}
+  .ws-toolbar:has(.ws-tbgroup) .sep{height:20px}
+}

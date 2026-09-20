@@ -37,6 +37,43 @@ function membersOf(btn) {
   return out;
 }
 
+/** แบ่งแถบเครื่องมือเป็นกลุ่มพร้อมป้ายชื่อใต้กลุ่ม ตามผังริบบอนของ Power BI
+ *
+ * ‼️ พี่ปอนด์ส่งภาพหน้าจอ Power BI เต็ม ๆ มาแล้วบอกว่า "ส่วน RIBBON ก็ยังเหมือนเดิมเลย" (20/09/2026)
+ *   ของ Power BI แบ่งคำสั่งเป็นกลุ่มด้วยเส้นคั่น **แล้วมีชื่อกลุ่มกำกับใต้แถบ**
+ *   (Clipboard, Data, Queries, Insert, Calculations, Sensitivity, Share, Copilot)
+ *   ของเรามีเส้นคั่นอยู่แล้วแต่ไม่มีชื่อ คนจึงต้องเดาเองว่าแต่ละกลุ่มต่างกันตรงไหน
+ *
+ * ‼️ ชื่อกลุ่มไม่ใช่ของประดับ มันตอบคำถามที่ปุ่มตอบเองไม่ได้ เช่นในเครื่องมือจัดการหน้า
+ *   "ครอบขอบขาว" กับ "ครอบทุกหน้า" อยู่คนละกลุ่ม แต่ไม่มีอะไรบอกว่ากลุ่มไหนทำกับหน้าที่เลือก
+ *   กลุ่มไหนทำทั้งเล่ม ซึ่งเป็นความต่างที่สำคัญที่สุดของสองปุ่มนี้
+ *
+ * ‼️ ทำเป็นตัวแปลงกลาง ไม่ต้องรื้อ markup ของเครื่องมือ
+ *   เครื่องมือยังส่งอาร์เรย์แบนที่มี .sep คั่นเหมือนเดิม แค่เพิ่ม toolbarGroups เป็นรายชื่อ
+ *   ถ้าไม่ส่งชื่อมา ก็ได้แถบหน้าตาเดิมทุกประการ ไม่มีอะไรเปลี่ยน
+ */
+function ribbonGroups(items, names) {
+  const list = items.filter(Boolean);
+  const isSep = (n) => n && n.classList && n.classList.contains("sep");
+  if (!names || !names.length || !list.some(isSep)) return list;
+
+  const chunks = [[]];
+  for (const n of list) {
+    if (isSep(n)) chunks.push([]);
+    else chunks[chunks.length - 1].push(n);
+  }
+  const out = [];
+  chunks.forEach((chunk, i) => {
+    if (!chunk.length) return;
+    if (out.length) out.push(el("div", { class: "sep" }));
+    out.push(el("div", { class: "ws-tbgroup" }, [
+      el("div", { class: "ws-tbrow" }, chunk),
+      names[i] ? el("div", { class: "ws-tblabel" }, names[i]) : null,
+    ]));
+  });
+  return out;
+}
+
 function collapsibleGroups(panel, toolId) {
   const KEY = `filekit-folded-${toolId}`;
   let folded = new Set();
@@ -302,7 +339,8 @@ export function workspace(tool, cfg = {}) {
   ]);
 
   const canvas = el("div", { class: "ws-canvas" }, [
-    cfg.toolbar && cfg.toolbar.length ? el("div", { class: "ws-toolbar" }, cfg.toolbar) : null,
+    cfg.toolbar && cfg.toolbar.length
+      ? el("div", { class: "ws-toolbar" }, ribbonGroups(cfg.toolbar, cfg.toolbarGroups)) : null,
     el("div", { class: "ws-stage-in" }, [emptyBox, cfg.center ? cfg.center.node : null]),
   ]);
 

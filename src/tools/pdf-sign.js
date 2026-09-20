@@ -156,6 +156,7 @@ export function mount(tool) {
     center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ เลือกทางซ้ายเพื่อเซ็น", "No file yet. Choose one on the left") },
     right: { title: tr("ลายเซ็นของคุณ", "Your signature"), node: rightNode },
     toolbar: [prevBtn, pageLabel, nextBtn, el("span", { class: "sep" }), fitSw, placeMidBtn, delSelBtn, clearPageBtn],
+    toolbarGroups: [tr("หน้า", "Page"), tr("ลายเซ็นบนหน้านี้", "Signatures on this page")],
     footer: [go, st.node],
   });
   const { wrap, body, setBusy, showCanvas } = ws;

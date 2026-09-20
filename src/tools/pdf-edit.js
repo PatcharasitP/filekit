@@ -256,6 +256,7 @@ export function mount(tool) {
     center: { node: scroller, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อเริ่มแก้ไข", "No file yet. Choose a PDF to start") },
     right: { title: tr("ตัวเลือก", "Options"), node: rightNode },
     toolbar: [zoomOutBtn, zoomLabel, zoomInBtn, fitBtn, el("div", { class: "sep" }), placeMidBtn, undoBtn, clearBtn],
+    toolbarGroups: [tr("มุมมอง", "View"), tr("สิ่งที่วางไว้", "Placed items")],
     footer: [st.node, saveBtn],
   });
   ws.wrap.prepend(el("style", {}, STYLE));

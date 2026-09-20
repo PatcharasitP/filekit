@@ -259,6 +259,21 @@ export function workspace(tool, cfg = {}) {
     }
   }
 
+  /* ‼️ แผงที่เนื้อในถูกจัดเป็น "กลุ่มพับได้" ห้ามขึ้นเป็นริบบอน (เจอกับตา 20/09/2026)
+   *   เห็นในภาพธีมมืดของเครื่องมือลบชั้น หัวข้อกลุ่มสองอันไปกองอยู่ขอบขวา กลางว่างเปล่า 150px
+   *   เพราะริบบอนพลิกลูกของ .ws-scroll เป็นแถวแนวนอน แต่ปุ่มพับกลุ่มถูกออกแบบมาเป็นรายการแนวตั้ง
+   *   (หัวข้อกิน 100% ของแถว ลูกศรชิดขวา เนื้อในซ่อนอยู่) เอามาเรียงนอนแล้วพังทุกกรณี
+   *   ‼️ และตามหลักการเดิมก็ไม่ควรอยู่แล้ว แผงที่ต้องแบ่งกลุ่ม = ของเยอะเกินกว่าจะวางเป็นริบบอน
+   *   เทสทุกตัวเขียวตอนนั้น เพราะไม่มีข้อไหนถามว่า "ริบบอนหน้าตาถูกไหม" ต้องใช้ตาดูเท่านั้น */
+  function maybeDemote() {
+    if (userChose !== null || !asRibbon || !rightPanel) return false;
+    const tall = rightPanel.getBoundingClientRect().height > RIB_MAX_H;
+    if (!tall && !rightPanel.querySelector(".ws-fold-btn")) return false;
+    asRibbon = false;
+    applyRibbon();
+    return true;
+  }
+
   const panel = (side, spec) => spec ? el("aside", { class: `ws-panel ws-${side}` }, [
     el("div", { class: "ws-head" }, [
       el("h2", {}, spec.title),
@@ -381,12 +396,7 @@ export function workspace(tool, cfg = {}) {
      ‼️ เลิกเฝ้าเมื่อพลิกไปแล้ว หรือเมื่อครบ 6 วินาที จะได้ไม่เฝ้าค้างทั้งชีวิตหน้า
         และเฉพาะตอนที่ผู้ใช้ยังไม่เคยเลือกเอง ความตั้งใจของผู้ใช้ห้ามถูกทับ */
   if (userChose === null && asRibbon && rightPanel && window.ResizeObserver) {
-    const ro = new ResizeObserver(() => {
-      if (!asRibbon) return ro.disconnect();
-      if (rightPanel.getBoundingClientRect().height > RIB_MAX_H) {
-        asRibbon = false; applyRibbon(); ro.disconnect();
-      }
-    });
+    const ro = new ResizeObserver(() => { if (!maybeDemote()) return; ro.disconnect(); });
     ro.observe(rightPanel);
     setTimeout(() => ro.disconnect(), 6000);   // ตัวจับเวลานี้คือเพดานสูงสุดของการเฝ้า
   }
@@ -419,6 +429,9 @@ export function workspace(tool, cfg = {}) {
            (disconnect ล้างคิวที่ค้างอยู่ให้ด้วย จึงไม่มีรายการเก่าเด้งกลับหลังต่อใหม่) */
         obs.disconnect();
         try { collapsibleGroups(sc, tool.id); } finally { obs.observe(sc, watch); }
+        /* ‼️ จังหวะนี้คือตอนที่กลุ่มพับได้เพิ่งเกิด ต้องถามทันทีว่าริบบอนยังเหมาะอยู่ไหม
+           รอ ResizeObserver อย่างเดียวไม่พอ เพราะการห่อหัวข้อเป็นปุ่มอาจไม่เปลี่ยนความสูงเลย */
+        if (node === rightPanel) maybeDemote();
       });
     };
     const obs = new MutationObserver(scan);

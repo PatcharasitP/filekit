@@ -208,6 +208,23 @@ def main():
            pg.evaluate("() => localStorage.getItem('filekit-pane-right-pbi-donut')"))
         pg.evaluate("() => localStorage.clear()")
 
+        # ‼️ ด่านนี้มาจากบั๊กที่เห็นด้วยตาในภาพธีมมืด ไม่มีเทสไหนจับได้เลย (20/09/2026)
+        #    แผงที่เนื้อในถูกจัดเป็นกลุ่มพับได้ ขึ้นเป็นริบบอนแล้วพัง
+        #    หัวข้อกลุ่มไปกองอยู่ขอบขวา ตรงกลางว่างเปล่า 150px
+        #    เพราะปุ่มพับกลุ่มออกแบบมาเป็นรายการแนวตั้ง เอามาเรียงนอนไม่ได้
+        print("\n⑨ แผงที่แบ่งกลุ่มแล้ว ห้ามขึ้นเป็นริบบอน")
+        bad = []
+        for t in ["pdf-unstamp", "pdf-edit", "pbi-donut", "map-relocate", "pdf-watermark"]:
+            pg.goto(f"{BASE}/#{t}", wait_until="load", timeout=60000)
+            pg.wait_for_timeout(2600)
+            r = pg.evaluate("""() => { const pn = document.querySelector('.ws-right');
+                if (!pn) return null;
+                return {rib: pn.classList.contains('as-ribbon'),
+                        groups: pn.querySelectorAll('.ws-fold-btn').length}; }""")
+            if r and r["rib"] and r["groups"]:
+                bad.append(f"{t}({r['groups']} กลุ่ม)")
+        ck("ไม่มีเครื่องมือไหนขึ้นริบบอนทั้งที่แผงแบ่งกลุ่มแล้ว", not bad, "; ".join(bad) or "ตรวจ 5 ตัว")
+
         ck("ไม่มี error หลุดออกมาระหว่างทาง", not errs, errs[0] if errs else "")
         b.close()
 

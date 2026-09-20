@@ -5,6 +5,28 @@ import { IS_EN } from "./i18n.js";
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+/* ── ธงเลือกโครงหน้าเครื่องมือ ────────────────────────────────────────────
+ * v2 คือโครงที่โคลนมาจาก iLovePDF กับ Smallpdf (แผน 20/09/2026 พี่ปอนด์เคาะ 21/09)
+ * อยู่ใน dom.js เพราะเป็นโมดูลล่างสุดที่ทั้ง app.js, ui.js และ workspace.js เรียกได้
+ * โดยไม่เกิดวงจร import ไขว้กัน
+ *
+ * ‼️ ค่าเริ่มต้นเปลี่ยนที่บรรทัดเดียวตรงนี้เท่านั้น และ ?ui=1 ยังพาไปโครงเดิมได้เสมอ
+ *   ระหว่างช่วงย้าย ของเดิมจึงไม่มีทางหายไปโดยไม่มีทางถอย
+ * ‼️ อ่านครั้งเดียวตอนโหลดหน้า ห้ามอ่านสดทุกครั้ง เพราะถ้าค่าเปลี่ยนกลางคัน
+ *   หน้าจะมีโครงสองแบบปนกันในหน้าเดียว (บางเครื่องมือ mount ไปแล้ว บางตัวยัง) */
+const V2_DEFAULT = true;
+let v2 = V2_DEFAULT;
+try {
+  const q = new URLSearchParams(location.search).get("ui");
+  if (q === "1" || q === "2") { v2 = q === "2"; localStorage.setItem("fk:ui", q); }
+  else {
+    const saved = localStorage.getItem("fk:ui");
+    if (saved === "1" || saved === "2") v2 = saved === "2";
+  }
+} catch { /* โหมดส่วนตัว อ่าน localStorage ไม่ได้ ใช้ค่าเริ่มต้น */ }
+/** โครงหน้าเครื่องมือ v2 เปิดอยู่ไหม */
+export const useV2 = () => v2;
+
 /* ‼️ ของที่กดได้ ถ้าถอด title ออกแล้วไม่มีชื่ออย่างอื่น โปรแกรมอ่านหน้าจอจะอ่านไม่ออก
    จึงย้าย title ไปเป็น aria-label ให้เฉพาะพวกนี้ ส่วนของที่ไม่ได้กดก็ทิ้งไปเลย */
 const NEEDS_NAME = new Set(["button", "a", "input", "select", "textarea", "summary"]);

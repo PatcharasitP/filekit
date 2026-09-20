@@ -1,5 +1,5 @@
 import { detectType, wrongTypeMessage, typeLabel } from "./filetype.js";
-import { $, $$, el, showVeil, filesFromClipboard } from "./dom.js";
+import { $, $$, el, showVeil, filesFromClipboard, useV2 } from "./dom.js";
 import { byId, GROUPS, TOOLS } from "./registry.js";
 import { TOOL_IO } from "./toolio.js";
 import { toolIcon, uiIcon, fileKindIcon } from "./icons.js";
@@ -204,7 +204,17 @@ const GROUP_ACCENT = {
   image: "--g-img", doc: "--g-doc", ppt: "--g-ppt", data: "--g-data", thai: "--g-thai",
 };
 
+let SHELL2 = null;
+/** app.js ฝากตัวสร้างโครง v2 ไว้ตอนโหลด เพื่อเลี่ยง import วนกันระหว่าง ui.js กับ shell2.js */
+export function setShell2(fn) { SHELL2 = fn; }
+
 export function toolShell(tool) {
+  /* ‼️ ตัวสลับโครง v1 กับ v2 อยู่ตรงนี้จุดเดียว เครื่องมือทั้ง 53 ตัวจึงไม่ต้องแก้สักไฟล์
+     v2 คืน body เป็นผืนงาน ของที่เครื่องมือ append ลงไปจะตกในผืนงานทั้งหมด
+     ซึ่งใช้งานได้ทันทีแม้ยังไม่ได้ย้ายปุ่มไปแผงขวา (ทยอยย้ายทีละตัวได้)
+     ‼️ โหลดแบบ static import ไม่ได้ เพราะ shell2.js import ui.js กลับมา จะเป็นวงจร
+        ใช้ตัวแปรที่ app.js ฝากไว้แทน (ดู setShell2 ข้างล่าง) */
+  if (useV2() && SHELL2) return SHELL2(tool);
   const body = el("div", { class: "panel" });
   /* ‼️ 13/09/2026 เคยย้าย FAQ + ทำอะไรต่อดี ไปเป็นคอลัมน์ขวาลอยบนจอกว้างและมีปุ่มพับทั้งสองข้าง
      พี่ปอนด์ดูแล้วบอก "รกมาก" จึงถอดออก (ต้นแบบ datatraining เป็นคอลัมน์เดียว) FAQ กลับมาอยู่ท้ายหน้า
@@ -847,6 +857,16 @@ export function setInputFiles(files) {
 }
 /** ไฟล์ที่พาไปเครื่องมืออื่นได้ตอนนี้ — ผลลัพธ์มาก่อน ถ้ายังไม่มีก็ใช้ไฟล์ที่โหลดอยู่ */
 export function carryFiles() { return resultFiles || inputFiles || null; }
+/** ไฟล์ที่อยู่ในกล่องกับไฟล์ผลลัพธ์ แยกกัน — โครงหน้า v2 ใช้ตัดสินว่าตอนนี้ควรอยู่สถานะไหน */
+export function fileState() { return { input: inputFiles, result: resultFiles }; }
+/** ฟังว่าไฟล์ในกล่องหรือไฟล์ผลลัพธ์เปลี่ยน
+ *  ‼️ ต้องส่ง dead() มาด้วย เพื่อให้ตัวเฝ้าถอดตัวเองเมื่อเครื่องมือถูกถอดออกจากหน้า
+ *     (กลไกเดียวกับ resultWatchers เดิม ซึ่งเป็น Set ที่เก็บ {fn, dead}) */
+export function watchFiles(fn, dead = () => false) {
+  const w = { fn, dead };
+  resultWatchers.add(w);
+  return () => resultWatchers.delete(w);
+}
 function announceResult(blob, filename) {
   try { setResultFiles([new File([blob], filename, { type: blob.type })]); }
   catch { /* เบราว์เซอร์เก่ามาก ๆ ที่ไม่รองรับ File ตรง ๆ — ไม่ใช่จุดคอขวด ปล่อยผ่านเงียบ ๆ */ }

@@ -1,0 +1,308 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   หน้าเครื่องมือ v2 — วางผังใหม่ทับของเดิม
+   โหลดต่อจาก tool.css เสมอ จึงใช้ token สี ปุ่ม ช่องกรอก กล่องรับไฟล์ ของเดิมได้หมด
+   ไฟล์นี้ทำอย่างเดียวคือ "จัดช่อง" ไม่ได้เปลี่ยนภาษาการออกแบบของเว็บ
+
+   ‼️ ห้ามแก้ตัวเลขในนี้โดยไม่วัดก่อน ค่าทั้งหมดมาจากการวัดหน้าจริงของ
+      iLovePDF และ Smallpdf เมื่อ 20/09/2026 (ดูตารางในหัว src/shell2.js)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.s2{
+  --hd-h:60px;
+  --side-w:clamp(340px, 24vw, 440px);
+  --cta-h:72px;
+  /* ความลึกมาจากสีพื้นสามขั้น ไม่ใช่เงากับเส้นขอบ (รสนิยมที่พี่ปอนด์ชี้จาก openkrua) */
+  --surf-1:var(--card);      /* แผง แถบหัว */
+  --surf-2:var(--bg);        /* พื้นหน้า */
+  --surf-3:var(--bg-soft);   /* ผืนงาน เข้มสุดในโหมดสว่าง */
+  display:flex; flex-direction:column;
+  /* ‼️ ต้องเป็น height ไม่ใช่ min-height ไม่งั้นสถานะทำงานจะยืดตามเนื้อหาแล้วหน้าเลื่อน
+     ซึ่งทำให้ปุ่มหลักที่อยู่ท้ายแผงหลุดจอไปเลย (วัดเจอตอนต่อเครื่องมือตัวแรก)
+     หลักข้อ 4 ของ v2 คือสถานะทำงานเป็นโหมดแอป หน้าเว็บไม่เลื่อน
+     ‼️ 100dvh ไม่ใช่ 100vh — แถบที่อยู่เว็บบนมือถือยืดหดได้ vh จึงเกินจอจริงเสมอ
+     หน้าเปล่าเลื่อนได้ในตัวเอง (.s2-land มี overflow:auto) จึงไม่เสียเนื้อหาใต้จอแรก */
+  height:100dvh; overflow:hidden;
+}
+/* ‼️ ต้องประกาศสองที่เสมอ ให้ทั้ง "ตามระบบ" และ "ผู้ใช้เลือกเอง" ทำงานถูกทั้งคู่
+   (กติกาเดียวกับที่ index.html ใช้กับ token ชุดหลัก) */
+:root[data-theme="dark"] .s2{--surf-3:#0e1116}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .s2{--surf-3:#0e1116} }
+
+/* ── กรอบของหน้าเว็บ ที่ v2 ต้องปิดทิ้งเฉพาะบนหน้าเครื่องมือ ─────────────
+ * ไฟล์นี้โหลดเฉพาะเมื่อ v2 เปิดอยู่ จึงไม่ต้องมีเงื่อนไขอะไรเพิ่ม
+ * แถบหัวของ v2 ทำหน้าที่แทน .top ทั้งหมดแล้ว (โลโก้ เมนู ค้นหา) ส่วนธีมกับภาษา
+ * ยังอยู่ที่ .top ของหน้าแรก ซึ่งผู้ใช้ตั้งครั้งเดียวแล้วจำไว้ทั้งเว็บ
+ * ‼️ ห้ามแตะหน้าแรก (body ที่ไม่มี .tool) เด็ดขาด */
+body.tool > header.top,
+body.tool > footer,
+body.tool > .network{display:none}
+body.tool #main{max-width:none; margin:0; padding:0}
+body.tool{overflow:hidden}
+
+/* ── แถบหัวกลาง ─────────────────────────────────────────────────────── */
+.s2-hd{
+  height:var(--hd-h); flex:none; position:relative; z-index:20;
+  display:flex; align-items:center; gap:var(--sp4); padding-inline:var(--sp4);
+  background:var(--surf-1); border-bottom:1px solid var(--line-soft);
+}
+.s2-logo{display:flex; align-items:center; gap:9px; text-decoration:none; color:var(--text);
+  font-size:16px; white-space:nowrap}
+.s2-logo b{font-weight:700}
+.s2-logo-ico{width:26px; height:26px; border-radius:8px; background:var(--ac,var(--brand));
+  color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700; flex:none}
+.s2-menubtn,.s2-search{
+  display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line);
+  background:var(--bg-soft); color:var(--text); border-radius:999px;
+  padding:7px 14px; font-size:13.5px; line-height:1.4; white-space:nowrap;
+}
+.s2-menubtn{font-weight:600}
+.s2-menubtn:hover,.s2-search:hover{border-color:var(--ac,var(--brand))}
+.s2-chev{width:12px; height:12px; transition:transform .15s}
+.s2-menubtn[aria-expanded="true"] .s2-chev{transform:rotate(180deg)}
+.s2-search{flex:1 1 auto; min-width:0; max-width:420px; color:var(--text-mute); justify-content:flex-start}
+.s2-search-ico{width:14px; height:14px; flex:none}
+.s2-search span{overflow:hidden; text-overflow:ellipsis}
+
+/* เมนูรวมเครื่องมือ การ์ดลอย ไม่ดันเนื้อหา (ถอดจาก iLovePDF) */
+.s2-menu{
+  position:absolute; inset-block-start:calc(var(--hd-h) - 4px);
+  inset-inline-start:var(--sp4); inset-inline-end:var(--sp4);
+  background:var(--surf-1); border:1px solid var(--line); border-radius:12px;
+  box-shadow:0 18px 50px rgba(0,0,0,.18); padding:18px 20px; z-index:30;
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:4px 14px;
+  max-height:calc(100dvh - var(--hd-h) - 24px); overflow:auto;
+}
+:root[data-theme="dark"] .s2-menu{box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.s2-col{display:flex; flex-direction:column; min-width:0}
+.s2-col h4{margin:0 0 4px; font-size:12px; font-weight:600; color:var(--text-mute);
+  letter-spacing:.02em; line-height:1.4}
+.s2-mi{display:flex; align-items:center; gap:8px; height:36px; padding-inline:6px;
+  border-radius:7px; text-decoration:none; color:var(--text); font-size:13px; line-height:1.35}
+.s2-mi:hover{background:var(--bg-soft)}
+.s2-mi.here{color:var(--gc); font-weight:700; background:color-mix(in srgb,var(--gc) 10%,transparent)}
+.s2-mi-ico{flex:none; width:20px; height:20px; border-radius:6px; display:grid; place-items:center;
+  background:color-mix(in srgb,var(--gc) 16%,transparent); color:var(--gc)}
+.s2-mi-ico svg{width:13px; height:13px}
+.s2-mi-tx{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+/* ── สถานะ A หน้าเปล่า (ชั้นลอยทับพื้นที่ทำงานจริง ๆ) ────────────────────
+ * ‼️ ต้องเป็น overlay ที่ "ทับ" ไม่ใช่การซ่อนพื้นที่ทำงานด้วย display:none
+ *   เพราะกล่องรับไฟล์ตัวจริงอยู่ในพื้นที่ทำงาน (เครื่องมือแบบ panel วางไว้ในผืนงาน)
+ *   ถ้าซ่อนทั้งก้อน กล่องจะถูกซ่อนไปด้วย แล้ว **เลือกไฟล์ไม่ได้เลย**
+ *   ซึ่งเป็นบั๊กตัวเดียวกับที่เพิ่งแก้ไปเมื่อวาน (จอ 1820 ซ่อนแถบหัวที่มีกล่องรับไฟล์อยู่)
+ *   วันนี้มันเกือบกลับมาอีกรอบในรูปแบบใหม่ จับได้เพราะเทสถามว่า "ใส่ไฟล์แล้วสถานะเปลี่ยนไหม" */
+.s2{position:relative}
+.s2-land{display:none}
+.s2[data-state="landing"] .s2-land{
+  display:block; position:absolute; inset-block-start:var(--hd-h); inset-inline:0; inset-block-end:0;
+  z-index:10; overflow:auto; background:var(--surf-2);
+}
+.s2-land-in{max-width:640px; margin:0 auto; padding:clamp(28px,6vh,60px) var(--sp4) 48px; text-align:center}
+.s2-land-ico{width:56px; height:56px; border-radius:16px; background:var(--ac,var(--brand));
+  color:#fff; display:grid; place-items:center; margin:0 auto 18px}
+.s2-land-ico svg{width:30px; height:30px}
+.s2-land h1{margin:0 0 6px; font-size:clamp(26px,3.4vw,40px); font-weight:700;
+  /* ‼️ ไทยต่ำกว่า 1.3 สระบนล่างชนกัน (เพดานที่พิสูจน์ไว้แล้ว 07/09) */
+  line-height:1.3; letter-spacing:-.01em}
+.s2-land-sub{margin:0 0 26px; font-size:17px; color:var(--text-dim); line-height:1.55}
+.s2-cta-big{
+  height:72px; min-width:min(330px,100%); padding-inline:44px; border:0; border-radius:12px;
+  background:#B4451F; color:#fff; font-family:inherit;
+  font-size:22px; font-weight:600; line-height:1.3; cursor:pointer;
+  box-shadow:0 3px 8px rgba(0,0,0,.16);
+  transition:transform var(--t-panel,.22s) var(--ease-spring,ease), box-shadow .15s;
+}
+.s2-cta-big:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.2)}
+.s2-cta-big:active{transform:translateY(1px)}
+.s2-land-drop{margin:14px 0 0; font-size:14px; color:var(--text-mute)}
+.s2-land-row{margin-top:16px; display:flex; gap:18px; justify-content:center; align-items:center;
+  flex-wrap:wrap; font-size:13.5px; color:var(--text-mute)}
+.s2-link{background:none; border:0; color:var(--brand-text); font-family:inherit; font-size:13.5px;
+  cursor:pointer; text-decoration:underline; text-underline-offset:3px; padding:2px 0}
+.s2-safe{display:inline-flex; align-items:center; gap:6px}
+.s2-safe-ico{width:14px; height:14px; flex:none}
+/* ใต้จอแรก: คำอธิบาย ตัวอย่าง คำถาม ทำอะไรต่อดี */
+.s2-fold{margin-top:42px; padding-top:26px; border-top:1px solid var(--line); text-align:start}
+.s2-fold > *{margin-block:0 18px}
+.s2-fold .tex{display:flex}
+
+/* ── สถานะ B ทำงาน ─────────────────────────────────────────────────── */
+.s2-work{
+  flex:1 1 auto; min-height:0;
+  display:grid; grid-template-columns:1fr var(--side-w);
+  /* ‼️ ต้องมี minmax(0,1fr) คู่กับ min-height:0 ที่ลูก ไม่งั้นแถวขยายตามเนื้อหา
+     แล้วลูกสูงเกินแม่โดยไม่มีอะไรฟ้อง (วัดเจอที่จอ 1366x768 ปุ่มหลักหลุดจอไป 87px)
+     ญาติกับกฎเดิมของโปรเจกต์ที่ว่า flex:1 ต้องมาคู่กับ min-width:0 เสมอ */
+  grid-template-rows:minmax(0,1fr);
+}
+.s2-canvas{background:var(--surf-3); display:flex; flex-direction:column;
+  min-width:0; min-height:0; position:relative}
+.s2-tbar{
+  flex:none; min-height:48px; display:flex; align-items:center; flex-wrap:wrap; gap:4px;
+  padding:6px 12px; background:var(--surf-2); border-bottom:1px solid var(--line-soft);
+}
+.s2-tbar .sep{width:1px; align-self:stretch; margin-block:4px; background:var(--line); margin-inline:6px; flex:none}
+.s2-stage{flex:1 1 auto; min-height:0; overflow:auto; padding:20px; overscroll-behavior:contain}
+.s2-empty{height:100%; display:grid; place-items:center; align-content:center; gap:12px;
+  color:var(--text-mute); font-size:14px; text-align:center}
+.s2-empty-ico{width:56px; height:56px; border-radius:16px; display:grid; place-items:center;
+  background:color-mix(in srgb,var(--ac,var(--brand)) 12%,transparent); color:var(--ac,var(--brand))}
+.s2-empty-svg{width:28px; height:28px}
+
+/* แผงขวา */
+.s2-side{
+  background:var(--surf-1); border-inline-start:1px solid var(--line-soft);
+  display:flex; flex-direction:column; min-width:0; min-height:0;
+}
+.s2-side-hd{flex:none; display:flex; align-items:flex-start; gap:10px; padding:14px 18px 8px}
+.s2-side-hd h2{margin:0; font-size:20px; font-weight:700; line-height:1.3; flex:1 1 auto; min-width:0}
+.s2-side-bd,.s2-side-res{flex:1 1 auto; min-height:0; overflow:auto; padding:0 18px 14px;
+  overscroll-behavior:contain}
+.s2-side-ft{flex:none; padding:12px 18px; border-top:1px solid var(--line-soft); background:var(--surf-1)}
+.s2-grp{font-size:12px; font-weight:600; color:var(--text-mute); margin:14px 0 8px;
+  letter-spacing:.02em; display:flex; align-items:center; gap:8px}
+.s2-grp::after{content:""; flex:1 1 auto; height:1px; background:var(--line-soft)}
+.s2-side-bd > .s2-grp:first-child{margin-top:4px}
+.s2-hint{font-size:13px; color:var(--text-dim); margin:0 0 10px; line-height:1.55}
+.s2-note{flex:none; padding:8px var(--sp4); font-size:12.5px; color:var(--text-mute);
+  background:var(--surf-1); border-top:1px solid var(--line-soft)}
+
+/* ปุ่มหลัก — ของเดิมคือ .btn ธรรมดา เราแค่ขยายให้เป็นพระเอกของจอ */
+.s2-cta-row{display:flex; gap:10px; align-items:center; width:100%}
+.s2-cta.btn,.s2-cta{
+  flex:1 1 auto; min-width:0;
+  /* ‼️ ปุ่มหลักใช้สีสนิมของแบรนด์ ไม่ใช่ดำ (พี่ปอนด์เคาะจากต้นแบบ 21/09 ข้อ D3 ทางเลือก A)
+     วัดแล้ว ตัวอักษรขาวบนปุ่ม 5.51:1 และตัวปุ่มบนพื้นมืด 3.40:1 ผ่านทั้งสองเกณฑ์
+     ‼️ ใช้สีเดียวกันทุกหมวด ไม่ผูกกับสีประจำตระกูล เพราะสีตระกูลบางตัว (เช่นเหลือง Power BI)
+        ตัวอักษรขาวบนพื้นนั้นไม่ผ่าน 4.5:1 และเราต้องการให้ "ปุ่มลงมือทำ" หน้าตาเดียวกันทั้งเว็บ */
+  --cta-bg:#B4451F;
+  background:var(--cta-bg); color:#fff;
+  height:var(--cta-h); border-radius:12px; padding-inline:20px;
+  font-size:20px; font-weight:600; line-height:1.3;
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,.14);
+}
+.s2-cta.btn:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.s2-cta.btn:disabled{transform:none; box-shadow:none}
+.s2-cta-why{margin:0 0 8px; font-size:12.5px; color:var(--text-mute); text-align:center; line-height:1.45}
+.s2-stat{margin-bottom:8px}
+.s2-stat .status{margin:0}
+.s2-subrow{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+.s2-sub.btn{flex:1 1 auto; min-width:0; height:40px; padding-inline:14px; font-size:13.5px;
+  border-radius:var(--r-sm); background:var(--card); color:var(--text);
+  border:1px solid var(--line); box-shadow:none; font-weight:600}
+.s2-sub.btn:hover{background:var(--card-hi); transform:none; box-shadow:none; filter:none}
+
+/* ── สถานะ D ผลลัพธ์ ────────────────────────────────────────────────── */
+.s2[data-state="result"] .s2-tbar{display:none}
+.s2-res{padding-top:6px}
+.s2-done{display:flex; align-items:center; gap:10px; margin:0 0 6px; font-size:20px; font-weight:700}
+.s2-done-ico{width:26px; height:26px; border-radius:50%; background:var(--ok); color:#fff;
+  display:grid; place-items:center; flex:none}
+.s2-done-svg{width:15px; height:15px}
+.s2-res-name{font-size:14.5px; font-weight:600; word-break:break-all; line-height:1.5;
+  border-bottom:1px dashed var(--line); padding-bottom:4px}
+.s2-res-meta{font-size:13px; color:var(--text-mute); margin-top:4px}
+.s2-res-row{display:flex; gap:8px; margin-top:14px}
+.s2-btn2{flex:1 1 0; height:40px; border:1px solid var(--line); background:var(--card);
+  color:var(--text); border-radius:var(--r-sm); font-family:inherit; font-size:13.5px; cursor:pointer}
+.s2-btn2:hover{background:var(--card-hi); border-color:var(--ac,var(--brand))}
+.s2-side-res .next-steps{margin-top:16px}
+.s2-side-res .next-row{grid-template-columns:1fr}
+
+/* ── ของเดิมที่ v2 ไม่ใช้แล้ว ────────────────────────────────────────────
+   ซ่อนแทนการลบ เพราะยังต้องใช้ในโหมด v1 ระหว่างช่วงย้าย (เปิดด้วย ?ui=1)
+   ‼️ ซ่อนเฉพาะเมื่ออยู่ในโครง v2 เท่านั้น ห้ามซ่อนทั้งเว็บ */
+.s2 .ribbon,.s2 .tool-rail,.s2 .tool-head,.s2 .ws-panefold,.s2 .ws-rail,.s2 .ws-ribbtn{display:none}
+/* กล่องรับไฟล์ในแผงขวา ยุบเป็นแถบเตี้ยเสมอ เพราะหน้าเปล่ามีปุ่มยักษ์ทำหน้าที่นั้นแล้ว */
+.s2 .s2-side-bd .dz{padding:11px 14px; min-height:0; text-align:start;
+  display:flex; align-items:center; gap:10px}
+.s2 .s2-side-bd .dz-ico,.s2 .s2-side-bd .dz-hint,.s2 .s2-side-bd .dz-safe,
+.s2 .s2-side-bd .dz-sample,.s2 .s2-side-bd .dz-btn{display:none}
+.s2 .s2-side-bd .dz-main{font-size:13.5px; margin:0}
+.s2 .s2-side-bd .dz-wrap.has-files .dz-main{display:none}
+.s2 .s2-side-bd .dz-wrap.has-files .dz-more{display:block; font-size:13.5px; font-weight:700}
+
+/* ── กำลังทำงาน ─────────────────────────────────────────────────────── */
+.s2-work.busy .s2-stage{opacity:.55; pointer-events:none}
+.s2-work.busy .s2-side-bd{opacity:.55; pointer-events:none}
+
+/* ── มือถือและจอแคบ ─────────────────────────────────────────────────── */
+.s2-sheet-hd{display:none}
+.s2-sheetbtn{display:none}
+@media (max-width:860px){
+  .s2-work{grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto;
+    display:flex; flex-direction:column}
+  .s2-canvas{flex:1 1 auto; min-height:0}
+  .s2-side{flex:none; border-inline-start:0; border-block-start:1px solid var(--line-soft)}
+  /* แผงตัวเลือกเป็นแผ่นเลื่อนขึ้นจากล่าง เปิดด้วยปุ่ม "ตัวเลือก" ข้างปุ่มหลัก */
+  .s2-side-hd,.s2-side-bd{display:none}
+  .s2-side.open{position:fixed; inset-inline:0; inset-block-end:0; z-index:40;
+    max-height:80dvh; border-radius:18px 18px 0 0; box-shadow:0 -10px 40px rgba(0,0,0,.3)}
+  .s2-side.open .s2-side-hd,.s2-side.open .s2-side-bd{display:block}
+  .s2-side.open .s2-sheet-hd{display:flex; align-items:center; justify-content:space-between;
+    padding:10px 18px 0}
+  .s2-sheetbtn{display:inline-flex; align-items:center; justify-content:center; flex:none;
+    height:56px; padding-inline:18px; border:1px solid var(--line); background:var(--card);
+    color:var(--text); border-radius:12px; font-family:inherit; font-size:15px; font-weight:600}
+  /* ‼️ สถานะผลลัพธ์ ห้ามซ่อนแผงไว้หลังปุ่มตัวเลือก ตอนงานเสร็จสิ่งที่ผู้ใช้ต้องการที่สุด
+     คือชื่อไฟล์กับปุ่มดาวน์โหลด (บั๊กที่จับได้ตอนทำต้นแบบ 21/09) */
+  .s2[data-state="result"] .s2-side-res{display:block}
+  .s2[data-state="result"] .s2-canvas{flex:0 1 auto; max-height:38dvh}
+  .s2[data-state="result"] .s2-sheetbtn{display:none}
+  .s2-cta.btn,.s2-cta{height:56px; font-size:17px}
+  .s2-side-ft{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  .s2-land-in{padding-top:26px}
+  .s2-land h1{font-size:26px}
+  .s2-land-sub{font-size:15px; margin-bottom:20px}
+  .s2-cta-big{width:100%; height:60px; font-size:19px; padding-inline:16px}
+  .s2-hd{gap:10px; padding-inline:12px}
+  .s2-search{display:none}
+  .s2-menu{grid-template-columns:1fr; inset-inline:8px}
+}
+@media (max-width:520px){
+  .s2-logo b{display:none}
+}
+
+/* ── ลดการเคลื่อนไหวตามที่ผู้ใช้ตั้งไว้ ────────────────────────────────── */
+@media (prefers-reduced-motion:reduce){
+  .s2-cta-big,.s2-cta.btn{transition:none}
+  .s2-cta-big:hover,.s2-cta.btn:hover{transform:none}
+}
+
+/* ปุ่มภาษากับธีมที่ยืมมาจากแถบหัวของเว็บ (ดูเหตุผลใน shell2.js toolHeader) */
+.s2-hd-right{margin-inline-start:auto; display:flex; align-items:center; gap:8px; flex:none}
+.s2-hd-right .langsw{margin:0}
+
+/* ปุ่มจริงของเครื่องมือแบบ panel ถูกแทนด้วยปุ่มเงาในแผงขวาแล้ว (ดู liftActions ใน shell2.js)
+   ‼️ ซ่อนด้วย position ไม่ใช่ display:none เพราะปุ่มจริงยังต้องรับ .click() ได้
+      และเครื่องมือบางตัววัดขนาดปุ่มตัวเองอยู่ */
+/* ‼️ ต้องครอบทุกระดับ ไม่ใช่แค่ลูกตรง เพราะหลายเครื่องมือสร้าง .actions ชุดที่สอง
+   ไว้ในกล่องผลลัพธ์ของตัวเอง (เช่นปุ่มดาวน์โหลด ZIP ของ pdf-to-images)
+   ซึ่ง liftActions ยกมาแผงขวาแล้ว ถ้าไม่ซ่อนตัวจริงจะเห็นปุ่มเดียวกันสองที่ */
+.s2 .s2-stage .actions{position:absolute; width:1px; height:1px; overflow:hidden;
+  clip-path:inset(50%); white-space:nowrap}
+.s2 .s2-stage > .status-wrap{margin-top:12px}
+
+/* ผลลัพธ์หลายไฟล์ที่ย้ายมาจากผืนงาน */
+.s2-res-list{display:flex; flex-direction:column; gap:8px; margin:12px 0}
+.s2-res-list .result{margin:0}
+
+
+/* ── สถานะผลลัพธ์: ผืนงานต้องไม่โชว์ฟอร์มเดิมค้างไว้ ─────────────────────
+   ตอนงานเสร็จ ตัวเลือกกับกล่องรับไฟล์หมดหน้าที่แล้ว (หลักข้อ 1 หนึ่งจอ หนึ่งเรื่อง)
+   เครื่องมือแบบ workspace ยังโชว์ผลงานในผืนงานต่อได้ เพราะนั่นคือผลลัพธ์จริง ๆ
+   ส่วนแบบ panel ผืนงานมีแต่ฟอร์ม จึงเปลี่ยนเป็นกล่องสรุปแทน */
+.s2[data-state="result"] .s2-work.panel-mode .s2-stage > *{display:none}
+.s2[data-state="result"] .s2-work.panel-mode .s2-stage > .s2-done-big{display:grid}
+.s2-done-big{display:none; height:100%; place-items:center; align-content:center; gap:14px; text-align:center}
+.s2-done-big .ico{width:72px; height:72px; border-radius:50%; background:var(--ok); color:#fff;
+  display:grid; place-items:center}
+.s2-done-big .ico svg{width:38px; height:38px}
+.s2-done-big b{font-size:22px; font-weight:700}
+.s2-done-big span{font-size:14px; color:var(--text-mute)}
+/* ปุ่มหลักเดิมหมดหน้าที่ในสถานะผลลัพธ์ ปุ่มดาวน์โหลดของแต่ละไฟล์อยู่ในแผงแล้ว */
+.s2[data-state="result"] .s2-cta-row,
+.s2[data-state="result"] .s2-subrow,
+.s2[data-state="result"] .s2-stat{display:none}
+.s2[data-state="result"] .s2-side-ft{border-top:0; padding-block:0}

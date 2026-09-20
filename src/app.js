@@ -5,7 +5,7 @@
 import { TOOLS, GROUPS, byId , chipOf } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
-import { el, $, $$, showVeil, filesFromClipboard } from "./dom.js";
+import { el, $, $$, showVeil, filesFromClipboard, useV2 } from "./dom.js";
 import { toolIcon, uiIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic, pl } from "./i18n.js";
 import { inAppBanner } from "./inapp.js";
@@ -584,14 +584,30 @@ if (location.hash.replace(/^#\/?/, "")) route();
 /* ‼️ เก็บ promise ไว้บนตัวฟังก์ชันเอง ไม่ใช่ตัวแปร let ข้างนอก — go() ถูกเรียกได้ตั้งแต่
  *    ตอน route() บรรทัดบน ๆ ซึ่งยังมาไม่ถึงบรรทัดนี้ ถ้าใช้ let จะพังด้วย ReferenceError
  *    (temporal dead zone) เฉพาะตอนเปิดเว็บด้วยลิงก์เครื่องมือตรง ๆ ซึ่งเป็นทางที่คนแชร์ลิงก์กันใช้ */
+/* ‼️ ฝากตัวสร้างโครง v2 ให้ ui.js กับ workspace.js ใช้ แทนการให้สองไฟล์นั้น import shell2.js เอง
+   เพราะ shell2.js import ui.js กลับมา (toolMeta, nextSteps, watchFiles) จะเป็นวงจร import ไขว้
+   ต้องเสร็จ **ก่อน** เครื่องมือตัวแรกถูก mount ไม่งั้นตัวแรกจะได้โครงเก่าไปหนึ่งตัว */
+let shell2Job = null;
+function installShell2() {
+  if (shell2Job) return shell2Job;
+  shell2Job = Promise.all([import("./shell2.js"), import("./ui.js"), import("./workspace.js")])
+    .then(([s2, ui, ws]) => { ui.setShell2(s2.toolShell2); ws.setShell2(s2.toolShell2); })
+    .catch((e) => { console.error("shell2 โหลดไม่ได้ ใช้โครงเดิมแทน", e); });
+  return shell2Job;
+}
+
 function loadToolCss() {
   if (loadToolCss.p) return loadToolCss.p;
-  loadToolCss.p = new Promise((resolve) => {
-    const link = el("link", { rel: "stylesheet", href: "assets/css/tool.css" });
+  const one = (href) => new Promise((resolve) => {
+    const link = el("link", { rel: "stylesheet", href });
     link.addEventListener("load", resolve, { once: true });
     link.addEventListener("error", resolve, { once: true });   // โหลดไม่ได้ก็ต้องไม่ค้างหน้า
     document.head.appendChild(link);
   });
+  /* ‼️ tool2.css ต้องมาหลัง tool.css เสมอ เพราะมันวางผังทับของเดิมด้วย specificity เท่ากันบางกฎ
+     และต้องรอทั้งคู่จริง ๆ ไม่ใช่แค่สั่งโหลด ไม่งั้นเครื่องมือโผล่มาแบบไม่มีสไตล์แว้บหนึ่ง */
+  loadToolCss.p = one("assets/css/tool.css")
+    .then(() => (useV2() ? Promise.all([one("assets/css/tool2.css"), installShell2()]) : null));
   return loadToolCss.p;
 }
 // เปิดเว็บมาที่ลิงก์เครื่องมือตรง ๆ = ต้องใช้ทันที ไม่ต้องรอเจตนา

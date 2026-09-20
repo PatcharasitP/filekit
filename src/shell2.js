@@ -1,0 +1,554 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// โครงหน้าเครื่องมือ v2 — หนึ่งจอ หนึ่งเรื่อง
+//
+// ที่มา: พี่ปอนด์สั่ง 20/09/2026 "หน้าเครื่องมือมันยังไม่ถูกใจพี่เลย ไปก็อปเขามาเลยเถอะ
+//        I LOVE PDF, SMALLPDF เอาแบบ FULL SYSTEM เลย" แล้วเคาะต้นแบบ 21/09
+//        แผนเต็ม: .claude/plans/2026-09-20-filekit-toolpage-v2-plan.md
+//
+// สิ่งที่วัดมาได้ก่อนออกแบบ (จอ 1920x920 ไฟล์ชุดเดียวกัน เดินครบ 3 สถานะ):
+//   ของกดได้ในจอ  iLovePDF 11-19 · Smallpdf 20-27 · FileKit v127 29-57
+//   ปุ่มลงมือหลัก  iLovePDF 392x80 · Smallpdf 320x40 · FileKit 89x43
+//   หน้าเลื่อนไหม  สองเจ้าแรกไม่เลื่อน · ของเราเลื่อน 1184-1716px
+//   มือถืองานเริ่ม iLovePDF 60px · Smallpdf 112px · ของเรา 739-1053px
+//   ‼️ และ iLovePDF ใช้โครงเดียวกันเป๊ะทั้ง 8 เครื่องมือที่ยิง ส่วนเรามี 2 โครง คูณ 6 โหมดผัง
+//
+// หลัก 7 ข้อของ v2
+//   1 หนึ่งจอ หนึ่งเรื่อง  4 สถานะ แต่ละสถานะมีปุ่มพระเอกปุ่มเดียว
+//   2 โครงเดียวทั้ง 53 เครื่องมือ ไม่มีโหมดผังให้ผู้ใช้เลือก
+//   3 งานเริ่มใต้แถบหัวทันที
+//   4 สถานะทำงานคือโหมดแอป หน้าเว็บไม่เลื่อน เลื่อนเฉพาะในผืนงานกับในแผง
+//   5 ปุ่มหลักยักษ์ ตรึงท้ายแผงเสมอ กดไม่ได้เมื่อไรต้องบอกเหตุผลเป็นข้อความ
+//   6 คำอธิบายอยู่หน้าเปล่าใต้จอแรก หรือในแผงผลลัพธ์ ไม่อยู่ในสถานะทำงาน
+//   7 มีงบของที่กดได้ และมีเทสบังคับ (tests/browser_shell2.py)
+//
+// ‼️ ข้อตัดสินใจทางเทคนิคที่สำคัญที่สุดของไฟล์นี้: **ไม่ย้าย node ของเครื่องมือเลย**
+//   หน้าเปล่าเป็น "ชั้นลอยทับ" ที่มีปุ่มยักษ์ ซึ่งส่งต่อการกดไปยังปุ่มจริงในกล่องรับไฟล์
+//   กล่องรับไฟล์ตัวจริงอยู่ที่เดิมตลอดเวลา เครื่องมือจึงค้น .file-row ของตัวเองเจอเหมือนเดิม
+//   เหตุผล: 20/09/2026 เราเพิ่งเสียเวลาทั้งวันกับบั๊ก 4 ตัวที่รากเดียวกันคือ
+//   "ย้าย node แล้วของที่อ้างอิงตำแหน่งพังเงียบ ๆ" และตัวที่ร้ายที่สุดคือ
+//   กล่องรับไฟล์ถูกย้ายเข้าแถบหัว แล้วแถบหัวถูกซ่อนที่จอ 1820px จนเครื่องมือ 16 ตัว
+//   ไม่มีอะไรให้กดเลือกไฟล์เลย · ย้ายน้อยที่สุด = พังน้อยที่สุด
+// ─────────────────────────────────────────────────────────────────────────────
+import { el } from "./dom.js";
+import { toolIcon, uiIcon } from "./icons.js";
+import { tr } from "./i18n.js";
+import { GROUPS, TOOLS } from "./registry.js";
+import {
+  fileState, watchFiles, toolMeta, toolExample, toolFaq, nextSteps, railCopyMd, fmtBytes,
+} from "./ui.js";
+
+const GROUP_ACCENT = {
+  pdf: "--g-pdf", "from-pdf": "--g-pdf", "to-pdf": "--g-pdf",
+  image: "--g-img", doc: "--g-doc", ppt: "--g-ppt", data: "--g-data",
+  excel: "--g-data", thai: "--g-thai",
+  powerbi: "--g-powerbi", powerquery: "--g-powerbi", powerautomate: "--g-powerbi",
+};
+const accentOf = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
+
+/* ── เมนูรวมเครื่องมือในแถบหัว ───────────────────────────────────────────
+ * ถอดจาก iLovePDF: ชี้แล้วการ์ดขาวลอยลงมา **ไม่ดันเนื้อหา** 7 คอลัมน์ แถวละ 36px
+ * ของเขามี 33 เครื่องมือใน 7 คอลัมน์ ของเรามี 53 จึงแบ่งคอลัมน์ตามจำนวนจริง
+ * ‼️ อ่านจากทะเบียนเสมอ ห้ามฝังรายชื่อไว้ในนี้ (เทสที่ก็อปตรรกะไปเขียนซ้ำจะตกยุคทุกครั้ง)
+ * ‼️ หมวด pdf มี 16 ตัวซึ่งยาวเกินหนึ่งคอลัมน์บนจอ 768px จึงหั่นเป็นสองคอลัมน์
+ *   โดยแยกตรงที่ "จัดการ" จบและ "แปลงจาก" เริ่ม ซึ่งเป็นความต่างที่ผู้ใช้เข้าใจอยู่แล้ว
+ *   id หมวดยังเป็น pdf เหมือนเดิม นี่เป็นเรื่องการแสดงผลล้วน ๆ */
+const MENU_SPLIT = { pdf: [10, tr("จัดการ PDF", "Organize PDF"), tr("แปลงจาก PDF", "Convert from PDF")] };
+
+function menuColumns() {
+  const cols = [];
+  for (const g of GROUPS) {
+    const list = TOOLS.filter((t) => t.group === g.id);
+    if (!list.length) continue;
+    const sp = MENU_SPLIT[g.id];
+    if (sp && list.length > sp[0]) {
+      cols.push({ head: sp[1], accent: g.accent, tools: list.slice(0, sp[0]) });
+      cols.push({ head: sp[2], accent: g.accent, tools: list.slice(sp[0]) });
+    } else {
+      cols.push({ head: g.label, accent: g.accent, tools: list });
+    }
+  }
+  return cols;
+}
+
+/** เมนูรวมเครื่องมือ คืน { node, btn, close } */
+export function toolMenu(tool) {
+  const panel = el("nav", { class: "s2-menu", hidden: true,
+    "aria-label": tr("เครื่องมือทั้งหมด", "All tools") });
+  const btn = el("button", {
+    type: "button", class: "s2-menubtn", "aria-expanded": "false",
+    onclick: (e) => { e.stopPropagation(); toggle(); },
+  }, [el("span", {}, tr("เครื่องมือทั้งหมด", "All tools")), uiIcon("chev", "s2-chev")]);
+
+  let built = false;
+  function build() {
+    if (built) return;
+    built = true;
+    for (const c of menuColumns()) {
+      panel.appendChild(el("div", { class: "s2-col" }, [
+        el("h4", {}, c.head),
+        ...c.tools.map((t) => el("a", {
+          class: "s2-mi" + (t.id === tool.id ? " here" : ""),
+          href: "#/" + t.id, style: `--gc:var(${c.accent})`,
+          "aria-current": t.id === tool.id ? "page" : null,
+        }, [
+          el("span", { class: "s2-mi-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
+          el("span", { class: "s2-mi-tx" }, t.title),
+        ])),
+      ]));
+    }
+  }
+  function toggle(force) {
+    const open = force !== undefined ? force : panel.hidden;
+    if (open) build();
+    panel.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    if (open) {
+      /* ‼️ ลูกศรขึ้นลงเดินในคอลัมน์ ซ้ายขวาข้ามคอลัมน์ Esc ปิดแล้วคืนโฟกัสให้ปุ่ม
+         ยกตรรกะ roving tabindex มาจาก toolRibbon เดิมซึ่งผ่าน WCAG มาแล้ว */
+      const first = panel.querySelector(".s2-mi");
+      if (first) first.focus();
+    }
+  }
+  panel.addEventListener("keydown", (e) => {
+    const items = [...panel.querySelectorAll(".s2-mi")];
+    const i = items.indexOf(document.activeElement);
+    if (i < 0) return;
+    const col = document.activeElement.closest(".s2-col");
+    const inCol = [...col.querySelectorAll(".s2-mi")];
+    const ci = inCol.indexOf(document.activeElement);
+    const cols = [...panel.querySelectorAll(".s2-col")];
+    const colIdx = cols.indexOf(col);
+    let to = null;
+    if (e.key === "ArrowDown") to = inCol[Math.min(ci + 1, inCol.length - 1)];
+    else if (e.key === "ArrowUp") to = inCol[Math.max(ci - 1, 0)];
+    else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      const next = cols[colIdx + (e.key === "ArrowRight" ? 1 : -1)];
+      if (next) { const l = [...next.querySelectorAll(".s2-mi")]; to = l[Math.min(ci, l.length - 1)]; }
+    } else if (e.key === "Home") to = items[0];
+    else if (e.key === "End") to = items[items.length - 1];
+    if (!to) return;
+    e.preventDefault();
+    to.focus();
+  });
+  return { node: panel, btn, close: () => toggle(false), isOpen: () => !panel.hidden };
+}
+
+/* ── แถบหัวกลาง 60px ───────────────────────────────────────────────────
+ * แทนของเดิมสามอย่างรวด: แถบหมวด (50px), ริบบอนเครื่องมือ (พับ 50 กาง 145),
+ * และปุ่ม "เครื่องมือทั้งหมด" มุมขวาบน · ได้ความสูงคืนทุกหน้า 50 ถึง 145px
+ * ‼️ ช่องค้นหาไทยที่ยอมพิมพ์ผิดของเรายังอยู่ ซึ่งทั้ง iLovePDF และ Smallpdf ไม่มี
+ *   (ของเขาต้องเข้าเมนูหรือกลับหน้าแรกอย่างเดียว) */
+function toolHeader(tool, menu) {
+  /* ‼️ ปุ่มภาษากับปุ่มธีมต้องมาอยู่ในแถบนี้ด้วย
+     v2 ซ่อนแถบหัวของเว็บ (.top) เพราะสองแถบซ้อนกัน = 120px ซึ่งขัดหลักข้อ 3
+     แต่ถ้าซ่อนเฉย ๆ ผู้ใช้จะสลับธีมหรือภาษาบนหน้าเครื่องมือไม่ได้เลย = ถอยหลัง
+     จึง **ยืมปุ่มตัวจริง** มาวางในแถบใหม่ ไม่ได้สร้างปุ่มใหม่
+     เพราะ app.js ผูก event ไว้กับตัวปุ่มเอง (ไม่ได้อ้างตำแหน่งใน DOM)
+     การยืมจึงปลอดภัย และตอนกลับหน้าแรกเราคืนให้ที่เดิมเป๊ะ */
+  const borrowed = el("div", { class: "s2-hd-right" });
+  const lang = document.getElementById("lang");
+  const theme = document.getElementById("theme");
+  const home = { lang: lang && lang.parentNode, theme: theme && theme.parentNode,
+    langNext: lang && lang.nextSibling, themeNext: theme && theme.nextSibling };
+  if (lang) borrowed.appendChild(lang);
+  if (theme) borrowed.appendChild(theme);
+  /* คืนของกลับที่เดิมเมื่อเครื่องมือถูกถอดออกจากหน้า (กลับหน้าแรก หรือสลับเครื่องมือ)
+     ‼️ ต้องคืนให้ตำแหน่งเดิม ไม่ใช่ append ท้าย ไม่งั้นลำดับปุ่มในแถบหัวหน้าแรกจะสลับ */
+  const putBack = () => {
+    /* ‼️ nextSibling ที่จำไว้อาจไม่ใช่ลูกของพ่อแล้ว (เครื่องมือตัวก่อนหน้ายืมไปวางที่อื่น)
+       insertBefore กับ node ที่ไม่ใช่ลูก จะโยน error ทุกครั้ง ต้องถอยไป append แทน */
+    const back = (node, parent, next) => {
+      if (!node || !parent || node.parentNode === parent) return;
+      if (next && next.parentNode === parent) parent.insertBefore(node, next);
+      else parent.appendChild(node);
+    };
+    back(lang, home.lang, home.langNext);
+    back(theme, home.theme, home.themeNext);
+  };
+
+  const hd = el("header", { class: "s2-hd" }, [
+    el("a", { class: "s2-logo", href: "#", "aria-label": tr("กลับหน้าแรก", "Back to home") }, [
+      el("span", { class: "s2-logo-ico", "aria-hidden": "true" }, "F"),
+      el("b", {}, "FileKit"),
+    ]),
+    menu.btn,
+    el("button", {
+      class: "s2-search", type: "button",
+      onclick: () => { location.hash = ""; setTimeout(() => document.getElementById("q")?.focus(), 60); },
+    }, [uiIcon("search", "s2-search-ico"), el("span", {}, tr("ค้นหาเครื่องมือ", "Search tools"))]),
+    borrowed,
+    menu.node,
+  ]);
+  hd.__putBack = putBack;
+  return hd;
+}
+
+/* ── หน้าเปล่า ────────────────────────────────────────────────────────
+ * ‼️ เป็นชั้นลอยทับพื้นที่ทำงาน ไม่ใช่การย้ายกล่องรับไฟล์มาไว้ตรงนี้
+ *   ปุ่มยักษ์ส่งต่อการกดไปยังปุ่มจริงในกล่อง (ดูหมายเหตุหัวไฟล์ว่าทำไม)
+ *   การลากไฟล์ยังทำงานเหมือนเดิมทุกประการ เพราะตัวรับ drop ของกล่องผูกไว้ที่ document อยู่แล้ว */
+function landingBlock(tool, forward) {
+  const big = el("button", { class: "s2-cta-big", type: "button", onclick: () => forward("pick") },
+    tool.accepts && tool.accepts.length
+      ? tr(`เลือกไฟล์ ${labelOfAccepts(tool)}`, `Choose ${labelOfAccepts(tool, true)} files`)
+      : tr("เริ่มใช้งาน", "Get started"));
+
+  const sample = el("button", { class: "s2-link", type: "button", onclick: () => forward("sample") },
+    tr("ลองด้วยไฟล์ตัวอย่าง", "Try a sample file"));
+
+  return el("div", { class: "s2-land" }, [
+    el("div", { class: "s2-land-in" }, [
+      el("div", { class: "s2-land-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
+      el("h1", {}, tool.title),
+      el("p", { class: "s2-land-sub" }, tool.desc),
+      big,
+      el("p", { class: "s2-land-drop" }, tr("หรือลากไฟล์มาวางตรงไหนก็ได้ในหน้านี้",
+                                            "Or drop your files anywhere on this page")),
+      el("div", { class: "s2-land-row" }, [
+        sample,
+        el("span", { class: "s2-safe" }, [
+          uiIcon("lock", "s2-safe-ico"),
+          tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device, nothing is uploaded"),
+        ]),
+      ]),
+      /* ใต้จอแรก: ของที่เคยกองอยู่ในหน้าทำงานจนบังงานจริง ย้ายมาอยู่ตรงนี้ทั้งหมด */
+      el("div", { class: "s2-fold" }, [
+        toolMeta(tool), toolExample(tool), nextSteps(tool), toolFaq(tool), railCopyMd(tool),
+      ]),
+    ]),
+  ]);
+}
+
+const ACC_LABEL = { pdf: "PDF", image: tr("รูปภาพ", "image"), docx: "Word", pptx: "PowerPoint",
+  xlsx: "Excel", xls: "Excel", xlsm: "Excel", csv: "CSV", txt: tr("ข้อความ", "text") };
+function labelOfAccepts(tool) {
+  const seen = [];
+  for (const a of tool.accepts || []) {
+    const l = ACC_LABEL[a];
+    if (l && !seen.includes(l)) seen.push(l);
+  }
+  return seen.slice(0, 2).join(tr(" หรือ ", " or ")) || tr("ไฟล์", "file");
+}
+
+/* ── แผงผลลัพธ์ ───────────────────────────────────────────────────────
+ * ลูกผสม: โครงจาก iLovePDF (ปุ่มดาวน์โหลดเป็นพระเอก) แผงจาก Smallpdf
+ * (ชื่อไฟล์ ขนาด จำนวนหน้า แล้วตามด้วย "ทำอะไรต่อดี")
+ * ‼️ ของเราบอกขนาดไฟล์ผลลัพธ์ ซึ่ง iLovePDF ไม่บอก (วัดเองแล้ว 20/09) */
+function resultBlock(tool, files, onAgain, onBack) {
+  const one = files.length === 1 ? files[0] : null;
+  return el("div", { class: "s2-res" }, [
+    el("p", { class: "s2-done" }, [
+      el("span", { class: "s2-done-ico", "aria-hidden": "true" }, [uiIcon("check", "s2-done-svg")]),
+      tr("เสร็จแล้ว", "Done"),
+    ]),
+    one
+      ? el("div", {}, [
+          el("div", { class: "s2-res-name" }, one.name),
+          el("div", { class: "s2-res-meta" }, fmtBytes(one.size)),
+        ])
+      : el("div", { class: "s2-res-meta" },
+          tr(`ได้ ${files.length} ไฟล์`, `${files.length} files`)),
+    el("div", { class: "s2-res-row" }, [
+      el("button", { class: "s2-btn2", type: "button", onclick: onBack }, tr("กลับไปแก้", "Back to editing")),
+      el("button", { class: "s2-btn2", type: "button", onclick: onAgain }, tr("เริ่มใหม่", "Start over")),
+    ]),
+    nextSteps(tool),
+  ]);
+}
+
+/**
+ * โครงหน้าเครื่องมือ v2
+ * @param tool รายการจากทะเบียน
+ * @param cfg  โครงสร้างเดียวกับ workspace() เดิมทุกประการ
+ *             { left, center, right, toolbar, toolbarGroups, footer, note }
+ *             ไม่ส่ง cfg มาเลย = โหมด panel ของเก่า ทุกอย่างลงผืนงาน
+ * @returns { wrap, body, grid, canvas, side, setBusy, showCanvas }  (เข้ากันได้กับของเดิม)
+ */
+export function toolShell2(tool, cfg = {}) {
+  const menu = toolMenu(tool);
+  const panelMode = !cfg.center && !cfg.right && !cfg.left;
+
+  /* ผืนงาน */
+  const stage = el("div", { class: "s2-stage" });
+  const toolbar = cfg.toolbar && cfg.toolbar.length
+    ? el("div", { class: "s2-tbar" }, cfg.toolbar.filter(Boolean)) : null;
+  const doneBig = el("div", { class: "s2-done-big" }, [
+    el("div", { class: "ico", "aria-hidden": "true" }, [uiIcon("check")]),
+    el("b", {}, tr("เสร็จแล้ว", "Done")),
+    el("span", {}, tr("ไฟล์ผลลัพธ์อยู่ในแผงด้านขวา", "Your files are in the panel on the right")),
+  ]);
+  const emptyBox = el("div", { class: "s2-empty" }, [
+    el("div", { class: "s2-empty-ico", "aria-hidden": "true" }, [toolIcon(tool, "s2-empty-svg")]),
+    el("div", {}, (cfg.center && cfg.center.empty)
+      || tr("ยังไม่มีไฟล์ เลือกไฟล์ก่อนเพื่อดูตัวอย่าง", "No file yet. Choose a file first to see a preview")),
+  ]);
+  if (cfg.center) stage.append(emptyBox, cfg.center.node);
+  stage.appendChild(doneBig);
+  const canvas = el("section", { class: "s2-canvas" }, [toolbar, stage]);
+
+  /* แผงขวา */
+  const sideBody = el("div", { class: "s2-side-bd" });
+  if (cfg.left) {
+    if (cfg.left.title) sideBody.appendChild(el("div", { class: "s2-grp" }, cfg.left.title));
+    if (cfg.left.hint) sideBody.appendChild(el("p", { class: "s2-hint" }, cfg.left.hint));
+    sideBody.appendChild(cfg.left.node);
+  }
+  if (cfg.right) {
+    if (cfg.right.title && cfg.left) sideBody.appendChild(el("div", { class: "s2-grp" }, cfg.right.title));
+    if (cfg.right.aside) sideBody.appendChild(cfg.right.aside);
+    sideBody.appendChild(cfg.right.node);
+  }
+
+  const resultHost = el("div", { class: "s2-side-res", hidden: true });
+  const ctaWhy = el("p", { class: "s2-cta-why", hidden: true });
+  const ctaRow = el("div", { class: "s2-cta-row" });
+  const sheetBtn = el("button", { class: "s2-sheetbtn", type: "button", "aria-expanded": "false" },
+    tr("ตัวเลือก", "Options"));
+  const sideFoot = el("div", { class: "s2-side-ft" }, [ctaWhy, ctaRow]);
+
+  const restart = el("button", { class: "s2-link s2-restart", type: "button" }, tr("เริ่มใหม่", "Start over"));
+  const side = el("aside", { class: "s2-side" }, [
+    el("div", { class: "s2-sheet-hd" }, [
+      el("b", {}, tr("ตัวเลือก", "Options")),
+      el("button", { class: "s2-link", type: "button", onclick: () => setSheet(false) }, tr("ปิด", "Close")),
+    ]),
+    el("div", { class: "s2-side-hd" }, [
+      el("h2", {}, tool.title),
+      restart,
+    ]),
+    sideBody, resultHost, sideFoot,
+  ]);
+
+  const grid = el("div", { class: "s2-work" }, [canvas, side]);
+  if (panelMode) grid.classList.add("panel-mode");
+
+  /* ── ปุ่มหลัก ────────────────────────────────────────────────────────
+   * เอาปุ่มแรกจาก cfg.footer มาทำเป็นปุ่มยักษ์ ที่เหลือเป็นปุ่มรองใต้มัน
+   * ‼️ ไม่สร้างปุ่มใหม่ ใช้ปุ่มตัวเดิมที่เครื่องมือสร้าง เพราะเครื่องมือถือ reference ไว้
+   *   (เปิด/ปิด, เปลี่ยนข้อความ, ซ่อน) สร้างใหม่แล้วคำสั่งพวกนั้นจะไปตกที่ปุ่มผี */
+  const footItems = (cfg.footer || []).filter(Boolean);
+  const buttons = footItems.filter((n) => n && n.tagName === "BUTTON");
+  const statusNodes = footItems.filter((n) => n && n.tagName !== "BUTTON");
+  const mainBtn = buttons[0] || null;
+  if (mainBtn) mainBtn.classList.add("s2-cta");
+  const subBtns = buttons.slice(1);
+  for (const b of subBtns) b.classList.add("s2-sub");
+  if (statusNodes.length) sideFoot.insertBefore(el("div", { class: "s2-stat" }, statusNodes), ctaWhy);
+  ctaRow.append(sheetBtn, mainBtn || el("span"));
+  if (subBtns.length) sideFoot.appendChild(el("div", { class: "s2-subrow" }, subBtns));
+
+  const header = toolHeader(tool, menu);
+  const wrap = el("div", { class: "s2", "data-state": "landing",
+    style: `--ac:${accentOf(tool)}` }, [
+    header,
+    landingBlock(tool, forward),
+    grid,
+    cfg.note ? el("div", { class: "s2-note" }, cfg.note) : null,
+  ]);
+
+  /* ── ส่งต่อการกดจากปุ่มยักษ์ไปยังปุ่มจริงในกล่องรับไฟล์ ─────────────────
+   * หากล่องแบบอ่านอย่างเดียว ไม่แตะ ไม่ย้าย · เครื่องมือ panel ต่อกล่องหลัง mount
+   * จึงหาแบบ lazy ทุกครั้งที่กด แทนการจำ reference ไว้ตอนสร้าง */
+  function forward(what) {
+    const dz = wrap.querySelector(".dz-wrap");
+    if (!dz) return;
+    if (what === "pick") {
+      const btn = dz.querySelector(".dz-btn") || dz.querySelector(".dz");
+      if (btn) btn.click();
+      return;
+    }
+    const s = dz.querySelector(".dz-sample button, .dz-sample .btn");
+    if (s) s.click();
+  }
+
+  /* ── เครื่องสถานะ ────────────────────────────────────────────────────
+   * เกาะจุดประกาศกลางที่มีอยู่แล้วใน ui.js (setInputFiles จากกล่องรับไฟล์
+   * กับ announceResult จาก download/downloadButton) จึงไม่ต้องแก้เครื่องมือสักตัว */
+  let state = "landing";
+  let sheetOpen = false;
+  let manualBack = false;    // ผู้ใช้กด "กลับไปแก้" ทั้งที่ยังมีผลลัพธ์ค้างอยู่
+  let domResultShown = false;  // เคยย้ายแถวผลลัพธ์จากผืนงานมาแผงขวาแล้วหรือยัง
+
+  function setState(s) {
+    if (state === s) return;
+    state = s;
+    wrap.dataset.state = s;
+    resultHost.hidden = s !== "result";
+    sideBody.hidden = s === "result";
+    restart.hidden = s === "result";
+    if (s !== "work") setSheet(false);
+    /* ‼️ ย้ายโฟกัสเมื่อสถานะเปลี่ยน ไม่งั้นคนใช้คีย์บอร์ดจะค้างอยู่กับปุ่มที่หายไปแล้ว */
+    if (s === "result") {
+      const dl = resultHost.querySelector("button, a");
+      if (dl && document.activeElement && wrap.contains(document.activeElement)) dl.focus();
+    }
+  }
+  function setSheet(on) {
+    sheetOpen = !!on;
+    side.classList.toggle("open", sheetOpen);
+    sheetBtn.setAttribute("aria-expanded", String(sheetOpen));
+  }
+  sheetBtn.addEventListener("click", () => setSheet(!sheetOpen));
+
+  /* ‼️ เครื่องมือที่ให้ผลลัพธ์หลายไฟล์ (แยกไฟล์, PDF เป็นรูป, แยก Excel) ไม่ได้เรียก download()
+     ตอนทำงานเสร็จ แต่วาดแถวผลลัพธ์ .result ลงผืนงานให้ผู้ใช้กดดาวน์โหลดทีละใบ
+     จึงไม่มีสัญญาณกลางให้เกาะ · ตรวจจากของที่โผล่บนจอจริงแทน ซึ่งเป็นความจริง ไม่ใช่การเดา
+     ‼️ ย้ายทั้งกองมาแผงขวา ปลอดภัยเพราะไม่มีเครื่องมือไหนค้นหาแถวผลลัพธ์จากตำแหน่งของมัน
+        (ต่างจากกล่องรับไฟล์ที่เครื่องมือค้น .file-row จากพ่อของมันเอง) */
+  function domResults() {
+    return [...wrap.querySelectorAll(".s2-stage .result")];
+  }
+
+  function syncState() {
+    /* ‼️ เครื่องมือที่ไม่ได้ทำงานกับไฟล์ (กราฟ Deneb, ชุดสร้างสูตร Power Query, ตาราง HTML)
+       ต้องไม่มีหน้าเปล่า เพราะไม่มีอะไรให้เลือก เข้าสถานะทำงานพร้อมข้อมูลตัวอย่างทันที
+       เช็คจาก DOM จริง ไม่ใช่จาก tool.accepts เพราะบางตัวรับไฟล์ผ่าน sheetpick
+       ซึ่งต่อกล่องเข้ามาทีหลัง จึงต้องดูว่า "ตอนนี้มีกล่องรับไฟล์อยู่จริงไหม" */
+    if (!wrap.querySelector(".dz-wrap")) { setState("work"); return; }
+    const { input, result } = fileState();
+    const domRes = domResults();
+    /* ‼️ ต้องจำว่าเคยย้ายผลลัพธ์มาแล้ว เพราะพอย้ายเสร็จ ผืนงานก็ไม่มี .result อีกต่อไป
+       ถ้าตรวจจากผืนงานอย่างเดียว สถานะจะเด้งกลับไป work ทันทีในรอบถัดไป
+       (เจอกับตาตอนต่อ pdf-to-images: ผลลัพธ์ย้ายมาถูกที่แล้ว แต่หน้ายังเป็นสถานะทำงาน) */
+    if (domRes.length) domResultShown = true;
+    if ((domRes.length || domResultShown) && !manualBack) {
+      if (!domRes.length) { setState("result"); return; }
+      const host = el("div", { class: "s2-res" }, [
+        el("p", { class: "s2-done" }, [
+          el("span", { class: "s2-done-ico", "aria-hidden": "true" }, [uiIcon("check", "s2-done-svg")]),
+          domRes.length === 1 ? tr("เสร็จแล้ว", "Done")
+                              : tr(`ได้ ${domRes.length} ไฟล์`, `${domRes.length} files`),
+        ]),
+        el("div", { class: "s2-res-list" }, domRes),
+        el("div", { class: "s2-res-row" }, [
+          el("button", { class: "s2-btn2", type: "button",
+            onclick: () => { manualBack = true; setState("work"); } }, tr("กลับไปแก้", "Back to editing")),
+          el("button", { class: "s2-btn2", type: "button", onclick: hardReset }, tr("เริ่มใหม่", "Start over")),
+        ]),
+        nextSteps(tool),
+      ]);
+      resultHost.replaceChildren(host);
+      setState("result");
+      return;
+    }
+    if (result && result.length && !manualBack) {
+      resultHost.replaceChildren(resultBlock(tool, result,
+        () => { manualBack = true; hardReset(); },
+        () => { manualBack = true; setState(input && input.length ? "work" : "landing"); }));
+      setState("result");
+      return;
+    }
+    setState(input && input.length ? "work" : "landing");
+  }
+  function hardReset() {
+    /* กดปุ่มลบของกล่องรับไฟล์ทุกใบ = กลับไปสถานะเริ่มต้นโดยไม่ต้องรีเฟรชหน้า */
+    for (const x of wrap.querySelectorAll(".dz-wrap .file-x, .dz-wrap .files .x")) x.click();
+    manualBack = false; domResultShown = false;
+    resultHost.replaceChildren();
+    setTimeout(syncState, 0);
+  }
+  restart.addEventListener("click", hardReset);
+
+  /* ไฟล์ในกล่องเปลี่ยน = ผู้ใช้เริ่มรอบใหม่ ยกเลิกธง "กลับไปแก้" ให้เอง */
+  let lastInputCount = 0;
+  const stopWatch = watchFiles(() => {
+    const n = (fileState().input || []).length;
+    if (n !== lastInputCount) { lastInputCount = n; manualBack = false; domResultShown = false; resultHost.replaceChildren(); }
+    syncState();
+  }, () => mountedOnce && !wrap.isConnected);
+  /* ‼️ ตัวเฝ้าต้องไม่ "ตาย" ก่อนถูกวางลงหน้า ตอนสร้างเสร็จใหม่ ๆ wrap ยังไม่ connected
+     ถ้าเช็ค isConnected ตรง ๆ ตัวเฝ้าจะถูกลบทิ้งตั้งแต่รอบแรก แล้วสถานะจะไม่เปลี่ยนเลย */
+  let mountedOnce = false;
+  requestAnimationFrame(() => { mountedOnce = true; });
+  wrap.addEventListener("fk:dispose", stopWatch);
+
+  /* ── ยกปุ่มลงมือทำของเครื่องมือแบบ panel ขึ้นมาเป็นปุ่มหลัก ───────────────
+   * เครื่องมือ 28 ตัวที่ยังใช้โครงเดิมวางปุ่มไว้ใน .actions กลางผืนงาน
+   * ‼️ ไม่ย้ายปุ่มจริง เพราะเครื่องมือถือ reference ไว้ (เปิด/ปิด เปลี่ยนข้อความ ซ่อน)
+   *   แต่สร้าง "ปุ่มเงา" ในแผงขวาที่ส่งต่อการกด แล้วสะท้อนสภาพของปุ่มจริงตลอดเวลา
+   *   วิธีนี้ทำให้ทั้ง 28 ตัวได้ปุ่มยักษ์ทันทีโดยไม่ต้องแก้สักไฟล์ และถอยกลับได้ทันทีเช่นกัน
+   * ‼️ ต้องเฝ้าดูด้วย เพราะหลายเครื่องมือสร้าง .actions หลังโหลดไฟล์เสร็จ ไม่ใช่ตอน mount */
+  const ghosts = new Map();
+  function liftActions() {
+    if (!panelMode) return;
+    const acts = [...wrap.querySelectorAll(".s2-stage .actions")];
+    const reals = acts.flatMap((a) => [...a.querySelectorAll("button")]).filter((b) => !ghosts.has(b));
+    for (const real of reals) {
+      const first = ghosts.size === 0;
+      const ghost = el("button", {
+        type: "button", class: "btn " + (first ? "s2-cta" : "s2-sub"),
+        onclick: () => real.click(),
+      }, real.textContent);
+      const sync = () => {
+        ghost.textContent = real.textContent;
+        ghost.disabled = real.disabled;
+        ghost.hidden = real.hidden;
+        const al = real.getAttribute("aria-label");
+        if (al) ghost.setAttribute("aria-label", al);
+      };
+      new MutationObserver(sync).observe(real, { attributes: true, childList: true, subtree: true, characterData: true });
+      sync();
+      ghosts.set(real, ghost);
+      if (first) ctaRow.appendChild(ghost);
+      else {
+        let sub = sideFoot.querySelector(".s2-subrow");
+        if (!sub) { sub = el("div", { class: "s2-subrow" }); sideFoot.appendChild(sub); }
+        sub.appendChild(ghost);
+      }
+    }
+    /* แถบสถานะของเครื่องมือ (ความคืบหน้า/ข้อความ) ก็ควรอยู่ติดปุ่ม ไม่ใช่กลางผืนงาน
+       แต่ตัวนี้ย้ายได้ปลอดภัย เพราะไม่มีเครื่องมือไหนค้นหามันจากตำแหน่ง */
+    const st = wrap.querySelector(".s2-stage > .status-wrap");
+    if (st && !sideFoot.contains(st)) sideFoot.insertBefore(el("div", { class: "s2-stat" }, [st]), ctaWhy);
+  }
+  if (panelMode) {
+    requestAnimationFrame(liftActions);
+    new MutationObserver(liftActions).observe(stage, { childList: true, subtree: true });
+  }
+
+  requestAnimationFrame(syncState);
+  let resScan = false;
+  new MutationObserver(() => {
+    if (resScan) return;
+    resScan = true;
+    requestAnimationFrame(() => { resScan = false; syncState(); });
+  }).observe(stage, { childList: true, subtree: true });
+
+  /* ‼️ คืนปุ่มภาษากับธีมให้แถบหัวเว็บทันทีที่เครื่องมือถูกถอดออกจากหน้า
+     ไม่งั้นกลับหน้าแรกแล้วปุ่มหายไปกับเครื่องมือที่ถูกเก็บเข้าแคช
+     (app.js เก็บ DOM ของเครื่องมือไว้ใช้ซ้ำ ไม่ได้ทิ้ง จึงต้องคืนตอน "ถูกถอด" ไม่ใช่ตอน "ถูกทำลาย")
+     ใช้ตัวเฝ้าตัวเดียวทั้งหน้า ผูกกับ #tool ซึ่งเป็นที่ที่เครื่องมือถูกสลับเข้าออก */
+  const host = document.getElementById("tool");
+  if (host && header.__putBack) {
+    new MutationObserver(() => { if (!wrap.isConnected) header.__putBack(); })
+      .observe(host, { childList: true });
+    window.addEventListener("hashchange", () => {
+      // กลับหน้าแรก (hash ว่าง) = เครื่องมือกำลังจะถูกถอด คืนปุ่มก่อนหน้าถูกวาดใหม่
+      if (!location.hash.replace(/^#\/?/, "")) header.__putBack();
+    });
+  }
+
+  /* Esc ปิดเมนูกับแผ่นล่าง แล้วคืนโฟกัส */
+  wrap.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (menu.isOpen()) { menu.close(); menu.btn.focus(); e.stopPropagation(); return; }
+    if (sheetOpen) { setSheet(false); sheetBtn.focus(); e.stopPropagation(); }
+  });
+  document.addEventListener("click", (e) => {
+    if (!wrap.isConnected) return;
+    if (menu.isOpen() && !e.target.closest(".s2-menu") && !e.target.closest(".s2-menubtn")) menu.close();
+  });
+
+  return {
+    wrap,
+    body: panelMode ? stage : (cfg.center ? cfg.center.node : stage),
+    grid, canvas, side, stage,
+    setState, forward,
+    setBusy: (on) => grid.classList.toggle("busy", !!on),
+    showCanvas: (on) => {
+      emptyBox.hidden = !!on;
+      if (cfg.center) cfg.center.node.hidden = !on;
+      grid.classList.toggle("has-file", !!on);
+    },
+  };
+}

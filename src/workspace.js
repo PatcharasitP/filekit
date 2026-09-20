@@ -6,8 +6,12 @@
 //   แถบล่าง   = สถานะ + ปุ่มลงมือ
 // บนจอแคบทั้งสามแผงจะเรียงลงมาเป็นชั้น ๆ แทน (ไม่ซ่อนอะไรทิ้ง)
 // ─────────────────────────────────────────────────────────────────────────────
-import { el } from "./dom.js";
+import { el, useV2 } from "./dom.js";
 import { toolShell } from "./ui.js";
+
+let SHELL2 = null;
+/** app.js ฝากตัวสร้างโครง v2 ไว้ตอนโหลด (เลี่ยง import วนกันระหว่าง workspace.js กับ shell2.js) */
+export function setShell2(fn) { SHELL2 = fn; }
 import { toolIcon, uiIcon } from "./icons.js";
 import { configSearch, CFGSEARCH_CSS } from "./cfgsearch.js";
 import { tr } from "./i18n.js";
@@ -215,6 +219,10 @@ function attachSearch(panel) {
  * คืน { wrap, body, setBusy, showCanvas }
  */
 export function workspace(tool, cfg = {}) {
+  /* ‼️ ตัวสลับโครง v1 กับ v2 — เครื่องมือ 25 ตัวที่ใช้ workspace() ไม่ต้องแก้สักไฟล์
+     เพราะ cfg บอกอยู่แล้วว่าอะไรคือแผงซ้าย ผืนงาน แผงขวา แถบเครื่องมือ และปุ่มล่าง
+     v2 แค่เอา cfg ตัวเดียวกันไปจัดช่องใหม่ตามผังของ iLovePDF */
+  if (useV2() && SHELL2) return SHELL2(tool, cfg);
   const { wrap, body } = toolShell(tool);
   body.classList.add("ws-body");
   body.id = "ws-top";        // จุดหมายของลิงก์ "พื้นที่ทำงาน" ในรางซ้าย

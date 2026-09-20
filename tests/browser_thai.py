@@ -8,7 +8,9 @@ def _tool_count():
     out = subprocess.run(["node", "--input-type=module", "-e",
         'import {TOOLS} from "./src/registry.js"; console.log(TOOLS.length)'],
         cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
-    return int(out)
+    # ‼️ node ใส่รหัสสี ANSI มาด้วยในบางสภาพแวดล้อม ต้องถอดก่อนแปลงเป็นตัวเลข
+    #    ไม่งั้นเทสระเบิดตั้งแต่บรรทัดแรกโดยไม่เกี่ยวกับเว็บเลย (เจอ 20/09/2026)
+    return int(re.sub(r"\x1b\[[0-9;]*m", "", out).strip())
 
 N_TOOLS = _tool_count()
 

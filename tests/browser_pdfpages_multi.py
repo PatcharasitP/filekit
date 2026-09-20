@@ -184,6 +184,13 @@ def main():
               return (src ? src.textContent.trim() + ' ' : '') + n.getAttribute('alt');
             })"""
             before_alt = pg.eval_on_selector_all(".pg img", JS_ALT)
+            # ‼️ ต้องเลื่อนการ์ดเข้ามาในจอก่อนวัดพิกัด (แก้ 20/09/2026)
+            #    ขั้นก่อนหน้า (เรียงทีละไฟล์ / สลับไฟล์ทีละหน้า) ทำให้หน้าเลื่อนไปเอง
+            #    พิกัดที่วัดไว้จึงเป็นของตำแหน่งเก่า พอมีอะไรมาเพิ่มความสูงของหน้า
+            #    (ส่วน "ตรวจเองได้" รอบหนึ่ง ริบบอนเครื่องมืออีกรอบหนึ่ง) ค่าก็เพี้ยนทันที
+            #    คนใช้จริงย่อมเลื่อนให้เห็นการ์ดก่อนลากอยู่แล้ว เทสจึงควรทำเหมือนกัน
+            cards[0].scroll_into_view_if_needed()
+            pg.wait_for_timeout(300)
             c0, c3 = cards[0].bounding_box(), cards[3].bounding_box()
             pg.mouse.move(c0["x"] + c0["width"] / 2, c0["y"] + c0["height"] / 2)
             pg.mouse.down()

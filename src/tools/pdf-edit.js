@@ -205,10 +205,25 @@ export function mount(tool) {
     drawOverlay();
   }
 
+  /* ‼️ ทางเลือกที่ไม่ต้องลากเลย (WCAG 2.5.7) วางกลางหน้าก่อนแล้วค่อยกดลูกศรขยับ
+     เดิมวางกล่องปิดทับได้ทางเดียวคือลากคลุมพื้นที่ คนที่ลากไม่ได้จึงใช้เครื่องมือนี้ไม่ได้เลย */
+  const placeMidBtn = button(tr("วางกลางหน้า", "Place in the middle"), { icon: "plus", ghost: true,
+    onclick: () => {
+      if (!pdf) return st.err(tr("เลือกไฟล์ก่อน", "Choose a file first"));
+      if (mode === "text") placeText({ x: 0.4, y: 0.45 });
+      else {
+        edits.push({ page: cur, kind: "cover", x: 0.35, y: 0.45, w: 0.3, h: 0.06, color: coverColor.value });
+        drawOverlay(); renderThumbs(); syncButtons();
+      }
+      const boxes = layer.querySelectorAll(".pe-box");
+      if (boxes.length) boxes[boxes.length - 1].focus();
+      st.ok(tr("วางแล้ว กดปุ่มลูกศรเพื่อขยับ กด Alt ค้างพร้อมลูกศรเพื่อปรับขนาด",
+               "Placed. Arrow keys move it, hold Alt with the arrows to resize"));
+    } });
   const undoBtn = button(tr("ย้อนล่าสุด", "Undo last"), { icon: "undo", ghost: true, onclick: undoLast });
   const clearBtn = button(tr("ล้างหน้านี้", "Clear page"), { icon: "trash", ghost: true, onclick: clearPage });
   const saveBtn = button(tr("บันทึก", "Save"), { onclick: save });
-  [undoBtn, clearBtn].forEach((b) => { b.disabled = true; });
+  [placeMidBtn, undoBtn, clearBtn].forEach((b) => { b.disabled = true; });
   saveBtn.disabled = true;
 
   const leftNode = el("div", { class: "pe-left" }, [
@@ -240,7 +255,7 @@ export function mount(tool) {
     left: { title: tr("ไฟล์ PDF", "PDF file"), node: leftNode },
     center: { node: scroller, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อเริ่มแก้ไข", "No file yet. Choose a PDF to start") },
     right: { title: tr("ตัวเลือก", "Options"), node: rightNode },
-    toolbar: [zoomOutBtn, zoomLabel, zoomInBtn, fitBtn, el("div", { class: "sep" }), undoBtn, clearBtn],
+    toolbar: [zoomOutBtn, zoomLabel, zoomInBtn, fitBtn, el("div", { class: "sep" }), placeMidBtn, undoBtn, clearBtn],
     footer: [st.node, saveBtn],
   });
   ws.wrap.prepend(el("style", {}, STYLE));
@@ -353,6 +368,8 @@ export function mount(tool) {
     edits.filter((e) => e.page === cur).forEach((e) => {
       const box = el("div", {
         class: `pe-box ${e.kind}`,
+        /* ‼️ ต้องโฟกัสได้ ไม่งั้นคนใช้คีย์บอร์ดแก้ของที่วางไปแล้วไม่ได้เลย (WCAG 2.5.7) */
+        tabindex: "0", role: "group",
         style: {
           left: `${e.x * 100}%`, top: `${e.y * 100}%`,
           width: e.kind === "cover" ? `${e.w * 100}%` : "auto",
@@ -371,6 +388,38 @@ export function mount(tool) {
           onclick: (ev) => { ev.stopPropagation(); edits = edits.filter((x) => x !== e); drawOverlay(); syncButtons(); renderThumbs(); },
         }, "✕"),
       ]);
+      const what = e.kind === "cover" ? tr("กล่องปิดทับ", "Cover box") : tr("ข้อความ", "Text");
+      const say = () => box.setAttribute("aria-label", tr(
+        `${what} ตำแหน่ง ${Math.round(e.x * 100)}% จากซ้าย ${Math.round(e.y * 100)}% จากบน กดลูกศรเพื่อขยับ กด Delete เพื่อเอาออก`,
+        `${what} at ${Math.round(e.x * 100)}% from left, ${Math.round(e.y * 100)}% from top. Arrow keys move it, Delete removes it`));
+      say();
+      /* ‼️ ขยับทีละก้าวด้วยลูกศร แม่นกว่าการลากเพราะไม่มีทางพลาด
+         ก้าวเล็ก 0.4% ของหน้า ก้าวใหญ่กด Shift = 5 เท่า
+         กล่องปิดทับยังปรับขนาดด้วย Alt+ลูกศร ได้ด้วย เพราะลากมุมอย่างเดียวก็ตกเกณฑ์เหมือนกัน */
+      box.addEventListener("keydown", (ev) => {
+        const step = ev.shiftKey ? 0.02 : 0.004;
+        const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0],
+                    ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
+        if (d) {
+          ev.preventDefault();
+          if (ev.altKey && e.kind === "cover") {
+            e.w = Math.min(1, Math.max(0.01, e.w + d[0]));
+            e.h = Math.min(1, Math.max(0.01, e.h + d[1]));
+          } else {
+            e.x = Math.min(1, Math.max(0, e.x + d[0]));
+            e.y = Math.min(1, Math.max(0, e.y + d[1]));
+          }
+          drawOverlay();
+          const again = [...layer.querySelectorAll(".pe-box")][edits.filter((z) => z.page === cur).indexOf(e)];
+          if (again) again.focus();
+          return;
+        }
+        if (ev.key === "Delete" || ev.key === "Backspace") {
+          ev.preventDefault();
+          edits = edits.filter((x) => x !== e);
+          drawOverlay(); syncButtons(); renderThumbs();
+        }
+      });
       bindMove(box, e);
       layer.appendChild(box);
     });
@@ -427,6 +476,7 @@ export function mount(tool) {
 
   function syncButtons() {
     const n = edits.length;
+    placeMidBtn.disabled = !pdf;
     undoBtn.disabled = !n;
     clearBtn.disabled = !edits.some((e) => e.page === cur);
     st.info(n ? tr(`แก้ไว้ ${n} จุด`, `${n} edit${n > 1 ? "s" : ""} pending`) : "");

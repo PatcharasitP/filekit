@@ -86,6 +86,118 @@ export function downloadButton(blob, filename, opts = {}) {
   });
 }
 
+/* ── ริบบอนเครื่องมือ (20/09/2026) ────────────────────────────────────────
+ * ‼️ พี่ปอนด์ชี้ริบบอนของ Power BI แล้วบอกว่าอยากได้แบบนั้น ฟ้าวัดก่อนแล้วพบว่า
+ *   ถ้าเอามาทำ "ริบบอนของการตั้งค่า" จะไม่คุ้ม เพราะค่ากลางของเราคือ 3 ช่องต่อเครื่องมือ
+ *   มีแค่ 5 ตัวที่เกิน 20 ช่อง และไม่มีสักตัวที่เกิน 40 ขณะที่ Power BI มีคำสั่งหลายร้อย
+ *   แต่ถ้าทำเป็น **ริบบอนของเครื่องมือ** จะตรงกับปัญหาที่พี่ปอนด์บ่นไว้ตั้งแต่ต้นพอดี
+ *   คือ "เครื่องมือเยอะมาก อยากใช้หลายฟังก์ชันในที่เดียว ไม่ต้องกลับหน้าแรกทุกที"
+ *
+ * ‼️ พับได้เป็นเงื่อนไขบังคับ ไม่ใช่ของแถม
+ *   วัดจริงวันนี้: หน้ากระดาษในเครื่องมือ PDF ถูกจำกัดด้วย "ความสูงจอ" ไม่ใช่ความกว้าง
+ *   ของที่กินความสูงจึงแพงกว่าของที่กินความกว้างเสมอ ริบบอนจึงยุบเหลือแถบแท็บอย่างเดียว
+ *   และจำสถานะที่ผู้ใช้เลือกไว้ (Power BI ก็ทำแบบเดียวกัน ปุ่ม ^ มุมขวาของริบบอน)
+ *
+ * ‼️ แท็บต้องเดินด้วยลูกศรได้ตามแบบ tablist ของ WCAG
+ *   บทเรียนวันนี้: pdf-sign ลากได้อย่างเดียวจนตก WCAG 2.5.7 มาตลอดโดยไม่มีใครรู้
+ *   ของใหม่จึงต้องทำให้ถูกตั้งแต่แรก ไม่ใช่รอให้มีคนมาจับได้
+ */
+const RIBBON_KEY = "filekit-ribbon-open";
+/** สีประจำตระกูลของเครื่องมือ ใช้ร่วมกันทั้งริบบอนและการ์ด "ทำอะไรต่อดี"
+ *  ‼️ เคยเป็นตัวแปรในฟังก์ชันเดียว พอริบบอนมาเรียกจึงพังตอนกางครั้งแรก
+ *     และไม่พังตอนทดสอบเพราะค่าเริ่มต้นคือพับไว้ โค้ดท่อนนั้นเลยไม่เคยถูกรัน */
+const accent = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
+
+export function toolRibbon(tool) {
+  const tabs = el("div", { class: "rb-tabs", role: "tablist",
+    "aria-label": tr("หมวดเครื่องมือ", "Tool categories") });
+  const bodyRow = el("div", { class: "rb-cmds" });
+  const panel = el("div", { class: "rb-body", role: "tabpanel", hidden: true }, [bodyRow]);
+  const bar = el("div", { class: "ribbon" }, [tabs, panel]);
+
+  let open = false;
+  try { open = localStorage.getItem(RIBBON_KEY) === "1"; } catch { /* โหมดส่วนตัว */ }
+  let activeGroup = tool.group;
+
+  const groups = GROUPS.filter((g) => TOOLS.some((t) => t.group === g.id));
+  const tabBtns = groups.map((g) => el("button", {
+    type: "button", class: "rb-tab", role: "tab", "data-g": g.id,
+    onclick: () => pick(g.id, true),
+  }, g.label));
+
+  const toggle = el("button", {
+    type: "button", class: "rb-toggle",
+    onclick: () => { open = !open; save(); paint(); },
+  }, [uiIcon("chev", "ico-svg")]);
+  tabs.append(...tabBtns, toggle);
+
+  /* ‼️ ลูกศรซ้ายขวาเดินระหว่างแท็บ และมีแค่แท็บที่เลือกอยู่ที่รับ Tab ได้ (roving tabindex)
+     ไม่งั้นคนใช้คีย์บอร์ดต้องกด Tab ผ่านแท็บทั้ง 9 ตัวก่อนถึงจะไปถึงเนื้อหา */
+  tabs.addEventListener("keydown", (e) => {
+    const i = tabBtns.indexOf(document.activeElement);
+    if (i < 0) return;
+    const to = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: tabBtns.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const n = (to + tabBtns.length) % tabBtns.length;
+    pick(groups[n].id, false);
+    tabBtns[n].focus();
+  });
+
+  function save() { try { localStorage.setItem(RIBBON_KEY, open ? "1" : "0"); } catch { /* ไม่เป็นไร */ } }
+
+  function pick(gid, fromClick) {
+    // กดแท็บเดิมซ้ำตอนกางอยู่ = พับ (พฤติกรรมเดียวกับริบบอนของ Office)
+    if (fromClick && open && gid === activeGroup) { open = false; save(); return paint(); }
+    activeGroup = gid;
+    if (fromClick) { open = true; save(); }
+    paint();
+  }
+
+  function paint() {
+    /* ‼️ ตอนพับก็ต้องบอกว่าตอนนี้อยู่หมวดไหน (แก้ 20/09/2026)
+       เดิมทำเครื่องหมายเฉพาะตอนกาง แถบเลยดูเป็นป้าย 9 อันที่ไม่บอกอะไรและไม่ชวนกด
+       งานวิจัยของเราเองระบุว่า "หาไม่เจอ" เป็นสาเหตุ 45% ของงานที่ทำไม่สำเร็จ
+       แถบที่พับอยู่จึงต้องยังทำหน้าที่บอกตำแหน่งให้ได้ ไม่ใช่เงียบสนิท */
+    tabBtns.forEach((b, i) => {
+      const on = groups[i].id === activeGroup;
+      b.setAttribute("aria-selected", String(on && open));
+      b.tabIndex = on ? 0 : -1;
+      b.classList.toggle("on", on && open);
+      b.classList.toggle("at", on && !open);
+    });
+    panel.hidden = !open;
+    bar.classList.toggle("open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? tr("พับริบบอน", "Collapse the ribbon")
+                                           : tr("กางริบบอน", "Expand the ribbon"));
+    if (!open) return;
+
+    const carried = carryFiles();
+    const types = new Set((carried || []).map(detectType));
+    bodyRow.innerHTML = "";
+    for (const t of TOOLS.filter((x) => x.group === activeGroup)) {
+      const takes = carried && carried.filter((f) => t.accepts && t.accepts.includes(detectType(f)));
+      const carry = takes && takes.length ? takes : null;
+      const here = t.id === tool.id;
+      bodyRow.appendChild(el("a", {
+        class: "rb-cmd" + (here ? " here" : ""), href: "#/" + t.id,
+        style: `--ac:${accent(t)}`,
+        "aria-current": here ? "page" : null,
+        "aria-label": carry ? tr(`${t.title} พาไฟล์ไปด้วย`, `${t.title}, brings your file`) : null,
+        onclick: () => { if (carry) stashFiles(carry); },
+      }, [
+        el("span", { class: "rb-ico", "aria-hidden": "true" }, [toolIcon(t) || t.icon]),
+        el("span", { class: "rb-name" }, t.title),
+        carry ? el("span", { class: "rb-carry", "aria-hidden": "true" }, "•") : null,
+      ]));
+    }
+  }
+
+  paint();
+  return bar;
+}
+
 /** โครงหน้าเครื่องมือ: หัวเรื่อง + กล่องเนื้อหา */
 const GROUP_ACCENT = {
   pdf: "--g-pdf", "from-pdf": "--g-pdf", "to-pdf": "--g-pdf",
@@ -98,6 +210,7 @@ export function toolShell(tool) {
      พี่ปอนด์ดูแล้วบอก "รกมาก" จึงถอดออก (ต้นแบบ datatraining เป็นคอลัมน์เดียว) FAQ กลับมาอยู่ท้ายหน้า
      คงไว้เฉพาะสไตล์ FAQ แถวเส้นบาง · วิธีทำคอลัมน์ลอยด้วย display:contents ยังอยู่ใน PROVEN.md/เล่ม 9 W69 */
   const wrap = el("div", { style: `--ac:var(${GROUP_ACCENT[tool.group] || "--brand"})` }, [
+    toolRibbon(tool),
     el("div", { class: "tool-head" }, [
       el("div", { class: "tool-ico", "aria-hidden": "true" }, [toolIcon(tool) || tool.icon]),
       el("div", {}, [el("h1", {}, tool.title), el("p", {}, tool.desc), toolMeta(tool), toolExample(tool)]),
@@ -360,7 +473,6 @@ export function toolMeta(tool) {
 const NEXT_VISIBLE = 6;
 export function nextSteps(tool) {
   ensureResultLifecycle();
-  const accent = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
   const row = el("div", { class: "next-row" });
   const more = el("button", { class: "next-more", type: "button", hidden: true,
     onclick: () => { row.classList.add("all"); more.hidden = true; } });

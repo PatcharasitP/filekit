@@ -1,4 +1,4 @@
-import { el, statusBar, button, dropzone, downloadButton, stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+import { el, statusBar, button, dropzone, downloadButton, stripExt, fmtBytes, yieldToBrowser, segmented} from "../ui.js";
 import { uiIcon } from "../icons.js";
 import { workspace } from "../workspace.js";
 import { openPdf, passwordBox, loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
@@ -91,15 +91,60 @@ export function mount(tool) {
   ]);
 
   // ── ตรงกลาง: หน้ากระดาษ PDF ──────────────────────────────────────────────
+  const RENDER_SCALE = 1.5;   // เรนเดอร์ละเอียดกว่าที่แสดง เพื่อให้คมตอนขยาย
   const pageCanvas = el("canvas", { class: "sign-page" });
   const layer = el("div", { class: "sign-layer" });
   const stage = el("div", { class: "sign-stage" }, [pageCanvas, layer]);
   const centerNode = el("div", { class: "sign-wrap" }, [stage]);
 
+  /* ── ขนาดหน้ากระดาษ ใช้กฎเดียวกับ Mozilla pdf.js ────────────────────────
+   * ‼️ วิจัย 20/09/2026: ในบรรดาตัวอ่าน PDF ที่ยืนยันหลักฐานได้ (pdf.js, Smallpdf,
+   *   iLovePDF, PDF24, Sejda) **ไม่มีเจ้าไหน default เป็น "เห็นทั้งหน้า" เลยสักเจ้า**
+   *   ทุกเจ้าใช้ "เต็มความกว้าง" เพราะหน้า A4 เป็นแนวตั้งแต่จอเป็นแนวนอน
+   *   ถ้าตั้งเป็นเห็นทั้งหน้า ความสูงจอจะเป็นตัวจำกัดขนาด แล้วเหลือที่ว่างสองข้างที่ใช้ไม่ได้
+   *   (ของเราวัดได้ก่อนแก้: จอกว้าง 1440 กับ 1920 ได้หน้าเท่ากันเป๊ะ 481x680)
+   *
+   * ‼️ สูตรของ pdf.js (ฟ้าเปิดซอร์ส web/pdf_viewer.js อ่านเองบรรทัดต่อบรรทัด)
+   *     หน้าแนวตั้ง = เต็มความกว้าง · หน้าแนวนอน = เอาด้านที่เล็กกว่า · เพดาน 125% ทั้งคู่
+   *   เพดาน 125% (MAX_AUTO_SCALE) มีไว้กันหน้าเล็ก ๆ ถูกขยายจนเส้นแตก
+   * ‼️ ต้องคำนวณใหม่ทุกครั้งที่จอเปลี่ยนขนาด แบบที่ pdf.js กับ Smallpdf ทำ
+   *   ไม่ใช่คำนวณครั้งเดียวตอนโหลดแล้วค้าง (iLovePDF/PDF24/Sejda ทำแบบค้าง ซึ่งด้อยกว่า) */
+  const FIT_KEY = "filekit-sign-fit";
+  const MAX_AUTO_SCALE = 1.25;
+  let fitMode = (() => { try { return localStorage.getItem(FIT_KEY) || "width"; } catch { return "width"; } })();
+
+  function applyFit() {
+    if (!pageCanvas.width) return;
+    // ขนาดจริงของหน้าที่ scale 1 (เรนเดอร์ไว้ที่ 1.5 เท่าเพื่อความคม)
+    const natW = pageCanvas.width / RENDER_SCALE, natH = pageCanvas.height / RENDER_SCALE;
+    stage.classList.toggle("fit-width", fitMode === "width");
+    if (fitMode !== "width") { pageCanvas.style.maxWidth = ""; return; }
+    // เพดาน 125% ของขนาดจริง ตามค่า MAX_AUTO_SCALE ของ pdf.js
+    pageCanvas.style.maxWidth = Math.round(natW * MAX_AUTO_SCALE) + "px";
+    // หน้าแนวนอนไม่ควรล้นความสูงจนต้องเลื่อนหาหัวกระดาษ จึงคุมด้วยความสูงด้วย
+    stage.style.maxHeight = natH > natW ? "" : "78vh";
+  }
+
+  const fitSw = segmented([["width", tr("เต็มความกว้าง", "Fit width")],
+                           ["page", tr("เห็นทั้งหน้า", "Fit page")]], fitMode);
+  fitSw.onchange = () => {
+    fitMode = fitSw.value;
+    try { localStorage.setItem(FIT_KEY, fitMode); } catch { /* โหมดส่วนตัว */ }
+    applyFit();
+  };
+  window.addEventListener("resize", applyFit);
+
   // ── แถบเครื่องมือลอยเหนือผืนงาน ───────────────────────────────────────────
   const prevBtn = button(tr("หน้าก่อน", "Previous page"), { ghost: true, onclick: () => gotoPage(current - 1) });
   const nextBtn = button(tr("หน้าถัดไป →", "Next page →"), { ghost: true, onclick: () => gotoPage(current + 1) });
   const pageLabel = el("span", { class: "sign-pageno" });
+  /* ‼️ ปุ่มนี้คือทางเลือกที่ไม่ต้องใช้เมาส์เลย (เพิ่ม 20/09/2026)
+     WCAG 2.5.7 Dragging Movements บังคับว่าทุกอย่างที่ลากได้ ต้องมีวิธีอื่นที่ไม่ต้องลาก
+     เดิมเครื่องมือนี้วางลายเซ็นได้ทางเดียวคือคลิกบนหน้ากระดาษ แล้วย้ายได้ทางเดียวคือลาก
+     = คนที่ใช้คีย์บอร์ดอย่างเดียวหรือมีข้อจำกัดการเคลื่อนไหว เซ็นเอกสารไม่ได้เลยแม้แต่นิดเดียว
+     วางกลางหน้าก่อนแล้วค่อยกดลูกศรขยับ เป็นทางที่ทำได้ครบโดยไม่ต้องแตะเมาส์ */
+  const placeMidBtn = button(tr("วางกลางหน้า", "Place in the middle"), { ghost: true, icon: "plus",
+    onclick: () => placeAt(0.5, 0.45, true) });
   const delSelBtn = button(tr("ลบที่เลือก", "Remove selected"), { ghost: true, danger: true, icon: "trash", onclick: deleteSelected });
   const clearPageBtn = button(tr("ล้างหน้า", "Clear page"), { ghost: true, danger: true, onclick: clearPage });
 
@@ -110,7 +155,7 @@ export function mount(tool) {
     left: { title: tr("เอกสาร PDF", "PDF document"), node: leftNode, hint: tr("เลือกไฟล์แล้วคลิกเลขหน้า", "Choose a file, click a page") },
     center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ เลือกทางซ้ายเพื่อเซ็น", "No file yet. Choose one on the left") },
     right: { title: tr("ลายเซ็นของคุณ", "Your signature"), node: rightNode },
-    toolbar: [prevBtn, pageLabel, nextBtn, el("span", { class: "sep" }), delSelBtn, clearPageBtn],
+    toolbar: [prevBtn, pageLabel, nextBtn, el("span", { class: "sep" }), fitSw, placeMidBtn, delSelBtn, clearPageBtn],
     footer: [go, st.node],
   });
   const { wrap, body, setBusy, showCanvas } = ws;
@@ -194,7 +239,7 @@ export function mount(tool) {
     current = n;
     const page = await pdf.getPage(n);
     // เรนเดอร์ที่ 1.5 เท่าให้คมพอ แต่ไม่กินหน่วยความจำเกินจำเป็น
-    const viewport = page.getViewport({ scale: 1.5 });
+    const viewport = page.getViewport({ scale: RENDER_SCALE });
     pageCanvas.width = Math.floor(viewport.width);
     pageCanvas.height = Math.floor(viewport.height);
     const ctx = pageCanvas.getContext("2d");
@@ -202,19 +247,31 @@ export function mount(tool) {
     await page.render({ canvasContext: ctx, viewport }).promise;
     page.cleanup();
     selected = -1;
+    applyFit();
     refresh();
   }
 
   // ── วางลายเซ็นบนหน้า ─────────────────────────────────────────────────────
-  stage.addEventListener("click", (e) => {
-    if (e.target.closest(".sign-item")) return;      // คลิกบนลายเซ็นเดิม = เลือก ไม่วางใหม่
+  /** วางลายเซ็นลงตำแหน่งสัดส่วน 0-1 · ใช้ร่วมกันทั้งทางคลิกและทางคีย์บอร์ด
+   *  @param focusIt ให้โฟกัสไปที่ลายเซ็นที่เพิ่งวาง เพื่อให้กดลูกศรขยับต่อได้ทันที */
+  function placeAt(rx, ry, focusIt) {
+    if (!pdf) return st.err(tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF first"));
     if (!signature) return st.err(tr("เลือกหรือวาดลายเซ็นก่อน", "Choose or draw a signature first"));
-    const r = stage.getBoundingClientRect();
-    const rx = (e.clientX - r.left) / r.width;
-    const ry = (e.clientY - r.top) / r.height;
     placed.push({ page: current, rx, ry, rw: 0.22, dataUrl: signature });
     selected = placed.length - 1;
     refresh();
+    if (focusIt) {
+      const last = layer.querySelector(".sign-item.selected");
+      if (last) last.focus();
+      st.ok(tr("วางแล้ว กดปุ่มลูกศรเพื่อขยับ กด Shift ค้างเพื่อขยับทีละมาก",
+               "Placed. Use the arrow keys to move it, hold Shift to move faster"));
+    }
+  }
+
+  stage.addEventListener("click", (e) => {
+    if (e.target.closest(".sign-item")) return;      // คลิกบนลายเซ็นเดิม = เลือก ไม่วางใหม่
+    const r = stage.getBoundingClientRect();
+    placeAt((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height, false);
   });
 
   function drawPlaced() {
@@ -223,9 +280,37 @@ export function mount(tool) {
       if (p.page !== current) return;
       const item = el("div", {
         class: "sign-item" + (idx === selected ? " selected" : ""),
+        /* ‼️ ต้องโฟกัสได้ ไม่งั้นคนใช้คีย์บอร์ดเข้าถึงลายเซ็นที่วางไว้ไม่ได้เลย */
+        tabindex: "0", role: "button",
         style: { left: p.rx * 100 + "%", top: p.ry * 100 + "%", width: p.rw * 100 + "%",
           boxShadow: idx === selected ? "0 0 0 3px var(--brand)" : "none", borderRadius: "3px" },
-      }, [el("img", { src: p.dataUrl, alt: tr("ลายเซ็น", "Signature"), draggable: "false" })]);
+      }, [el("img", { src: p.dataUrl, alt: "", draggable: "false" })]);
+      const say = () => item.setAttribute("aria-label",
+        tr(`ลายเซ็นบนหน้า ${p.page} ตำแหน่ง ${Math.round(p.rx * 100)}% จากซ้าย ${Math.round(p.ry * 100)}% จากบน กดลูกศรเพื่อขยับ กด Delete เพื่อลบ`,
+           `Signature on page ${p.page}, ${Math.round(p.rx * 100)}% from left, ${Math.round(p.ry * 100)}% from top. Arrow keys move it, Delete removes it`));
+      say();
+      item.addEventListener("focus", () => { if (selected !== idx) { selected = idx; refresh();
+        const again = layer.querySelectorAll(".sign-item")[Math.min(idx, layer.children.length - 1)];
+        if (again) again.focus(); } });
+      /* ‼️ ขยับทีละก้าวด้วยลูกศร แม่นกว่าการลากเสมอ เพราะไม่มีทางพลาด
+         ก้าวเล็ก 0.4% ของหน้า (ราว 2 px บนหน้า 481px) ก้าวใหญ่กด Shift = 5 เท่า */
+      item.addEventListener("keydown", (ev) => {
+        const step = (ev.shiftKey ? 0.02 : 0.004);
+        const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0],
+                       ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
+        if (move) {
+          ev.preventDefault();
+          p.rx = Math.min(1, Math.max(0, p.rx + move[0]));
+          p.ry = Math.min(1, Math.max(0, p.ry + move[1]));
+          item.style.left = p.rx * 100 + "%";
+          item.style.top = p.ry * 100 + "%";
+          say();
+          return;
+        }
+        if (ev.key === "Delete" || ev.key === "Backspace") {
+          ev.preventDefault(); selected = idx; deleteSelected();
+        }
+      });
       // คลิกเฉย ๆ (ไม่ลาก) = เลือก · ลาก = ย้ายตำแหน่ง
       item.addEventListener("pointerdown", (e) => {
         e.preventDefault();

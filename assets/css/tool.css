@@ -1371,3 +1371,66 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 }
 .ia-bar .ia-how{flex:none;color:var(--text-dim);font-weight:600}
 @media (max-width:640px){ .ia-bar{margin-inline:12px;font-size:12.5px} }
+
+/* ── พื้นที่จับลายเซ็นใหญ่กว่าภาพ (20/09/2026) ────────────────────────────
+   ‼️ ลายเซ็นจริงเป็นเส้นบาง ๆ สูงไม่กี่สิบพิกเซล การจับให้โดนจึงยากกว่าที่คิด
+      Apple HIG กำหนด 44pt , Material 48dp , WCAG 2.5.8 ขั้นต่ำ 24 CSS px
+      แก้ที่ "พื้นที่จับ" ไม่ใช่ที่ "ขนาดภาพ" ภาพจึงไม่เปลี่ยนเลยแม้แต่พิกเซลเดียว
+   ‼️ ต้องใช้ ::before ที่รับ pointer event ได้ (ต่างจาก ::after ที่เป็นกรอบประ
+      ซึ่งตั้ง pointer-events:none ไว้) และเพราะเป็นลูกของ .sign-item
+      เหตุการณ์จึงไหลขึ้นไปหาตัวมันเอง ตัวลากเดิมทำงานต่อได้โดยไม่ต้องแก้อะไร */
+.sign-item::before{content:"";position:absolute;inset:-11px;border-radius:9px}
+/* ‼️ ต้องเห็นขอบโฟกัสชัดเมื่อเดินด้วยคีย์บอร์ด ไม่งั้นกด Tab แล้วไม่รู้ว่าอยู่ตรงไหน */
+.sign-item:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+.sign-item:focus{outline:none}
+.sign-item:focus-visible::after{opacity:.9}
+
+/* โหมดเต็มความกว้างของหน้า PDF (20/09/2026) — ดูเหตุผลเต็มในคอมเมนต์ของ pdf-sign.js
+   ‼️ ต้องปลด max-height ด้วย ไม่งั้นเพดาน 68vh จะยังบีบไว้เหมือนเดิม ตั้ง width ไปก็ไม่มีผล */
+.sign-stage.fit-width{max-width:100%}
+.sign-stage.fit-width .sign-page{width:100%;height:auto;max-height:none}
+
+/* ── ริบบอนเครื่องมือ (20/09/2026) ────────────────────────────────────────
+   ถอดโครงจากริบบอนของ Power BI ตามที่พี่ปอนด์ชี้ แถบแท็บอยู่บน คำสั่งอยู่ล่าง
+   ‼️ ค่าเริ่มต้นคือพับ เพราะวัดแล้วว่าความสูงคือของหายากในหน้าเครื่องมือเอกสาร
+      พับแล้วเหลือแค่แถบแท็บ ซึ่งยังบอกอยู่ว่ามีอะไรให้กดบ้าง ไม่ใช่ซ่อนจนหาไม่เจอ */
+.ribbon{margin:0 0 var(--sp3);border:1px solid var(--line-soft);border-radius:var(--r-md,12px);
+  background:var(--bg-soft);overflow:hidden}
+.rb-tabs{display:flex;align-items:center;gap:2px;padding:4px 6px;overflow-x:auto;scrollbar-width:none}
+.rb-tabs::-webkit-scrollbar{display:none}
+.rb-tab{flex:none;padding:7px 12px;border:0;border-radius:8px;background:transparent;cursor:pointer;
+  font:600 13px/1.5 var(--font);color:var(--text-dim);white-space:nowrap;
+  /* ‼️ ต้องไม่ต่ำกว่าเกณฑ์นิ้วแตะ เทส browser_layout จับที่ 36px ส่วน Apple แนะนำ 44
+     ริบบอนอยู่ทุกหน้าเครื่องมือ ถ้าเตี้ยไปจะกลายเป็นจุดพลาด 560 จุดทั้งเว็บทีเดียว */
+  min-height:40px}
+.rb-tab:hover{background:color-mix(in srgb,var(--text) 7%,transparent);color:var(--text)}
+.rb-tab.on{background:var(--card);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rb-tab:focus-visible,.rb-toggle:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
+.rb-toggle{margin-inline-start:auto;flex:none;width:40px;height:40px;border:0;border-radius:8px;
+  background:transparent;cursor:pointer;color:var(--text-mute);display:grid;place-items:center}
+.rb-toggle:hover{background:color-mix(in srgb,var(--text) 7%,transparent);color:var(--text)}
+.rb-toggle svg{width:16px;height:16px;transition:transform .18s}
+.ribbon.open .rb-toggle svg{transform:rotate(180deg)}
+.rb-body{border-top:1px solid var(--line-soft);padding:8px 6px}
+.rb-cmds{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin}
+/* ‼️ คำสั่งเป็นไอคอนบนตัวหนังสือล่าง แบบเดียวกับริบบอน Office
+   กว้างคงที่ 84px เพื่อให้แถวไม่ขยับตอนฟอนต์สลับ (บทเรียน CLS เมื่อวาน) */
+.rb-cmd{position:relative;flex:none;width:84px;padding:7px 4px;border-radius:9px;text-decoration:none;
+  display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--text-dim);
+  text-align:center;min-height:68px}
+.rb-cmd:hover{background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--text)}
+.rb-cmd:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
+.rb-cmd.here{background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--text);font-weight:700}
+.rb-ico{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;
+  background:color-mix(in srgb,var(--ac) 14%,var(--card));color:var(--ac);flex:none}
+.rb-ico svg{width:17px;height:17px}
+.rb-name{font-size:11px;line-height:1.35;font-weight:inherit;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* จุดเล็ก ๆ บอกว่ากดแล้วไฟล์ที่ถืออยู่จะตามไปด้วย ผูกกับมุมไอคอนจริง ไม่ลอย */
+.rb-carry{position:absolute;top:8px;inset-inline-end:22px;width:7px;height:7px;border-radius:50%;
+  background:var(--ac);box-shadow:0 0 0 2px var(--bg-soft);font-size:0}
+@media (max-width:640px){ .rb-cmd{width:76px} .rb-tab{font-size:12.5px;padding:7px 10px} }
+/* หมวดที่อยู่ตอนนี้ ตอนริบบอนพับ — จางกว่าตอนกาง แต่ยังบอกตำแหน่งได้ */
+.rb-tab.at{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
+.rb-tab.at::after{content:"";display:block;height:2px;margin:5px 2px -5px;border-radius:2px;
+  background:color-mix(in srgb,var(--brand) 70%,var(--text))}

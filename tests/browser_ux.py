@@ -1,3 +1,4 @@
+import re
 import sys, pathlib
 from playwright.sync_api import sync_playwright
 
@@ -8,7 +9,8 @@ def _tool_count():
     out = subprocess.run(["node", "--input-type=module", "-e",
         'import {TOOLS} from "./src/registry.js"; console.log(TOOLS.length)'],
         cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
-    return int(out)
+    # ‼️ node ใส่รหัสสี ANSI มาด้วยในบางสภาพแวดล้อม ต้องถอดก่อนแปลงเป็นตัวเลข
+    return int(re.sub(r"\x1b\[[0-9;]*m", "", out).strip())
 
 # จำนวนหมวดก็อ่านจากทะเบียนเช่นกัน — เดิมฮาร์ดโค้ดไว้ 9 พอเพิ่มหมวด Power Query
 # กับ Power Automate เทสก็แดงเองทั้งที่หน้าเว็บถูกต้อง (เจอจริง 11/09/2026)
@@ -21,7 +23,8 @@ def _group_count():
         'import {GROUPS} from "./src/registry.js";'
         ' console.log(new Set(GROUPS.map(g => g.chip || g.id)).size)'],
         cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
-    return int(out)
+    # ‼️ node ใส่รหัสสี ANSI มาด้วยในบางสภาพแวดล้อม ต้องถอดก่อนแปลงเป็นตัวเลข
+    return int(re.sub(r"\x1b\[[0-9;]*m", "", out).strip())
 
 N_TOOLS = _tool_count()
 N_GROUPS = _group_count()
@@ -42,7 +45,8 @@ def _group_count(gid):
     out = subprocess.run(["node", "--input-type=module", "-e",
         f'import {{TOOLS}} from "./src/registry.js"; console.log(TOOLS.filter(t=>t.group==="{gid}").length)'],
         cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
-    return int(out)
+    # ‼️ node ใส่รหัสสี ANSI มาด้วยในบางสภาพแวดล้อม ต้องถอดก่อนแปลงเป็นตัวเลข
+    return int(re.sub(r"\x1b\[[0-9;]*m", "", out).strip())
 
 BASE = __import__("os").environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
 P, F = 0, []

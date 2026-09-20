@@ -9,7 +9,8 @@
    ทุกคำในรายการนั้นต้องเป็น "ผลลัพธ์ที่ผู้ใช้ต้องการให้เป็นภาษาไทย" ไม่ใช่ "คำที่เราขี้เกียจแปล"
    ถ้าเจอไทยที่ไม่อยู่ในรายการ = ตก และเทสจะพิมพ์ออกมาให้เห็นว่าคำไหน อยู่หน้าไหน
 """
-import os, re, sys
+import os
+import re, re, sys
 from playwright.sync_api import sync_playwright
 
 # จำนวนเครื่องมืออ่านจากทะเบียนจริง ไม่ฮาร์ดโค้ด — เพิ่มเครื่องมือแล้วเทสไม่แดงเอง
@@ -19,7 +20,9 @@ def _tool_count():
     out = subprocess.run(["node", "--input-type=module", "-e",
         'import {TOOLS} from "./src/registry.js"; console.log(TOOLS.length)'],
         cwd=str(root), capture_output=True, text=True, check=True).stdout.strip()
-    return int(out)
+    # ‼️ node ใส่รหัสสี ANSI มาด้วยในบางสภาพแวดล้อม ('\x1b[33m53\x1b[39m')
+    #    ต้องถอดออกก่อนแปลงเป็นตัวเลข ไม่งั้นเทสระเบิดตั้งแต่บรรทัดแรกโดยไม่เกี่ยวกับเว็บเลย
+    return int(re.sub(r"\x1b\[[0-9;]*m", "", out).strip())
 
 N_TOOLS = _tool_count()
 

@@ -137,7 +137,11 @@ def thai_leftovers(texts, extra_allow=()):
 def english_leak(texts, extra_allow=()):
     """ย้อนกลับ: โหมดไทย มีประโยคอังกฤษทั้งท่อนหลุดมาไหม (>=3 คำอังกฤษติดกัน)
     allow เฉพาะวลีสั้น ๆ ที่รู้จักกันว่าใช้ปนในไทยได้ตามธรรมชาติ (ชื่อแบรนด์/มาตรฐานไฟล์)"""
-    allow_en = {"FileKit", "UTF-8", "TIS-620", "Windows-874", "GitHub"} | set(extra_allow)
+    # ‼️ ชื่อผลิตภัณฑ์ไมโครซอฟท์ไม่มีชื่อไทยทางการ จึงเป็นอังกฤษในโหมดไทยได้ตามกติกาข้างบน
+    #    เพิ่ม 20/09/2026 ตอนริบบอนเครื่องมือเอาชื่อหมวดไปโผล่ทุกหน้าเครื่องมือ
+    #    ("Power Automate Cloud" เป็นวลี 3 คำ จึงไปชนกฎ >=3 คำอังกฤษติดกัน)
+    allow_en = {"FileKit", "UTF-8", "TIS-620", "Windows-874", "GitHub",
+                "Power Automate", "Power Query", "Power BI"} | set(extra_allow)
     bad = []
     for t in texts:
         for m in EN_RUN.finditer(t):

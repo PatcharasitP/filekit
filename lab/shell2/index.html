@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>FileKit หน้าเครื่องมือ v2 ต้นแบบ</title>
+<!--
+  ต้นแบบเฟส 0 ของแผน .claude/plans/2026-09-20-filekit-toolpage-v2-plan.md
+  ‼️ อยู่ใน repo เพื่อให้เปิดบนมือถือจริงได้ แต่ติด noindex ไว้ และไม่มีลิงก์จากหน้าไหนชี้มา
+  ลบทิ้งได้ทันทีที่ v2 ของจริงขึ้น
+  ‼️ นี่คือของจำลองให้กดดู ไม่ได้ต่อกับเครื่องมือจริง ไม่ขึ้นเว็บ
+  จุดประสงค์เดียว: ให้พี่ปอนด์เห็นของจริงแล้วเคาะว่า "ใช่ทางนี้" ก่อนลงโค้ดจริง
+  ใช้ token สี ฟอนต์ และระยะห่างชุดเดียวกับ FileKit ของจริงทุกตัว
+-->
+<style>
+@font-face{font-family:"FK Sarabun";src:url("../../vendor/fonts/Sarabun-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"FK Sarabun";src:url("../../vendor/fonts/Sarabun-SemiBold.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"FK Sarabun";src:url("../../vendor/fonts/Sarabun-Bold.woff2") format("woff2");font-weight:700;font-display:swap}
+
+:root{
+  --bg:#f6f5f3; --bg-soft:#efeeea; --card:#fff; --card-hi:#faf9f7;
+  --line:#e2e0da; --line-soft:#ebe9e4;
+  --text:#14161c; --text-dim:#585d68; --text-mute:#626771;
+  --stage:#1b2029; --stage-2:#12161d;
+  --brand:#6c8cff; --brand-text:#3a57c8; --focus:#2f50b5;
+  --g-pdf:#e8613c; --g-img:#3ab7d8; --g-doc:#6c8cff; --g-ppt:#c77dff;
+  --g-data:#3ec98a; --g-thai:#ff6b81; --g-powerbi:#e0a72e;
+  --ok:#0f8a52; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:24px;
+  --r:14px; --r-sm:10px; --r-lg:20px;
+  --lh:1.75; --lh-tight:1.4;
+  --font:"FK Sarabun","Sarabun","IBM Plex Sans Thai",-apple-system,"Segoe UI",sans-serif;
+  /* โทเคนของ v2 ตามตารางในแผนข้อ 7 */
+  --hd-h:60px; --side-w:clamp(340px,24vw,440px); --cta-h:72px;
+  --cta-bg:#B4451F; --cta-fg:#fff;          /* สี A สนิม วัดแล้ว ขาวบนปุ่ม 5.51:1 */
+  --ac:var(--g-pdf);
+  /* ความลึกจากสีพื้นสามขั้น ไม่ใช่เงา (รสนิยม openkrua) */
+  --surf-1:#fff;      /* แผง แถบหัว */
+  --surf-2:#f6f5f3;   /* พื้นหน้า */
+  --surf-3:#eceae5;   /* ผืนงาน เข้มสุด */
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --bg-soft:#171a20; --card:#1c2027; --card-hi:#232830;
+  --line:#39404e; --line-soft:#2b313d;
+  --text:#f0f1f3; --text-dim:#a8adb8; --text-mute:#949ba7;
+  --brand-text:#8aa3ff; --focus:#8aa3ff; --ok:#3ddc97;
+  --surf-1:#1c2027; --surf-2:#151920; --surf-3:#0e1116;
+}
+:root[data-cta="dark"]{ --cta-bg:#14161c; --cta-fg:#fff; }
+:root[data-theme="dark"][data-cta="dark"]{ --cta-bg:#f0f1f3; --cta-fg:#101216; }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#8b8880;font-family:var(--font);color:var(--text);font-size:15px;line-height:var(--lh);
+  -webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+[hidden]{display:none !important}
+
+/* ── แถบควบคุมของห้องทดลอง (ไม่ใช่ส่วนหนึ่งของดีไซน์) ─────────────── */
+.lab{position:sticky;top:0;z-index:99;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;
+  padding:10px 16px;background:#22252b;color:#e9eaee;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.lab b{font-weight:700;color:#fff;margin-inline-end:4px}
+.lab .grp{display:flex;gap:4px;align-items:center}
+.lab .grp > span{color:#9aa0ab;margin-inline-end:4px}
+.lab button{border:1px solid #444a55;background:#2c3038;color:#dfe2e8;border-radius:999px;
+  padding:5px 12px;font-size:12.5px;line-height:1.4}
+.lab button[aria-pressed="true"]{background:#e9eaee;color:#14161c;border-color:#e9eaee;font-weight:700}
+.lab .note{color:#9aa0ab;font-size:12px;margin-inline-start:auto}
+
+/* ── กรอบจำลองหน้าจอ ─────────────────────────────────────────── */
+.stage{padding:18px;display:flex;justify-content:center}
+.frame{width:100%;max-width:1600px;background:var(--bg);border-radius:12px;overflow:hidden;
+  box-shadow:0 10px 40px rgba(0,0,0,.35);color:var(--text)}
+body[data-view="mobile"] .frame{max-width:390px}
+
+/* ── แถบหัวกลาง 60px ─────────────────────────────────────────── */
+.hd{height:var(--hd-h);display:flex;align-items:center;gap:var(--sp4);padding-inline:var(--sp4);
+  background:var(--surf-1);border-bottom:1px solid var(--line-soft);position:relative;z-index:20}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px;white-space:nowrap}
+.logo i{width:26px;height:26px;border-radius:8px;background:var(--g-pdf);display:grid;place-items:center;
+  color:#fff;font-style:normal;font-size:14px;font-weight:700}
+.hd-tools{display:flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--bg-soft);
+  border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap}
+.hd-tools svg{width:12px;height:12px}
+.hd-search{flex:1 1 auto;min-width:0;max-width:420px;display:flex;align-items:center;gap:8px;
+  border:1px solid var(--line);border-radius:999px;padding:6px 14px;background:var(--bg-soft);color:var(--text-mute);font-size:13.5px}
+.hd-right{margin-inline-start:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-mute)}
+.hd-right button{border:1px solid var(--line);background:transparent;color:var(--text-mute);
+  border-radius:999px;padding:5px 10px;font-size:12.5px}
+.hd-right button[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:700}
+
+/* เมนูรวมเครื่องมือ การ์ดขาวลอย ไม่ดันเนื้อหา */
+.menu{position:absolute;inset-block-start:calc(var(--hd-h) - 4px);inset-inline-start:var(--sp4);
+  inset-inline-end:var(--sp4);background:var(--surf-1);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 18px 50px rgba(0,0,0,.18);padding:18px 20px;z-index:30;
+  display:grid;grid-template-columns:repeat(7,1fr);gap:4px 14px}
+:root[data-theme="dark"] .menu{box-shadow:0 18px 50px rgba(0,0,0,.6)}
+.menu h4{grid-column:auto;margin:0 0 4px;font-size:12px;font-weight:600;color:var(--text-mute);
+  letter-spacing:.02em;line-height:1.4}
+.menu .col{display:flex;flex-direction:column}
+.menu a{display:flex;align-items:center;gap:8px;height:36px;padding-inline:6px;border-radius:7px;
+  text-decoration:none;color:var(--text);font-size:13px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu a:hover{background:var(--bg-soft)}
+.menu a.here{color:var(--ac);font-weight:700;background:color-mix(in srgb,var(--ac) 10%,transparent)}
+.menu a i{flex:none;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--gc,var(--g-pdf)) 16%,transparent);color:var(--gc,var(--g-pdf));
+  font-style:normal;font-size:11px;font-weight:700}
+.menu a b{font-weight:400;overflow:hidden;text-overflow:ellipsis}
+
+/* ── สถานะ A หน้าเปล่า ──────────────────────────────────────── */
+.landing{min-height:calc(100dvh - var(--hd-h) - 120px);display:grid;place-items:start center;
+  padding:clamp(28px,6vh,64px) var(--sp4) 40px;text-align:center;background:var(--surf-2)}
+.landing .in{max-width:620px;width:100%}
+.l-ico{width:56px;height:56px;border-radius:16px;background:var(--ac);color:#fff;display:grid;
+  place-items:center;margin:0 auto 18px}
+.l-ico svg{width:30px;height:30px}
+.landing h1{margin:0 0 6px;font-size:clamp(28px,3.4vw,40px);font-weight:700;line-height:1.3;
+  letter-spacing:-.01em}
+.landing p.sub{margin:0 0 26px;font-size:17px;color:var(--text-dim);line-height:1.55}
+.cta-big{height:72px;min-width:330px;padding-inline:44px;border:0;border-radius:12px;
+  background:var(--cta-bg);color:var(--cta-fg);font-size:22px;font-weight:600;line-height:1.3;
+  box-shadow:0 3px 8px rgba(0,0,0,.16);transition:transform 120ms,box-shadow 120ms}
+.cta-big:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.2)}
+.landing .drop{margin:14px 0 0;font-size:14px;color:var(--text-mute)}
+.landing .row2{margin-top:18px;display:flex;gap:18px;justify-content:center;align-items:center;flex-wrap:wrap;
+  font-size:13.5px;color:var(--text-mute)}
+.landing .row2 button{background:none;border:0;color:var(--brand-text);font-size:13.5px;
+  text-decoration:underline;text-underline-offset:3px;padding:0}
+.landing .safe{display:inline-flex;align-items:center;gap:6px}
+.landing .safe svg{width:14px;height:14px}
+.fold{max-width:900px;margin:44px auto 0;text-align:start;border-top:1px solid var(--line);padding-top:26px}
+.fold h2{font-size:15px;font-weight:700;margin:0 0 12px}
+.fold .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px}
+.fold .step{background:var(--surf-1);border:1px solid var(--line-soft);border-radius:var(--r);padding:14px 16px}
+.fold .step b{display:block;font-size:12px;color:var(--text-mute);font-weight:600}
+.fold .step span{font-size:14px;line-height:1.5;display:block;margin-top:2px}
+.fold .faq{border-top:1px solid var(--line-soft)}
+.fold .faq div{border-bottom:1px solid var(--line-soft);padding:12px 2px;font-size:14px;
+  display:flex;justify-content:space-between;align-items:center;color:var(--text-dim)}
+.fold .faq div::after{content:"›";color:var(--text-mute);font-size:18px}
+
+/* ── สถานะ B ทำงาน กริดผืนงาน + แผงขวา ───────────────────────── */
+.work{display:grid;grid-template-columns:1fr var(--side-w);height:calc(100dvh - var(--hd-h));
+  min-height:560px;max-height:860px}
+.canvas{background:var(--surf-3);display:flex;flex-direction:column;min-width:0;position:relative}
+.tbar{height:48px;flex:none;display:flex;align-items:center;gap:4px;padding-inline:12px;
+  background:var(--surf-2);border-bottom:1px solid var(--line-soft);overflow:hidden}
+.tbar button{height:32px;border:1px solid transparent;background:transparent;color:var(--text);
+  border-radius:8px;padding-inline:10px;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tbar button:hover{background:var(--surf-1);border-color:var(--line-soft)}
+.tbar .sep{width:1px;height:20px;background:var(--line);margin-inline:6px;flex:none}
+.tbar .sp{margin-inline-start:auto}
+.scroll{flex:1 1 auto;overflow:auto;padding:22px;min-height:0}
+.pages{display:flex;flex-wrap:wrap;gap:24px}
+.pg{width:200px;position:relative}
+.pg .paper{height:250px;background:#fff;border-radius:8px;border:1px solid var(--line);
+  box-shadow:0 1px 3px rgba(0,0,0,.08);padding:14px 12px;overflow:hidden}
+:root[data-theme="dark"] .pg .paper{border-color:#2b313d}
+.pg .paper .t{height:7px;background:#c9ccd2;border-radius:2px;margin-bottom:9px;width:62%}
+.pg .paper .l{height:4px;background:#e2e4e8;border-radius:2px;margin-bottom:6px}
+.pg .tag{position:absolute;inset-block-start:8px;inset-inline-start:8px;width:22px;height:22px;
+  border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff}
+.pg .cap{margin-top:7px;font-size:12.5px;color:var(--text-mute);text-align:center}
+.pg.sel .paper{outline:2px solid var(--ac);outline-offset:2px}
+.addcard{width:200px;height:250px;border:2px dashed var(--line);border-radius:8px;display:grid;
+  place-items:center;color:var(--text-mute);font-size:13.5px;background:transparent}
+.fab{position:absolute;inset-block-start:60px;inset-inline-end:16px;display:flex;flex-direction:column;gap:8px}
+.fab button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surf-1);
+  color:var(--text);display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.12);position:relative}
+.fab button .n{position:absolute;inset-block-start:-4px;inset-inline-start:-4px;min-width:18px;height:18px;
+  border-radius:9px;background:var(--ac);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding-inline:4px}
+
+/* พรีวิวหน้าเดียว (T4) */
+.preview1{display:grid;place-items:center;padding:24px}
+.preview1 .paper{width:min(520px,100%);aspect-ratio:1/1.414;background:#fff;border-radius:6px;
+  border:1px solid var(--line);box-shadow:0 2px 12px rgba(0,0,0,.1);position:relative;padding:44px 40px;overflow:hidden}
+.preview1 .paper .t{height:11px;background:#c9ccd2;border-radius:3px;width:52%;margin-bottom:16px}
+.preview1 .paper .l{height:6px;background:#e2e4e8;border-radius:3px;margin-bottom:10px}
+.preview1 .wm{position:absolute;inset:0;display:grid;place-items:center;transform:rotate(-32deg);
+  color:#ff3355;opacity:.22;font-size:34px;font-weight:700;white-space:nowrap}
+
+/* กราฟจำลอง (T7) */
+.chart{display:grid;place-items:center;padding:20px;height:100%}
+.donut{width:min(340px,70%);aspect-ratio:1;border-radius:50%;
+  background:conic-gradient(var(--g-powerbi) 0 38%,var(--g-img) 38% 63%,var(--g-data) 63% 82%,var(--g-doc) 82% 93%,var(--line) 93% 100%);
+  display:grid;place-items:center;position:relative}
+.donut::after{content:"";position:absolute;width:56%;height:56%;border-radius:50%;background:var(--surf-3)}
+.donut .mid{position:relative;z-index:1;text-align:center}
+.donut .mid b{display:block;font-size:26px;line-height:1.2}
+.donut .mid span{font-size:12.5px;color:var(--text-mute)}
+
+/* แผงขวา */
+.side{background:var(--surf-1);border-inline-start:1px solid var(--line-soft);
+  display:flex;flex-direction:column;min-width:0}
+.side-hd{flex:none;padding:14px 18px 10px;display:flex;align-items:flex-start;gap:10px}
+.side-hd h2{margin:0;font-size:20px;font-weight:700;line-height:1.3;flex:1 1 auto}
+.side-hd button{border:0;background:none;color:var(--brand-text);font-size:13px;padding:2px 0;
+  text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.side-bd{flex:1 1 auto;overflow:auto;padding:0 18px 16px;min-height:0}
+.side-ft{flex:none;padding:14px 18px;border-top:1px solid var(--line-soft);background:var(--surf-1)}
+.cta{width:100%;height:var(--cta-h);border:0;border-radius:12px;background:var(--cta-bg);color:var(--cta-fg);
+  font-size:20px;font-weight:600;line-height:1.3;box-shadow:0 2px 8px rgba(0,0,0,.14);
+  display:flex;align-items:center;justify-content:center;gap:10px;transition:transform 120ms}
+.cta:hover{transform:translateY(-1px)}
+.cta:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.cta-why{font-size:12.5px;color:var(--text-mute);text-align:center;margin:0 0 8px;line-height:1.4}
+.stat{font-size:13px;color:var(--text-dim);margin:0 0 10px;display:flex;align-items:center;gap:7px}
+.stat i{width:7px;height:7px;border-radius:50%;background:var(--ok);font-style:normal;flex:none}
+
+.grp-h{font-size:12px;font-weight:600;color:var(--text-mute);margin:16px 0 8px;letter-spacing:.02em;
+  display:flex;align-items:center;gap:6px}
+.grp-h::after{content:"";flex:1 1 auto;height:1px;background:var(--line-soft)}
+.frow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line-soft);
+  border-radius:var(--r-sm);margin-bottom:8px;background:var(--bg-soft)}
+.frow .tag{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11px;
+  font-weight:700;color:#fff;flex:none}
+.frow .nm{flex:1 1 auto;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .mt{font-size:12px;color:var(--text-mute);flex:none}
+.frow .x{border:0;background:none;color:var(--text-mute);font-size:16px;line-height:1;padding:2px 4px;flex:none}
+.opt{margin-bottom:10px}
+.opt label{display:block;font-size:12.5px;color:var(--text-mute);margin-bottom:5px}
+.opt input[type=text],.opt select{width:100%;height:38px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--card);color:var(--text);padding-inline:10px;font-family:inherit;font-size:14px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1 1 0;height:38px;border:1px solid var(--line);background:var(--card);color:var(--text);
+  border-radius:var(--r-sm);font-size:13.5px}
+/* ‼️ สถานะ "เลือกอยู่" ใช้พาสเทลอ่อน ไม่ใช่สีเต็ม (กฎที่พี่ปอนด์เคาะไว้ 22/07/2026)
+   ถ้าใช้สีเต็ม ปุ่มตัวเลือกจะแย่งความเด่นกับปุ่มหลัก จนหน้าหนึ่งมีพระเอกหลายตัว
+   ซึ่งขัดกับหลักข้อ 1 ของ v2 โดยตรง */
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--ac) 14%,var(--card));
+  border-color:var(--ac);color:var(--text);font-weight:600}
+.bigrow{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:start;padding:12px 14px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);margin-bottom:8px;color:var(--text)}
+.bigrow[aria-pressed="true"]{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 7%,var(--card))}
+.bigrow .tx{flex:1 1 auto;min-width:0}
+.bigrow b{display:block;font-size:14px;font-weight:600;line-height:1.35}
+.bigrow span{display:block;font-size:12.5px;color:var(--text-mute);line-height:1.4}
+.bigrow .ck{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex:none;margin-top:2px;
+  display:grid;place-items:center}
+.bigrow[aria-pressed="true"] .ck{background:var(--ok);border-color:var(--ok);color:#fff}
+.guess{margin:12px 0 0;padding:10px 12px;border-radius:var(--r-sm);font-size:13px;line-height:1.5;
+  background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--text)}
+.guess b{font-size:15px}
+.cfg-search{width:100%;height:36px;border:1px solid var(--line);border-radius:999px;background:var(--bg-soft);
+  color:var(--text-mute);padding-inline:14px;font-size:13px;display:flex;align-items:center;gap:8px;margin-top:4px}
+
+/* ── สถานะ C กำลังทำงาน ─────────────────────────────────────── */
+.busy{position:absolute;inset:0;background:color-mix(in srgb,var(--surf-3) 82%,transparent);
+  display:grid;place-items:center;z-index:5;backdrop-filter:blur(2px)}
+.busy .in{text-align:center}
+.ring{width:66px;height:66px;border-radius:50%;margin:0 auto 14px;
+  background:conic-gradient(var(--ac) 0 62%,var(--line) 62% 100%);display:grid;place-items:center}
+.ring::after{content:"";width:74%;height:74%;border-radius:50%;background:var(--surf-3)}
+.busy p{margin:0 0 12px;font-size:15px}
+.busy button{border:1px solid var(--line);background:var(--surf-1);color:var(--text);border-radius:999px;
+  padding:7px 18px;font-size:13.5px}
+
+/* ── สถานะ D ผลลัพธ์ ───────────────────────────────────────── */
+.done-h{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;margin:0 0 4px}
+.done-h i{width:26px;height:26px;border-radius:50%;background:var(--ok);color:#fff;display:grid;
+  place-items:center;font-style:normal;font-size:15px;flex:none}
+.fname{font-size:14.5px;font-weight:600;border-bottom:1px dashed var(--line);padding-bottom:3px;
+  margin-bottom:3px;word-break:break-all}
+.fmeta{font-size:13px;color:var(--text-mute);margin-bottom:14px}
+.subrow{display:flex;gap:8px;margin-top:10px}
+.subrow button{flex:1 1 0;height:40px;border:1px solid var(--line);background:var(--card);color:var(--text);
+  border-radius:var(--r-sm);font-size:13.5px}
+.nextlist{margin-top:18px}
+.nextlist a{display:flex;align-items:center;gap:10px;height:44px;padding-inline:12px;border-radius:var(--r-sm);
+  text-decoration:none;color:var(--text);font-size:13.5px;border:1px solid var(--line-soft);margin-bottom:6px;background:var(--card)}
+.nextlist a:hover{border-color:var(--ac)}
+.nextlist a i{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex:none;
+  font-style:normal;font-size:11px;font-weight:700;color:#fff}
+.nextlist a .ar{margin-inline-start:auto;color:var(--text-mute)}
+
+/* ── มือถือ ─────────────────────────────────────────────── */
+body[data-view="mobile"] .hd{gap:10px;padding-inline:12px}
+body[data-view="mobile"] .hd-search,body[data-view="mobile"] .hd-right .lng{display:none}
+body[data-view="mobile"] .menu{grid-template-columns:1fr;max-height:70dvh;overflow:auto}
+/* ‼️ ต้องคิดความสูงจาก "ที่เหลือจริง" ไม่ใช่เดาจาก 100dvh ลบตัวเลขที่ฝังไว้
+   รอบแรกเขียน calc(100dvh - 60 - 76) แล้วปุ่มหลักไปโผล่ที่ y=889 บนจอสูง 844
+   เพราะลืมหักแถบควบคุม และเพราะแถบล่างจริงสูง 110 ไม่ใช่ 76 ที่เดาไว้
+   ‼️ นี่คือกับดักเดียวกับที่ทำให้ปุ่มหลักของจริงหลุดจอมาแล้ว
+   วิธีที่ถูกคือให้ผืนงานเป็น flex:1 แล้วปล่อยให้เบราว์เซอร์คำนวณเอง */
+body[data-view="mobile"] .frame{height:calc(100dvh - var(--lab-h,40px));display:flex;flex-direction:column;overflow:hidden}
+body[data-view="mobile"] .hd{flex:none}
+body[data-view="mobile"] .landing{flex:1 1 auto;min-height:0;overflow:auto}
+body[data-view="mobile"] .work{grid-template-columns:1fr;height:auto;max-height:none;
+  flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+body[data-view="mobile"] .canvas{flex:1 1 auto;min-height:0;height:auto}
+body[data-view="mobile"] .side{flex:none;position:static}
+body[data-view="mobile"] .side{border:0;border-top:1px solid var(--line-soft);
+  position:sticky;inset-block-end:0;background:var(--surf-1)}
+body[data-view="mobile"] .side-bd,body[data-view="mobile"] .side-hd{display:none}
+body[data-view="mobile"] .side.open .side-bd,body[data-view="mobile"] .side.open .side-hd{display:block}
+/* ‼️ สถานะผลลัพธ์บนมือถือ ห้ามซ่อนแผงไว้หลังปุ่ม "ตัวเลือก" (เจอกับตาตอนดูภาพรอบแรก)
+   ตอนงานเสร็จ สิ่งที่ผู้ใช้ต้องการที่สุดคือชื่อไฟล์ ขนาด และปุ่มดาวน์โหลด
+   รอบแรกของต้นแบบซ่อนทั้งหมด เหลือแต่การ์ดหน้า = ไม่มีทางดาวน์โหลดได้เลย
+   นี่คือบั๊กชนิดเดียวกับที่ทำให้ของจริงพังมาแล้ว คือกฎซ่อนของโหมดหนึ่ง
+   ไปกลืนของจำเป็นของอีกโหมดหนึ่ง */
+body[data-view="mobile"][data-state="result"] .side-bd,
+body[data-view="mobile"][data-state="result"] .side-hd{display:block}
+body[data-view="mobile"][data-state="result"] .side{position:static;max-height:none}
+body[data-view="mobile"][data-state="result"] .canvas{flex:0 1 auto;max-height:38dvh}
+body[data-view="mobile"][data-state="result"] .side{overflow:auto}
+body[data-view="mobile"][data-state="result"] .m-opt{display:none}
+body[data-view="mobile"] .side.open{position:fixed;inset-block-end:0;inset-inline:0;max-height:80dvh;
+  border-radius:18px 18px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.3);z-index:40}
+body[data-view="mobile"] .side-ft{padding:10px 12px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+body[data-view="mobile"] .m-opt{display:inline-flex}
+/* ‼️ ปุ่มหลักต้องกินความกว้างที่เหลือทั้งหมด วัดรอบแรกได้ 92px เพราะแถวปุ่มไม่ได้ยืด
+   บทเรียนเดิมของโปรเจกต์: flex:1 ต้องมาคู่กับ min-width:0 เสมอ ไม่งั้นบีบไม่ลง */
+.cta-row{display:flex;gap:10px;align-items:center;width:100%}
+body[data-view="mobile"] .cta{height:56px;font-size:17px;flex:1 1 auto;min-width:0}
+body[data-view="mobile"] .landing{min-height:0;padding:26px 16px 30px}
+body[data-view="mobile"] .landing h1{font-size:26px}
+body[data-view="mobile"] .landing p.sub{font-size:15px;margin-bottom:20px}
+body[data-view="mobile"] .cta-big{width:100%;min-width:0;height:60px;font-size:19px;padding-inline:16px}
+body[data-view="mobile"] .fold .steps{grid-template-columns:1fr}
+body[data-view="mobile"] .pages{gap:14px;justify-content:center}
+body[data-view="mobile"] .pg,body[data-view="mobile"] .addcard{width:152px}
+body[data-view="mobile"] .pg .paper{height:190px}
+body[data-view="mobile"] .tbar{overflow-x:auto}
+/* ‼️ บนจอแคบ กรอบจำลองต้องไม่กินความกว้าง ไม่งั้นต้นแบบโกหกว่าที่แคบกว่าของจริง 36px
+   ซึ่งพอดีกับที่ทำให้การ์ดตกจาก 2 คอลัมน์เหลือ 1 (เจอกับตาตอนดูภาพมือถือรอบแรก) */
+body[data-view="mobile"] .stage{padding:0}
+body[data-view="mobile"] .frame{border-radius:0;box-shadow:none}
+body[data-view="mobile"] .scroll{padding:14px}
+/* ‼️ บนจอแคบ แถบควบคุมต้องเป็นแถวเดียวเลื่อนได้ ไม่ใช่ตกบรรทัด 4 แถว
+   รอบแรกมันสูง 200px แล้วดันหน้าจำลองลงจนปุ่มหลักหลุดจอ
+   = ต้นแบบโกหกว่าดีไซน์มีปัญหา ทั้งที่คนที่ผิดคือเครื่องมือวัดเอง
+   (บทเรียนเดิมของโปรเจกต์ "พิสูจน์ตัวตรวจก่อนเชื่อผลตรวจ") */
+@media (max-width:720px){
+  .lab{gap:6px 10px;padding:7px 10px;font-size:12px;flex-wrap:nowrap;overflow-x:auto;
+    scrollbar-width:none;white-space:nowrap}
+  .lab::-webkit-scrollbar{display:none}
+  .lab > *{flex:none}
+  .lab button{padding:4px 9px;font-size:11.5px}
+  .lab .note,.lab b{display:none}
+}
+.m-opt{display:none;height:56px;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);
+  color:var(--text);border-radius:12px;padding-inline:18px;font-size:15px;font-weight:600;flex:none}
+body:not([data-view="mobile"]) .m-sheet-hd{display:none}
+.m-sheet-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 0}
+.m-sheet-hd button{border:0;background:none;color:var(--brand-text);font-size:14px}
+</style>
+</head>
+<body data-view="desktop" data-state="landing">
+
+<div class="lab">
+  <b>ต้นแบบ v2</b>
+  <div class="grp"><span>เครื่องมือ</span>
+    <button data-tool="t3" aria-pressed="true">T3 จัดการหน้า PDF</button>
+    <button data-tool="t4" aria-pressed="false">T4 ใส่ลายน้ำ</button>
+    <button data-tool="t7" aria-pressed="false">T7 กราฟโดนัท</button>
+  </div>
+  <div class="grp"><span>สถานะ</span>
+    <button data-state="landing" aria-pressed="true">1 หน้าเปล่า</button>
+    <button data-state="work" aria-pressed="false">2 ทำงาน</button>
+    <button data-state="busy" aria-pressed="false">3 กำลังทำ</button>
+    <button data-state="result" aria-pressed="false">4 ผลลัพธ์</button>
+  </div>
+  <div class="grp"><span>ธีม</span>
+    <button data-theme="light" aria-pressed="true">สว่าง</button>
+    <button data-theme="dark" aria-pressed="false">มืด</button>
+  </div>
+  <div class="grp"><span>ปุ่มหลัก</span>
+    <button data-cta="rust" aria-pressed="true">A สนิม</button>
+    <button data-cta="dark" aria-pressed="false">B ดำ</button>
+  </div>
+  <div class="grp"><span>จอ</span>
+    <button data-view="desktop" aria-pressed="true">เดสก์ท็อป</button>
+    <button data-view="mobile" aria-pressed="false">มือถือ</button>
+  </div>
+  <span class="note">กดปุ่มในหน้าจำลองได้จริง เลือกไฟล์ ไป ทำงาน ไป ผลลัพธ์</span>
+</div>
+
+<div class="stage"><div class="frame">
+
+  <header class="hd">
+    <span class="logo"><i>F</i>FileKit</span>
+    <button class="hd-tools" id="mbtn" aria-expanded="false">เครื่องมือทั้งหมด
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 9l7 7 7-7"/></svg>
+    </button>
+    <span class="hd-search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      ค้นหาเครื่องมือ
+    </span>
+    <span class="hd-right">
+      <span class="lng"><button aria-pressed="true">ไทย</button><button aria-pressed="false">EN</button></span>
+      <button id="thbtn" aria-pressed="false">ธีม</button>
+    </span>
+    <nav class="menu" id="menu" hidden></nav>
+  </header>
+
+  <!-- ── สถานะ A หน้าเปล่า ── -->
+  <section class="landing" id="v-landing">
+    <div class="in">
+      <div class="l-ico" id="l-ico"></div>
+      <h1 id="l-title">จัดการหน้า PDF</h1>
+      <p class="sub" id="l-sub">เก็บ ลบ สลับลำดับ และหมุนหน้า รวมหลายไฟล์มาจัดในกระดานเดียวได้</p>
+      <button class="cta-big" id="pickbtn">เลือกไฟล์ PDF</button>
+      <p class="drop">หรือลากไฟล์มาวางตรงไหนก็ได้ในหน้านี้</p>
+      <div class="row2">
+        <button>ลองด้วยไฟล์ตัวอย่าง</button>
+        <span class="safe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+          ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น
+        </span>
+      </div>
+      <div class="fold">
+        <h2>ใช้ยังไง</h2>
+        <div class="steps">
+          <div class="step"><b>ขั้นที่ 1</b><span>เลือกไฟล์ PDF หนึ่งไฟล์หรือหลายไฟล์</span></div>
+          <div class="step"><b>ขั้นที่ 2</b><span>กดหน้าที่จะเก็บ ลากสลับลำดับ หรือหมุน</span></div>
+          <div class="step"><b>ขั้นที่ 3</b><span>กดบันทึก แล้วดาวน์โหลดไฟล์ใหม่</span></div>
+        </div>
+        <h2>คำถามที่เจอบ่อย</h2>
+        <div class="faq">
+          <div>ไฟล์ของฉันถูกอัปโหลดขึ้นเซิร์ฟเวอร์ไหม</div>
+          <div>รวมหลายไฟล์เข้าด้วยกันได้ไหม</div>
+          <div>ไฟล์ที่ได้ยังมีสารบัญกับบุ๊กมาร์กอยู่ไหม</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── สถานะ B, C, D ── -->
+  <section class="work" id="v-work" hidden>
+    <div class="canvas">
+      <div class="tbar" id="tbar"></div>
+      <div class="scroll" id="cv"></div>
+      <div class="fab" id="fab">
+        <button><span class="n">2</span>+</button>
+        <button>AZ</button>
+      </div>
+      <div class="busy" id="busy" hidden>
+        <div class="in">
+          <div class="ring"></div>
+          <p id="busytx">กำลังบันทึก หน้า 3 จาก 5</p>
+          <button>ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side" id="side">
+      <div class="m-sheet-hd"><b>ตัวเลือก</b><button data-close-sheet>ปิด</button></div>
+      <div class="side-hd">
+        <h2 id="s-title">จัดการหน้า PDF</h2>
+        <button id="restart">เริ่มใหม่</button>
+      </div>
+      <div class="side-bd" id="s-body"></div>
+      <div class="side-ft">
+        <p class="cta-why" id="ctawhy" hidden>เลือกหน้าที่จะเก็บอย่างน้อย 1 หน้าก่อน</p>
+        <div class="cta-row">
+          <button class="m-opt" id="mopt">ตัวเลือก</button>
+          <button class="cta" id="cta">บันทึก PDF</button>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+</div></div>
+
+<script>
+const TOOLS = {
+  t3: { id:"pdf-pages", title:"จัดการหน้า PDF", sub:"เก็บ ลบ สลับลำดับ และหมุนหน้า รวมหลายไฟล์มาจัดในกระดานเดียวได้",
+        ac:"--g-pdf", cta:"บันทึก PDF", pick:"เลือกไฟล์ PDF", out:"รายงานประจำเดือน-จัดหน้า.pdf", meta:"47 KB, 5 หน้า" },
+  t4: { id:"pdf-watermark", title:"ใส่ลายน้ำ PDF", sub:"ประทับข้อความไทยและอังกฤษลงทุกหน้า เลือกตำแหน่ง สี และความเข้มได้",
+        ac:"--g-pdf", cta:"ใส่ลายน้ำ", pick:"เลือกไฟล์ PDF", out:"รายงานประจำเดือน-ลายน้ำ.pdf", meta:"46 KB, 3 หน้า" },
+  t7: { id:"pbi-donut", title:"กราฟโดนัท Deneb", sub:"ปรับแล้วเห็นผลทันที แล้วคัดลอกสเปกไปวางใน Deneb ได้เลย",
+        ac:"--g-powerbi", cta:"คัดลอกสเปก", pick:"เลือกไฟล์ Excel", out:"donut.vl.json", meta:"12 KB" },
+};
+const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="12" height="16" rx="2"/><path d="M8 7h4M8 11h4"/><rect x="8" y="5" width="12" height="16" rx="2" fill="none"/></svg>';
+const MENU = [
+  ["จัดการ PDF","--g-pdf",["จัดการหน้า PDF","แก้ไขข้อความบน PDF","รวมไฟล์ PDF","แยกไฟล์ PDF","บีบอัดไฟล์ PDF","เซ็นชื่อบน PDF","ใส่ลายน้ำ PDF","ลบชั้นที่ทับบนหน้า","ใส่เลขหน้า PDF","ลบหน้าว่างจากสแกน"]],
+  ["แปลงจาก PDF","--g-pdf",["OCR อ่านข้อความจากสแกน","PDF เป็น Images","PDF เป็นภาพยาวแผ่นเดียว","PDF เป็นข้อความ","PDF เป็น Word","PDF เป็น Excel"]],
+  ["รูปภาพ","--g-img",["แปลงชนิดไฟล์รูป","ย่อและบีบอัดรูปภาพ","ลบพื้นหลังรูปภาพ","Images เป็น PDF"]],
+  ["เอกสาร Word","--g-doc",["รวมไฟล์ Word","ค้นหาและแทนที่ทั้งชุด","ตรวจเอกสารก่อนส่ง","จดหมายเวียน Word + Excel","Word เป็น PDF","PowerPoint เป็น Word","PowerPoint เป็น PDF"]],
+  ["Excel และการคำนวณ","--g-data",["หายอดที่บวกกันได้เท่านี้","สลับ Excel กับ CSV","แยกไฟล์ Excel ตามคอลัมน์","รวมหลายไฟล์ Excel","Excel เป็น PDF","ตารางเป็น Schema ของ Parse JSON","ตาราง HTML สำหรับอีเมลใน flow"]],
+  ["งานเอกสารไทย","--g-thai",["ซ่อมไฟล์ไทยเพี้ยน","สลับปี พ.ศ. กับ ค.ศ.","ตรวจเลขบัตร ปชช.","แยกคำนำหน้า ชื่อ นามสกุล","แยกที่อยู่ไทยเป็นคอลัมน์","ตัวเลขเป็นบาทถ้วน"]],
+  ["Power BI และ Power Query","--g-powerbi",["กราฟโดนัท Deneb","กราฟแท่งแนวนอน Deneb","สร้างธีม Power BI","แผนที่พื้นที่รอบจุด","ตารางเป็นสูตร Power Query","จัดกลุ่มตัวเลขเป็นช่วง","สร้างสูตรค้นข้ามหลายแหล่ง","เลือกวันล่าสุดจากหลายคอลัมน์"]],
+];
+const PAPER = '<div class="t"></div>' + '<div class="l"></div>'.repeat(9);
+const $ = (s) => document.querySelector(s);
+let tool = "t3", state = "landing";
+
+function buildMenu() {
+  $("#menu").innerHTML = MENU.map(([head, gc, items]) => `<div class="col"><h4>${head}</h4>` +
+    items.map((n) => `<a href="#" class="${n === TOOLS[tool].title ? "here" : ""}" style="--gc:var(${gc})"><i>${n[0]}</i><b>${n}</b></a>`).join("") +
+    "</div>").join("");
+}
+
+function pagesHtml(n = 5) {
+  const cols = ["var(--g-pdf)", "var(--g-img)"];
+  let h = "";
+  for (let i = 0; i < n; i++) {
+    const f = i < 3 ? 0 : 1;
+    h += `<div class="pg${i === 0 ? " sel" : ""}"><span class="tag" style="background:${cols[f]}">${f ? "B" : "A"}</span>
+      <div class="paper">${PAPER}</div><div class="cap">หน้า ${i + 1}</div></div>`;
+  }
+  return h + '<div class="addcard">+ เพิ่มไฟล์</div>';
+}
+
+function render() {
+  const t = TOOLS[tool];
+  document.documentElement.style.setProperty("--ac", `var(${t.ac})`);
+  $("#l-ico").innerHTML = ICON; $("#l-title").textContent = t.title;
+  $("#l-sub").textContent = t.sub; $("#pickbtn").textContent = t.pick;
+  $("#s-title").textContent = t.title;
+  buildMenu();
+
+  const isResult = state === "result";
+  $("#v-landing").hidden = state !== "landing";
+  $("#v-work").hidden = state === "landing";
+  $("#busy").hidden = state !== "busy";
+  $("#fab").hidden = isResult || tool === "t7";
+
+  // แถบเครื่องมือของผืนงาน
+  $("#tbar").innerHTML = isResult ? "" : ({
+    t3: `<button>↶ ย้อน</button><button>↷ ทำซ้ำ</button><button>ลบหน้าที่เลือก</button>
+         <span class="sep"></span><button>ครอบขอบขาว</button><button>+ หน้าว่าง</button>
+         <span class="sep"></span><button>รีเซ็ตทั้งหมด</button><span class="sp"></span><button>? คีย์ลัด</button>`,
+    t4: `<button>เลื่อนดูทุกหน้า</button><span class="sep"></span><button>− ย่อ</button><button>100%</button><button>+ ขยาย</button>`,
+    t7: `<button>ข้อมูลตัวอย่าง</button><span class="sep"></span><button>พรีวิว</button><button>สเปก JSON</button><span class="sp"></span><button>รีเซ็ตค่า</button>`,
+  })[tool];
+  $("#tbar").hidden = isResult;
+
+  // ผืนงาน
+  $("#cv").className = "scroll" + (tool === "t4" ? " preview1" : "");
+  if (isResult) {
+    $("#cv").className = "scroll" + (tool === "t3" ? "" : " preview1");
+    $("#cv").innerHTML = tool === "t3" ? `<div class="pages">${pagesHtml(5).replace('<div class="addcard">+ เพิ่มไฟล์</div>', "")}</div>`
+      : tool === "t4" ? `<div class="paper">${PAPER.replace(/l"><\/div>/g, 'l"></div>')}<div class="wm">เอกสารลับ ห้ามเผยแพร่</div></div>`
+      : `<div class="chart"><div class="donut"><span class="mid"><b>1,240</b><span>รวมทั้งหมด</span></span></div></div>`;
+  } else if (tool === "t3") {
+    $("#cv").innerHTML = `<div class="pages">${pagesHtml(5)}</div>`;
+  } else if (tool === "t4") {
+    $("#cv").innerHTML = `<div class="paper">${PAPER}<div class="wm">เอกสารลับ ห้ามเผยแพร่</div></div>`;
+  } else {
+    $("#cv").className = "scroll";
+    $("#cv").innerHTML = `<div class="chart"><div class="donut"><span class="mid"><b>1,240</b><span>รวมทั้งหมด</span></span></div></div>`;
+  }
+
+  // แผงขวา
+  const fileRow = (c, l, n, m) => `<div class="frow"><span class="tag" style="background:var(${c})">${l}</span><span class="nm">${n}</span><span class="mt">${m}</span><button class="x">×</button></div>`;
+  const files = `<div class="grp-h">ไฟล์</div>`
+    + fileRow("--g-pdf", "A", "รายงานประจำเดือน.pdf", "3 หน้า")
+    + fileRow("--g-img", "B", "ใบปะหน้าเอกสาร.pdf", "2 หน้า");
+  const file1 = `<div class="grp-h">ไฟล์</div>` + fileRow("--g-pdf", "A", "รายงานประจำเดือน.pdf", "3 หน้า");
+  const bodyByTool = {
+    t3: files + `<div class="grp-h">หน้าที่เลือก</div>
+      <p style="font-size:13.5px;color:var(--text-dim);margin:0 0 8px;line-height:1.55">กดการ์ดเพื่อเลือกหรือยกเลิก ลากเพื่อสลับลำดับ</p>
+      <div class="opt"><label>หรือพิมพ์ช่วงหน้าที่จะเก็บ</label><input type="text" value="1-5"></div>`,
+    t4: file1 + `
+      <div class="grp-h">ชนิดลายน้ำ</div>
+      <div class="seg"><button aria-pressed="true">ข้อความ</button><button aria-pressed="false">รูปโลโก้</button></div>
+      <div class="opt" style="margin-top:12px"><label>ข้อความลายน้ำ</label><input type="text" value="เอกสารลับ ห้ามเผยแพร่"></div>
+      <div class="opt"><label>ตำแหน่ง</label><select><option>ทแยงกลางหน้า</option><option>กลางหน้า</option><option>มุมขวาล่าง</option></select></div>
+      <div class="opt"><label>ความเข้ม 18%</label><input type="range" style="width:100%" value="18"></div>
+      <div class="grp-h">ขนาด</div>
+      <div class="seg"><button aria-pressed="false">เล็ก</button><button aria-pressed="true">กลาง</button><button aria-pressed="false">ใหญ่</button></div>`,
+    t7: `<span class="cfg-search">ค้นหาในตัวเลือก 23 ข้อ</span>
+      <div class="grp-h">ข้อมูล</div>
+      <div class="opt"><label>คอลัมน์หมวด</label><select><option>ประเภทสินค้า</option></select></div>
+      <div class="opt"><label>คอลัมน์ค่า</label><select><option>ยอดขาย</option></select></div>
+      <div class="grp-h">รูปทรง</div>
+      <div class="opt"><label>ความหนาวงแหวน 56%</label><input type="range" style="width:100%" value="56"></div>
+      <div class="seg"><button aria-pressed="true">มีป้ายกลาง</button><button aria-pressed="false">ไม่มี</button></div>
+      <div class="grp-h">คำอธิบายสี</div>
+      <div class="seg"><button aria-pressed="false">ซ้าย</button><button aria-pressed="true">ขวา</button><button aria-pressed="false">ซ่อน</button></div>`,
+  };
+  const resultBody = `
+    <p class="done-h"><i>✓</i>เสร็จแล้ว</p>
+    <div class="fname">${TOOLS[tool].out}</div>
+    <div class="fmeta">${TOOLS[tool].meta}</div>
+    <div class="subrow"><button>กลับไปแก้</button><button id="again">เริ่มใหม่</button></div>
+    <div class="nextlist"><div class="grp-h">ทำอะไรต่อดี</div>
+      <a href="#"><i style="background:var(--g-pdf)">บ</i>บีบอัดไฟล์ PDF<span class="ar">›</span></a>
+      <a href="#"><i style="background:var(--g-pdf)">ล</i>ใส่ลายน้ำ PDF<span class="ar">›</span></a>
+      <a href="#"><i style="background:var(--g-pdf)">ซ</i>เซ็นชื่อบน PDF<span class="ar">›</span></a>
+      <a href="#"><i style="background:var(--g-img)">ร</i>PDF เป็น Images<span class="ar">›</span></a>
+    </div>`;
+  $("#s-body").innerHTML = isResult ? resultBody : bodyByTool[tool];
+
+  // ปุ่มหลัก กับบรรทัดสถานะ
+  const stat = { t3: "เหลือ 5 จาก 5 หน้า", t4: "จะใส่ลายน้ำ 3 หน้า", t7: "พรีวิวตรงกับสเปกที่จะคัดลอก" }[tool];
+  $("#cta").textContent = isResult ? "ดาวน์โหลด" : TOOLS[tool].cta;
+  $("#ctawhy").hidden = true;
+  $("#restart").hidden = isResult;
+  const old = $("#s-stat"); if (old) old.remove();
+  if (!isResult) {
+    const p = document.createElement("p");
+    p.id = "s-stat"; p.className = "stat"; p.innerHTML = `<i></i>${stat}`;
+    $(".side-ft").prepend(p);
+  }
+  $("#cta").disabled = state === "busy";
+}
+
+function setState(s) { state = s; document.body.dataset.state = s; document.querySelectorAll(".lab [data-state]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.state === s))); render(); }
+function setTool(t) { tool = t; document.querySelectorAll("[data-tool]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tool === t))); if (t === "t7" && state === "landing") setState("work"); else render(); }
+
+document.querySelectorAll(".lab [data-tool]").forEach((b) => b.onclick = () => setTool(b.dataset.tool));
+document.querySelectorAll(".lab [data-state]").forEach((b) => b.onclick = () => setState(b.dataset.state));
+document.querySelectorAll(".lab [data-theme]").forEach((b) => b.onclick = () => {
+  document.documentElement.dataset.theme = b.dataset.theme;
+  document.querySelectorAll(".lab [data-theme]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+});
+document.querySelectorAll(".lab [data-cta]").forEach((b) => b.onclick = () => {
+  document.documentElement.dataset.cta = b.dataset.cta;
+  document.querySelectorAll(".lab [data-cta]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+});
+document.querySelectorAll(".lab [data-view]").forEach((b) => b.onclick = () => {
+  document.body.dataset.view = b.dataset.view;
+  document.querySelectorAll(".lab [data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+});
+
+$("#pickbtn").onclick = () => setState("work");
+$("#restart").onclick = () => setState("landing");
+$("#cta").onclick = () => {
+  if (state === "result") return;
+  setState("busy");
+  setTimeout(() => setState("result"), 1100);
+};
+$("#mbtn").onclick = () => {
+  const m = $("#menu"); m.hidden = !m.hidden;
+  $("#mbtn").setAttribute("aria-expanded", String(!m.hidden));
+};
+document.addEventListener("click", (e) => {
+  if (!$("#menu").hidden && !e.target.closest("#menu") && !e.target.closest("#mbtn")) {
+    $("#menu").hidden = true; $("#mbtn").setAttribute("aria-expanded", "false");
+  }
+  if (e.target.closest("[data-close-sheet]")) $("#side").classList.remove("open");
+  const row = e.target.closest(".seg button, .bigrow");
+  if (row) { [...row.parentElement.children].forEach((x) => x.setAttribute && x.setAttribute("aria-pressed", String(x === row))); }
+  const pg = e.target.closest(".pg");
+  if (pg) pg.classList.toggle("sel");
+  if (e.target.id === "again") setState("landing");
+});
+$("#mopt").onclick = () => $("#side").classList.toggle("open");
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("#menu").hidden = true; $("#side").classList.remove("open"); } });
+
+/* วัดความสูงจริงของแถบควบคุม แล้วบอก CSS ห้ามฝังตัวเลขไว้เอง */
+const syncLabH = () => document.documentElement.style.setProperty("--lab-h", document.querySelector(".lab").offsetHeight + "px");
+new ResizeObserver(syncLabH).observe(document.querySelector(".lab"));
+syncLabH();
+
+setTool("t3");
+</script>
+</body>
+</html>

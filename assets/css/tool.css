@@ -335,7 +335,13 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   background:var(--bg-soft);cursor:grab;transition:border-color .15s,opacity .15s;
 }
 .pg canvas,.pg img{display:block;width:100%;height:auto;background:#fff}
-.pg.dropped{opacity:.3;border-style:dashed}
+/* ‼️ ลบแล้วต้องหายไปเลย ไม่ใช่จางลง (20/09/2026 พี่ปอนด์เจอเองแล้วทัก)
+   ของเดิม opacity .3 คือ "ทำเครื่องหมายว่าจะลบตอนบันทึก" ซึ่งอ่านได้หลายแบบเกินไป
+   คนกดปุ่มลบแล้วเห็นของยังอยู่ ย่อมคิดว่าปุ่มไม่ทำงาน
+   ‼️ ไม่ลบทิ้งจากอาร์เรย์ เพราะเลขหน้าบนการ์ดกับช่องพิมพ์ช่วงหน้าอ้างอิงตำแหน่งเดียวกัน
+   ถอดออกจากอาร์เรย์เมื่อไหร่ เลขที่ผู้ใช้เห็นกับเลขที่ระบบนับจะคนละชุดทันที
+   ซ่อนด้วย display จึงได้ผลที่ผู้ใช้ต้องการโดยไม่แตะความหมายของเลขหน้าเลย */
+.pg.dropped{display:none}
 /* ‼️ ตอนลากสลับหน้า ต้องรู้ว่า "จะไปวางตรงไหน" ไม่ใช่แค่ "ชี้อยู่ที่ใบไหน" (18/09/2026)
    พี่ปอนด์บอกตรง ๆ ว่า "ไม่รู้ว่าที่เราลากเปลี่ยนมันเปลี่ยนไหม"
    เดิมบอกด้วยการเปลี่ยนสีขอบใบที่ชี้อยู่เท่านั้น ซึ่งเบามากและไม่ได้บอกตำแหน่งวาง
@@ -1618,4 +1624,22 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 @media (max-width:760px){
   .ws-tblabel{display:none}
   .ws-toolbar:has(.ws-tbgroup) .sep{height:20px}
+}
+
+/* ── แถวบอกคีย์ลัด (20/09/2026 พี่ปอนด์ทักว่ายังไม่เห็นคีย์ลัดเลย) ─────────────
+   ‼️ โชว์เฉพาะเครื่องที่มีเมาส์จริง จอสัมผัสไม่มีคีย์บอร์ดให้กด บอกไปก็กินที่เปล่า
+      ใช้กติกาเดียวกับ .kbd ของช่องค้นหาบนหน้าแรกที่ทำไว้ก่อนแล้ว */
+.keyhints{display:none}
+@media (hover:hover) and (pointer:fine){
+  .keyhints{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px;
+    margin:10px 2px 0; font-size:12px; color:var(--text-mute); line-height:1.6;
+  }
+}
+.keyhints-t{font-weight:700;color:var(--text-dim)}
+.keyhint{display:inline-flex; align-items:center; gap:6px}
+.keyhints .kbd{
+  display:inline-flex; align-items:center; flex:none;
+  font-size:11px; color:var(--text-dim); border:1px solid var(--line); border-radius:6px;
+  padding:2px 7px; background:var(--bg-soft); font-family:inherit; white-space:nowrap;
 }

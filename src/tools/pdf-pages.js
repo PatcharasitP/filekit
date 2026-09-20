@@ -1,5 +1,5 @@
 import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, openPdf, passwordBox } from "../pdfopen.js";
-import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes, stashFiles } from "../ui.js";
+import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes, stashFiles, keyHints } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
@@ -120,7 +120,14 @@ export function mount(tool) {
   // ── แถบเครื่องมือลอย: ทำงานกับหน้าที่เลือกอยู่ ──────────────────────
   const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: tr("หมุนซ้าย", "Rotate left"), onclick: () => rotateSelected(270) });
   const rotateRBtn = button("", { icon: "rotateR", ghost: true, label: tr("หมุนขวา", "Rotate right"), onclick: () => rotateSelected(90) });
-  const toggleBtn = button("", { icon: "trash", ghost: true, label: tr("ลบ/เอากลับ", "Remove/restore"), onclick: toggleSelected });
+  /* ‼️ เปลี่ยนจาก "สลับลบ/เอากลับ" เป็น "ลบ" ตรง ๆ (20/09/2026 พี่ปอนด์เจอเอง)
+     พี่ปอนด์: "พอไปกดปุ่มลบ หน้ากระดาษขึ้นจาง ๆ มันควรหายไปเลย"
+     ของเดิมแค่ติดธงว่าจะลบตอนบันทึก แล้วทำให้จาง ซึ่งอ่านได้หลายแบบเกินไป
+     คำว่าลบต้องแปลว่าหายไป ส่วนการเอากลับย้ายไปเป็นปุ่มของตัวเองที่เห็นชัด */
+  const toggleBtn = button("", { icon: "trash", ghost: true, label: tr("ลบหน้านี้", "Delete this page"), onclick: dropSelected });
+  const undoDelBtn = button(tr("ย้อนการลบ", "Undo delete"), { ghost: true, icon: "undo",
+    label: tr("เอาหน้าที่เพิ่งลบกลับมา", "Bring back the page you just deleted"), onclick: undoDelete });
+  undoDelBtn.disabled = true;
   const cropBtn = button(tr("ครอบขอบขาว", "Trim white edge"), { ghost: true,
     label: tr("ครอบขอบขาวของหน้าที่เลือก", "Trim the white edge of the selected page"), onclick: () => autoCrop(false) });
   const cropAllBtn = button(tr("ครอบทุกหน้า", "Trim every page"), { ghost: true, onclick: () => autoCrop(true) });
@@ -208,6 +215,7 @@ export function mount(tool) {
     if (!items.length) return;
     const keep = new Set(q.pick(items.length));
     items.forEach((it, i) => { it.dropped = !keep.has(i + 1); });
+    removed = [];                 // เลือกใหม่ทั้งชุด การย้อนทีละหน้าจึงไม่มีความหมายอีก
     selected = null;
     rangeInput.value = "";
     render();
@@ -238,7 +246,8 @@ export function mount(tool) {
     right: { title: tr("ตัวเลือก", "Options"), node: rightNode, folded: true },
     center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูตัวอย่าง", "No file yet. Choose a PDF to preview") },
     toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }),
-              cropBtn, cropAllBtn, blankBtn, el("div", { class: "sep" }), editTextBtn, resetBtn],
+              cropBtn, cropAllBtn, blankBtn, el("div", { class: "sep" }),
+              undoDelBtn, editTextBtn, resetBtn],
     /* ‼️ ชื่อกลุ่มตอบคำถามที่ปุ่มตอบเองไม่ได้ คือ "ทำกับอะไร"
        ครอบขอบขาว อยู่กลุ่มทั้งเล่ม ส่วนหมุนกับลบ อยู่กลุ่มหน้าที่เลือก
        ก่อนมีชื่อกลุ่ม สองอย่างนี้หน้าตาเหมือนกันหมด ต้องกดลองเองถึงจะรู้ */
@@ -246,8 +255,33 @@ export function mount(tool) {
     footer: [st.node, saveBtn],
   });
   ws.wrap.prepend(el("style", {}, STYLE));
+
+  /* ‼️ คีย์ลัดระดับหน้า (พี่ปอนด์ทัก 20/09/2026 ว่า "ปุ่มพวกคีย์ลัดยังไม่เห็นนะ")
+     ผูกที่ ws.body ไม่ใช่ document เพราะเครื่องมืออื่นก็ผูกของตัวเองไว้เหมือนกัน
+     ผูกที่ document จะได้คีย์ลัดข้ามเครื่องมือกันมั่วเมื่อผู้ใช้สลับไปมา
+     ‼️ ต้องไม่ทำงานตอนกำลังพิมพ์อยู่ในช่อง ไม่งั้น Ctrl+Z ในช่องพิมพ์ช่วงหน้าจะถูกขโมย */
+  ws.body.addEventListener("keydown", (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+    if (typing) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      if (!removed.length) return;
+      e.preventDefault();
+      undoDelete();
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if ((e.key === "Delete" || e.key === "Backspace") && selected) { e.preventDefault(); dropSelected(); }
+    else if (e.key === "[") { e.preventDefault(); rotateSelected(270); }
+    else if (e.key === "]") { e.preventDefault(); rotateSelected(90); }
+  });
   ws.body.append(
     results,
+    keyHints([
+      ["Del", tr("ลบหน้าที่เลือก", "Delete selected page")],
+      ["Ctrl+Z", tr("ย้อนการลบ", "Undo delete")],
+      ["[ ]", tr("หมุนซ้าย ขวา", "Rotate left, right")],
+      ["Enter", tr("เลือก ยกเลิกเลือก", "Select, deselect")],
+    ]),
     el("div", { class: "note" },
       // ‼️ เครื่องมือนี้สร้างไฟล์ใหม่แล้วคัดลอกหน้าที่เก็บเข้าไป สารบัญ/บุ๊กมาร์กของไฟล์เดิม
       //    จึงไม่ติดมาด้วย แม้ผู้ใช้จะไม่ได้แก้อะไรเลย · บอกไว้ตรง ๆ เหมือนที่ pdf-merge บอก
@@ -384,6 +418,14 @@ export function mount(tool) {
   }
 
   function render() {
+    /* ‼️ render() วาดการ์ดใหม่ทั้งตะแกรงทุกครั้ง ทุกการกระทำจึงทำโฟกัสหลุดไปที่ <body>
+       เจอตอนทดสอบคีย์ลัดหมุนหน้า กด ] ได้ครั้งเดียวแล้วเงียบ เพราะหมุนเสร็จโฟกัสหาย
+       ‼️ แก้ที่นี่ที่เดียว ไม่ไล่แปะทีละฟังก์ชัน เพราะทุกอย่างลงเอยที่ render() หมด
+          (เลือก หมุน ลบ ย้อน ครอบ ลากสลับ เลือกช่วง) แปะทีละที่เดี๋ยวก็ลืมสักอัน
+       ‼️ ถ้าใบเดิมถูกลบไป ให้ไปใบถัดไป ถ้าไม่มีก็ใบสุดท้าย คนลบรัว ๆ จะได้ไม่สะดุด
+       ‼️ ไม่แตะโฟกัสเลยถ้าตอนนั้นไม่ได้อยู่บนการ์ด เช่นกำลังพิมพ์อยู่ในช่องช่วงหน้า */
+    const hadFocus = document.activeElement?.closest?.(".pg");
+    const focusAt = hadFocus ? +hadFocus.dataset.i : null;
     const many = files.length > 1;
     pagesGrid.innerHTML = "";
     items.forEach((it, i) => {
@@ -396,7 +438,13 @@ export function mount(tool) {
         "aria-label": tr(`หน้า ${i + 1}${many ? " จาก" + srcLabel : ""}${it.dropped ? " (ทำเครื่องหมายลบไว้)" : ""}`,
                          `Page ${i + 1}${many ? " from " + srcLabel : ""}${it.dropped ? " (marked for removal)" : ""}`),
         onclick: () => { selectItem(it === selected ? null : it); },
-        onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectItem(it === selected ? null : it); } },
+        /* ‼️ พี่ปอนด์กด Delete แล้วไม่มีอะไรเกิดขึ้น เพราะของเดิมรับแค่ Enter กับ Space
+           ปุ่ม Delete คือสิ่งที่ทุกคนลองเป็นอย่างแรกกับของที่เลือกไว้ ต้องทำงาน
+           Backspace ด้วย เพราะบนแม็คคีย์บอร์ดหลายรุ่นไม่มีปุ่ม Delete แยก */
+        onkeydown: (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectItem(it === selected ? null : it); return; }
+          if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); dropItem(it); }
+        },
       }, [
         many && !it.blank ? el("span", { class: "src", title: `${srcLabel}: ${files[it.fi].name}` }, tagOf(it.fi)) : null,
         /* หน้าว่างไม่มีภาพย่อ วาดเป็นกระดาษเปล่าพร้อมป้ายบอก จะได้ไม่คิดว่าโหลดไม่ขึ้น */
@@ -460,13 +508,19 @@ export function mount(tool) {
             "aria-label": tr(`หมุนหน้า ${i + 1} ไปทางขวา`, `Rotate page ${i + 1} right`),
             onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, [uiIcon("rotateR", "pg-ico")]),
           el("button", { type: "button",
-            title: it.dropped ? tr(`เอากลับ (หน้า ${i + 1})`, `Restore page ${i + 1}`) : tr(`ลบหน้านี้ (หน้า ${i + 1})`, `Remove page ${i + 1}`),
-            "aria-label": it.dropped ? tr(`เอาหน้า ${i + 1} กลับ`, `Restore page ${i + 1}`) : tr(`ลบหน้า ${i + 1}`, `Delete page ${i + 1}`),
-            onclick: (e) => { e.stopPropagation(); it.dropped = !it.dropped; render(); } }, [uiIcon(it.dropped ? "undo" : "trash", "pg-ico")]),
+            title: tr(`ลบหน้านี้ (หน้า ${i + 1})`, `Delete page ${i + 1}`),
+            "aria-label": tr(`ลบหน้า ${i + 1}`, `Delete page ${i + 1}`),
+            onclick: (e) => { e.stopPropagation(); dropItem(it); } }, [uiIcon("trash", "pg-ico")]),
         ]),
       ]);
       pagesGrid.appendChild(card);
     });
+    if (focusAt !== null) {
+      const same = pagesGrid.querySelector(`.pg[data-i="${focusAt}"]:not(.dropped)`);
+      const cards = [...pagesGrid.querySelectorAll(".pg:not(.dropped)")];
+      const go = same || cards.find((c) => +c.dataset.i > focusAt) || cards[cards.length - 1];
+      if (go) go.focus();
+    }
     updateSummary();
     st.info(tr(`เหลือ ${items.filter((i) => !i.dropped).length}/${items.length} หน้า`,
                 `${items.filter((i) => !i.dropped).length}/${pl(items.length, "page", "pages")} left`));
@@ -583,6 +637,14 @@ export function mount(tool) {
   }
 
   function selectItem(it) {
+    /* ‼️ ต้องคืนโฟกัสให้การ์ดที่เลือก (แก้ 20/09/2026)
+       render() วาดการ์ดใหม่ทั้งตะแกรงทุกครั้ง การ์ดที่เพิ่งคลิกจึงถูกโยนทิ้ง
+       โฟกัสตกไปที่ <body> ทันที ซึ่งทำให้เกิดสองปัญหาพร้อมกัน
+       ① คีย์ลัดบนการ์ด (Delete, Enter) ไม่มีวันทำงาน เพราะอีเวนต์เกิดที่ body
+          แล้ววิ่งขึ้นไป document อีเวนต์ไม่เคยวิ่งลงมาหา ws.body ที่เป็นลูก
+       ② คนใช้คีย์บอร์ดต้อง Tab ใหม่จากต้นหน้าทุกครั้งที่คลิกเลือกหน้า
+       ‼️ คืนโฟกัสเฉพาะตอนที่โฟกัสยังไม่ได้อยู่ในช่องกรอกที่อื่น
+          ไม่งั้นการวาดใหม่ระหว่างผู้ใช้พิมพ์ช่วงหน้าจะไปแย่งโฟกัสจากช่องพิมพ์ */
     selected = it;
     render();
   }
@@ -593,10 +655,37 @@ export function mount(tool) {
     render();
   }
 
-  function toggleSelected() {
-    if (!selected) return;
-    selected.dropped = !selected.dropped;
+  /* ‼️ กองซ้อนไว้ย้อนการลบทีละครั้ง เก็บทั้งตัวหน้าและลำดับที่มันอยู่
+     ไม่ได้เก็บแค่ "ตัวล่าสุด" เพราะคนกดลบรัว ๆ แล้วเผลอเกินไปหนึ่งหน้าเป็นเรื่องปกติ
+     ‼️ ชิปเลือกเร็วกับช่องพิมพ์ช่วงหน้าเป็นการ "เลือกใหม่ทั้งชุด" จึงล้างกองนี้ทิ้ง
+     ไม่งั้นย้อนกลับแล้วจะได้สภาพลูกผสมที่อธิบายให้ผู้ใช้ไม่ได้ */
+  let removed = [];
+
+  function dropSelected() {
+    if (!selected || selected.dropped) return;
+    dropItem(selected);
+  }
+
+  function dropItem(it) {
+    /* ‼️ ต้องจำว่ากำลังใช้คีย์บอร์ดอยู่หรือเปล่า ก่อนที่ render() จะล้างการ์ดทิ้ง
+       เพราะการ์ดที่โฟกัสอยู่หายไป โฟกัสจะตกกลับไปที่ <body> ทันที
+       คนที่ลบด้วยคีย์บอร์ดต้อง Tab ใหม่จากต้นหน้าทุกครั้งที่ลบหนึ่งหน้า
+       จึงย้ายโฟกัสไปใบถัดไป ถ้าลบใบสุดท้ายก็ถอยไปใบก่อนหน้า */
+    it.dropped = true;
+    removed.push(it);
+    if (selected === it) selected = null;
+    render();                       // render() ย้ายโฟกัสไปใบถัดไปให้เองแล้ว
+    st.info(tr(`ลบหน้าแล้ว เหลือ ${items.filter((x) => !x.dropped).length} หน้า`,
+               `Page deleted, ${pl(items.filter((x) => !x.dropped).length, "page", "pages")} left`));
+  }
+
+  function undoDelete() {
+    const it = removed.pop();
+    if (!it) return;
+    it.dropped = false;
+    selected = it;
     render();
+    st.ok(tr("เอาหน้าที่ลบกลับมาแล้ว", "Brought the deleted page back"));
   }
 
   function syncToolbar() {
@@ -608,9 +697,9 @@ export function mount(tool) {
     rotateLBtn.disabled = !has;
     rotateRBtn.disabled = !has;
     toggleBtn.disabled = !has;
-    toggleBtn.replaceChildren(uiIcon(has && selected.dropped ? "undo" : "trash", "btn-ico"));
     // ‼️ ใช้ ariaLabel อย่างเดียว เว็บนี้ไม่ใช้ tooltip ของเบราว์เซอร์
-    toggleBtn.ariaLabel = has && selected.dropped ? tr("เอากลับ", "Restore") : tr("ลบหน้านี้", "Remove this page");
+    toggleBtn.ariaLabel = tr("ลบหน้านี้", "Delete this page");
+    undoDelBtn.disabled = removed.length === 0;
   }
 
   function applyRange() {
@@ -621,6 +710,7 @@ export function mount(tool) {
     if (!pages.length) { st.err(tr("ไม่พบเลขหน้าที่ถูกต้องในช่วงที่พิมพ์", "No valid page numbers found in what you typed")); return; }
     const keepSet = new Set(pages.map((p) => p - 1));
     items.forEach((it, i) => { it.dropped = !keepSet.has(i); });
+    removed = [];                 // เลือกใหม่ทั้งชุด เหมือนชิปเลือกเร็ว
     selected = null;
     render();
     st.ok(tr(`ตั้งช่วง ${rangeInput.value} (${pages.length} หน้า)`,

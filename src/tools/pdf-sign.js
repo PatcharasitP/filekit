@@ -1,4 +1,4 @@
-import { el, statusBar, button, dropzone, downloadButton, stripExt, fmtBytes, yieldToBrowser, segmented} from "../ui.js";
+import { el, statusBar, button, dropzone, downloadButton, stripExt, fmtBytes, yieldToBrowser, segmented, keyHints} from "../ui.js";
 import { uiIcon } from "../icons.js";
 import { workspace } from "../workspace.js";
 import { openPdf, passwordBox, loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
@@ -161,6 +161,11 @@ export function mount(tool) {
   });
   const { wrap, body, setBusy, showCanvas } = ws;
   body.append(results);
+  body.appendChild(keyHints([
+    ["Del", tr("ลบลายเซ็นที่เลือก", "Delete selected signature")],
+    ["\u2190 \u2191 \u2192 \u2193", tr("ขยับทีละนิด", "Nudge")],
+    ["Shift + \u2190", tr("ขยับทีละมาก", "Move further")],
+  ]));
   body.appendChild(el("div", { class: "note" },
     tr("ลายเซ็นเป็นภาพวางทับหน้าเอกสาร ไม่ใช่ลายเซ็นดิจิทัลที่มีใบรับรองทางกฎหมาย",
     "This is an image overlay, not a certificate-based digital signature for legal use")));

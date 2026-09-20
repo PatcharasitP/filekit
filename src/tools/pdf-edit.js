@@ -14,7 +14,7 @@
 //    ได้ภาษาไทยครบทุกตัวรวมสระและวรรณยุกต์ โดยไม่เพิ่มขนาดที่ต้องโหลด
 import { loadPdfLib, ENCRYPTED_WARNING, openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
-         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes, keyHints} from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
@@ -261,6 +261,14 @@ export function mount(tool) {
   });
   ws.wrap.prepend(el("style", {}, STYLE));
   ws.body.append(results,
+    /* ‼️ เขียนเฉพาะคีย์ที่มีอยู่จริงในโค้ด ไล่อ่าน handler ทีละตัวก่อนเขียน
+       บอกคีย์ที่ไม่มีจริง แย่กว่าไม่บอกเลย เพราะคนกดแล้วคิดว่าเว็บพัง */
+    keyHints([
+      ["Del", tr("ลบสิ่งที่เลือก", "Delete selected")],
+      ["\u2190 \u2191 \u2192 \u2193", tr("ขยับทีละนิด", "Nudge")],
+      ["Shift + \u2190", tr("ขยับทีละมาก", "Move further")],
+      ["Alt + \u2190", tr("ย่อขยายกล่องปิดทับ", "Resize the cover box")],
+    ]),
     el("div", { class: "note" },
       tr("ลากคลุมเพื่อปิดทับข้อความเดิม แล้วพิมพ์ข้อความใหม่วางแทนที่ได้",
          "Drag to cover the old text, then place your new text on top")),

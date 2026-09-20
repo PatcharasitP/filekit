@@ -253,8 +253,11 @@ export function workspace(tool, cfg = {}) {
       const lbl = on ? tr(`เปิดแผง ${t}`, `Show ${t}`) : tr(`พับแผง ${t} เก็บ`, `Collapse ${t}`);
       for (const b of [foldBtn[side], rail[side]]) {
         b.setAttribute("aria-expanded", String(!on));
+        /* ‼️ ห้ามตั้ง title (กฎของโปรเจกต์ จับด้วย tests/browser_noemoji.py)
+           tooltip ของเบราว์เซอร์ไม่โผล่บนจอสัมผัส หน่วงครึ่งวินาทีบนเดสก์ท็อป
+           และโปรแกรมอ่านจออ่านซ้ำกับ aria-label · el() จึงถอด title ให้ทุกครั้ง
+           แต่การตั้งผ่าน .title = ตรง ๆ แบบนี้เล็ดลอดไปได้ ต้องไม่ทำ */
         b.setAttribute("aria-label", lbl);
-        b.title = lbl;
       }
     }
   }
@@ -324,7 +327,6 @@ export function workspace(tool, cfg = {}) {
     ribBtn.setAttribute("aria-label", asRibbon
       ? tr("ย้ายการตั้งค่ากลับไปด้านขวา", "Move settings back to the right")
       : tr("ย้ายการตั้งค่าขึ้นไปด้านบน", "Move settings to the top"));
-    ribBtn.title = ribBtn.getAttribute("aria-label");
     applyPanes();
   }
   ribBtn.addEventListener("click", () => {

@@ -63,6 +63,15 @@ OUT_DIR = SCRATCH / "out"
 
 STEP_TIMEOUT = 90_000      # ms ต่อขั้น (โหลดไลบรารีหนักครั้งแรก + เผื่อเครื่องแชร์กับงานอื่นพร้อมกัน)
 SIF_TIMEOUT = 15_000       # ms รอ input[type=file] / .file-row
+def main_file_input(pg):
+    """‼️ ช่องเลือกไฟล์หลักคือช่องที่อยู่ใน .dz ไม่ใช่ "ช่องแรกของเอกสาร" (20/09/2026)
+    pdf-watermark มีช่องเลือกรูปโลโก้อยู่ในแผงตั้งค่าด้วย และโหมดริบบอน
+    ย้ายแผงตั้งค่าขึ้นไปเหนือผังงาน ช่องโลโก้จึงกลายเป็นช่องแรกของเอกสาร
+    เทสเดิมจึงยัดไฟล์ PDF เข้าช่องรูปโลโก้ แล้วไปรอ .file-row ที่ไม่มีวันมา
+    ‼️ กราฟ Power BI 3 ตัวมีช่องไฟล์ที่ไม่ได้อยู่ใน .dz จึงต้องมีทางถอย"""
+    dz = pg.locator(".dz input[type=file]")
+    return dz if dz.count() else pg.locator("input[type=file]")
+
 OCR_TIMEOUT = 180_000      # ms — ครั้งแรกต้องโหลดชุดภาษา Tesseract จาก CDN จริง (~5-20MB)
 
 MAGIC_SECRET = "MAGIC-SECRET-9F3K2"        # ฝังในเนื้อไฟล์
@@ -399,8 +408,7 @@ def dl(pg, trigger, filename, timeout=STEP_TIMEOUT):
 def sc_pdf_merge(pg, files):
     """pdf-lib — รวม 2 PDF ที่มีคำลับคนละท่อนเข้าด้วยกัน"""
     goto(pg, "pdf-merge")
-    pg.set_input_files("input[type=file]",
-                        [str(files["pdf_main"]), str(files["pdf_second"])], timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files([str(files["pdf_main"]), str(files["pdf_second"])], timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     ck_true("pdf-merge: ไฟล์เข้าครบ 2 แถว", pg.locator(".file-row").count() == 2)
     pg.get_by_role("button", name="รวมไฟล์").click()
@@ -416,7 +424,7 @@ def sc_pdf_merge(pg, files):
 def sc_pdf_watermark(pg, files):
     """pdf-lib — ใส่ลายน้ำ ตรวจว่าเนื้อความเดิม (คำลับ) ยังอยู่ครบหลังแก้ไฟล์"""
     goto(pg, "pdf-watermark")
-    pg.set_input_files("input[type=file]", str(files["pdf_main"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     pg.get_by_role("button", name="ใส่ลายน้ำ").click()
     pg.wait_for_selector(".result", timeout=STEP_TIMEOUT)
@@ -430,7 +438,7 @@ def sc_pdf_watermark(pg, files):
 def sc_pdf_to_text(pg, files):
     """pdf.js — ดึงข้อความออกมาเป็น .txt"""
     goto(pg, "pdf-to-text")
-    pg.set_input_files("input[type=file]", str(files["pdf_main"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     pg.get_by_role("button", name="ดึงข้อความ").click()
     # ‼️ pdf-to-text.js ไม่ได้ใช้ resultRow() ร่วม เขียนปุ่มเองในกล่อง class="actions" (ไม่ใช่ ".result")
@@ -444,7 +452,7 @@ def sc_pdf_to_text(pg, files):
 def sc_pdf_to_images(pg, files):
     """pdf.js + canvas — แปลงทุกหน้าเป็นรูป (page.render ลง canvas แล้ว toBlob)"""
     goto(pg, "pdf-to-images")
-    pg.set_input_files("input[type=file]", str(files["pdf_main"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     pg.get_by_role("button", name="แปลงเป็นรูป").click()
     pg.wait_for_selector(".results button", timeout=STEP_TIMEOUT)
@@ -460,7 +468,7 @@ def sc_pdf_to_images(pg, files):
 def sc_pdf_to_word(pg, files):
     """pdf.js (อ่าน) + docx (เขียน) — แปลง PDF เป็น DOCX ที่แก้ไขต่อได้"""
     goto(pg, "pdf-to-word")
-    pg.set_input_files("input[type=file]", str(files["pdf_main"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     pg.get_by_role("button", name="แปลงเป็น Word").click()
     pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
@@ -473,7 +481,7 @@ def sc_pdf_to_word(pg, files):
 def sc_word_to_pdf(pg, files):
     """mammoth (อ่าน docx) + jspdf (เขียน pdf) — ฝังฟอนต์ไทยจาก vendor/fonts/ ด้วย"""
     goto(pg, "word-to-pdf")
-    pg.set_input_files("input[type=file]", str(files["docx"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["docx"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     pg.get_by_role("button", name="แปลงเป็น PDF").click()
     pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
@@ -486,7 +494,7 @@ def sc_word_to_pdf(pg, files):
 def sc_excel_csv(pg, files):
     """xlsx — แปลง XLSX เป็น CSV"""
     goto(pg, "excel-csv")
-    pg.set_input_files("input[type=file]", str(files["xlsx"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["xlsx"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     pg.get_by_role("button", name="แปลงไฟล์").click()
     pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
@@ -498,7 +506,7 @@ def sc_excel_csv(pg, files):
 def sc_image_resize(pg, files):
     """canvas — ย่อ/บีบอัดรูปด้วย canvas.toBlob() ในเบราว์เซอร์ล้วน"""
     goto(pg, "image-resize")
-    pg.set_input_files("input[type=file]", str(files["png"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["png"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     pg.get_by_role("button", name="ย่อและบีบอัด").click()
     # ‼️ image-resize.js มี UI ของตัวเอง (.rz-* ทั้งหมด) ไม่มี ".results"/".result" เลย
@@ -512,7 +520,7 @@ def sc_image_resize(pg, files):
 def sc_pdf_ocr(pg, files):
     """tesseract — OCR อ่านคำลับจากรูปกลับมาเป็นข้อความ (พิสูจน์ว่าประมวลผลเนื้อไฟล์จริงในเครื่อง)"""
     goto(pg, "pdf-ocr")
-    pg.set_input_files("input[type=file]", str(files["png"]), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(files["png"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     # เลือกภาษาอังกฤษอย่างเดียว (ข้อความในรูปเป็น ASCII ล้วน) — โหลดชุดภาษาเล็กสุด เร็วสุด
     pg.locator('.seg input[value="eng"]').check()

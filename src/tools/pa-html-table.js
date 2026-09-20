@@ -45,9 +45,15 @@ const STYLE = `
 .pah-preview *{max-width:100%}
 .pah-col{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft);padding:9px 11px;margin-bottom:8px}
 .pah-col-head{display:flex;align-items:center;gap:6px;margin-bottom:7px}
-.pah-col-head input{flex:1}
+/* ‼️ ต้องมี min-width:0 ด้วย ไม่งั้น flex:1 หดไม่ลงจริง (เจอกับตา 20/09/2026)
+   flex item มี min-width:auto เป็นค่าตั้งต้น = ห้ามหดต่ำกว่าความกว้างเนื้อหาของตัวเอง
+   และ <input> มีความกว้างเนื้อหาราว 170px จาก attribute size ที่เบราว์เซอร์ตั้งให้เอง
+   ช่องพิมพ์จึงไม่ยอมหด แล้วดันปุ่ม ขึ้น ลง ลบ ออกไปนอกแผงซ้ายทั้งสามใบ
+   วัดจริงบนจอ 1440px ปุ่มลบอยู่ที่ 325-347px ส่วนแผงจบที่ 312px = อยู่นอกกรอบทั้งใบ
+   ‼️ นี่คือบั๊กใช้งาน ไม่ใช่เรื่องความสวย ผู้ใช้สลับลำดับคอลัมน์และลบคอลัมน์ไม่ได้เลย */
+.pah-col-head input{flex:1;min-width:0}
 .pah-mini{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:6px;
-  width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px}
+  width:26px;height:26px;flex:none;line-height:1;cursor:pointer;font-size:13px}
 .pah-mini:hover:not(:disabled){border-color:var(--g-powerbi,var(--brand))}
 .pah-mini:disabled{opacity:.35;cursor:default}
 /* ‼️ นิ้วแตะต้องการ 36x36px (WCAG 2.5.8 / Apple HIG / Material) แต่ปุ่มไอคอนพวกนี้กว้าง 26px

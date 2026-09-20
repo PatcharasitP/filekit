@@ -304,11 +304,25 @@ def case_pdf_to_images(pg):
             im.verify()
 
 
+
+
+def main_file_input(pg):
+    """‼️ ช่องเลือกไฟล์หลักคือช่องที่อยู่ใน .dz ไม่ใช่ "ช่องแรกของเอกสาร" (20/09/2026)
+    pdf-watermark มีช่องเลือกรูปโลโก้อยู่ในแผงตั้งค่าด้วย และโหมดริบบอน
+    ย้ายแผงตั้งค่าขึ้นไปไว้เหนือผังงาน ช่องโลโก้จึงกลายเป็นช่องแรกของเอกสาร
+    เทสเดิมเลยยัดไฟล์ PDF เข้าช่องรูปโลโก้ แล้วไปรอ .file-row ที่ไม่มีวันมา
+    (ช่องโลโก้ซ่อนอยู่ตอนเลือกโหมดข้อความ แต่ set_input_files ใส่ของที่ซ่อนอยู่ได้)
+    ‼️ กราฟ Power BI 3 ตัวมีช่องไฟล์ที่ไม่ได้อยู่ใน .dz จึงต้องมีทางถอย ไม่ใช่บังคับ .dz อย่างเดียว"""
+    dz = pg.locator(".dz input[type=file]")
+    return dz if dz.count() else pg.locator("input[type=file]")
+
+
+
 def case_pdf_watermark(pg):
     src = SAMPLES / "ตัวอย่าง-รายงานประจำเดือน.pdf"
     expected_pages = fitz.open(str(src)).page_count
     goto(pg, "pdf-watermark")
-    pg.set_input_files("input[type=file]", str(src), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     pg.get_by_role("button", name="ใส่ลายน้ำ").click()
     pg.wait_for_selector(".result", timeout=20_000)

@@ -258,10 +258,24 @@ SHEETPICK = {
 SHEETPICK_DL_TEXT = {"en": "Download as Excel", "th": "ดาวน์โหลดเป็น Excel"}
 
 
+
+
+def main_file_input(pg):
+    """‼️ ช่องเลือกไฟล์หลักคือช่องที่อยู่ใน .dz ไม่ใช่ "ช่องแรกของเอกสาร" (20/09/2026)
+    pdf-watermark มีช่องเลือกรูปโลโก้อยู่ในแผงตั้งค่าด้วย และโหมดริบบอน
+    ย้ายแผงตั้งค่าขึ้นไปไว้เหนือผังงาน ช่องโลโก้จึงกลายเป็นช่องแรกของเอกสาร
+    เทสเดิมเลยยัดไฟล์ PDF เข้าช่องรูปโลโก้ แล้วไปรอ .file-row ที่ไม่มีวันมา
+    (ช่องโลโก้ซ่อนอยู่ตอนเลือกโหมดข้อความ แต่ set_input_files ใส่ของที่ซ่อนอยู่ได้)
+    ‼️ กราฟ Power BI 3 ตัวมีช่องไฟล์ที่ไม่ได้อยู่ใน .dz จึงต้องมีทางถอย ไม่ใช่บังคับ .dz อย่างเดียว"""
+    dz = pg.locator(".dz input[type=file]")
+    return dz if dz.count() else pg.locator("input[type=file]")
+
+
+
 def run_simple(pg, tool_id, files_rel):
     file_paths = [str(SAMPLES / f) for f in files_rel]
     goto(pg, tool_id)
-    pg.set_input_files("input[type=file]", file_paths, timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(file_paths, timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     return file_paths
 
@@ -274,7 +288,7 @@ def click_go(pg, text, timeout=25_000):
 
 def run_sheetpick(pg, tool_id, file_path, download_text=None, extra_wait=0):
     goto(pg, tool_id)
-    pg.set_input_files("input[type=file]", str(file_path), timeout=SIF_TIMEOUT)
+    main_file_input(pg).first.set_input_files(str(file_path), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".stats .stat", timeout=20_000)
     if extra_wait:
         pg.wait_for_timeout(extra_wait)

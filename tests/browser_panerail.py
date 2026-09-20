@@ -194,6 +194,20 @@ def main():
              return !!a && !!b && a.innerHTML !== b.innerHTML;
            }"""))
 
+        # ‼️ ด่านนี้มาจากบั๊กที่ฟ้าทำเอง แล้วเทสข้อ ⑥ จับได้ (20/09/2026)
+        #    ค่าเริ่มต้นของหลายเครื่องมือ "เดาเป็นริบบอนก่อน" แล้วถอยเป็นแผงข้างหลังวัดความสูง
+        #    ถ้าโค้ดไปล้างสถานะพับทิ้งระหว่างจังหวะที่ยังเดาอยู่ ผู้ใช้จะเสียค่าที่ตั้งไว้ทุกครั้งที่เปิดหน้า
+        #    ด่านนี้ยืนยันว่าการอยู่โหมดริบบอน "กดทับ" การพับเฉย ๆ ห้ามไปแตะค่าที่เก็บไว้
+        pg.goto(f"{BASE}/#pbi-donut", wait_until="load", timeout=60000)
+        pg.wait_for_timeout(2500)
+        pg.evaluate("() => localStorage.setItem('filekit-pane-right-pbi-donut','1')")
+        pg.reload(wait_until="load")
+        pg.wait_for_timeout(3200)
+        ck("ค่าที่ผู้ใช้ตั้งไว้ต้องไม่ถูกโหมดริบบอนล้างทิ้งระหว่างทาง",
+           pg.evaluate("() => localStorage.getItem('filekit-pane-right-pbi-donut') === '1'"),
+           pg.evaluate("() => localStorage.getItem('filekit-pane-right-pbi-donut')"))
+        pg.evaluate("() => localStorage.clear()")
+
         ck("ไม่มี error หลุดออกมาระหว่างทาง", not errs, errs[0] if errs else "")
         b.close()
 

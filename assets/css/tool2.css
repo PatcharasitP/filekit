@@ -327,3 +327,37 @@ body.tool{overflow:hidden}
   .s2-side-bd .cfs-wrap{margin-block-end:6px}
   .s2-side-bd .ps-wrap{margin-bottom:8px}
 }
+
+/* ── เป้าการแตะต้องได้ 36px ทุกปุ่มที่โผล่บนจอสัมผัสหรือจอแคบ ────────────
+ * ‼️ ปุ่มใหม่ของ v2 สองตัวตกเกณฑ์ตอนวัดจริง (menubtn 34.9px, ลิงก์ตัวอย่าง 21px)
+ *   ต้องผูกกับ "จอแคบ หรือ ใช้นิ้ว" ไม่ใช่อย่างใดอย่างหนึ่ง
+ *   เพราะโน้ตบุ๊กจอสัมผัสก็ใช้นิ้ว และเทสบางตัวเปิดจอ 390px โดยไม่จำลองนิ้ว
+ *   (กติกาเดียวกับ .tm-chip ใน tool.css ที่เคยเจอปัญหานี้มาก่อน) */
+@media (max-width:640px){
+  .s2-menubtn{min-height:36px}
+  .s2-link{min-height:36px; display:inline-flex; align-items:center}
+}
+@media (pointer:coarse){
+  .s2-menubtn{min-height:36px}
+  .s2-link{min-height:36px; display:inline-flex; align-items:center}
+  .s2-btn2{min-height:40px}
+}
+
+/* ‼️ แถบหัวเว็บมีของเพิ่มขึ้นใน v2 (ปุ่มเมนูรวมเครื่องมือ) จอแคบจึงล้นแนวนอน
+   วัดจริงบนจอ 390: ปุ่ม "เครื่องมือทั้งหมด" ยื่นไปถึง x=474 ทำให้ทั้งหน้าเลื่อนข้างได้
+   ปุ่มย้อนกลับซ้ำซ้อนกับโลโก้ (กดโลโก้ก็กลับหน้าแรก) และมีเมนูรวมแทนแล้ว
+   จึงเหลือแค่ลูกศรบนจอแคบ ไม่ซ่อนทั้งปุ่มเพราะยังเป็นทางกลับที่คนคุ้นมือ */
+@media (max-width:640px){
+  /* ‼️ วัดจริงบนจอ 390: แถบหัวกว้างรวม 469px ดันทั้งหน้าให้เลื่อนข้างได้
+     (ผู้ใช้มือถือจะรู้สึกว่าหน้า "ไถไปข้างได้" ซึ่งเป็นตำหนิที่เห็นชัดมาก)
+     ปุ่มย้อนกลับซ้ำซ้อนกับโลโก้ (กดโลโก้ก็กลับหน้าแรก) และมีเมนูรวมเครื่องมือแทนแล้ว
+     จึงซ่อนบนจอแคบ ส่วนชื่อเว็บเหลือไอคอน และปุ่มเมนูบีบได้ */
+  body.tool .back{display:none}
+  /* ‼️ ซ่อนแค่ข้อความ แต่ต้องคงพื้นที่กดไว้ 36px ไม่งั้นปุ่มเหลือกว้าง 8px กดไม่โดน
+     (ซ่อนข้อความแล้วปุ่มหดตามทันที เพราะไอคอนในปุ่มนี้เป็น svg ที่กว้างตามข้อความ) */
+  body.tool .brand > span{display:none}
+  body.tool .brand{min-width:40px; justify-content:center}
+  body.tool .s2-menubtn{max-width:52vw; min-width:0}
+  body.tool .s2-menubtn > span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  body.tool .top{gap:8px; padding-inline:10px}
+}

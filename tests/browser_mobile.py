@@ -125,6 +125,16 @@ SCAN_JS = """() => {
     if (!visible(el)) continue;
     const tag = el.tagName;
     if (tag === "SELECT" || tag === "TEXTAREA" || tag === "PRE") continue;
+    /* ‼️ "กับดักสกอลล์ซ้อน" คือกล่องที่เลื่อนได้ซ้อนอยู่ในหน้าที่เลื่อนได้ ผู้ใช้จึงงงว่าจะเลื่อนอะไร
+       โครง v2 ทำให้หน้าเว็บ "ไม่เลื่อนเลย" แล้วให้เลื่อนเฉพาะในผืนงานกับในแผง (แบบเดียวกับ
+       iLovePDF และ Smallpdf ที่วัดมา) จึงไม่มีการซ้อนตั้งแต่ต้น ไม่ใช่กับดัก
+       ‼️ เงื่อนไขนี้ต้องตรวจว่าหน้าไม่เลื่อนจริงด้วย ไม่ใช่ยกเว้นตามชื่อคลาสเฉย ๆ */
+    /* ‼️ หน้าเว็บถือว่า "ไม่เลื่อน" เมื่อเลื่อนจริงไม่ได้ ไม่ใช่เมื่อ scrollHeight เท่ากับจอเป๊ะ
+       body มี overflow:hidden ในโครง v2 ค่าที่วัดได้จึงอาจเกินจอเล็กน้อยโดยที่เลื่อนไม่ได้จริง */
+    const canScrollPage = document.scrollingElement
+      && document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 2
+      && getComputedStyle(document.body).overflowY !== "hidden";
+    if (!canScrollPage && el.closest(".s2")) continue;
     const cs = getComputedStyle(el);
     if (cs.overflowY !== "auto" && cs.overflowY !== "scroll") continue;
     if (el.scrollHeight <= el.clientHeight + 1) continue;
@@ -159,7 +169,9 @@ SCAN_JS = """() => {
 
 # ② ปุ่มลงมือทำ — คืน rect ของทุกปุ่ม/ลิงก์ที่มองเห็นได้ใน .ws-footer (ถ้ามี — แผง 3 ช่อง) หรือ .actions แรกของหน้า
 BTN_JS = """() => {
-  const footer = document.querySelector(".ws-footer");
+  /* ‼️ โครง v2 ย้ายแถบปุ่มไปที่ .s2-side-ft ซึ่งเป็นส่วนท้ายของแผงขวาที่ไม่เลื่อน
+     ต้องหาที่นั่นก่อน ไม่งั้นจะรายงานว่า "ไม่มีปุ่ม" ทั้งที่ปุ่มอยู่ในจอตลอดเวลา (แก้ 21/09/2026) */
+  const footer = document.querySelector(".s2-side-ft") || document.querySelector(".ws-footer");
   const container = footer || document.querySelector(".actions");
   if (!container) return { hasContainer: false, buttons: [] };
   function visible(el){ return !!el && (!el.checkVisibility || el.checkVisibility()); }
@@ -338,12 +350,20 @@ def check_tool(pg, base, tid, results):
                 f"floating={e['floating']} coversEmpty={e['coversEmpty']} (ต้อง static และไม่ทับข้อความว่างเปล่า)")
 
     # ---------- กดปุ่มตัวอย่างทุกปุ่มบนหน้า (บางเครื่องมือมี >1 dropzone เช่น word-mailmerge) ----------
-    btns = pg.locator("button", has_text=SAMPLE_BTN_TEXT)
+    # ‼️ โครง v2 มีปุ่ม "ลองด้วยไฟล์ตัวอย่าง" สองที่: ปุ่มที่ผู้ใช้เห็นในหน้าเปล่า
+    # กับปุ่มตัวจริงในกล่องรับไฟล์ซึ่งถูกหน้าเปล่าทับอยู่ (ปุ่มแรกส่งต่อการกดไปให้)
+    # เทสต้องกดเฉพาะปุ่มที่มองเห็นจริง ไม่งั้นจะค้างรอปุ่มที่ไม่มีวันโผล่ (แก้ 21/09/2026)
+    btns = pg.locator("button:visible", has_text=SAMPLE_BTN_TEXT)
     n = btns.count()
     if n == 0:
         return  # เครื่องมือไม่มีไฟล์ตัวอย่าง (ไม่พบในทะเบียนตอนนี้ — เผื่ออนาคต)
+    # ‼️ ห้ามวน nth() ตายตัว เพราะการกดปุ่มแรกเปลี่ยนสถานะของหน้า (หน้าเปล่าไปสถานะทำงาน)
+    # ปุ่มที่เหลือจึงย้ายที่หรือหายไป ต้องหยิบปุ่มที่มองเห็น "ตอนนั้น" ใหม่ทุกรอบ
     for i in range(n):
-        btns.nth(i).click()
+        live = pg.locator("button:visible", has_text=SAMPLE_BTN_TEXT)
+        if live.count() == 0:
+            break
+        live.first.click()
         if not wait_loaded(pg, i + 1):
             results["load_fail"].append(f"{tid} → โหลดไฟล์ตัวอย่างปุ่มที่ {i + 1}/{n} ไม่สำเร็จภายในเวลา")
             return
@@ -468,7 +488,7 @@ def main():
 def _load_one_sample(pg, tool_id):
     pg.goto(f"{BASE}#/{tool_id}", wait_until="networkidle")
     pg.wait_for_timeout(400)
-    pg.locator("button", has_text=SAMPLE_BTN_TEXT).first.click()
+    pg.locator("button:visible", has_text=SAMPLE_BTN_TEXT).first.click()
     wait_loaded(pg, 1)
     wait_stable(pg)
     scroll_to(pg, 0)

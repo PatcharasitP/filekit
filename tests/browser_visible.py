@@ -444,10 +444,11 @@ def main():
         pg_bug = b.new_page(viewport={"width": 1280, "height": 950})
         pg_bug.goto(f"{BASE}#/pdf-pages", wait_until="networkidle")
         pg_bug.evaluate(mark_head)
-        pg_bug.add_style_tag(content=(
-            ".btn.ghost{background:var(--card) !important;"
-            "border-color:transparent !important;box-shadow:none !important}"
-        ))
+        # ต้องฉีดสีพื้นของจริงที่อยู่ข้างหลังปุ่มนั้น ไม่ใช่ var(--card) ตายตัว
+        # โครง v2 เปลี่ยนพื้นผืนงานเป็น --bg-soft ปุ่มที่ฉีด --card จึงยังต่างจากพื้น 1.09
+        # แล้วตัวตรวจก็ตอบถูกว่ายังไม่ล่องหน = ตัวจำลองบั๊กผิด ไม่ใช่ตัวตรวจผิด
+        # อ่านสีพื้นจริงจาก DOM แล้วทาทับ ตัวจำลองจึงตรงกับบั๊กจริงเสมอไม่ว่าโครงไหน
+        pg_bug.evaluate("""() => {\n  const bgOf = (el) => {\n    for (let n = el.parentElement; n; n = n.parentElement) {\n      const c = getComputedStyle(n).backgroundColor;\n      if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c;\n    }\n    return getComputedStyle(document.body).backgroundColor;\n  };\n  for (const b of document.querySelectorAll('.btn.ghost')) {\n    b.style.setProperty('background', bgOf(b), 'important');\n    b.style.setProperty('border-color', 'transparent', 'important');\n    b.style.setProperty('box-shadow', 'none', 'important');\n  }\n}""")
         pg_bug.wait_for_timeout(150)
         r_bug = pg_bug.evaluate(SCAN_JS)
         ghost_bad_bug = not_head([c for c in r_bug["clickables"]

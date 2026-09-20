@@ -63,6 +63,31 @@ def ratio(a, b):
     hi, lo = max(la, lb), min(la, lb)
     return (hi + .05) / (lo + .05)
 
+def size_close(got, want):
+    """เทียบขนาดไฟล์แบบเผื่อการแกว่งเล็กน้อย
+
+    ‼️ ที่มา 20/09/2026 ชุดเทสเต็มตกที่ pdf-to-word ประกาศ 8.4 KB แต่ได้จริง 8.3 KB
+    วัดซ้ำ 5 รอบได้ 8.4, 8.4, 8.4, 8.4, 8.3 คือแกว่งจริง ไม่ใช่ของพัง
+    ต้นเหตุคือไลบรารี docx ใช้ Packer สร้างไฟล์ zip ซึ่งฝังเวลาปัจจุบัน
+    ลงในหัวรายการ zip ทุกครั้ง ขนาดหลังบีบอัดจึงต่างกันได้ไม่กี่ไบต์ทุกรอบ
+    เป็นพฤติกรรมของไลบรารี แก้ที่ฝั่งเราไม่ได้ถ้าไม่ไปรื้อ zip ใหม่ ซึ่งไม่คุ้ม
+
+    ‼️ ยังเทียบหน่วยแบบตรงตัวเสมอ KB กับ MB ต่างกันคือของพังจริง ต้องแดง
+    ‼️ เผื่อแค่ 0.2 หน่วยหรือ 3% แล้วแต่ตัวไหนมากกว่า ซึ่งพอสำหรับการปัดเศษ
+    แต่ไม่พอจะกลบการถดถอยจริง (เช่น 8.4 เป็น 12 KB ยังแดงอยู่)
+    """
+    import re
+    g = re.match(r"([\d.,]+)\s*(\w+)", (got or "").strip())
+    w = re.match(r"([\d.,]+)\s*(\w+)", (want or "").strip())
+    if not g or not w:
+        return (got or "").strip() == (want or "").strip()
+    if g.group(2) != w.group(2):
+        return False
+    gv = float(g.group(1).replace(",", ""))
+    wv = float(w.group(1).replace(",", ""))
+    return abs(gv - wv) <= max(0.2, wv * 0.03)
+
+
 with sync_playwright() as p:
     br = p.chromium.launch()
     ctx = br.new_context(viewport={"width": 1440, "height": 950})
@@ -120,7 +145,7 @@ with sync_playwright() as p:
             continue
         ext = (got["name"].rsplit(".", 1)[-1] or "").lower()
         ok = (got_in == want["n"] and ext == want["outExt"]
-              and got["size"].strip() == want["outSize"] and got["meta"].strip() == want["outMeta"])
+              and size_close(got["size"], want["outSize"]) and got["meta"].strip() == want["outMeta"])
         ck(f"③ {tid} รันจริงตรงกับที่ประกาศ ({want['n']} ไฟล์ → .{want['outExt']} {want['outSize']} {want['outMeta']})",
            ok, f"ได้ {got_in} ไฟล์ → .{ext} {got['size'].strip()} {got['meta'].strip()}")
 

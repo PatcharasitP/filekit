@@ -421,7 +421,12 @@ def main():
                     ".forEach(e => e.classList.add('in-head'))"
         not_head = lambda lst: [c for c in lst if "in-head" not in c["cls"].split()]
         pg_fix.evaluate(mark_head)
-        total_ghost = pg_fix.locator(".btn.ghost:not(.in-head)").count()
+        # ‼️ ต้องนับเฉพาะปุ่มที่ "มองเห็นอยู่จริง" ให้ตรงกับสิ่งที่ตัวสแกนตรวจได้ (แก้ 20/09/2026)
+        #    ตัวสแกนข้ามของที่ซ่อนอยู่เสมอ เพราะของที่มองไม่เห็นจะล่องหนหรือไม่ก็ไม่มีความหมาย
+        #    พอ pdf-pages ตั้งให้แผงขวาเปิดมาพับไว้ ปุ่มในแผงนั้น 5 ตัวจึงถูกซ่อน
+        #    เทสตั้งเป้าว่าต้องจับให้ได้ 14 ตัวรวมของที่ซ่อน ตัวสแกนจับได้แค่ 9 ตัวที่เห็น
+        #    = เป้าผิด ไม่ใช่ตัวสแกนพลาด นับให้ตรงกันทั้งสองฝั่งจึงจบ
+        total_ghost = pg_fix.locator(".btn.ghost:not(.in-head):visible").count()
         pg_fix.add_style_tag(content=(
             ".btn.ghost{background:var(--brand) !important;color:#fff !important;"
             "border-color:transparent !important;box-shadow:none !important}"

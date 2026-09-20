@@ -162,7 +162,11 @@ def main():
         # ── ① ใส่ลายน้ำด้วยเครื่องมือของเราเอง = เส้นทางที่ผู้ใช้เดินจริง ─────────
         pg.goto(f"{BASE}/#pdf-watermark", wait_until="load", timeout=60000)
         pg.wait_for_timeout(2200)
-        pg.locator("input[type=file]").first.set_input_files(str(plain))
+        # ‼️ ต้องชี้ที่ .dz ไม่ใช่ "ช่องแรกของเอกสาร" (20/09/2026)
+        #    pdf-watermark มีช่องเลือกรูปโลโก้อยู่ในแผงตั้งค่าด้วย และแผงตั้งค่าของเครื่องมือนี้
+        #    ขึ้นเป็นริบบอนอยู่เหนือผังงาน ช่องโลโก้จึงเป็นช่องแรกของเอกสาร
+        #    ยัดผิดช่องแล้วปุ่ม "ใส่ลายน้ำ" ไม่เปิด เทสจึงค้างรอปุ่มที่ disabled อยู่
+        pg.locator(".dz input[type=file]").first.set_input_files(str(plain))
         pg.wait_for_timeout(2200)
         pg.get_by_role("button", name="ใส่ลายน้ำ").first.click()
         pg.wait_for_timeout(3000)
@@ -222,7 +226,11 @@ def main():
         # ── ③ เคสที่ต้องปฏิเสธอย่างซื่อสัตย์: ไฟล์ที่ไม่มีชั้นทับ ──────────────
         pg.goto(f"{BASE}/#pdf-unstamp", wait_until="load", timeout=60000)
         pg.wait_for_timeout(2000)
-        pg.locator("input[type=file]").first.set_input_files(str(plain))
+        # ‼️ ต้องชี้ที่ .dz ไม่ใช่ "ช่องแรกของเอกสาร" (20/09/2026)
+        #    pdf-watermark มีช่องเลือกรูปโลโก้อยู่ในแผงตั้งค่าด้วย และแผงตั้งค่าของเครื่องมือนี้
+        #    ขึ้นเป็นริบบอนอยู่เหนือผังงาน ช่องโลโก้จึงเป็นช่องแรกของเอกสาร
+        #    ยัดผิดช่องแล้วปุ่ม "ใส่ลายน้ำ" ไม่เปิด เทสจึงค้างรอปุ่มที่ disabled อยู่
+        pg.locator(".dz input[type=file]").first.set_input_files(str(plain))
         pg.wait_for_timeout(4000)
         ck(pg.locator(".us-layer input").count() == 0,
            "ไฟล์ที่ไม่มีชั้นทับ ต้องไม่เสนอชั้นให้ลบสักชั้น")

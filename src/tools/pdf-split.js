@@ -1,4 +1,4 @@
-import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING } from "../pdfopen.js";
+import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, download,
          stripExt, parsePages, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
 import { workspace } from "../workspace.js";
@@ -148,7 +148,7 @@ export function mount(tool) {
     pageBytes = null; byteToken++;
     updateAll();
     try {
-      const { doc, encrypted, hiddenLayers } = await loadPdfLib(myFile);
+      const { doc, encrypted, hiddenLayers } = await loadPdfLib(myFile, passwordBox(ws.body));
       if (file !== myFile) return; // ผู้ใช้เปลี่ยนไฟล์ระหว่างโหลด — ทิ้งผลเก่า
       cache = { file: myFile, doc, encrypted, hiddenLayers, total: doc.getPageCount() };
       /* วัดขนาดจริงต่อหน้าในพื้นหลัง โหมดแยกตามขนาดจะแม่นขึ้นเองเมื่อวัดเสร็จ */

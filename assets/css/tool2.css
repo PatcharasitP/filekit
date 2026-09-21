@@ -291,6 +291,27 @@ body.tool{overflow:hidden}
 /* ผลลัพธ์หลายไฟล์ที่ย้ายมาจากผืนงาน */
 .s2-res-list{display:flex; flex-direction:column; gap:8px; margin:12px 0}
 .s2-res-list .result{margin:0}
+/* ‼️ กล่องขอรหัสผ่านของไฟล์ ต้องลอยกลางจอ (เจอจริง 21/09/2026)
+ * เดิมมันถูกต่อท้ายผืนงาน ซึ่งในโครง v2 ผืนงานสูงเท่าจอพอดี
+ * กล่องจึงไปโผล่ที่ก้นหน้า ผู้ใช้เห็นช่องกรอกแต่ปุ่มยืนยันถูกตัดออกนอกจอ กดไม่ได้เลย
+ * และนี่คือของที่ผู้ใช้ "ต้องตอบก่อน" ถึงจะทำอะไรต่อได้ จึงควรเป็นชั้นลอย ไม่ใช่ของท้ายหน้า */
+body.tool > .pw-box{
+  position:fixed; inset-block-start:50%; inset-inline-start:50%;
+  transform:translate(-50%,-50%);
+  z-index:60; width:min(420px, calc(100vw - 32px)); max-height:calc(100dvh - 40px); overflow:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.28);
+}
+:root[data-theme="dark"] body.tool > .pw-box{box-shadow:0 20px 60px rgba(0,0,0,.65)}
+/* ฉากหลังมืดลง เพื่อบอกว่าต้องตอบกล่องนี้ก่อน */
+body.tool:has(> .pw-box)::after{
+  content:""; position:fixed; inset:0; background:rgba(17,17,17,.42); z-index:55;
+  /* ‼️ ต้องไม่รับการกด ไม่งั้นมันบังปุ่มในกล่องเอง ทั้งที่ตาเห็นว่ากล่องอยู่ข้างบน
+     (เจอจริง: Playwright ฟ้องว่า .s2 intercepts pointer events ทั้งที่กล่องมี z-index สูงกว่า) */
+  pointer-events:none;
+}
+body.tool > .pw-box .actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-content:center}
+
 /* ปุ่มรวมของผลลัพธ์ (เช่น ดาวน์โหลด ZIP) ที่ย้ายมาจากผืนงาน ต้องเด่นกว่าปุ่มรายไฟล์ */
 .s2-res-dl{display:flex; flex-direction:column; gap:8px; margin:12px 0}
 .s2-res-dl .btn{width:100%; justify-content:center; min-height:44px}

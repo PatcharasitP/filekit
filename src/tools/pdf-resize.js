@@ -4,7 +4,7 @@
 //
 // ‼️ ข้อความยังค้นหาและคัดลอกได้ เพราะวางหน้าเดิมลงกระดาษใหม่ ไม่ได้แปลงเป็นภาพ
 //   (พิสูจน์แล้ว 21/09/2026: A4 เป็น Letter 612x792 ข้อความยังค้นได้ครบ)
-import { loadPdfLib, friendlyPdfError } from "../pdfopen.js";
+import { loadPdfLib, friendlyPdfError, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
@@ -91,7 +91,7 @@ export function mount(tool) {
     if (!file) { stage.hidden = true; ws.showCanvas(false); go.disabled = true; return; }
     try {
       st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
-      const { doc } = await loadPdfLib(file);
+      const { doc } = await loadPdfLib(file, passwordBox(ws.body));
       pageCount = doc.getPageCount();
       const p0 = doc.getPage(0).getSize();
       srcSize = { w: p0.width, h: p0.height };
@@ -156,7 +156,7 @@ export function mount(tool) {
     st.info(tr("กำลังเปลี่ยนขนาด…", "Resizing…"));
     try {
       const { PDFDocument } = PDFLib;
-      const { doc: src } = await loadPdfLib(file);
+      const { doc: src } = await loadPdfLib(file, passwordBox(ws.body));
       const out = await PDFDocument.create();
       const embedded = await out.embedPages(src.getPages());
       const t = target();

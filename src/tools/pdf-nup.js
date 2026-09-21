@@ -6,7 +6,7 @@
 //
 // ‼️ ข้อความยังค้นหาและคัดลอกได้เหมือนเดิม เพราะวางหน้าเดิมลงกระดาษใหม่
 //   ไม่ได้เรนเดอร์เป็นภาพ (พิสูจน์แล้ว 21/09/2026)
-import { loadPdfLib, friendlyPdfError } from "../pdfopen.js";
+import { loadPdfLib, friendlyPdfError, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
@@ -87,7 +87,7 @@ export function mount(tool) {
     if (!file) { stage.hidden = true; ws.showCanvas(false); go.disabled = true; return; }
     try {
       st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
-      const { doc } = await loadPdfLib(file);
+      const { doc } = await loadPdfLib(file, passwordBox(ws.body));
       pageCount = doc.getPageCount();
       stage.hidden = false;
       ws.showCanvas(true);
@@ -161,7 +161,7 @@ export function mount(tool) {
     st.info(tr("กำลังจัดหน้า…", "Arranging the pages…"));
     try {
       const { PDFDocument } = PDFLib;
-      const { doc: src } = await loadPdfLib(file);
+      const { doc: src } = await loadPdfLib(file, passwordBox(ws.body));
       const out = await PDFDocument.create();
       const embedded = await out.embedPages(src.getPages());
       const p = plan();

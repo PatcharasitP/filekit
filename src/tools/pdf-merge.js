@@ -1,4 +1,4 @@
-import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING } from "../pdfopen.js";
+import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, downloadButton, stripExt, yieldToBrowser, fmtBytes, field, select } from "../ui.js";
 import { tr, pl } from "../i18n.js";
 
@@ -66,8 +66,8 @@ export function mount(tool) {
       if (modeSel.value === "alt") {
         /* สลับหน้าจาก 2 ไฟล์: หน้าแรกของไฟล์หน้า, หน้าแรกของไฟล์หลัง, หน้าสองของไฟล์หน้า, ...
            ‼️ ไฟล์ด้านหลังมักเรียงกลับ จึงกลับลำดับก่อนสลับ (ค่าเริ่มต้นคือกลับ เพราะเป็นเคสที่เจอบ่อยกว่า) */
-        const a = await loadPdfLib(files[0]);
-        const b = await loadPdfLib(files[1]);
+        const a = await loadPdfLib(files[0], passwordBox(body));
+        const b = await loadPdfLib(files[1], passwordBox(body));
         if (a.encrypted || b.encrypted) sawEncrypted = true;
         if (a.hiddenLayers || b.hiddenLayers) sawHiddenLayers = true;
         const ai = a.doc.getPageIndices();
@@ -84,7 +84,7 @@ export function mount(tool) {
         }
       } else {
       for (let i = 0; i < files.length; i++) {
-        const { doc: src, encrypted, hiddenLayers } = await loadPdfLib(files[i]);
+        const { doc: src, encrypted, hiddenLayers } = await loadPdfLib(files[i], passwordBox(body));
         if (encrypted) sawEncrypted = true;
         if (hiddenLayers) sawHiddenLayers = true;
         const pages = await out.copyPages(src, src.getPageIndices());

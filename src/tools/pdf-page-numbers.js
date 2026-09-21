@@ -8,7 +8,7 @@
 // ‼️ วิธีวาดตัวอักษร: pdf-lib ฝังฟอนต์ไทยเองไม่ได้ถ้าไม่มี fontkit (ซึ่งเราไม่โหลด)
 //    จึงใช้ 2 ทาง — เลขอารบิกล้วนใช้ฟอนต์ในตัวของ pdf-lib (คมชัด ไฟล์เล็กมาก)
 //    ส่วนข้อความที่มีอักษรไทยวาดลง canvas แล้วฝังเป็น PNG (หลักเดียวกับใส่ลายน้ำ)
-import { loadPdfLib, ENCRYPTED_WARNING, friendlyPdfError } from "../pdfopen.js";
+import { loadPdfLib, ENCRYPTED_WARNING, friendlyPdfError, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
@@ -165,7 +165,7 @@ export function mount(tool) {
     if (!file) { stage.hidden = true; ws.showCanvas(false); return; }
     try {
       st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
-      const r = await loadPdfLib(file);
+      const r = await loadPdfLib(file, passwordBox(ws.body));
       pageCount = r.doc.getPageCount();
       encrypted = r.encrypted;
       stage.hidden = false;
@@ -235,7 +235,7 @@ export function mount(tool) {
     st.info(tr("กำลังใส่เลขหน้า…", "Adding page numbers…"));
     try {
       const { StandardFonts, rgb, degrees } = PDFLib;
-      const { doc } = await loadPdfLib(file);
+      const { doc } = await loadPdfLib(file, passwordBox(ws.body));
       const size = +sizeSel.value;
       const pages = doc.getPages();
 

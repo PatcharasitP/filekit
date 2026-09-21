@@ -48,7 +48,14 @@ export function passwordBox(container) {
       ]);
       const done = (v) => { box.remove(); resolve(v); };
       input.addEventListener("keydown", (e) => { if (e.key === "Enter") done(input.value); });
-      container.appendChild(box);
+      /* ‼️ ต่อเข้า body ไม่ใช่กล่องของเครื่องมือ (แก้ 21/09/2026)
+       * นี่คือของที่ผู้ใช้ต้องตอบก่อนถึงจะทำอะไรต่อได้ จึงต้องเป็นชั้นลอยจริง ๆ
+       * ตอนอยู่ในผืนงานของโครง v2 มันถูกของอื่นใน DOM เดียวกันทับจนกดปุ่มไม่ได้
+       * และถ้าผืนงานสูงเท่าจอพอดี กล่องจะไปโผล่ท้ายหน้าโดยปุ่มถูกตัดออกนอกจอ
+       * (เห็นกับตาจากภาพ: ผู้ใช้เห็นช่องกรอกแต่ไม่เห็นปุ่มยืนยันเลย)
+       * container ยังรับไว้เพื่อความเข้ากันได้ของผู้เรียกเดิม แต่ไม่ได้ใช้เป็นที่วางแล้ว */
+      void container;
+      document.body.appendChild(box);
       input.focus();
     });
 }
@@ -91,7 +98,17 @@ export async function openPdf(file, askPassword) {
  *
  * คืน { doc, encrypted } โดย encrypted จะเป็น false เสมอ (คงรูปคืนค่าไว้ให้เครื่องมือเดิมใช้ได้)
  */
-export async function loadPdfLib(file) {
+/* ‼️ 21/09/2026 ไลบรารีตัวใหม่ (@cantoo/pdf-lib) ถอดรหัสได้แล้ว ต่างจากตัวเดิมที่ทำไม่ได้เลย
+ * จึงเปิดทางให้เครื่องมือเปิดไฟล์ที่ล็อกรหัสได้ **โดยไม่เปลี่ยนพฤติกรรมของเครื่องมือที่ยังไม่พร้อม**
+ * กติกาคือ เครื่องมือที่อยากรองรับ ต้องส่ง askPassword มาเอง (ใช้ passwordBox() ได้เลย)
+ * เครื่องมือที่ไม่ส่งมา จะเจอข้อความเดิมเป๊ะ ไม่มีอะไรเปลี่ยน
+ *
+ * ‼️ ลำดับการลองสำคัญ (พิสูจน์แล้ว 21/09): ต้องลองรหัสว่างก่อนเสมอ
+ *   เพราะไฟล์ที่ "ล็อกแค่สิทธิ์" (เปิดอ่านได้แต่ห้ามคัดลอก) มีรหัสผู้ใช้ว่างอยู่แล้ว
+ *   ไฟล์พวกนี้เดิมถูกปฏิเสธทั้งที่เปิดได้ และเป็นเคสที่เจอบ่อยกับเอกสารราชการ
+ *   ‼️ ห้ามส่ง password: undefined เพราะไลบรารีจะมองว่าไม่ได้ส่งรหัสมาเลย แล้วโยน error ทันที
+ */
+export async function loadPdfLib(file, askPassword) {
   assertNotEmpty(file);
   const { PDFDocument } = PDFLib;
   const buf = await file.arrayBuffer();
@@ -100,7 +117,32 @@ export async function loadPdfLib(file) {
     clearInfoMetadata(doc);
     return { doc, encrypted: false, hiddenLayers: countHiddenLayers(doc) };
   } catch (e) {
-    if (/encrypt/i.test(String(e?.message || e))) throw new Error(ENCRYPTED_BLOCKED);
+    if (/encrypt/i.test(String(e?.message || e))) {
+      /* ① ไฟล์ล็อกแค่สิทธิ์ เปิดได้ด้วยรหัสว่าง */
+      try {
+        const doc = await PDFDocument.load(buf.slice(0), { password: "" });
+        clearInfoMetadata(doc);
+        return { doc, encrypted: false, unlocked: "restricted", hiddenLayers: countHiddenLayers(doc) };
+      } catch { /* ล็อกการเปิดจริง ต้องใช้รหัสของผู้ใช้ */ }
+      /* ② เครื่องมือที่ไม่ได้ขอรหัส ได้พฤติกรรมเดิมทุกประการ */
+      if (!askPassword) throw new Error(ENCRYPTED_BLOCKED);
+      /* ③ ถามผู้ใช้ สูงสุด 3 ครั้ง (จำนวนเดียวกับ openPdf ที่ใช้มานานแล้ว) */
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const pw = await askPassword(attempt > 0);
+        if (pw === null || pw === undefined)
+          throw new Error(tr(`${file.name}: ยกเลิกการเปิดไฟล์ที่ล็อกรหัสผ่าน`,
+                             `${file.name}: cancelled opening the password-protected file`));
+        try {
+          const doc = await PDFDocument.load(buf.slice(0), { password: pw });
+          clearInfoMetadata(doc);
+          return { doc, encrypted: false, unlocked: "password", hiddenLayers: countHiddenLayers(doc) };
+        } catch (err) {
+          if (!/password/i.test(String(err && err.message))) throw err;
+        }
+      }
+      throw new Error(tr(`${file.name}: ใส่รหัสผ่านไม่ถูกต้องหลายครั้ง, ลองตรวจสอบรหัสอีกครั้ง`,
+                         `${file.name}: wrong password entered too many times, double-check the password and try again`));
+    }
     console.error(e);
     if (/invalid|parse/i.test(String(e?.message || e)))
       throw new Error(tr(`${file.name}: ไม่ใช่ PDF ที่ถูกต้อง หรือไฟล์เสียหาย, ลองเปิดด้วยโปรแกรมอ่าน PDF ดูก่อน`, `${file.name}: this isn't a valid PDF, or the file is damaged, try opening it in a PDF reader first`));

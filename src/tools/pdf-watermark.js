@@ -1,4 +1,4 @@
-import { loadPdfLib, ENCRYPTED_WARNING } from "../pdfopen.js";
+import { loadPdfLib, ENCRYPTED_WARNING, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, segmented, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
@@ -256,7 +256,7 @@ export function mount(tool) {
     if (!file) { meta = null; ws.showCanvas(false); return; }
     ws.setBusy(true);
     try {
-      const { doc } = await loadPdfLib(file);
+      const { doc } = await loadPdfLib(file, passwordBox(ws.body));
       const first = doc.getPage(0);
       const { width, height } = first.getSize();
       meta = { pages: doc.getPageCount(), w: width, h: height };
@@ -335,7 +335,7 @@ export function mount(tool) {
     st.info(tr("กำลังใส่ลายน้ำ…", "Adding watermark…"));
     try {
       const { PDFDocument, degrees } = PDFLib;
-      const { doc, encrypted } = await loadPdfLib(file);
+      const { doc, encrypted } = await loadPdfLib(file, passwordBox(ws.body));
       // โหมดรูปใช้ PNG ของโลโก้ตรง ๆ โหมดข้อความวาดข้อความลง canvas เป็น PNG ก่อน
       const { dataUrl, w, h } = useImage ? logo : textToPng(text, { color: colorInput.value });
       const png = await doc.embedPng(dataUrl);

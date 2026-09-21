@@ -56,7 +56,7 @@ with sync_playwright() as p:
 
     # เพิ่มชั้นในสุด แล้ว ISINSCOPE ต้องย้ายตาม
     added = pg.evaluate("""() => {
-        const sels = [...document.querySelectorAll('.ws-right select')];
+        const sels = [...document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')];
         const s = sels.find(x => [...x.options].some(o => o.textContent.trim() === 'ลำดับ'));
         if (!s) return null;
         s.value = [...s.options].find(o => o.textContent.trim() === 'ลำดับ').value;

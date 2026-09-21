@@ -188,7 +188,7 @@ def test_pdf_split(pg):
     pg.locator('input[type=radio][value="every"]').check()
     # ‼️ ต้องเจาะจงตัวแรก เพราะเครื่องมือมีช่องตัวเลข 2 ช่องแล้ว (ทุก N หน้า กับ เพดานขนาดไฟล์)
     #    ช่อง "ทุก N หน้า" อยู่ก่อนตามลำดับใน DOM
-    pg.locator('input[type=number]').first.fill("2")
+    pg.locator('input[type=number]:visible').first.fill("2")
     pg.wait_for_timeout(300)
     act(pg, "แยกไฟล์")
     wait_status(pg, "แยกได้")

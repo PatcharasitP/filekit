@@ -377,7 +377,7 @@ def do_tool_action(pg, tool_id, address_xlsx_path, lang="en"):
         if tool_id == "pdf-split":
             # ตั้งโหมด "ทุก N หน้า" ให้ได้ผลลัพธ์หลายไฟล์ + ปุ่ม ZIP (จังหวะที่เทสเดิมไม่เคยเห็น)
             pg.locator('input[type=radio][value="every"]').check()
-            pg.locator("input[type=number]").fill("1")
+            pg.locator("input[type=number]:visible").fill("1")
             pg.wait_for_timeout(300)
         if tool_id == "image-convert":
             # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ

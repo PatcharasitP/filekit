@@ -111,11 +111,21 @@ with sync_playwright() as p:
     # ต่อด้วยเครื่องมือที่รู้ผลลัพธ์แน่นอน (image-convert) เพื่อทดสอบให้ครบ: เลือกไฟล์ → ลงมือ → ดาวน์โหลด
     pg.goto(f"{BASE}/#/image-convert", wait_until="networkidle")
     pg.wait_for_selector(".dz")
-    dz = pg.locator(".dz")
-    dz.focus()
-    ck_true("กล่องลากไฟล์รับโฟกัสได้ด้วยคีย์บอร์ด (tabindex)", pg.evaluate("document.activeElement.className").find("dz") != -1)
+    # ‼️ v2 วางหน้าเปล่าเป็นชั้นลอยทับตอนยังไม่มีไฟล์ และสั่ง inert กับของข้างหลัง
+    #    ทางที่คนใช้คีย์บอร์ดเดินจริงจึงเป็น "ปุ่มยักษ์บนหน้าเปล่า" ไม่ใช่กล่องลากไฟล์ที่ถูกบังอยู่
+    #    เทสต้องเดินทางเดียวกับผู้ใช้ ไม่ใช่งัดของที่ถูกปิดการใช้งานไว้
+    big = pg.locator(".s2-cta-big")
+    if big.count():
+        big.first.focus()
+        ck_true("ปุ่มเริ่มงานบนหน้าเปล่ารับโฟกัสได้ด้วยคีย์บอร์ด",
+                pg.evaluate("document.activeElement.className").find("s2-cta-big") != -1)
+    else:
+        dz = pg.locator(".dz")
+        dz.focus()
+        ck_true("กล่องลากไฟล์รับโฟกัสได้ด้วยคีย์บอร์ด (tabindex)",
+                pg.evaluate("document.activeElement.className").find("dz") != -1)
     with pg.expect_file_chooser() as fcinfo:
-        pg.keyboard.press("Enter")   # Enter บนกล่องลากไฟล์ต้องเปิดตัวเลือกไฟล์ได้ (ไม่ใช่แค่คลิก)
+        pg.keyboard.press("Enter")   # Enter ต้องเปิดตัวเลือกไฟล์ได้ (ไม่ใช่แค่คลิกเมาส์)
     fc = fcinfo.value
     sample_img = SAMPLES / "ตัวอย่าง-รูปภาพ-1.jpg"
     fc.set_files(str(sample_img))

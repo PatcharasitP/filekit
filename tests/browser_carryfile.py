@@ -80,7 +80,10 @@ with sync_playwright() as p:
         # ‼️ เดินหลายขั้น ขั้นแรกใช้ได้เสมอแม้ของพัง ต้องเดินถึงขั้นที่ 4 ถึงจะจับได้
         seen = []
         for step in range(2, 6):
-            pg.wait_for_selector(".next-card", timeout=8000)
+            # ‼️ v2 ซ่อนรายการ "ทำอะไรต่อดี" ไว้ใต้ฉากเปิดตอนกำลังทำงานอยู่
+            #    เทสนี้ถามว่า "ไฟล์ตามไปด้วยไหม" ไม่ได้ถามว่าการ์ดโผล่ตอนไหน
+            #    จึงรอแค่ว่ามีอยู่ใน DOM แล้วสั่งคลิกผ่าน evaluate เหมือนเดิม
+            pg.wait_for_selector(".next-card", state="attached", timeout=8000)
             pg.wait_for_timeout(700)
             pick = pg.evaluate("""() => { const c = [...document.querySelectorAll('.next-card')];
               const k = Math.min(3, c.length - 1);

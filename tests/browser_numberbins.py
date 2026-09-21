@@ -147,7 +147,7 @@ def main():
             pg.wait_for_timeout(1800)
 
             print("\n── ① เปิดไฟล์แล้วต้องรู้เองว่าคอลัมน์ไหนคือตัวเลข ──")
-            picked = pg.evaluate("() => {const s=document.querySelectorAll('.ws-left select');"
+            picked = pg.evaluate("() => {const s=document.querySelectorAll('.s2-stage select, .s2-side-bd select, .s2-stage select, .s2-side-bd select, .ws-left select');"
                                  "return [...s].map(x => x.options[x.selectedIndex]?.textContent || '')}")
             ok("เดาคอลัมน์ตัวเลขถูกเป็น DISTANCE_KM", "DISTANCE_KM" in picked, f"ได้ {picked}")
             ok("เดาคอลัมน์ชื่อรายการถูกเป็น SITE_CODE", "SITE_CODE" in picked, f"ได้ {picked}")
@@ -200,7 +200,7 @@ def main():
                   .find(i => i.placeholder && i.placeholder.includes('0, 5, 10')) || {}).value""")
             def pick_method(v):
                 pg.evaluate("""(v) => {
-                  const s = document.querySelectorAll('.ws-right select')[0];
+                  const s = document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')[0];
                   s.value = v; s.dispatchEvent(new Event('change', { bubbles: true }));
                 }""", v)
                 pg.wait_for_timeout(500)

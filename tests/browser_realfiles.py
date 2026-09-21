@@ -748,7 +748,7 @@ def main():
             pg.wait_for_selector(".dz")
             pg.locator(".dz input[type=file]").first.set_input_files(str(tbox))
             pg.wait_for_timeout(1200)
-            boxes = pg.locator("input[type=text]")
+            boxes = pg.locator("input[type=text]:visible")
             # คำนี้ "ไม่มีอยู่จริง" ในเอกสาร มันคร่อมรอยต่อระหว่างข้อความนอกกล่องกับในกล่อง
             boxes.nth(0).fill("ทั้งสิ้นหมายเหตุ")
             boxes.nth(1).fill("XXX")

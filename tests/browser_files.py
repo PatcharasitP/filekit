@@ -339,7 +339,7 @@ def case_pdf_split(pg):
     pg.set_input_files("input[type=file]", str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     pg.locator('input[type=radio][value="every"]').check()
-    pg.locator("input[type=number]").fill("1")
+    pg.locator("input[type=number]:visible").fill("1")
     pg.wait_for_selector(".sp-count", timeout=10_000)
     assert f"{expected_pages} ไฟล์" in pg.locator(".sp-count").inner_text(), \
         f"ตัวอย่างจำนวนไฟล์ที่จะได้ไม่ตรง: {pg.locator('.sp-count').inner_text()}"

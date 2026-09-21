@@ -85,7 +85,7 @@ def main():
         pg.wait_for_timeout(3000)          # รอให้วัดขนาดจริงต่อหน้าเสร็จ
         pg.locator('input[type=radio][value="size"]').check()
         pg.wait_for_timeout(600)
-        pg.locator('input[type=number]').last.fill(str(CAP_MB))
+        pg.locator('input[type=number]:visible').last.fill(str(CAP_MB))
         pg.wait_for_timeout(1500)
 
         print("\n── ① พรีวิวต้องตรงกับผลจริง")

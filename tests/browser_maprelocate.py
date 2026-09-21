@@ -161,7 +161,7 @@ def main():
             pg.wait_for_timeout(2200)
 
             print("\n── ① เดาคอลัมน์พิกัดเองได้ ──")
-            picked = pg.evaluate("""() => [...document.querySelectorAll('.ws-left select')]
+            picked = pg.evaluate("""() => [...document.querySelectorAll('.s2-stage select, .s2-side-bd select, .s2-stage select, .s2-side-bd select, .ws-left select')]
               .map(s => s.options[s.selectedIndex]?.textContent || '')""")
             for want in ["LAT_OLD", "LON_OLD", "LAT_NEW", "LON_NEW", "PROVINCE"]:
                 ok(f"จับคู่ {want} ได้เอง", want in picked, f"ได้ {picked}")
@@ -222,14 +222,14 @@ def main():
             pg.wait_for_timeout(400)
             country = canvas_hash(pg)
             pg.evaluate("""() => {
-              const s = [...document.querySelectorAll('.ws-right select')]
+              const s = [...document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')]
                 .find(x => [...x.options].some(o => o.textContent.includes('ซูมพอดี')));
               s.value = 'data'; s.dispatchEvent(new Event('change', { bubbles: true }));
             }""")
             pg.wait_for_timeout(700)
             ok("สลับเป็นซูมพอดีข้อมูลแล้วภาพเปลี่ยนจริง", canvas_hash(pg) != country)
             pg.evaluate("""() => {
-              const s = [...document.querySelectorAll('.ws-right select')]
+              const s = [...document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')]
                 .find(x => [...x.options].some(o => o.textContent.includes('ทุกคู่')));
               s.value = 'all'; s.dispatchEvent(new Event('change', { bubbles: true }));
             }""")
@@ -238,10 +238,10 @@ def main():
             ok("เปิดป้ายทุกคู่แล้วบอกตรง ๆ ว่าซ่อนป้ายที่ทับกันไปกี่ป้าย",
                "ซ่อนป้าย" in legend, f"ได้ {legend!r}")
             pg.evaluate("""() => {
-              const s = [...document.querySelectorAll('.ws-right select')]
+              const s = [...document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')]
                 .find(x => [...x.options].some(o => o.textContent.includes('ทุกคู่')));
               s.value = 'top'; s.dispatchEvent(new Event('change', { bubbles: true }));
-              const e = [...document.querySelectorAll('.ws-right select')]
+              const e = [...document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')]
                 .find(x => [...x.options].some(o => o.textContent.includes('ซูมพอดี')));
               e.value = 'country'; e.dispatchEvent(new Event('change', { bubbles: true }));
             }""")
@@ -365,7 +365,7 @@ def main():
             body = pg.evaluate("() => document.body.textContent")
             ok("บอกตรง ๆ ว่าแสดงกี่แถวจากทั้งหมดกี่คู่", "2,418" in body and "300" in body)
             pg.evaluate("""() => {
-              const s = [...document.querySelectorAll('.ws-right select')]
+              const s = [...document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')]
                 .find(x => [...x.options].some(o => o.textContent.includes('10 อันดับ')));
               s.value = '10'; s.dispatchEvent(new Event('change', { bubbles: true }));
             }""")

@@ -127,7 +127,15 @@ def pick(pg, label):
        การชี้ด้วยตัวเลือกที่ต้องการ ทนต่อการเพิ่มหรือลดดรอปดาวน์ และอ่านแล้วรู้ว่ากำลังเลือกอะไร
     """
     box = pg.locator("select").filter(has=pg.locator(f'option:text-is("{label}")'))
-    box.first.wait_for(state="attached", timeout=20000)
+    # ‼️ รอให้ "มองเห็นจริง" ไม่ใช่แค่มีใน DOM (เปลี่ยน 21/09/2026)
+    #    หน้าเครื่องมือ v2 มีชั้นลอยทับตอนยังไม่มีไฟล์ ของข้างหลังถูกสั่ง inert
+    #    ซึ่ง attached ก็ยังจริง แต่สั่งเลือกไม่ได้ แล้วค้างจนหมดเวลาโดยไม่บอกสาเหตุ
+    try:
+        box.first.wait_for(state="visible", timeout=20000)
+    except Exception:
+        have = pg.evaluate("""() => [...document.querySelectorAll('select')]
+            .map(s => [...s.options].map(o => o.textContent.trim()).slice(0, 8))""")
+        raise AssertionError(f'หาดรอปดาวน์ที่มีตัวเลือก "{label}" ที่มองเห็นได้ไม่เจอ, ที่มีอยู่จริง {have}')
     box.first.select_option(label=label)
 
 def case_split(pg, main):
@@ -211,7 +219,7 @@ def case_page_numbers(pg, pdf):
 
     pick(pg, "หน้า 1 จาก 12")
     pick(pg, "เลขไทย ๑ ๒ ๓")
-    pg.locator("input[type=number]").nth(1).fill("2")     # เริ่มใส่จากหน้าที่ 2 (ข้ามปก)
+    pg.locator("input[type=number]:visible").nth(1).fill("2")     # เริ่มใส่จากหน้าที่ 2 (ข้ามปก)
     pg.wait_for_timeout(900)
 
     ck("‼️ พรีวิวเป็นเลขไทยและนับเฉพาะหน้าที่ใส่เลข",
@@ -234,7 +242,7 @@ def case_page_numbers(pg, pdf):
     doc.close()
 
     # ‼️ ตั้งให้เริ่มใส่เลขเกินจำนวนหน้า ต้องบอกและปิดปุ่ม ไม่ใช่สร้างไฟล์ที่ไม่มีเลขเลย
-    pg.locator("input[type=number]").nth(1).fill("99")
+    pg.locator("input[type=number]:visible").nth(1).fill("99")
     pg.wait_for_timeout(800)
     ck_true("ตั้งเริ่มใส่เลขเกินจำนวนหน้า แล้วยังใส่ได้เพราะถูกหนีบไว้ที่หน้าสุดท้าย",
             not pg.locator("button.btn:visible", has_text="ใส่เลขหน้า").first.is_disabled(),

@@ -50,9 +50,9 @@ READ_BINS = """() => {
 
 
 def set_theme(pg):
-    pg.fill("input[type=text]", "ธีมของพี่ปอนด์")
+    pg.fill("input[type=text]:visible", "ธีมของพี่ปอนด์")
     pg.wait_for_timeout(300)
-    n = pg.locator("input[type=number]").first
+    n = pg.locator("input[type=number]:visible").first
     n.fill("2560")
     n.dispatch_event("input")
 
@@ -67,7 +67,7 @@ def set_bins(pg):
 
 
 READ_PAGENUM = """() => {
-  const s = [...document.querySelectorAll('.ws-right select, .ws-left select')];
+  const s = [...document.querySelectorAll('.ws-right select, .s2-stage select, .s2-side-bd select, .ws-left select')];
   const n = [...document.querySelectorAll('input[type=number]')];
   return {a: s[3] && s[3].value, b: n[0] && n[0].value};
 }"""
@@ -81,7 +81,7 @@ READ_WM = """() => {
 def set_pagenum(pg):
     pg.locator(".ws-right select, .ws-left select").nth(3).select_option("16")
     pg.wait_for_timeout(300)
-    n = pg.locator("input[type=number]").first
+    n = pg.locator("input[type=number]:visible").first
     n.fill("7")
     n.dispatch_event("input")
 
@@ -129,7 +129,7 @@ def set_coverage(pg):
 
 
 READ_RELOCATE = """() => ({ a: document.querySelector('.mr-color').value,
-                            b: document.querySelector('.ws-right select').value })"""
+                            b: document.querySelector('.s2-side-bd select, .s2-side-bd select, .ws-right select').value })"""
 
 
 def set_relocate(pg):
@@ -137,7 +137,7 @@ def set_relocate(pg):
     c.fill("#aa2288")
     c.dispatch_event("input")
     pg.wait_for_timeout(200)
-    pg.locator(".ws-right select").first.select_option("6")
+    pg.locator(".s2-side-bd select, .ws-right select").first.select_option("6")
 
 
 TOOLS = [

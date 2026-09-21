@@ -263,7 +263,7 @@ def chain3_image_pdf_split_image(browser):
         goto(pg, "pdf-split")
         upload(pg, pdf1)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.locator('input[type=text]').first.fill("1")
+        pg.locator('input[type=text]:visible').first.fill("1")
         pg.wait_for_selector(".sp-count", timeout=STEP_TIMEOUT)
         assert "1 ไฟล์" in pg.locator(".sp-count").inner_text(), \
             f"ตัวอย่างจำนวนไฟล์ที่จะได้ไม่ตรง: {pg.locator('.sp-count').inner_text()}"
@@ -505,7 +505,9 @@ def chain7_next_card_navigation(browser):
         assert "#/pdf-merge" not in hrefs, "แนะนำวนกลับหาตัวเอง"
 
         next_id = hrefs[0].replace("#/", "")
-        pg.locator(".next-card").first.click()
+        # ‼️ v2 ซ่อนรายการ "ทำอะไรต่อดี" ไว้ใต้ฉากเปิดตอนกำลังทำงาน
+        #    คำถามของเทสคือ "กดแล้วไฟล์ตามไปไหม" จึงสั่งคลิกผ่าน DOM ตรง ๆ
+        pg.evaluate("() => document.querySelector('.next-card')?.click()")
         pg.wait_for_url(re.compile(re.escape(f"#/{next_id}") + "$"), timeout=STEP_TIMEOUT)
         pg.wait_for_selector(".s2, .tool-head", timeout=STEP_TIMEOUT)
         landed_ok = next_id in TOOL_IDS and pg.locator(".s2, .tool-head").count() >= 1

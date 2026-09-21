@@ -123,6 +123,11 @@ export const TOOLS = [
     accepts:["pdf","image"],
     libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร ตัวหนังสือ รูปภาพ ภาพถ่าย recognize", next:["pdf-to-text","pdf-to-word"] },
 
+  { id:"pdf-to-powerpoint", group:"pdf", icon:"📽", title:"PDF เป็น PowerPoint",
+    desc:"หนึ่งหน้าเป็นหนึ่งสไลด์ เอาไปฉายหรือแทรกในเด็คอื่นได้ บอกตรง ๆ ว่าสไลด์เป็นภาพ แก้ข้อความข้างในไม่ได้",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdfjs","pptxgen"], keys:"powerpoint pptx สไลด์ นำเสนอ ฉาย ประชุม เด็ค ppt แปลงเป็นสไลด์", next:["powerpoint-to-pdf","pdf-to-images"] },
+
   { id:"pdf-to-images",group:"pdf", icon:"🖼", title:"PDF เป็น Images",
     desc:"แปลงทุกหน้าเป็น PNG หรือ JPG เลือกความละเอียดได้",
     accepts:["pdf"],
@@ -393,6 +398,7 @@ const EN_TOOLS = {
   "pdf-page-numbers": ["Add page numbers to a PDF", "Number every page. Pick the position and format, use Thai numerals, and skip the cover"],
   "pdf-remove-blank": ["Remove blank pages from a scan", "Duplex scans leave a blank page between every sheet. Each page is checked for you, and you can keep or drop any of them yourself"],
   "pdf-ocr":          ["OCR (read text from scans)", "Read Thai and English text out of scanned PDFs as plain text or a searchable PDF"],
+  "pdf-to-powerpoint": ["PDF to PowerPoint", "One page becomes one slide, ready to present or drop into another deck. Each slide is a picture, so the text inside cannot be edited"],
   "pdf-to-images":    ["PDF to images", "Turn every page into PNG or JPG at the resolution you choose"],
   "pdf-to-longimage": ["PDF to one long image", "Stack every page into a single tall image, ready to send in a chat with no download step"],
   "pdf-to-text":      ["PDF to text", "Pull the text out as a TXT file, ready to copy"],

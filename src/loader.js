@@ -40,6 +40,13 @@ const REG = {
     local: "vendor/docx.umd.js",
     cdn: "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js",
   },
+  pptxgen: {
+    /* MIT · อ่านจาก GitHub API เอง 21/09/2026 · โหลดเฉพาะตอนเปิดเครื่องมือ PDF เป็น PowerPoint
+       ‼️ 477 KB ก้อนใหญ่ แต่หน้าแรกไม่โหลด และเครื่องมืออื่นไม่แตะ */
+    global: "PptxGenJS",
+    local: "vendor/pptxgen.bundle.js",
+    cdn: "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",
+  },
   jszip: {
     global: "JSZip",
     local: "vendor/jszip.min.js",
@@ -122,6 +129,8 @@ const inflight = new Map(); // ชื่อ -> Promise — กันโหลด
  * ‼️ เปลี่ยนเลขเวอร์ชันใน REG เมื่อไร ต้องคำนวณลายนิ้วมือใหม่ด้วยเสมอ ไม่งั้นตาข่ายรองรับพัง:
  *    curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A */
 const SRI = {
+  "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js":
+    "sha384-Cck14aA9cifjYolcnjebXRfWGkz5ltHMBiG4px/j8GS+xQcb7OhNQWZYyWjQ+UwQ",
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js":
     "sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e",
   "https://cdn.jsdelivr.net/npm/@cantoo/pdf-lib@2.11.1/dist/pdf-lib.min.js":

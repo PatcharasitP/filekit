@@ -12,6 +12,7 @@ FileKit เก็บไลบรารีทุกตัวไว้ในเค
 | `pdf-lib.min.js` | @cantoo/pdf-lib (fork ที่ยังดูแลอยู่ของ pdf-lib) | MIT | https://github.com/cantoo-scribe/pdf-lib |
 | `xlsx.full.min.js` | SheetJS | Apache-2.0 | https://github.com/SheetJS/sheetjs |
 | `docx.umd.js` | docx | MIT | https://github.com/dolanmiu/docx |
+| `pptxgen.bundle.js` | PptxGenJS | MIT | https://github.com/gitbrent/PptxGenJS |
 | `jszip.min.js` | JSZip | MIT หรือ GPL-3.0-or-later | https://github.com/Stuk/jszip |
 | `mammoth.browser.min.js` | mammoth.js | BSD-2-Clause | https://github.com/mwilliamson/mammoth.js |
 | `jspdf.umd.min.js` | jsPDF | MIT | https://github.com/parallax/jsPDF |

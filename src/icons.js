@@ -39,6 +39,7 @@ export const ICONS = {
   "pdf-ocr":      `<path d="M7 3h7l4 4v4"/><path d="M14 3v4h4"/><path d="M5 5v14a2 2 0 0 0 2 2h4.5"/><path d="M8.5 10.5h5M8.5 13.5h3"/><circle cx="16.8"cy="16.8"r="3.4"/><path d="M19.3 19.3L21.5 21.5"/>`,
 
   // ── แปลงจาก PDF ──
+  "pdf-to-powerpoint": `<rect x="3" y="4" width="18" height="12" rx="1.8"/><path d="M12 16v4M8.6 20h6.8"/><path d="M8.8 12.4V7.6h2.6a1.7 1.7 0 0 1 0 3.4H8.8"/>`,
   "pdf-to-images":`<rect x="4.2"y="6.2"width="15.6"height="11.6"rx="1.9"/><circle cx="8.2"cy="10.1"r="1.4"/><path d="M4.2 15.2l4-3.7 3.1 2.7 2.2-1.9 6.3 5.4"/>`,
   "pdf-to-text":  `<path d="M4.4 7h15.2M4.4 12h15.2M4.4 17h9.4"/>`,
   "pdf-to-word":  `<path d="M4.4 7.4l2.5 9.2 3.7-6.6 3.7 6.6 2.5-9.2"/>`,

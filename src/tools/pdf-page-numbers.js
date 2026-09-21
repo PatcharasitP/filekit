@@ -26,7 +26,19 @@ const FORMATS = {
   pageThai:  { label: () => tr("หน้า 1", "หน้า 1"),              make: (n) => `หน้า ${n}` },
   pageOfThai:{ label: () => tr("หน้า 1 จาก 12", "หน้า 1 จาก 12"), make: (n, t) => `หน้า ${n} จาก ${t}` },
   pageOfEn:  { label: () => tr("Page 1 of 12", "Page 1 of 12"),  make: (n, t) => `Page ${n} of ${t}` },
+  /* ‼️ เลขรัน Bates คือเลขลำดับเอกสารที่ใช้ในงานคดีและงานตรวจสอบ ต้องมีคำนำหน้าและเลขเติมศูนย์
+     ต่างจากเลขหน้าตรงที่มันคือ "เลขประจำแผ่น" ที่อ้างอิงข้ามเล่มได้ ห้ามซ้ำกันทั้งคดี
+     พิสูจน์แล้ว 21/09/2026 ว่าวาดลงไฟล์ได้จริงและ PyMuPDF อ่านกลับได้ตรง */
+  bates:     { label: () => tr("เลขรัน ABC-000001", "Bates ABC-000001"), bates: true },
+  custom:    { label: () => tr("ข้อความของฉันเอง", "My own text"), custom: true },
 };
+
+/* ตัวแปรที่ใช้ได้ในข้อความอิสระ · เขียนเป็นคำไทยตรง ๆ จะได้ไม่ต้องจำรหัส */
+const VARS = [
+  ["{หน้า}", (n) => String(n)],
+  ["{จำนวนหน้า}", (n, t) => String(t)],
+  ["{วันที่}", () => new Date().toLocaleDateString("th-TH")],
+];
 
 /* ตำแหน่ง 6 จุด — คนใช้จริงแทบไม่เคยวางกลางหน้า จึงตัดออกให้เลือกง่าย */
 const SPOTS = {
@@ -83,6 +95,16 @@ export function mount(tool) {
   const sizeSel = select([["9", "9 pt"], ["11", "11 pt"], ["13", "13 pt"], ["16", "16 pt"]], "11");
   const startAt = el("input", { type: "number", value: "1", min: "1", step: "1" });
   const firstPage = el("input", { type: "number", value: "1", min: "1", step: "1" });
+  const batesPrefix = el("input", { type: "text", value: "ABC-", placeholder: tr("เช่น ABC-", "e.g. ABC-") });
+  const batesDigits = select([["4", "0001"], ["5", "00001"], ["6", "000001"], ["7", "0000001"]], "6");
+  const customText = el("input", { type: "text", value: "",
+    placeholder: tr("เช่น เอกสารลับ หน้า {หน้า}/{จำนวนหน้า}", "e.g. Confidential, page {หน้า}/{จำนวนหน้า}") });
+  const fBates = field(tr("คำนำหน้าเลขรัน", "Bates prefix"), batesPrefix,
+    tr("ใส่ไว้หน้าเลขทุกแผ่น เช่น ABC- จะได้ ABC-000001", "Goes before every number, so ABC- gives ABC-000001"));
+  const fDigits = field(tr("จำนวนหลัก", "Number of digits"), batesDigits);
+  const fCustom = field(tr("ข้อความที่จะใส่", "Text to stamp"), customText,
+    tr("ใช้ {หน้า} {จำนวนหน้า} {วันที่} แทนค่าจริงได้", "Use {หน้า} {จำนวนหน้า} {วันที่} for real values"));
+  for (const f of [fBates, fDigits, fCustom]) f.style.display = "none";
 
   const st = statusBar();
   const results = el("div", { class: "results" });
@@ -124,6 +146,7 @@ export function mount(tool) {
       field(tr("ขนาดตัวอักษร", "Font size"), sizeSel),
       field(tr("เริ่มนับเลขที่", "Start counting at"), startAt,
             tr("ใช้เมื่อเล่มนี้ต่อจากเล่มก่อน", "Use this when the document continues from another one")),
+      fBates, fDigits, fCustom,
       field(tr("เริ่มใส่จากหน้าที่", "Start printing on page"), firstPage,
             tr("หน้าก่อนหน้านี้จะไม่มีเลข เช่นข้ามปกกับสารบัญ", "Earlier pages get no number, for example a cover and contents")),
     ]) },
@@ -134,7 +157,8 @@ export function mount(tool) {
      ค่าทั้ง 6 ไม่ผูกกับไฟล์เลย (ตำแหน่ง รูปแบบ ชนิดตัวเลข ขนาด เริ่มนับที่ เริ่มใส่จากหน้าที่)
      ส่งลิงก์ให้เพื่อนแล้วได้รูปแบบเลขหน้าเหมือนกันเป๊ะ ใช้กับไฟล์ของเขาเองได้เลย */
   const RULES = () => ({ pos: posSel.value, fmt: fmtSel.value, digit: digitSel.value,
-    size: sizeSel.value, start: startAt.value, first: firstPage.value });
+    size: sizeSel.value, start: startAt.value, first: firstPage.value,
+    bp: batesPrefix.value, bd: batesDigits.value });
   const store = stateKit(tool.id, {
     defaults: RULES(),
     collect: RULES,
@@ -145,6 +169,8 @@ export function mount(tool) {
       if (v.size !== undefined) sizeSel.value = v.size;
       if (v.start !== undefined) startAt.value = v.start;
       if (v.first !== undefined) firstPage.value = v.first;
+      if (v.bp !== undefined) batesPrefix.value = v.bp;
+      if (v.bd !== undefined) batesDigits.value = v.bd;
     },
   });
   store.restore();
@@ -154,9 +180,16 @@ export function mount(tool) {
 
   let file = null, pageCount = 0, encrypted = false;
 
-  const onTweak = () => { store.save(); drawPreview(); };
-  for (const c of [posSel, fmtSel, digitSel, sizeSel]) c.onchange = onTweak;
-  for (const c of [startAt, firstPage]) c.oninput = onTweak;
+  function syncFields() {
+    const def = FORMATS[fmtSel.value] || {};
+    fBates.style.display = def.bates ? "" : "none";
+    fDigits.style.display = def.bates ? "" : "none";
+    fCustom.style.display = def.custom ? "" : "none";
+  }
+  syncFields();
+  const onTweak = () => { syncFields(); store.save(); drawPreview(); };
+  for (const c of [posSel, fmtSel, digitSel, sizeSel, batesDigits]) c.onchange = onTweak;
+  for (const c of [startAt, firstPage, batesPrefix, customText]) c.oninput = onTweak;
 
   async function onFile() {
     file = dz.files[0] || null;
@@ -188,7 +221,18 @@ export function mount(tool) {
   }
 
   function label(n, total) {
-    const text = FORMATS[fmtSel.value].make(n, total);
+    const def = FORMATS[fmtSel.value];
+    let text;
+    if (def.bates) {
+      /* ‼️ เลขรันไม่แปลงเป็นเลขไทย เพราะมันคือรหัสอ้างอิงที่ต้องพิมพ์ซ้ำได้เป๊ะในเอกสารอื่น */
+      return (batesPrefix.value || "") + String(n).padStart(+batesDigits.value || 6, "0");
+    }
+    if (def.custom) {
+      text = customText.value || "";
+      for (const [token, fn] of VARS) text = text.split(token).join(fn(n, total));
+    } else {
+      text = def.make(n, total);
+    }
     return digitSel.value === "thai" ? toThaiDigits(text) : text;
   }
 
@@ -241,7 +285,11 @@ export function mount(tool) {
 
       // ฟอนต์ในตัวใช้ได้เฉพาะตอนไม่มีอักษรไทย ฝังครั้งเดียวใช้ทุกหน้า
       const sample = label(start, last);
-      const useImage = hasThai(sample) || digitSel.value === "thai";
+      /* ‼️ ต้องดูจากข้อความจริงที่จะวาด ไม่ใช่จากตัวเลือก "ชนิดตัวเลข" (แก้ 21/09/2026)
+       * เลขรัน Bates ไม่แปลงเป็นเลขไทยอยู่แล้ว (เป็นรหัสอ้างอิงที่ต้องพิมพ์ซ้ำได้เป๊ะ)
+       * แต่เงื่อนไขเดิมดูจาก digitSel ตรง ๆ พอผู้ใช้เคยเลือกเลขไทยไว้ เลขรันเลยถูกวาดเป็นภาพ
+       * ผลคือคัดลอกรหัสออกจากไฟล์ไม่ได้ ซึ่งทำลายประโยชน์ทั้งหมดของเลขรัน */
+      const useImage = hasThai(sample) || /[๐-๙]/.test(sample);
       const font = useImage ? null : await doc.embedFont(StandardFonts.Helvetica);
 
       // ‼️ ข้อความแต่ละหน้ายาวไม่เท่ากัน (9 กับ 10 กว้างต่างกัน) ต้องวัด/ฝังทีละหน้า

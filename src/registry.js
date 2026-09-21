@@ -109,9 +109,9 @@ export const TOOLS = [
     libs:["pdfjs","pdflib"], keys:"remove watermark stamp layer ลบลายน้ำ เอาลายน้ำออก ลบตรา ลบชั้น ลบโลโก้ทับ overlay", next:["pdf-watermark","pdf-compress"] },
 
   { id:"pdf-page-numbers", group:"pdf", icon:"🔢", title:"ใส่เลขหน้า PDF",
-    desc:"ใส่เลขหน้าให้ทุกหน้า เลือกตำแหน่ง รูปแบบ และใช้เลขไทยได้ ข้ามหน้าปกได้",
+    desc:"ใส่เลขหน้า เลขรัน Bates สำหรับงานคดี หรือข้อความของคุณเองลงหัวท้ายกระดาษ เลือกตำแหน่ง รูปแบบ และใช้เลขไทยได้ ข้ามหน้าปกได้",
     accepts:["pdf"],
-    libs:["pdflib"], keys:"page number เลขหน้า เลขไทย หน้า numbering ปกสารบัญ รายงาน", next:["pdf-merge","pdf-compress"] },
+    libs:["pdflib"], keys:"page number เลขหน้า เลขไทย หน้า numbering ปกสารบัญ รายงาน bates เลขรัน เลขลำดับเอกสาร หัวกระดาษ ท้ายกระดาษ header footer ประทับข้อความ คดี ตรวจสอบ", next:["pdf-merge","pdf-compress"] },
 
   { id:"pdf-remove-blank", group:"pdf", icon:"🧹", title:"ลบหน้าว่างจากไฟล์สแกน",
     desc:"สแกนสองหน้าแล้วได้หน้าเปล่าคั่นทุกใบ ตรวจให้เองทีละหน้า กดสลับเก็บหรือลบเองได้",

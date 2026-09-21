@@ -104,7 +104,7 @@ with sync_playwright() as p:
     # กด Enter เข้าเครื่องมือแรกที่โฟกัสอยู่ (data-id ของมันคือ pdf-pages ตามทะเบียน แต่ไม่ hardcode — อ่านจาก DOM จริง)
     opened_id = pg.evaluate("document.activeElement.dataset.id")
     pg.keyboard.press("Enter")
-    pg.wait_for_selector(".tool-head", timeout=8000)
+    pg.wait_for_selector(".s2, .tool-head", timeout=8000)
     ck_true(f"Enter บนป้ายเครื่องมือ → เปิดหน้าเครื่องมือ ({opened_id})",
             pg.evaluate("document.body.classList.contains('tool')"))
 
@@ -129,7 +129,7 @@ with sync_playwright() as p:
     status_txt = pg.locator(".status").inner_text()
     ck_true("กด Enter ที่ปุ่มลงมือทำ → งานเสร็จจริง (มีข้อความสถานะ)", bool(status_txt.strip()), f"status='{status_txt}'")
 
-    dl_btn = pg.locator(".results button").first
+    dl_btn = pg.locator(".s2-side-res button, .results button").first
     dl_btn.focus()
     with pg.expect_download() as dlinfo:
         pg.keyboard.press("Enter")   # ดาวน์โหลดด้วย Enter
@@ -225,7 +225,7 @@ with sync_playwright() as p:
     no_name_found = []
     for tid in REG_IDS:
         pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle")
-        pg.wait_for_selector(".tool-head", timeout=8000)
+        pg.wait_for_selector(".s2, .tool-head", timeout=8000)
         pg.wait_for_timeout(100)
         for e in pg.evaluate(SCAN_ICON_BTNS):
             if not e["accName"]:
@@ -268,7 +268,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(700)
     pg.get_by_role("button", name="แปลงไฟล์").click()
     pg.wait_for_timeout(2000)
-    dl_names = pg.evaluate("""() => [...document.querySelectorAll('.results button')]
+    dl_names = pg.evaluate("""() => [...document.querySelectorAll('.s2-side-res button, .results button')]
         .map(b => b.getAttribute('aria-label')).filter(Boolean)""")
     ck_true(f"ปุ่มดาวน์โหลด {len(dl_names)} ปุ่ม มีชื่อไม่ซ้ำกัน (บอกได้ว่าไฟล์ไหน)",
             len(dl_names) == len(set(dl_names)) and len(dl_names) > 0,
@@ -283,7 +283,7 @@ with sync_playwright() as p:
     bad_pages = []
     for tid in REG_IDS:
         pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle")
-        pg.wait_for_selector(".tool-head", timeout=8000)
+        pg.wait_for_selector(".s2, .tool-head", timeout=8000)
         pg.wait_for_timeout(80)
         heads = pg.evaluate("""() => [...document.querySelectorAll('#tool h1,#tool h2,#tool h3,#tool h4,#tool h5,#tool h6')]
             .map(h => ({lvl: parseInt(h.tagName[1]), text: h.textContent.trim().slice(0,30)}))""")
@@ -350,7 +350,7 @@ with sync_playwright() as p:
     ck_true("ค้นหาเจอเครื่องมือ", pg2.locator("button.pill").count() >= 1)
     pg2.locator("button.pill").first.click()
     pg2.wait_for_selector(".dz", timeout=8000)
-    ck_true("เปิดหน้าเครื่องมือได้", pg2.locator(".tool-head h1").count() == 1)
+    ck_true("เปิดหน้าเครื่องมือได้", pg2.locator(".s2-land h1, .tool-head h1").count() >= 1)
     with pg2.expect_file_chooser() as fcinfo:
         pg2.locator(".dz").click()
     fc = fcinfo.value

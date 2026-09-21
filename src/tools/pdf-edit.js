@@ -17,6 +17,8 @@ import { el, dropzone, statusBar, button, field, select, downloadButton,
          stripExt, yieldToBrowser, fmtBytes, keyHints} from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
+import { signaturePad, savedSignatures, saveSignature, removeSignature,
+         imageToSignature } from "../signpad.js";
 import { tr, pl } from "../i18n.js";
 
 const VIEW_SCALE = 1.6;    // ความละเอียดที่เรนเดอร์หน้ามาให้ดู ยิ่งสูงยิ่งวางตำแหน่งแม่น
@@ -109,6 +111,23 @@ const STYLE = `
 @media (hover:none){ .pe-box .rm{opacity:1} }
 .pe-zoom{font-size:12.5px;font-weight:700;min-width:46px;text-align:center;
   color:var(--text-mute);font-variant-numeric:tabular-nums}
+/* ── ของที่วางทับได้ นอกจากกล่องปิดทับกับข้อความ (เฟส 6 รวมเครื่องมือ 21/09/2026) ──
+   ‼️ ไฮไลต์ต้อง "โปร่ง" จริงทั้งบนจอและในไฟล์ ไม่งั้นมันคือกล่องปิดทับที่เปลี่ยนสี
+      ซึ่งจะกลืนข้อความข้างใต้หายไป = ตรงข้ามกับสิ่งที่คำว่าไฮไลต์สัญญาไว้ */
+.pe-box.highlight{mix-blend-mode:multiply;border:1px dashed color-mix(in srgb,var(--brand) 55%,transparent)}
+.pe-box.stamp{line-height:0}
+.pe-box.stamp img{width:100%;height:auto;display:block;pointer-events:none}
+.pe-sign{display:flex;flex-direction:column;gap:8px}
+.pe-sign .sign-canvas{border:1px dashed var(--line);border-radius:var(--r-sm,10px);background:#fff;touch-action:none}
+.pe-saved{display:flex;flex-wrap:wrap;gap:8px}
+.pe-saved figure{position:relative;margin:0;border:1px solid var(--line);border-radius:8px;
+  padding:4px 6px;background:#fff;cursor:pointer;line-height:0}
+.pe-saved figure.on{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent)}
+.pe-saved img{height:34px;width:auto;display:block}
+.pe-saved .x{position:absolute;inset-block-start:-7px;inset-inline-end:-7px;width:17px;height:17px;
+  border-radius:50%;border:0;background:var(--danger,#c0392b);color:#fff;font-size:10px;line-height:17px;
+  padding:0;cursor:pointer}
+.pe-grp[hidden]{display:none}
 .pe-hint{font-size:12.5px;line-height:1.6;color:var(--text-mute);padding:9px 12px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm,10px)}
 `;
@@ -141,6 +160,87 @@ export function mount(tool) {
   const weightSel = select([["400", tr("ปกติ", "Regular")], ["700", tr("หนา", "Bold")]], "400");
   const textColor = el("input", { type: "color", value: "#000000" });
   const coverColor = el("input", { type: "color", value: "#ffffff" });
+  const hlColor = el("input", { type: "color", value: "#ffe14d" });
+  /* ‼️ ความกว้างของลายเซ็นกับรูป เก็บเป็นสัดส่วนของหน้า ไม่ใช่พิกเซล
+     หน้ากระดาษบนจอย่อขยายได้ ถ้าเก็บเป็นพิกเซลของจอ ขนาดที่ได้ในไฟล์จะไม่ตรงกับที่เห็น */
+  const stampSize = el("input", { type: "range", min: "5", max: "60", value: "22", step: "1" });
+  const stampSizeVal = el("span", { class: "pe-zoom" }, "22%");
+  stampSize.addEventListener("input", () => { stampSizeVal.textContent = stampSize.value + "%"; });
+
+  let stampUrl = null;            // PNG พื้นโปร่งของลายเซ็นหรือรูปที่เลือกอยู่
+  const pad = signaturePad({ onChange: () => { padUse.disabled = pad.isEmpty(); } });
+  const padUse = button(tr("ใช้ลายเซ็นนี้", "Use this signature"), { onclick: () => {
+    const url = pad.toDataURL();
+    if (!url) return st.err(tr("ยังไม่ได้วาดลายเซ็น", "Nothing drawn yet"));
+    saveSignature(url); pad.clear(); padUse.disabled = true;
+    pickStamp(url); renderSaved();
+  } });
+  padUse.disabled = true;
+  const padClear = button(tr("ล้างกระดาน", "Clear pad"), { ghost: true, onclick: () => { pad.clear(); padUse.disabled = true; } });
+  const signUpInput = el("input", { type: "file", accept: "image/*", hidden: true,
+    onchange: async (ev) => {
+      const f = ev.target.files[0]; ev.target.value = "";
+      if (!f) return;
+      try {
+        st.info(tr("กำลังเตรียมรูปลายเซ็น…", "Preparing the signature image…"));
+        const url = await imageToSignature(f);
+        saveSignature(url); pickStamp(url); renderSaved(); st.clear();
+      } catch (e) { st.err(tr("อ่านรูปไม่ได้: ", "Couldn't read the image: ") + e.message); }
+    } });
+  const signUpBtn = button(tr("อัปโหลดรูปลายเซ็น", "Upload a signature image"),
+    { ghost: true, icon: "upload", onclick: () => signUpInput.click() });
+  const savedBox = el("div", { class: "pe-saved" });
+
+  const imgInput = el("input", { type: "file", accept: "image/*", hidden: true,
+    onchange: async (ev) => {
+      const f = ev.target.files[0]; ev.target.value = "";
+      if (!f) return;
+      try {
+        st.info(tr("กำลังเตรียมรูป…", "Preparing the image…"));
+        /* ‼️ รูปทั่วไปไม่ถอดพื้นขาว ต่างจากลายเซ็น เพราะโลโก้หรือตราที่มีพื้นขาวจงใจ
+           ถ้าไปถอดให้ จะได้รูปโหว่เป็นรูโดยที่ผู้ใช้ไม่ได้สั่ง */
+        pickStamp(await fileToPng(f)); st.clear();
+        st.ok(tr("เลือกรูปแล้ว คลิกตำแหน่งบนหน้าเพื่อวาง", "Image ready, click a spot on the page"));
+      } catch (e) { st.err(tr("อ่านรูปไม่ได้: ", "Couldn't read the image: ") + e.message); }
+    } });
+  const imgBtn = button(tr("เลือกไฟล์รูป", "Choose an image"), { icon: "upload", onclick: () => imgInput.click() });
+  const imgPreview = el("div", { class: "pe-saved" });
+
+  /** แปลงไฟล์รูปอะไรก็ได้เป็น PNG (pdf-lib ฝังได้แน่นอนทั้ง PNG และ JPEG แต่ PNG เก็บความโปร่งไว้) */
+  async function fileToPng(file) {
+    const bmp = await createImageBitmap(file);
+    const c = document.createElement("canvas");
+    c.width = bmp.width; c.height = bmp.height;
+    c.getContext("2d").drawImage(bmp, 0, 0);
+    bmp.close?.();
+    return c.toDataURL("image/png");
+  }
+
+  function pickStamp(url) {
+    stampUrl = url;
+    renderSaved();
+    imgPreview.replaceChildren(url && mode === "image"
+      ? el("figure", { class: "on" }, [el("img", { src: url, alt: tr("รูปที่เลือก", "Chosen image") })]) : null);
+  }
+
+  function renderSaved() {
+    const list = savedSignatures();
+    savedBox.replaceChildren(...(list.length ? list : []).map((url) => {
+      const fig = el("figure", { class: url === stampUrl ? "on" : "", role: "button", tabindex: "0",
+        "aria-label": tr("ใช้ลายเซ็นนี้", "Use this signature"),
+        onclick: () => pickStamp(url),
+        onkeydown: (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pickStamp(url); } } }, [
+        el("img", { src: url, alt: tr("ลายเซ็นที่บันทึกไว้", "Saved signature") }),
+        el("button", { class: "x", type: "button", "aria-label": tr("ลบลายเซ็นนี้", "Delete this signature"),
+          onclick: (ev) => { ev.stopPropagation(); removeSignature(url);
+            if (stampUrl === url) stampUrl = null; renderSaved(); } }, "\u2715"),
+      ]);
+      return fig;
+    }));
+    if (!list.length) savedBox.replaceChildren(el("div", { class: "pe-hint" },
+      tr("ยังไม่มีลายเซ็นที่บันทึกไว้ วาดในกรอบด้านบนหรืออัปโหลดรูปได้",
+         "No saved signatures yet. Draw in the box above or upload an image")));
+  }
 
   function segmentedModes() {
     const wrap = el("div", { class: "row" });
@@ -149,10 +249,29 @@ export function mount(tool) {
       b.dataset.mode = v;
       return b;
     };
-    wrap.append(mk("cover", tr("ปิดทับ", "Cover"), "trash"), mk("text", tr("ใส่ข้อความ", "Add text"), "edit"));
+    /* ‼️ เฟส 6 (21/09/2026) รวมงาน "วางของทับหน้า PDF" มาไว้ที่เดียว
+       เดิมแยกเป็นสองเครื่องมือ (แก้ข้อความ กับ เซ็นชื่อ) ซึ่งเป็นงานเดียวกันในสายตาผู้ใช้
+       คนที่ต้องแก้วันที่แล้วเซ็นด้วย ต้องบันทึกไฟล์แล้วเปิดอีกเครื่องมือหนึ่ง แล้วอัปโหลดใหม่
+       = สองรอบสำหรับงานเดียว และไฟล์ผ่านการบันทึกซ้ำโดยไม่จำเป็น */
+    wrap.append(
+      mk("cover", tr("ปิดทับ", "Cover"), "trash"),
+      mk("text", tr("ข้อความ", "Text"), "edit"),
+      mk("highlight", tr("ไฮไลต์", "Highlight"), "rows"),
+      mk("sign", tr("ลายเซ็น", "Signature"), "check"),
+      mk("image", tr("รูป", "Image"), "stack"),
+    );
     return wrap;
   }
   let mode = "cover";
+  const MODE_HINT = () => ({
+    cover: tr("ลากคลุมข้อความที่ต้องการลบ", "Drag over the text you want to remove"),
+    text: tr("พิมพ์ข้อความด้านขวาก่อน แล้วคลิกตำแหน่งบนหน้า", "Type the text on the right, then click a spot"),
+    highlight: tr("ลากคลุมข้อความที่อยากเน้น ตัวหนังสือใต้แถบยังอ่านออก",
+                  "Drag over the text you want to mark. The text underneath stays readable"),
+    sign: tr("เลือกหรือวาดลายเซ็นด้านขวา แล้วคลิกตำแหน่งบนหน้า",
+             "Pick or draw your signature on the right, then click a spot"),
+    image: tr("เลือกไฟล์รูปด้านขวา แล้วคลิกตำแหน่งบนหน้า", "Choose an image on the right, then click a spot"),
+  }[mode] || "");
   function setMode(v) {
     mode = v;
     layer.classList.toggle("text-mode", v === "text");
@@ -161,9 +280,11 @@ export function mount(tool) {
       b.classList.toggle("ghost", !on);
       b.setAttribute("aria-pressed", String(on));
     });
-    st.info(v === "cover"
-      ? tr("ลากคลุมข้อความที่ต้องการลบ", "Drag over the text you want to remove")
-      : tr("พิมพ์ข้อความด้านขวาก่อน แล้วคลิกตำแหน่งบนหน้า", "Type the text on the right, then click a spot"));
+    /* ‼️ โชว์เฉพาะตัวเลือกของเครื่องมือที่เลือกอยู่ ไม่ใช่กองทุกกลุ่มไว้ตลอด
+       ห้าเครื่องมือรวมกันมีตัวเลือกสิบกว่าช่อง ถ้าโชว์หมดพร้อมกันแผงจะกลายเป็นกำแพง
+       และคนจะหาไม่เจอว่าช่องไหนเป็นของเครื่องมือที่กำลังใช้ */
+    for (const g of groups) g.node.hidden = !g.modes.includes(v);
+    st.info(MODE_HINT());
   }
 
   const dz = dropzone({
@@ -211,8 +332,11 @@ export function mount(tool) {
     onclick: () => {
       if (!pdf) return st.err(tr("เลือกไฟล์ก่อน", "Choose a file first"));
       if (mode === "text") placeText({ x: 0.4, y: 0.45 });
+      else if (mode === "sign" || mode === "image") placeStamp({ x: 0.5, y: 0.5 });
       else {
-        edits.push({ page: cur, kind: "cover", x: 0.35, y: 0.45, w: 0.3, h: 0.06, color: coverColor.value });
+        const hl = mode === "highlight";
+        edits.push({ page: cur, kind: hl ? "highlight" : "cover", x: 0.35, y: 0.45, w: 0.3, h: 0.06,
+                     color: hl ? hlColor.value : coverColor.value });
         drawOverlay(); renderThumbs(); syncButtons();
       }
       const boxes = layer.querySelectorAll(".pe-box");
@@ -230,9 +354,10 @@ export function mount(tool) {
     dz.container, extra,
     el("div", {}, [el("h3", {}, tr("หน้าในไฟล์", "Pages")), thumbs]),
   ]);
-  const rightNode = el("div", { class: "pe-right" }, [
-    el("div", {}, [el("h3", {}, tr("เครื่องมือ", "Tool")), modeSeg]),
-    el("div", {}, [
+  /* กลุ่มตัวเลือกของแต่ละเครื่องมือ · setMode() เป็นคนเปิดปิดให้ */
+  const grp = (modes, children) => ({ modes, node: el("div", { class: "pe-grp" }, children) });
+  const groups = [
+    grp(["text"], [
       el("h3", {}, tr("ข้อความที่จะใส่", "Text to add")),
       field(tr("ข้อความ", "Text"), textInput),
       el("div", { class: "row" }, [
@@ -241,14 +366,41 @@ export function mount(tool) {
         field(tr("สีตัวอักษร", "Text colour"), textColor),
       ]),
     ]),
-    el("div", {}, [
+    grp(["cover"], [
       el("h3", {}, tr("สีที่ใช้ปิดทับ", "Cover colour")),
       field(tr("สี", "Colour"), coverColor,
         tr("ปกติใช้สีขาวให้กลืนกับกระดาษ", "White usually blends with the paper")),
+      el("div", { class: "pe-hint" },
+        tr("ปิดทับคือวางสี่เหลี่ยมทับข้อความเดิม ตัวอักษรเดิมยังอยู่ในไฟล์",
+           "Cover puts a rectangle over the old text. The original text stays in the file")),
     ]),
-    el("div", { class: "pe-hint" },
-      tr("ปิดทับคือวางสี่เหลี่ยมทับข้อความเดิม ตัวอักษรเดิมยังอยู่ในไฟล์",
-         "Cover puts a rectangle over the old text. The original text stays in the file")),
+    grp(["highlight"], [
+      el("h3", {}, tr("สีไฮไลต์", "Highlight colour")),
+      field(tr("สี", "Colour"), hlColor),
+      el("div", { class: "pe-hint" },
+        tr("แถบไฮไลต์โปร่งแสง ตัวหนังสือใต้แถบยังอ่านออกและยังค้นหาเจอ",
+           "The band is translucent, so the text underneath stays readable and searchable")),
+    ]),
+    grp(["sign"], [
+      el("h3", {}, tr("ลายเซ็นของคุณ", "Your signature")),
+      el("div", { class: "pe-sign" }, [pad.node, el("div", { class: "row" }, [padUse, padClear]), signUpBtn, signUpInput]),
+      el("h3", {}, tr("ที่บันทึกไว้", "Saved")),
+      savedBox,
+      el("div", { class: "row" }, [field(tr("ความกว้างบนหน้า", "Width on the page"), stampSize), stampSizeVal]),
+      el("div", { class: "pe-hint" },
+        tr("เป็นภาพวางทับหน้าเอกสาร ไม่ใช่ลายเซ็นดิจิทัลที่มีใบรับรองทางกฎหมาย",
+           "This is an image on top of the page, not a certificate-based digital signature")),
+    ]),
+    grp(["image"], [
+      el("h3", {}, tr("รูปที่จะวาง", "Image to place")),
+      el("div", { class: "row" }, [imgBtn, imgInput]),
+      imgPreview,
+      el("div", { class: "row" }, [field(tr("ความกว้างบนหน้า", "Width on the page"), stampSize), stampSizeVal]),
+    ]),
+  ];
+  const rightNode = el("div", { class: "pe-right" }, [
+    el("div", {}, [el("h3", {}, tr("เครื่องมือ", "Tool")), modeSeg]),
+    ...groups.map((g) => g.node),
   ]);
 
   const ws = workspace(tool, {
@@ -270,8 +422,8 @@ export function mount(tool) {
       ["Alt + \u2190", tr("ย่อขยายกล่องปิดทับ", "Resize the cover box")],
     ]),
     el("div", { class: "note" },
-      tr("ลากคลุมเพื่อปิดทับข้อความเดิม แล้วพิมพ์ข้อความใหม่วางแทนที่ได้",
-         "Drag to cover the old text, then place your new text on top")),
+      tr("ปิดทับ, พิมพ์ข้อความใหม่, ไฮไลต์, เซ็นชื่อ และวางรูป ทำได้ในรอบเดียวแล้วบันทึกครั้งเดียว",
+         "Cover, add text, highlight, sign and place images all in one pass, then save once")),
     el("div", { class: "note" },
       tr("ข้อความเดิมยังอยู่ในไฟล์ ถ้าเป็นความลับให้ใช้วิธีอื่น",
          "The original text remains in the file. Do not rely on this to hide secrets")),
@@ -375,29 +527,41 @@ export function mount(tool) {
   function drawOverlay() {
     layer.innerHTML = "";
     edits.filter((e) => e.page === cur).forEach((e) => {
+      const boxy = e.kind === "cover" || e.kind === "highlight";   // ของที่มีความกว้างความสูงของตัวเอง
       const box = el("div", {
         class: `pe-box ${e.kind}`,
         /* ‼️ ต้องโฟกัสได้ ไม่งั้นคนใช้คีย์บอร์ดแก้ของที่วางไปแล้วไม่ได้เลย (WCAG 2.5.7) */
         tabindex: "0", role: "group",
         style: {
           left: `${e.x * 100}%`, top: `${e.y * 100}%`,
-          width: e.kind === "cover" ? `${e.w * 100}%` : "auto",
-          height: e.kind === "cover" ? `${e.h * 100}%` : "auto",
-          background: e.kind === "cover" ? e.color : "transparent",
+          width: boxy ? `${e.w * 100}%` : (e.kind === "stamp" ? `${e.rw * 100}%` : "auto"),
+          height: boxy ? `${e.h * 100}%` : "auto",
+          background: e.kind === "cover" ? e.color : (e.kind === "highlight" ? e.color : "transparent"),
+          /* ‼️ จุดคลิกคือ "กึ่งกลาง" ของสิ่งที่วาง ทั้งภาพและข้อความ
+             เพราะตอนบันทึกลงไฟล์ save() วางโดยให้จุดคลิกเป็นกึ่งกลางแนวตั้ง (y - h/2)
+             ถ้าบนจอวางโดยเอาขอบบนไว้ที่จุดคลิก ของบนจอกับในไฟล์จะคลาดกันครึ่งบรรทัด
+             วัดจริง 21/09/2026: บนจอกึ่งกลางอยู่ที่ 0.5100 แต่ในไฟล์อยู่ที่ 0.5000
+             = เพี้ยน 1.4% ของหน้า หรือราว 12 พอยต์บน A4 ซึ่งพอให้วางทับวันที่เดิมไม่ลง
+             ‼️ นี่คือเครื่องมือที่ขายว่า "วางตรงไหนได้ตรงนั้น" จึงห้ามคลาดแม้แต่นิด */
+          transform: (e.kind === "stamp" || e.kind === "text") ? "translateY(-50%)" : null,
           color: e.kind === "text" ? e.color : null,
           fontSize: e.kind === "text" ? `${(e.size / pageSize.h) * 100 * (stage.clientHeight / 100)}px` : null,
           fontWeight: e.kind === "text" ? e.weight : null,
         },
       }, [
         e.kind === "text" ? e.text : null,
-        e.kind === "cover" ? el("div", { class: "pe-grip", title: tr("ลากเพื่อปรับขนาด", "Drag to resize") }) : null,
+        e.kind === "stamp" ? el("img", { src: e.url, alt: "" }) : null,
+        boxy || e.kind === "stamp"
+          ? el("div", { class: "pe-grip", title: tr("ลากเพื่อปรับขนาด", "Drag to resize") }) : null,
         el("button", {
           class: "rm", type: "button", title: tr("เอาออก", "Remove"),
           "aria-label": tr("เอาการแก้นี้ออก", "Remove this edit"),
           onclick: (ev) => { ev.stopPropagation(); edits = edits.filter((x) => x !== e); drawOverlay(); syncButtons(); renderThumbs(); },
         }, "✕"),
       ]);
-      const what = e.kind === "cover" ? tr("กล่องปิดทับ", "Cover box") : tr("ข้อความ", "Text");
+      const what = { cover: tr("กล่องปิดทับ", "Cover box"), highlight: tr("แถบไฮไลต์", "Highlight band"),
+                     text: tr("ข้อความ", "Text"), stamp: e.what === "sign" ? tr("ลายเซ็น", "Signature") : tr("รูป", "Image"),
+                   }[e.kind] || tr("สิ่งที่วางไว้", "Placed item");
       const say = () => box.setAttribute("aria-label", tr(
         `${what} ตำแหน่ง ${Math.round(e.x * 100)}% จากซ้าย ${Math.round(e.y * 100)}% จากบน กดลูกศรเพื่อขยับ กด Delete เพื่อเอาออก`,
         `${what} at ${Math.round(e.x * 100)}% from left, ${Math.round(e.y * 100)}% from top. Arrow keys move it, Delete removes it`));
@@ -411,9 +575,12 @@ export function mount(tool) {
                     ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
         if (d) {
           ev.preventDefault();
-          if (ev.altKey && e.kind === "cover") {
+          if (ev.altKey && (e.kind === "cover" || e.kind === "highlight")) {
             e.w = Math.min(1, Math.max(0.01, e.w + d[0]));
             e.h = Math.min(1, Math.max(0.01, e.h + d[1]));
+          } else if (ev.altKey && e.kind === "stamp") {
+            /* ภาพรักษาสัดส่วนเสมอ จึงปรับได้แค่ความกว้าง ลูกศรขึ้นลงก็ให้ผลเดียวกับซ้ายขวา */
+            e.rw = Math.min(1, Math.max(0.03, e.rw + (d[0] || -d[1])));
           } else {
             e.x = Math.min(1, Math.max(0, e.x + d[0]));
             e.y = Math.min(1, Math.max(0, e.y + d[1]));
@@ -451,7 +618,7 @@ export function mount(tool) {
       ev.preventDefault();
       mode0 = ev.target.closest(".pe-grip") ? "resize" : "move";
       from = rel(ev);
-      orig = { x: e.x, y: e.y, w: e.w, h: e.h };
+      orig = { x: e.x, y: e.y, w: e.w, h: e.h, rw: e.rw };
       node.classList.add("moving");
       node.setPointerCapture(ev.pointerId);
     });
@@ -462,22 +629,45 @@ export function mount(tool) {
       if (mode0 === "move") {
         e.x = Math.max(0, Math.min(1, orig.x + dx));
         e.y = Math.max(0, Math.min(1, orig.y + dy));
+      } else if (e.kind === "stamp") {
+        // ภาพรักษาสัดส่วนเดิมเสมอ ปรับได้แค่ความกว้าง แล้วความสูงตามไปเอง
+        e.rw = Math.max(0.03, Math.min(1, orig.rw + dx));
       } else {
         e.w = Math.max(0.004, orig.w + dx);
         e.h = Math.max(0.004, orig.h + dy);
       }
       node.style.left = `${e.x * 100}%`;
       node.style.top = `${e.y * 100}%`;
-      if (e.kind === "cover") {
+      if (e.kind === "cover" || e.kind === "highlight") {
         node.style.width = `${e.w * 100}%`;
         node.style.height = `${e.h * 100}%`;
+      } else if (e.kind === "stamp") {
+        node.style.width = `${e.rw * 100}%`;
       }
     });
-    const end = () => {
+    /* ‼️ คลิกทับของที่วางไปแล้ว ต้องวางชิ้นใหม่ได้ (เจอจริงตอนทำเทสเฟส 6 21/09/2026)
+     * งานหลักของเครื่องมือนี้คือ "ปิดทับวันที่เดิม แล้วพิมพ์วันที่ใหม่ตรงนั้น"
+     * ซึ่งแปลว่าต้องคลิกลงบนกล่องปิดทับที่เพิ่งวางไป
+     * ของเดิมกล่องกินคลิกไว้หมดเพื่อใช้ลากย้าย ผู้ใช้จึงวางข้อความทับไม่ได้เลย
+     * และไม่มีอะไรบอกด้วยว่าทำไมกดแล้วไม่เกิดอะไรขึ้น
+     * แยกด้วยระยะที่ลาก: ขยับน้อยกว่า 0.6% ของหน้า = ตั้งใจคลิก ไม่ใช่ตั้งใจลาก */
+    const end = (ev) => {
       if (!mode0) return;
+      const moved = from && ev && (() => {
+        const p = rel(ev);
+        return Math.abs(p.x - from.x) > 0.006 || Math.abs(p.y - from.y) > 0.006;
+      })();
       mode0 = null;
       node.classList.remove("moving");
-      st.ok(tr("ย้ายแล้ว", "Moved"));
+      if (!moved && (mode === "text" || mode === "sign" || mode === "image")) {
+        // คืนตำแหน่งเดิมก่อน เผื่อขยับไปนิดหน่อยระหว่างคลิก
+        e.x = orig.x; e.y = orig.y;
+        drawOverlay();
+        const at = from;
+        if (mode === "text") placeText(at); else placeStamp(at);
+        return;
+      }
+      if (moved) st.ok(tr("ย้ายแล้ว", "Moved"));
     };
     node.addEventListener("pointerup", end);
     node.addEventListener("pointercancel", end);
@@ -499,11 +689,14 @@ export function mount(tool) {
     const r = layer.getBoundingClientRect();
     return { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height };
   };
+  const isDrag = () => mode === "cover" || mode === "highlight";
   layer.addEventListener("pointerdown", (ev) => {
     if (!pdf || ev.target.closest(".rm")) return;
     if (mode === "text") return placeText(rel(ev));
+    if (mode === "sign" || mode === "image") return placeStamp(rel(ev));
     start = rel(ev);
-    ghost = el("div", { class: "pe-box cover", style: { background: coverColor.value, opacity: ".75" } });
+    ghost = el("div", { class: `pe-box ${mode}`,
+      style: { background: mode === "highlight" ? hlColor.value : coverColor.value, opacity: ".75" } });
     layer.appendChild(ghost);
     layer.setPointerCapture(ev.pointerId);
   });
@@ -523,10 +716,28 @@ export function mount(tool) {
     ghost?.remove(); ghost = null; start = null;
     // กันคลิกพลาดกลายเป็นกล่องจิ๋วที่มองไม่เห็นแต่ค้างอยู่ในไฟล์
     if (w < 0.004 || h < 0.004) { drawOverlay(); return; }
-    edits.push({ page: cur, kind: "cover", x, y, w, h, color: coverColor.value });
+    const hl = mode === "highlight";
+    edits.push({ page: cur, kind: hl ? "highlight" : "cover", x, y, w, h,
+                 color: hl ? hlColor.value : coverColor.value });
     drawOverlay(); renderThumbs();
-    st.ok(tr("ปิดทับแล้ว 1 จุด", "Covered one spot"));
+    st.ok(hl ? tr("ไฮไลต์แล้ว 1 จุด", "Highlighted one spot")
+             : tr("ปิดทับแล้ว 1 จุด", "Covered one spot"));
   });
+
+  /** วางลายเซ็นหรือรูปที่จุดที่คลิก (จุดคลิก = กึ่งกลางของภาพ) */
+  function placeStamp(p) {
+    if (!stampUrl) {
+      st.err(mode === "sign"
+        ? tr("เลือกหรือวาดลายเซ็นด้านขวาก่อน", "Pick or draw a signature on the right first")
+        : tr("เลือกไฟล์รูปด้านขวาก่อน", "Choose an image on the right first"));
+      return;
+    }
+    const rw = (+stampSize.value || 22) / 100;
+    edits.push({ page: cur, kind: "stamp", x: Math.max(0, p.x - rw / 2), y: p.y, rw, url: stampUrl,
+                 what: mode === "sign" ? "sign" : "image" });
+    drawOverlay(); renderThumbs();
+    st.ok(tr("วางแล้ว ลากเพื่อย้าย หรือลากมุมเพื่อย่อขยาย", "Placed. Drag to move, or drag the corner to resize"));
+  }
 
   function placeText(p) {
     const text = textInput.value.trim();
@@ -552,7 +763,7 @@ export function mount(tool) {
         const page = pages[e.page];
         if (!page) continue;
         const { width: pw, height: ph } = page.getSize();
-        if (e.kind === "cover") {
+        if (e.kind === "cover" || e.kind === "highlight") {
           const c = hexToRgb01(e.color);
           /* ‼️ PDF นับแกนตั้งจากล่างขึ้นบน ส่วนหน้าจอนับจากบนลงล่าง
              ต้องกลับด้าน ไม่งั้นกล่องไปโผล่คนละที่กับที่ผู้ใช้ลาก */
@@ -560,7 +771,18 @@ export function mount(tool) {
             x: e.x * pw, y: ph - (e.y + e.h) * ph,
             width: e.w * pw, height: e.h * ph,
             color: rgb(c.r, c.g, c.b),
+            /* ‼️ ไฮไลต์ต้องโปร่งจริงในไฟล์ด้วย ไม่ใช่แค่บนจอ
+               ถ้าทึบ ตัวหนังสือใต้แถบจะหายไปเลย ซึ่งไม่ใช่สิ่งที่คำว่าไฮไลต์หมายถึง
+               0.38 มาจากการลองพิมพ์ดู ต่ำกว่านี้แทบไม่เห็นแถบ สูงกว่านี้เริ่มกลืนตัวอักษร */
+            opacity: e.kind === "highlight" ? 0.38 : 1,
           });
+        } else if (e.kind === "stamp") {
+          /* ภาพ PNG พื้นโปร่ง วางโดยให้จุดที่ผู้ใช้คลิกเป็นกึ่งกลางแนวตั้ง
+             ความสูงคำนวณจากสัดส่วนจริงของภาพ ไม่ใช่เดา ไม่งั้นลายเซ็นจะแบนหรือยืด */
+          const png = await doc.embedPng(e.url);
+          const w = e.rw * pw;
+          const h = (png.height / png.width) * w;
+          page.drawImage(png, { x: e.x * pw, y: ph - e.y * ph - h / 2, width: w, height: h });
         } else {
           const { dataUrl, w, h } = textToPng(e.text, { fontSize: e.size, color: e.color, weight: e.weight });
           const png = await doc.embedPng(dataUrl);

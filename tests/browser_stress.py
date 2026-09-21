@@ -111,7 +111,7 @@ def case1_many_files(b):
         pg.locator("input[type=file]").set_input_files(files_in("batch60"))
         pg.wait_for_timeout(800)
         ck(f"[{tool}] โหลดครบ 60 ไฟล์ ไม่ค้าง", pg.locator(".file-row").count(), 60)
-        btn = pg.locator("button.btn", has_text=btn_text).first
+        btn = pg.locator("button.btn:visible", has_text=btn_text).first
         btn.click()
         try:
             pg.wait_for_function(
@@ -149,7 +149,7 @@ def case2_big_files(b):
         t0 = time.time()
         pg.locator("input[type=file]").set_input_files([str(TMP / "big-4000x4000.jpg")])
         pg.wait_for_timeout(500)
-        pg.locator("button.btn", has_text=btn_text).first.click()
+        pg.locator("button.btn:visible", has_text=btn_text).first.click()
         try:
             pg.wait_for_function(
                 f"() => {{ const t=document.querySelector('.status')?.textContent||''; "
@@ -171,7 +171,7 @@ def case2_big_files(b):
     pg.locator("input[type=file]").set_input_files([str(TMP / "hundred-scan.pdf")])
     pg.wait_for_timeout(800)
     t0 = time.time()
-    pg.locator("button.btn", has_text="บีบอัดไฟล์").first.click()
+    pg.locator("button.btn:visible", has_text="บีบอัดไฟล์").first.click()
     seen_progress = False
     try:
         for _ in range(40):
@@ -209,7 +209,7 @@ def case3_weird_names(b):
     pg.locator("input[type=file]").set_input_files(weird)
     pg.wait_for_timeout(1000)
     ck("dropzone รับไฟล์ชื่อโหดครบ ไม่ตกหล่น", pg.locator(".file-row").count(), 5)
-    pg.locator("button.btn", has_text="ย่อและบีบอัด").first.click()
+    pg.locator("button.btn:visible", has_text="ย่อและบีบอัด").first.click()
     pg.wait_for_timeout(2500)
     status = pg.locator(".status").inner_text()
     ck_true("ประมวลผลไฟล์ชื่อโหดสำเร็จครบ (ไม่มีไฟล์ตกหล่นเพราะชื่อ)", "5 ไฟล์" in status, status)
@@ -251,7 +251,7 @@ def case4_bad_files(b):
         pg.wait_for_selector(".dz")
         pg.locator("input[type=file]").set_input_files(good5 + [bad])
         pg.wait_for_timeout(600)
-        pg.locator("button.btn", has_text="สร้างไฟล์ PDF").first.click()
+        pg.locator("button.btn:visible", has_text="สร้างไฟล์ PDF").first.click()
         pg.wait_for_timeout(2500)
         status = pg.locator(".status").inner_text()
         results = pg.locator(".result").count()
@@ -269,7 +269,7 @@ def case4_bad_files(b):
         pg.wait_for_selector(".dz")
         pg.locator("input[type=file]").set_input_files(good5 + [bad])
         pg.wait_for_timeout(600)
-        pg.locator("button.btn", has_text="ย่อและบีบอัด").first.click()
+        pg.locator("button.btn:visible", has_text="ย่อและบีบอัด").first.click()
         pg.wait_for_timeout(2500)
         status = pg.locator(".status").inner_text()
         ck_true(f"[image-resize] ไฟล์ {badlabel} ปนมา → 5 ไฟล์ดีสำเร็จ (ทนไฟล์เสียได้)", "5 ไฟล์" in status, status)
@@ -294,7 +294,7 @@ def case5_rapid_actions(b):
     small = files_in("batch60")[:15]
     pg.locator("input[type=file]").set_input_files(small)
     pg.wait_for_timeout(500)
-    btn = pg.locator("button.btn", has_text="ย่อและบีบอัด").first
+    btn = pg.locator("button.btn:visible", has_text="ย่อและบีบอัด").first
     t0 = time.time()
     for _ in range(10):
         if btn.is_enabled():
@@ -314,7 +314,7 @@ def case5_rapid_actions(b):
     slow = files_in("slow20")
     pg.locator("input[type=file]").set_input_files(slow)
     pg.wait_for_timeout(1000)
-    pg.locator("button.btn", has_text="ย่อและบีบอัด").first.click()
+    pg.locator("button.btn:visible", has_text="ย่อและบีบอัด").first.click()
     try:
         pg.wait_for_selector(".btn-cancel:visible", timeout=5000)
         pg.wait_for_timeout(500)
@@ -334,7 +334,7 @@ def case5_rapid_actions(b):
     pg.wait_for_selector(".dz")
     pg.locator("input[type=file]").set_input_files(slow)
     pg.wait_for_timeout(1000)
-    pg.locator("button.btn", has_text="สร้างไฟล์ PDF").first.click()
+    pg.locator("button.btn:visible", has_text="สร้างไฟล์ PDF").first.click()
     # ‼️ ต้องสำรวจถี่ ๆ ตั้งแต่ 09/09/2026 ที่เครื่องมือสายภาพทำงานขนานหลายไฟล์พร้อมกัน
     #    งานชุดเดิมจบเร็วกว่า 400 มิลลิวินาที ปุ่มหยุดจึงโผล่แล้วหายไปก่อนที่เทสจะสำรวจรอบแรก
     #    (ตกทั้งที่ปุ่มยังทำงานถูกต้อง ยืนยันแยกด้วย tests/browser_cancel.py)
@@ -359,7 +359,7 @@ def case5_rapid_actions(b):
     pg.wait_for_selector(".dz")
     pg.locator("input[type=file]").set_input_files(slow)
     pg.wait_for_timeout(1000)
-    pg.locator("button.btn", has_text="ย่อและบีบอัด").first.click()
+    pg.locator("button.btn:visible", has_text="ย่อและบีบอัด").first.click()
     pg.wait_for_timeout(400)  # ให้เริ่มประมวลผลไปแล้วบางไฟล์
     mid_status = pg.locator(".status").inner_text()
     # ‼️ ต้องยิง click ตรง ๆ ผ่าน DOM — .click() ของ Playwright รอให้ element "นิ่ง" ก่อน
@@ -425,7 +425,7 @@ def case7_navigate_away(b):
     pg.wait_for_selector(".dz")
     pg.locator("input[type=file]").set_input_files(files_in("slow20"))
     pg.wait_for_timeout(800)
-    pg.locator("button.btn", has_text="ย่อและบีบอัด").first.click()
+    pg.locator("button.btn:visible", has_text="ย่อและบีบอัด").first.click()
     pg.wait_for_timeout(200)  # ให้เริ่มประมวลผลไปก่อนจริง ๆ
     pg.evaluate("location.hash = '#/pdf-merge'")
     pg.wait_for_timeout(3000)
@@ -456,7 +456,7 @@ def case4b_corrupt_png_hang(b):
     # ‼️ พบว่าค้างได้ตั้งแต่ตอนคลิกเลย (Playwright เองก็ค้างรอ "scheduled navigations" หลังคลิก
     #    เพราะ main thread ของหน้าโดนบล็อกเกือบจะทันทีที่ handler เริ่มทำงาน) — ต้องดัก timeout ทั้งสองจุด
     try:
-        pg.locator("button.btn", has_text="สร้างไฟล์ PDF").first.click(timeout=HANG_BUDGET_MS, no_wait_after=True)
+        pg.locator("button.btn:visible", has_text="สร้างไฟล์ PDF").first.click(timeout=HANG_BUDGET_MS, no_wait_after=True)
     except PWTimeout:
         hung = True
     if not hung:

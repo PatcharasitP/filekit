@@ -205,7 +205,7 @@ with sync_playwright() as p:
         #    ตอนไม่มีไฟล์ ช่องชีตกับคอลัมน์ยังว่างเท่ากับค่าเริ่มต้น statekit จึงไม่ใส่ลงลิงก์อยู่แล้ว
         #    ก่อวินาศกรรมใส่ col กับ sheet ลง collect() ตรง ๆ แล้วเทสยังเขียว = ด่านหลอก
         #    พอโหลดไฟล์ตัวอย่างก่อน คอลัมน์มีค่าจริงต่างจากค่าเริ่มต้น ด่านนี้ถึงแดงได้
-        sample = pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง")
+        sample = pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first
         for i in range(sample.count()):
             btn = sample.nth(i)
             if not btn.is_visible():

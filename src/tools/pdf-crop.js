@@ -78,8 +78,8 @@ export function mount(tool) {
     right: { title: tr("การครอบตัด", "Crop"), node: el("div", {}, [
       field(tr("ใช้กรอบนี้กับ", "Apply the frame to"), applySel),
       el("div", { class: "cr-warn" },
-         tr("เนื้อหานอกกรอบยังอยู่ในไฟล์ แค่ไม่ถูกแสดงและไม่ถูกพิมพ์ ถ้าต้องการให้หายจริง ๆ ให้ใช้เครื่องมือลบข้อมูลลับแทน",
-            "Content outside the frame stays in the file, it is just no longer shown or printed. To remove it for real, use the redaction tool instead")),
+         tr("เนื้อหานอกกรอบยังอยู่ในไฟล์ แค่ไม่แสดงและไม่พิมพ์ ถ้าต้องการให้หายจริงใช้ตัวลบข้อมูลลับ",
+            "Content outside the frame stays in the file, just not shown or printed. To remove it, use the redaction tool")),
     ]) },
     center: { node: wrap, empty: tr("เลือกไฟล์ PDF แล้วลากคลุมส่วนที่ต้องการเก็บ", "Choose a PDF, then drag over the part you want to keep") },
     footer: [go, st.node],

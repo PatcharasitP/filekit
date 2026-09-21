@@ -85,7 +85,7 @@ def goto(pg, tool_id):
     assert tool_id in TOOL_IDS, f"ไม่พบเครื่องมือ id={tool_id} ใน src/registry.js"
     pg.goto("about:blank")
     pg.goto(f"{BASE}/#/{tool_id}", wait_until="networkidle")
-    pg.wait_for_selector(".tool-head", timeout=STEP_TIMEOUT)
+    pg.wait_for_selector(".s2, .tool-head", timeout=STEP_TIMEOUT)
 
 
 def dl(pg, trigger, filename, timeout=STEP_TIMEOUT):
@@ -130,10 +130,10 @@ def chain1_word_pdf_merge_compress(browser):
         pg.locator(".dz input[type=file]").first.set_input_files(
             [str(src1), str(src2)], timeout=STEP_TIMEOUT)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="แปลงเป็น PDF").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        pdf1 = dl(pg, lambda: pg.locator(".results .result button").nth(0).click(), "c1_word1.pdf")
-        pdf2 = dl(pg, lambda: pg.locator(".results .result button").nth(1).click(), "c1_word2.pdf")
+        pg.get_by_role("button", name="แปลงเป็น PDF").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        pdf1 = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").nth(0).click(), "c1_word1.pdf")
+        pdf2 = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").nth(1).click(), "c1_word2.pdf")
         p1n = fitz.open(str(pdf1)).page_count
         p2n = fitz.open(str(pdf2)).page_count
         steps.append(("Word → PDF (2 ไฟล์)", f"{src1.name}, {src2.name}",
@@ -146,9 +146,9 @@ def chain1_word_pdf_merge_compress(browser):
             [str(pdf1), str(pdf2)], timeout=STEP_TIMEOUT)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
         assert pg.locator(".file-row").count() == 2, "ไฟล์ที่ใส่ไม่ครบ 2 แถว"
-        pg.get_by_role("button", name="รวมไฟล์").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        merged = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c1_merged.pdf")
+        pg.get_by_role("button", name="รวมไฟล์").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        merged = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c1_merged.pdf")
         mdoc = fitz.open(str(merged))
         expect_pages = p1n + p2n
         ok_pages = mdoc.page_count == expect_pages
@@ -160,13 +160,13 @@ def chain1_word_pdf_merge_compress(browser):
         goto(pg, "pdf-compress")
         pg.locator(".dz input[type=file]").first.set_input_files(str(merged), timeout=STEP_TIMEOUT)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="บีบอัดไฟล์").click()
+        pg.get_by_role("button", name="บีบอัดไฟล์").filter(visible=True).click()
         # ‼️ สิ่งที่ต้องรับประกันคือ "ผู้ใช้ไม่มีทางเสียชั้นข้อความไปเงียบ ๆ" ไม่ใช่ "ต้องได้ไฟล์เสมอ"
         #    ไฟล์ข้อความล้วนที่บีบต่อไม่ได้โดยไม่ทำลายข้อความ เครื่องมือต้องหยุดแล้วถามก่อน
         #    (แก้พฤติกรรมนี้ 09/09/2026 เพราะเดิมวาดใหม่เป็นภาพให้เอง ข้อความไทยหายเกลี้ยงทั้งไฟล์)
         pg.wait_for_selector(".results .result, .results .note.warn", timeout=STEP_TIMEOUT)
-        if pg.locator(".results .result").count():
-            final = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c1_final.pdf")
+        if pg.locator(".s2-side-res .result, .results .result").count():
+            final = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c1_final.pdf")
             fdoc = fitz.open(str(final))
             pages_ok = fdoc.page_count == expect_pages
             thai_found = any(re.search(r"[ก-๙]", fdoc[i].get_text()) for i in range(fdoc.page_count))
@@ -203,9 +203,9 @@ def chain2_excel_csv_encoding(browser):
         goto(pg, "excel-csv")
         upload(pg, src)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="แปลงไฟล์").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        csv1 = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c2_out.csv")
+        pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        csv1 = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c2_out.csv")
         raw = csv1.read_bytes()
         has_thai_1 = bool(re.search(r"[ก-๙]", raw.decode("utf-8-sig", errors="replace")))
         steps.append(("Excel → CSV", src.name, csv1.name,
@@ -217,7 +217,7 @@ def chain2_excel_csv_encoding(browser):
         upload(pg, csv1)
         pg.wait_for_selector(".enc-card", timeout=STEP_TIMEOUT)
         card_text = pg.locator(".enc-card").inner_text()
-        fixed = dl(pg, lambda: pg.get_by_role("button", name="บันทึกเป็น UTF-8").click(), "c2_fixed.csv")
+        fixed = dl(pg, lambda: pg.get_by_role("button", name="บันทึกเป็น UTF-8").filter(visible=True).click(), "c2_fixed.csv")
         data = fixed.read_bytes()
         text = data.decode("utf-8-sig", errors="replace")
         has_thai_2 = bool(re.search(r"[ก-๙]", text))
@@ -251,9 +251,9 @@ def chain3_image_pdf_split_image(browser):
             [str(img1), str(img2)], timeout=STEP_TIMEOUT)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
         assert pg.locator(".file-row").count() == 2, "ไฟล์รูปที่ใส่ไม่ครบ 2 แถว"
-        pg.get_by_role("button", name="สร้างไฟล์ PDF").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        pdf1 = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c3_imgpdf.pdf")
+        pg.get_by_role("button", name="สร้างไฟล์ PDF").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        pdf1 = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c3_imgpdf.pdf")
         pdoc = fitz.open(str(pdf1))
         steps.append(("รูปภาพ → PDF", f"{img1.name}, {img2.name}", pdf1.name,
                       f"ได้ PDF {pdoc.page_count} หน้า (2 รูป)", "ผ่าน" if pdoc.page_count == 2 else "ตก"))
@@ -267,9 +267,9 @@ def chain3_image_pdf_split_image(browser):
         pg.wait_for_selector(".sp-count", timeout=STEP_TIMEOUT)
         assert "1 ไฟล์" in pg.locator(".sp-count").inner_text(), \
             f"ตัวอย่างจำนวนไฟล์ที่จะได้ไม่ตรง: {pg.locator('.sp-count').inner_text()}"
-        pg.get_by_role("button", name="แยกไฟล์").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        split1 = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c3_split_p1.pdf")
+        pg.get_by_role("button", name="แยกไฟล์").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        split1 = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c3_split_p1.pdf")
         sdoc = fitz.open(str(split1))
         steps.append(("แยกหน้า PDF (เอาแค่หน้า 1)", pdf1.name, split1.name,
                       "ได้ไฟล์เดียว 1 หน้า", "ผ่าน" if sdoc.page_count == 1 else "ตก"))
@@ -279,12 +279,12 @@ def chain3_image_pdf_split_image(browser):
         goto(pg, "pdf-to-images")
         upload(pg, split1)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="แปลงเป็นรูป").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
+        pg.get_by_role("button", name="แปลงเป็นรูป").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
         # ‼️ PDF ต้นทางมีแค่ 1 หน้า (เอามาจากขั้นแยกหน้าก่อนหน้า) → ผลลัพธ์มีรูปเดียว
         #    src/tools/pdf-to-images.js:65 โชว์ปุ่ม "ดาวน์โหลด ZIP" เฉพาะตอน made.length > 1 เท่านั้น
         #    รูปเดียวจึงมีแค่ปุ่มดาวน์โหลดเดี่ยวใน .results .result (ไม่ใช่ ZIP) — ไม่ใช่บั๊ก เป็นพฤติกรรมตั้งใจ
-        img_out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c3_out.png")
+        img_out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c3_out.png")
         im = Image.open(img_out)
         im.load()
         ok_open = im.size[0] > 0 and im.size[1] > 0
@@ -311,9 +311,9 @@ def chain4_pdf_to_word(browser):
         goto(pg, "pdf-to-word")
         upload(pg, src)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="แปลงเป็น Word").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c4_out.docx")
+        pg.get_by_role("button", name="แปลงเป็น Word").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c4_out.docx")
 
         doc = pydocx.Document(str(out))
         paras = [p.text for p in doc.paragraphs if p.text.strip()]
@@ -347,9 +347,9 @@ def chain5_ppt_pdf_watermark_sign(browser):
         goto(pg, "powerpoint-to-pdf")
         upload(pg, src)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="สร้างไฟล์ PDF").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        pdf1 = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c5_ppt.pdf")
+        pg.get_by_role("button", name="สร้างไฟล์ PDF").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        pdf1 = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c5_ppt.pdf")
         p1 = fitz.open(str(pdf1)).page_count
         steps.append(("PowerPoint → PDF", src.name, pdf1.name,
                       f"จำนวนหน้า = จำนวนสไลด์ ({n_slides})", "ผ่าน" if p1 == n_slides else f"ตก — ได้ {p1} หน้า"))
@@ -358,9 +358,9 @@ def chain5_ppt_pdf_watermark_sign(browser):
         goto(pg, "pdf-watermark")
         upload(pg, pdf1)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="ใส่ลายน้ำ").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        pdf2 = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").click(), "c5_wm.pdf")
+        pg.get_by_role("button", name="ใส่ลายน้ำ").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        pdf2 = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).click(), "c5_wm.pdf")
         p2 = fitz.open(str(pdf2)).page_count
         steps.append(("ใส่ลายน้ำ PDF", pdf1.name, pdf2.name,
                       f"จำนวนหน้าไม่เปลี่ยน ({n_slides})", "ผ่าน" if p2 == n_slides else f"ตก — ได้ {p2} หน้า"))
@@ -376,9 +376,9 @@ def chain5_ppt_pdf_watermark_sign(browser):
         pg.wait_for_timeout(500)
         pg.locator(".sign-stage").click(position={"x": 120, "y": 120})
         pg.wait_for_selector(".sign-item", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="บันทึกไฟล์เซ็นแล้ว").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        pdf3 = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").click(), "c5_signed.pdf")
+        pg.get_by_role("button", name="บันทึกไฟล์เซ็นแล้ว").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        pdf3 = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).click(), "c5_signed.pdf")
         p3 = fitz.open(str(pdf3)).page_count
         steps.append(("เซ็นชื่อบน PDF", pdf2.name, pdf3.name,
                       f"จำนวนหน้าไม่เปลี่ยน ({n_slides})", "ผ่าน" if p3 == n_slides else f"ตก — ได้ {p3} หน้า"))
@@ -432,7 +432,7 @@ def chain6_excel_address_mailmerge(browser):
         upload(pg, src)
         pg.wait_for_selector(".stats .stat", timeout=STEP_TIMEOUT)
         chips = pg.locator(".stats").inner_text()
-        out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดเป็น Excel").click(), "c6_split.xlsx")
+        out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดเป็น Excel").filter(visible=True).click(), "c6_split.xlsx")
 
         wbo = openpyxl.load_workbook(out)
         wso = wbo.active
@@ -458,9 +458,9 @@ def chain6_excel_address_mailmerge(browser):
         locked4 = pg.locator(".mm-step").nth(3).get_attribute("data-locked")
         steps_note = f"ขั้น 4 ปลดล็อกหลังจับคู่คอลัมน์อัตโนมัติ (data-locked={locked4})"
         assert locked4 == "0", f"จับคู่คอลัมน์อัตโนมัติไม่สำเร็จ — ขั้นที่ 4 ยังล็อกอยู่ (data-locked={locked4})"
-        pg.get_by_role("button", name="สร้างเอกสารทั้งชุด").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-        merged_docx = dl(pg, lambda: pg.locator(".results .result button").first.click(), "c6_letter.docx")
+        pg.get_by_role("button", name="สร้างเอกสารทั้งชุด").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+        merged_docx = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "c6_letter.docx")
 
         doc = pydocx.Document(str(merged_docx))
         full_text = "\n".join(p.text for p in doc.paragraphs)
@@ -494,8 +494,8 @@ def chain7_next_card_navigation(browser):
         goto(pg, "pdf-merge")
         pg.locator(".dz input[type=file]").first.set_input_files([str(f) for f in files], timeout=STEP_TIMEOUT)
         pg.wait_for_selector(".file-row", timeout=STEP_TIMEOUT)
-        pg.get_by_role("button", name="รวมไฟล์").click()
-        pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
+        pg.get_by_role("button", name="รวมไฟล์").filter(visible=True).click()
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
 
         n_next = pg.locator(".next-card").count()
         hrefs = pg.eval_on_selector_all(".next-card", "els => els.map(e => e.getAttribute('href'))")
@@ -507,8 +507,8 @@ def chain7_next_card_navigation(browser):
         next_id = hrefs[0].replace("#/", "")
         pg.locator(".next-card").first.click()
         pg.wait_for_url(re.compile(re.escape(f"#/{next_id}") + "$"), timeout=STEP_TIMEOUT)
-        pg.wait_for_selector(".tool-head", timeout=STEP_TIMEOUT)
-        landed_ok = next_id in TOOL_IDS and pg.locator(".tool-head").count() == 1
+        pg.wait_for_selector(".s2, .tool-head", timeout=STEP_TIMEOUT)
+        landed_ok = next_id in TOOL_IDS and pg.locator(".s2, .tool-head").count() >= 1
         steps.append((f"คลิก next-card ตัวแรก → {next_id}", "-", "-",
                       "เข้าเครื่องมือถัดไปได้จริง หน้าเครื่องมือขึ้นครบ", "ผ่าน" if landed_ok else "ตก"))
         assert landed_ok, f"คลิกแล้วไม่เข้าเครื่องมือ {next_id} ให้ถูกต้อง"
@@ -522,7 +522,7 @@ def chain7_next_card_navigation(browser):
             pg.wait_for_selector(".file-row", timeout=6000)
         except Exception:
             pass
-        carried = pg.locator(".file-row").count() > 0 or pg.locator(".results .result").count() > 0
+        carried = pg.locator(".file-row").count() > 0 or pg.locator(".s2-side-res .result, .results .result").count() > 0
         steps.append(("ตรวจว่าไฟล์ตามไปด้วยไหม", "-", "-",
                       "ไฟล์ผลลัพธ์ต้องตามไปโดยไม่ต้องดาวน์โหลดก่อน",
                       "ผ่าน (ไฟล์ตามไปด้วย)" if carried else "ตก"))

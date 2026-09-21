@@ -35,7 +35,7 @@ from playwright.sync_api import sync_playwright
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas as rl_canvas
 
-BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8848")
+BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
 SELFTEST = "--selftest" in sys.argv
 ok = fail = 0
 reds = []
@@ -138,10 +138,10 @@ def run_tool(pg, src, tmp, out_name):
     for i in range(rows.count()):
         rows.nth(i).uncheck()
     pg.wait_for_timeout(2600)
-    pg.get_by_role("button", name="บันทึกไฟล์").click()
+    pg.get_by_role("button", name="บันทึกไฟล์").filter(visible=True).click()
     pg.wait_for_timeout(2200)
     with pg.expect_download() as dl:
-        pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+        pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
     out = tmp / out_name
     dl.value.save_as(str(out))
     return out, seen, blocked
@@ -168,10 +168,10 @@ def main():
         #    ยัดผิดช่องแล้วปุ่ม "ใส่ลายน้ำ" ไม่เปิด เทสจึงค้างรอปุ่มที่ disabled อยู่
         pg.locator(".dz input[type=file]").first.set_input_files(str(plain))
         pg.wait_for_timeout(2200)
-        pg.get_by_role("button", name="ใส่ลายน้ำ").first.click()
+        pg.get_by_role("button", name="ใส่ลายน้ำ").filter(visible=True).first.click()
         pg.wait_for_timeout(3000)
         with pg.expect_download() as dl:
-            pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+            pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
         wm = tmp / "wm.pdf"
         dl.value.save_as(str(wm))
 
@@ -216,10 +216,10 @@ def main():
 
         rows.first.uncheck()
         pg.wait_for_timeout(2500)
-        pg.get_by_role("button", name="บันทึกไฟล์").click()
+        pg.get_by_role("button", name="บันทึกไฟล์").filter(visible=True).click()
         pg.wait_for_timeout(2500)
         with pg.expect_download() as dl2:
-            pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+            pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
         out = tmp / "out.pdf"
         dl2.value.save_as(str(out))
 
@@ -237,7 +237,7 @@ def main():
         msg = pg.locator(".status").inner_text()
         ck("ไม่มีชั้นที่ถอดออกได้" in msg,
            "บอกตรง ๆ ว่าทำให้ไม่ได้ ไม่หลอกว่าสำเร็จ", msg[:70])
-        ck(pg.get_by_role("button", name="บันทึกไฟล์").is_disabled(),
+        ck(pg.get_by_role("button", name="บันทึกไฟล์").filter(visible=True).is_disabled(),
            "ปุ่มบันทึกปิดอยู่เมื่อไม่มีอะไรให้ลบ")
 
         ck(not errs, "ไม่มี error หลุดออกมา", errs[0] if errs else "")

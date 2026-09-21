@@ -139,8 +139,12 @@ def main():
             ck(w_after > w_before, f"ลากมุมแล้วกล่องใหญ่ขึ้นจริง ({w_before:.1f}% เป็น {w_after:.1f}%)")
 
         # ── พิมพ์ข้อความไทยแล้ววางทับ
+        # ‼️ ต้องเลือกเครื่องมือ "ข้อความ" ก่อน (เปลี่ยน 21/09/2026 ตอนรวมเครื่องมือเป็นตัวเดียว)
+        #    แผงขวาโชว์เฉพาะตัวเลือกของเครื่องมือที่เลือกอยู่ ไม่ได้กองทุกกลุ่มไว้พร้อมกันแล้ว
+        #    เพราะห้าเครื่องมือรวมกันมีสิบกว่าช่อง ถ้าโชว์หมดแผงจะกลายเป็นกำแพง
+        pg.click("[data-mode=text]")
+        pg.wait_for_timeout(250)
         pg.fill(".pe-right input[type=text]", "๑๒ มีนาคม ๒๕๖๙")
-        pg.click("button:has-text('ใส่ข้อความ')")
         pg.wait_for_timeout(200)
         pg.mouse.click(x0 + 20, y0 + 8)
         pg.wait_for_timeout(400)
@@ -165,7 +169,7 @@ def main():
         if SELFTEST:
             # จำลองบั๊กลืมกลับแกนตั้ง กล่องจะไปโผล่คนละที่ เทสต้องจับได้
             pg.evaluate("() => { window.__FK_FLIP_BUG = true }")
-        pg.click(".ws-footer button:has-text('บันทึก')")
+        pg.click("button.s2-cta:has-text('บันทึก'), .ws-footer button:has-text('บันทึก')")
         try:
             pg.wait_for_selector(".result button:has-text('ดาวน์โหลด')", timeout=90000)
             got = True

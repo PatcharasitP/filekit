@@ -193,7 +193,7 @@ def run_suite(browser_name, browser, samples, results):
         clear_errs()
         try:
             goto(pg, t)
-            pg.wait_for_selector(".dz, .tool-head", timeout=15_000)
+            pg.wait_for_selector(".dz, .s2, .tool-head", timeout=15_000)
             pg.wait_for_timeout(150)
             errs = real_errs()
             ok_or_fail(results, f"เปิดเครื่องมือ {t} ไม่มี error", len(errs) == 0, "; ".join(errs[:3]))
@@ -208,8 +208,8 @@ def run_suite(browser_name, browser, samples, results):
         pg.set_input_files("input[type=file]", str(samples["xlsx"]), timeout=SIF_TIMEOUT)
         pg.wait_for_selector(".file-row", timeout=15_000)
         pg.get_by_role("button", name="แปลงไฟล์").click()
-        pg.wait_for_selector(".results .result", timeout=20_000)
-        out = dl(pg, lambda: pg.locator(".results .result button").first.click(), f"{browser_name}_excelcsv_out.csv")
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
+        out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), f"{browser_name}_excelcsv_out.csv")
         data = out.read_bytes()
         text = data.decode("utf-8-sig")
         header = text.splitlines()[0] if text.splitlines() else ""
@@ -235,8 +235,8 @@ def run_suite(browser_name, browser, samples, results):
         ok_or_fail(results, "pdf-merge: ไฟล์ที่ใส่ขึ้นครบ 2 แถว", rows_ok, f"พบ {pg.locator('.file-row').count()} แถว")
 
         pg.get_by_role("button", name="รวมไฟล์").click()
-        pg.wait_for_selector(".results .result", timeout=20_000)
-        out = dl(pg, lambda: pg.locator(".results .result button").first.click(), f"{browser_name}_pdfmerge_out.pdf")
+        pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
+        out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), f"{browser_name}_pdfmerge_out.pdf")
         doc = fitz.open(str(out))
         got_pages = doc.page_count
         pages_ok = got_pages == expected_pages

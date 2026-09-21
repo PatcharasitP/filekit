@@ -88,7 +88,7 @@ with sync_playwright() as p:
     for tool, sel, label in [("excel-to-pq", ".pq-code", "Power Query M จาก Excel"),
                              ("pa-parse-json", ".paj-code", "Schema ของ Parse JSON")]:
         go(pg, tool)
-        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
         pg.wait_for_timeout(3800)
         done += probe(pg, label, sel)
 
@@ -133,7 +133,7 @@ with sync_playwright() as p:
             mp.goto(f"{BASE}/#/{tool}", wait_until="networkidle")
             mp.wait_for_timeout(900)
             if needs_file:
-                mp.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+                mp.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
                 mp.wait_for_timeout(3600)
             else:
                 mp.wait_for_timeout(1400)

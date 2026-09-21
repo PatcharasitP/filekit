@@ -28,7 +28,7 @@ with sync_playwright() as p:
     pg.locator("input[type=file]").set_input_files(
         [str(S/"รูปดี1.png"), str(S/"รูปเสีย.png"), str(S/"รูปดี2.png")])
     pg.wait_for_timeout(600)
-    pg.locator("button.btn", has_text="แปลง").first.click()
+    pg.locator("button.btn:visible", has_text="แปลง").first.click()
     pg.wait_for_timeout(2500)
     ck("ไฟล์ดี 2 ไฟล์ยังแปลงสำเร็จ (ไม่ล้มทั้งชุด)", pg.locator(".result").count(), 2)
     ck("บอกสถานะว่าข้ามไป 1 ไฟล์", pg.locator(".status").inner_text(), "ข้าม 1", contains=True)

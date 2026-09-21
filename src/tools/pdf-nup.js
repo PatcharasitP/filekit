@@ -145,9 +145,9 @@ export function mount(tool) {
     if (p.kind === "booklet") {
       const paperSheets = p.sheets.length / 2;
       foldNote.textContent = tr(
-        `พิมพ์สองหน้าบนกระดาษ ${paperSheets} แผ่น โดยพลิกด้านตามแนวสั้นของกระดาษ แล้วพับครึ่งเย็บกลาง จะได้เล่ม ${p.total} หน้าเรียงถูกต้อง` +
-        (p.total > pageCount ? ` (เติมหน้าว่างให้ ${p.total - pageCount} หน้า เพราะเล่มพับต้องหารด้วย 4 ลงตัว)` : ""),
-        `Print double-sided on ${pl(paperSheets, "sheet", "sheets")}, flipping on the short edge, then fold in half and staple the middle for a ${p.total}-page booklet in the right order` +
+        `พิมพ์สองหน้า ${paperSheets} แผ่น พลิกด้านสั้น พับครึ่งเย็บกลาง ได้เล่ม ${p.total} หน้า` +
+        (p.total > pageCount ? ` (เติมหน้าว่าง ${p.total - pageCount} หน้า เล่มพับต้องหาร 4 ลงตัว)` : ""),
+        `Print double-sided on ${pl(paperSheets, "sheet", "sheets")}, flip on the short edge, fold and staple: a ${p.total}-page booklet in order` +
         (p.total > pageCount ? ` (${p.total - pageCount} blank pages added, since a folded booklet needs a multiple of four)` : ""));
     }
   }

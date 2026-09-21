@@ -65,7 +65,7 @@ export function mount(tool) {
       field(tr("ขนาดสไลด์", "Slide size"), layoutSel),
       field(tr("ความละเอียด", "Quality"), qualitySel),
       el("div", { class: "pp-warn" },
-         tr("แต่ละสไลด์จะเป็นภาพของหน้านั้น แก้ข้อความในสไลด์ไม่ได้ ถ้าต้องแก้เนื้อหาให้แก้ที่ไฟล์ต้นทางแล้วแปลงใหม่",
+         tr("แต่ละสไลด์เป็นภาพของหน้านั้น แก้ข้อความข้างในไม่ได้ ต้องแก้ที่ไฟล์ต้นทางแล้วแปลงใหม่",
             "Each slide becomes a picture of that page, so the text inside cannot be edited. To change the content, edit the source file and convert again")),
     ]) },
     center: { node: stage, empty: tr("เลือกไฟล์ PDF เพื่อดูว่าจะได้กี่สไลด์", "Choose a PDF to see how many slides you get") },

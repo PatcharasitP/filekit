@@ -703,7 +703,7 @@ export function mount(tool) {
         "Or to set it up yourself in your own file, Solver sits at the right end of the Data tab (missing? enable it in File > Options > Add-ins > Solver Add-in). Here is how")),
       el("ol", { class: "ms-steps" }, [
         el("li", { html: tr(
-          `ตัวเลขอยู่คอลัมน์ <code>${col}</code> แถว 2 ถึง ${last} ส่วนคอลัมน์ <code>B</code> ใส่ 0 ทุกแถว คือช่อง "เลือกหรือไม่"`,
+          `ตัวเลขอยู่คอลัมน์ <code>${col}</code> แถว 2 ถึง ${last} ส่วน <code>B</code> ใส่ 0 ทุกแถว คือช่องเลือก`,
           `Put the numbers in column <code>${col}</code>, rows 2 to ${last}, and leave column <code>B</code> as 0 on every row. That column means "picked or not"`) }),
         el("li", { html: tr(
           `ช่อง <code>E1</code> ใส่สูตร <code>=SUMPRODUCT(${col}2:${col}${last},B2:B${last})</code> คือผลรวมเฉพาะแถวที่ถูกเลือก`,
@@ -741,7 +741,7 @@ export function mount(tool) {
         ]),
       ]),
       el("p", { class: "ms-empty-hint" }, tr(
-        "Solver คืนคำตอบเดียวแล้วจบ ไม่บอกว่ามีกี่ชุด และไม่เลือกชุดที่ใช้รายการน้อยสุด (ซ่อนคำตอบ 4 รายการ Solver ตอบมา 8-12 รายการ)",
+        "Solver คืนคำตอบเดียวแล้วจบ ไม่บอกว่ามีกี่ชุด และไม่เลือกชุดที่สั้นที่สุด",
         "Two things Solver will not do: it returns one answer and stops, never saying how many other sets add up the same, and it does not prefer the shortest set (hiding a 4 row answer, it came back with 8 to 12 rows)")),
       el("p", { class: "ms-empty-hint" }, tooBig
         ? tr(`มี ${n.toLocaleString()} แถว เกินเพดาน 200 ตัวแปรของ Solver ที่ติดมากับ Excel ต้องคัดให้เหลือไม่เกิน 200 แถวก่อน`,

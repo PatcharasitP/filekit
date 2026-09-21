@@ -18,7 +18,11 @@ import tempfile
 
 from playwright.sync_api import sync_playwright
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8848"
+# ‼️ ต้องเคารพ FK_BASE เสมอ ไม่งั้นตัวรันกลางยิงพอร์ตหนึ่ง เทสไปยิงอีกพอร์ตหนึ่ง
+#    แล้วขึ้น ERR_CONNECTION_REFUSED โดยที่ของจริงไม่ได้พังเลย (เจอ 21/09/2026)
+import os
+BASE = (sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].startswith("http")
+        else os.environ.get("FK_BASE", "http://127.0.0.1:8899"))
 ok, bad = [], []
 def check(name, cond, got=""):
     (ok if cond else bad).append(name)

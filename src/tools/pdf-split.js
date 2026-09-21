@@ -284,8 +284,8 @@ export function mount(tool) {
       if (tooBig.length) {
         const list = tooBig.slice(0, 6).join(", ") + (tooBig.length > 6 ? "…" : "");
         msgs.push(tr(
-          `หน้า ${list} ใหญ่กว่าเพดานด้วยตัวเอง แยกให้เล็กกว่านี้ไม่ได้ ไฟล์ของหน้าเหล่านี้จะยังเกินอยู่ ถ้าต้องการให้เล็กลงจริงต้องบีบอัดไฟล์ก่อน`,
-          `Page ${list} is larger than the limit on its own, so it cannot be split any smaller. Those files will still be over. Compress the PDF first if you need them smaller`));
+          `หน้า ${list} ใหญ่กว่าเพดานด้วยตัวเอง แยกให้เล็กกว่านี้ไม่ได้ ถ้าต้องการเล็กลงต้องบีบอัดก่อน`,
+          `Page ${list} is larger than the limit on its own and cannot be split smaller. Compress the PDF first`));
       }
       if (approx) msgs.push(tr("กำลังวัดขนาดจริงของแต่ละหน้าอยู่ ตัวเลขจะแม่นขึ้นในอีกครู่",
                                "Measuring each page's real size, these numbers get more accurate in a moment"));

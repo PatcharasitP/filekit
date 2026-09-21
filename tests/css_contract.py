@@ -217,7 +217,9 @@ with sync_playwright() as pw:
         page.goto("about:blank")
         page.goto(f"{BASE}/#/{t}", wait_until="networkidle")
         try:
-            page.wait_for_selector(".dz, .tool-head", timeout=12000)
+            # ‼️ เครื่องมือที่ไม่รับไฟล์ (กราฟ Deneb, ชุด Power Query) ไม่มีกล่องรับไฟล์เลย
+            #    รอ .dz อย่างเดียวจึงหมดเวลาแล้วรายงานว่า "เปิดหน้าไม่ขึ้น" ทั้งที่เปิดได้ปกติ
+            page.wait_for_selector(".dz, .s2, .tool-head", timeout=12000)
         except Exception:
             broken_tools.append((t, "เปิดหน้าเครื่องมือไม่ขึ้น"))
             continue

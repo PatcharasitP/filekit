@@ -81,7 +81,7 @@ export function mount(tool) {
             hint: tr("ลากสลับลำดับได้", "Drag to reorder") },
     right: { title: tr("วิธีอ่านผล", "How to read the result"), node: el("div", {}, [
       el("div", { class: "cd-note" },
-         tr("ซ้ายคือฉบับเดิม ขวาคือฉบับใหม่ แถบเหลืองคือบรรทัดที่ถูกแก้ แดงคือข้อความที่หายไป เขียวคือที่เพิ่มเข้ามา",
+         tr("ซ้ายคือฉบับเดิม ขวาคือฉบับใหม่ เหลือง=แก้ไข แดง=หายไป เขียว=เพิ่มเข้ามา",
             "The left is the older file and the right is the newer one. Yellow rows were edited, red text was removed and green text was added")),
       el("div", { class: "cd-note" },
          tr("เทียบจากชั้นข้อความในไฟล์ ไฟล์สแกนที่ยังไม่ผ่าน OCR จะไม่มีข้อความให้เทียบ ให้ทำ OCR ก่อน",

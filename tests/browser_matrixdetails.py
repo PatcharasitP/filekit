@@ -42,7 +42,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(1400)
     ck("① เปิดหน้าเครื่องมือได้", "Matrix" in pg.title(), pg.title())
 
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_timeout(4200)
     cols = pg.evaluate("() => [...document.querySelectorAll('.pmd-col-name')].map(e => e.textContent)")
     lv = pg.evaluate("() => [...document.querySelectorAll('.pmd-level-name')].map(e => e.textContent)")

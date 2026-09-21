@@ -111,11 +111,11 @@ def main():
             pg.wait_for_selector(".dz")
             pg.locator(".dz input[type=file]").set_input_files(str(src))
             pg.wait_for_timeout(400)
-            pg.locator("button.btn", has_text="แปลงเป็น PDF").click()
+            pg.locator("button.btn:visible", has_text="แปลงเป็น PDF").click()
             pg.wait_for_timeout(3500)
             out = tmp / "out.pdf"
             with pg.expect_download() as dl:
-                pg.locator(".results .result button").first.click()
+                pg.locator(".s2-side-res .result button, .results .result button").first.click()
             dl.value.save_as(str(out))
             page = fitz.open(out)[0]
             for w in ["ที่", "ผู้ซื้อ", "เรื่องนี้", "ตั้งแต่", "น้ำหนัก", "หนึ่ง", "เสื้อผ้า", "ชื้น"]:

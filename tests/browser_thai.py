@@ -122,7 +122,7 @@ with sync_playwright() as p:
     ck("ช่อง 'เปิดตรง ๆ' โชว์ตัวประหลาด", "�" in pg.locator(".preview-text.bad").first.inner_text(), True)
     ck("ช่อง 'หลังซ่อม' อ่านภาษาไทยออก", pg.locator(".preview-text.good").first.inner_text(), "สมชาย ใจดี", contains=True)
     with pg.expect_download() as dl:
-        pg.locator("button.btn", has_text="บันทึกเป็น UTF-8").click()
+        pg.locator("button.btn:visible", has_text="บันทึกเป็น UTF-8").click()
     f = OUT/"fixed-tis620.csv"; dl.value.save_as(str(f))
     txt = f.read_bytes().decode("utf-8-sig")
     ck("ไฟล์ที่ดาวน์โหลดอ่านเป็น UTF-8 ได้ถูกต้อง", txt.split("\n")[1], "EMP-001,สมชาย ใจดี,ฝ่ายบุคคล,เจ้าหน้าที่อาวุโส")
@@ -147,7 +147,7 @@ with sync_playwright() as p:
     open_tool("thai-date")
     upload(FX/"ข้อมูลพนักงาน-ทดสอบ.xlsx")
     pg.wait_for_selector(".xt", timeout=10000)
-    ck("เดาคอลัมน์วันที่ให้เอง", pg.locator(".panel select").nth(1).input_value(), "2")  # 0=ชีท(ซ่อน) 1=คอลัมน์
+    ck("เดาคอลัมน์วันที่ให้เอง", pg.locator(".s2-side-bd select, .panel select").nth(1).input_value(), "2")  # 0=ชีท(ซ่อน) 1=คอลัมน์
     body = pg.locator(".xt tbody")
     ck("15 ม.ค. 2569 → 2026-01-15", body.locator("tr").nth(0).locator("td").nth(3).inner_text(), "2026-01-15")
     ck("1 กันยายน 2568 → 2025-09-01", body.locator("tr").nth(1).locator("td").nth(3).inner_text(), "2025-09-01")
@@ -156,11 +156,11 @@ with sync_playwright() as p:
     ck("สรุปแปลงได้ 4 แถว", pg.locator(".stat.ok").inner_text(), "4", contains=True)
     ck("สรุปอ่านไม่ออก 1 แถว", pg.locator(".stat.bad").inner_text(), "1", contains=True)
     # สลับเป็นไทยย่อ
-    pg.locator(".panel select").nth(3).select_option("thabbr")   # 2=ทิศทาง 3=รูปแบบ
+    pg.locator(".s2-side-bd select, .panel select").nth(3).select_option("thabbr")   # 2=ทิศทาง 3=รูปแบบ
     pg.wait_for_timeout(300)
     ck("เปลี่ยนรูปแบบเป็นไทยย่อได้", body.locator("tr").nth(0).locator("td").nth(3).inner_text(), "15 ม.ค. 2026")
     with pg.expect_download() as dl:
-        pg.locator("button.btn", has_text="ดาวน์โหลดเป็น Excel").click()
+        pg.locator("button.btn:visible", has_text="ดาวน์โหลดเป็น Excel").click()
     fx = OUT/"date.xlsx"; dl.value.save_as(str(fx))
     ck("ไฟล์ Excel ที่ได้มีขนาดสมเหตุผล", fx.stat().st_size > 3000, True)
 
@@ -169,7 +169,7 @@ with sync_playwright() as p:
     open_tool("thai-id")
     upload(FX/"ข้อมูลพนักงาน-ทดสอบ.xlsx")
     pg.wait_for_selector(".xt", timeout=10000)
-    ck("เดาคอลัมน์เลขบัตรให้เอง", pg.locator(".panel select").nth(1).input_value(), "4")
+    ck("เดาคอลัมน์เลขบัตรให้เอง", pg.locator(".s2-side-bd select, .panel select").nth(1).input_value(), "4")
     ck("ถูกต้อง 3 แถว", pg.locator(".stat.ok").inner_text(), "3", contains=True)
     ck("ผิด 2 แถว", pg.locator(".stat.bad").inner_text(), "2", contains=True)
     tb = pg.locator(".xt tbody")
@@ -181,12 +181,12 @@ with sync_playwright() as p:
     open_tool("thai-number")
     upload(FX/"ข้อมูลพนักงาน-ทดสอบ.xlsx")
     pg.wait_for_selector(".xt", timeout=10000)
-    ck("เดาคอลัมน์เงินเดือนให้เอง", pg.locator(".panel select").nth(1).input_value(), "5")
+    ck("เดาคอลัมน์เงินเดือนให้เอง", pg.locator(".s2-side-bd select, .panel select").nth(1).input_value(), "5")
     tb = pg.locator(".xt tbody")
     ck("38000 → สามหมื่นแปดพันบาทถ้วน", tb.locator("tr").nth(0).locator("td").nth(3).inner_text(), "สามหมื่นแปดพันบาทถ้วน")
     ck("128400 → หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน", tb.locator("tr").nth(3).locator("td").nth(3).inner_text(), "หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน")
     ck("แปลงได้ครบ 5 แถว", pg.locator(".stat.ok").inner_text(), "5", contains=True)
-    pg.locator(".panel select").nth(2).select_option("toThai")
+    pg.locator(".s2-side-bd select, .panel select").nth(2).select_option("toThai")
     pg.wait_for_timeout(300)
     ck("โหมดเลขไทย 38000 → ๓๘๐๐๐", tb.locator("tr").nth(0).locator("td").nth(3).inner_text(), "๓๘๐๐๐")
 

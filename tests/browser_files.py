@@ -107,9 +107,9 @@ def case_excel_csv(pg):
     goto(pg, "excel-csv")
     pg.set_input_files("input[type=file]", str(SAMPLES / "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx"), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="แปลงไฟล์").click()
-    pg.wait_for_selector(".results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "excelcsv_out.csv")
+    pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "excelcsv_out.csv")
     data = out.read_bytes()
     assert data[:3] == b"\xef\xbb\xbf", "CSV ที่ได้ต้องมี UTF-8 BOM (กันไทยเพี้ยนตอนเปิดด้วย Excel)"
     text = data.decode("utf-8-sig")
@@ -126,9 +126,9 @@ def case_pdf_merge(pg):
     pg.set_input_files("input[type=file]", [str(f) for f in files], timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     assert pg.locator(".file-row").count() == 2, "ไฟล์ที่ใส่ไม่ครบ 2 แถวในรายการ"
-    pg.get_by_role("button", name="รวมไฟล์").click()
-    pg.wait_for_selector(".results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "pdfmerge_out.pdf")
+    pg.get_by_role("button", name="รวมไฟล์").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "pdfmerge_out.pdf")
     doc = fitz.open(str(out))
     assert doc.page_count == expected_pages, f"หน้าหลังรวมไม่ครบ: ได้ {doc.page_count} ต้องการ {expected_pages}"
     assert doc[0].get_text().strip(), "หน้าแรกของไฟล์ที่รวมแล้วไม่มีข้อความเลย"
@@ -139,9 +139,9 @@ def case_image_resize(pg):
     goto(pg, "image-resize")
     pg.set_input_files("input[type=file]", str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="ย่อและบีบอัด").click()
+    pg.get_by_role("button", name="ย่อและบีบอัด").filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดรูป").click(), "imgresize_out.jpg")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดรูป").filter(visible=True).click(), "imgresize_out.jpg")
     im = Image.open(out)
     im.load()
     assert max(im.size) <= 1600, f"ควรถูกจำกัดด้านยาวสุดที่ 1600px แต่ได้ขนาด {im.size}"
@@ -154,7 +154,7 @@ def case_thai_encoding(pg):
     pg.wait_for_selector(".enc-card", timeout=15_000)
     card_text = pg.locator(".enc-card").inner_text()
     assert ("TIS-620" in card_text) or ("Windows-874" in card_text), f"ไม่ตรวจพบว่าเป็น TIS-620: {card_text}"
-    out = dl(pg, lambda: pg.get_by_role("button", name="บันทึกเป็น UTF-8").click(), "thaienc_out.csv")
+    out = dl(pg, lambda: pg.get_by_role("button", name="บันทึกเป็น UTF-8").filter(visible=True).click(), "thaienc_out.csv")
     data = out.read_bytes()
     assert data[:3] == b"\xef\xbb\xbf", "ไฟล์ที่ซ่อมแล้วต้องมี UTF-8 BOM"
     text = data.decode("utf-8-sig")
@@ -168,7 +168,7 @@ def case_thai_id(pg):
     pg.wait_for_selector(".stats .stat", timeout=15_000)
     chips = pg.locator(".stats").inner_text()
     assert "ถูกต้อง" in chips, f"ไม่พบผลตรวจ 'ถูกต้อง' เลย: {chips}"
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดเป็น Excel").click(), "thaiid_out.xlsx")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดเป็น Excel").filter(visible=True).click(), "thaiid_out.xlsx")
     wb = openpyxl.load_workbook(out)
     ws = wb.active
     header = [c.value for c in ws[1]]
@@ -186,7 +186,7 @@ def case_thai_date(pg):
     pg.wait_for_selector(".stats .stat", timeout=15_000)
     chips = pg.locator(".stats").inner_text()
     assert "แปลงได้" in chips, f"ไม่พบผลแปลงวันที่เลย: {chips}"
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดเป็น Excel").click(), "thaidate_out.xlsx")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดเป็น Excel").filter(visible=True).click(), "thaidate_out.xlsx")
     wb = openpyxl.load_workbook(out)
     ws = wb.active
     header = [c.value for c in ws[1]]
@@ -207,9 +207,9 @@ def case_word_clean(pg):
     report = pg.locator(".clean-card").inner_text()
     assert ("ผู้เขียน" in report) or ("รหัสรอบการบันทึก" in report), \
         f"ไม่พบร่องรอย metadata ที่ควรเจอในไฟล์ตัวอย่าง (คาดว่ามี author/rsid): {report}"
-    pg.get_by_role("button", name="ล้าง").click()
-    pg.wait_for_selector(".results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "wordclean_out.docx")
+    pg.get_by_role("button", name="ล้าง").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "wordclean_out.docx")
 
     with zipfile.ZipFile(out) as z:
         names = z.namelist()
@@ -247,11 +247,11 @@ def case_pdf_to_text(pg):
     goto(pg, "pdf-to-text")
     pg.set_input_files("input[type=file]", str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="ดึงข้อความ").click()
+    pg.get_by_role("button", name="ดึงข้อความ").filter(visible=True).click()
     pg.wait_for_selector(".results .actions", timeout=20_000)
     status = pg.locator(".status-wrap .status").inner_text()
     assert str(expected_pages) in status, f"จำนวนหน้าที่ดึงข้อความไม่ตรง (คาด {expected_pages}): {status}"
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด .txt").click(), "pdftotext_out.txt")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด .txt").filter(visible=True).click(), "pdftotext_out.txt")
     data = out.read_bytes()
     assert data[:3] == b"\xef\xbb\xbf", "ไฟล์ .txt ที่ได้ต้องมี UTF-8 BOM"
     text = data.decode("utf-8-sig")
@@ -265,9 +265,9 @@ def case_images_to_pdf(pg):
     pg.set_input_files("input[type=file]", [str(f) for f in files], timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     assert pg.locator(".file-row").count() == 2, "ไฟล์รูปที่ใส่ไม่ครบ 2 แถว"
-    pg.get_by_role("button", name="สร้างไฟล์ PDF").click()
-    pg.wait_for_selector(".results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "imgtopdf_out.pdf")
+    pg.get_by_role("button", name="สร้างไฟล์ PDF").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "imgtopdf_out.pdf")
     doc = fitz.open(str(out))
     assert doc.page_count == 2, f"ควรได้ PDF 2 หน้า (1 รูป = 1 หน้า) แต่ได้ {doc.page_count}"
     pix = doc[0].get_pixmap()
@@ -278,9 +278,9 @@ def case_powerpoint_to_word(pg):
     goto(pg, "powerpoint-to-word")
     pg.set_input_files("input[type=file]", str(SAMPLES / "ตัวอย่าง-นำเสนอบริษัท.pptx"), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="แปลงเป็น Word").click()
-    pg.wait_for_selector(".results button", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".results button", has_text="ดาวน์โหลด").first.click(), "ppt2word_out.docx")
+    pg.get_by_role("button", name="แปลงเป็น Word").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res button, .results button", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res button, .results button", has_text="ดาวน์โหลด").first.click(), "ppt2word_out.docx")
     doc = pydocx.Document(str(out))
     full_text = "\n".join(p.text for p in doc.paragraphs)
     assert re.search(r"[ก-๙]", full_text), "ไม่มีข้อความไทยเลยในเอกสาร Word ที่แปลงออกมา"
@@ -293,9 +293,9 @@ def case_pdf_to_images(pg):
     goto(pg, "pdf-to-images")
     pg.set_input_files("input[type=file]", str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="แปลงเป็นรูป").click()
-    pg.wait_for_selector(".results button", timeout=25_000)
-    out = dl(pg, lambda: pg.locator(".results button", has_text="ZIP").first.click(), "pdf2img_out.zip")
+    pg.get_by_role("button", name="แปลงเป็นรูป").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res button, .results button", timeout=25_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res button, .results button", has_text="ZIP").first.click(), "pdf2img_out.zip")
     with zipfile.ZipFile(out) as z:
         names = z.namelist()
         assert len(names) == expected_pages, f"จำนวนรูปไม่ตรงจำนวนหน้า PDF: ได้ {len(names)} ต้องการ {expected_pages}"
@@ -324,9 +324,9 @@ def case_pdf_watermark(pg):
     goto(pg, "pdf-watermark")
     main_file_input(pg).first.set_input_files(str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="ใส่ลายน้ำ").click()
+    pg.get_by_role("button", name="ใส่ลายน้ำ").filter(visible=True).click()
     pg.wait_for_selector(".result", timeout=20_000)
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").click(), "wm_out.pdf")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).click(), "wm_out.pdf")
     doc = fitz.open(str(out))
     assert doc.page_count == expected_pages, f"จำนวนหน้าหลังใส่ลายน้ำไม่ตรง: {doc.page_count} vs {expected_pages}"
     assert len(doc[0].get_images()) >= 1, "หน้าแรกไม่มีภาพลายน้ำฝังอยู่เลย (ลายน้ำวาดเป็น PNG ฝังทับ)"
@@ -343,9 +343,9 @@ def case_pdf_split(pg):
     pg.wait_for_selector(".sp-count", timeout=10_000)
     assert f"{expected_pages} ไฟล์" in pg.locator(".sp-count").inner_text(), \
         f"ตัวอย่างจำนวนไฟล์ที่จะได้ไม่ตรง: {pg.locator('.sp-count').inner_text()}"
-    pg.get_by_role("button", name="แยกไฟล์").click()
-    pg.wait_for_selector(".results button", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".results button", has_text="ZIP").first.click(), "pdfsplit_out.zip")
+    pg.get_by_role("button", name="แยกไฟล์").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res button, .results button", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res button, .results button", has_text="ZIP").first.click(), "pdfsplit_out.zip")
     with zipfile.ZipFile(out) as z:
         names = z.namelist()
         assert len(names) == expected_pages, f"จำนวนไฟล์ที่แยกได้ไม่ตรงจำนวนหน้า: {len(names)} vs {expected_pages}"
@@ -363,10 +363,10 @@ def case_image_convert(pg):
     pg.wait_for_selector(".file-row", timeout=15_000)
     # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
     #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
-    pg.locator(".panel select").first.select_option("webp")
-    pg.get_by_role("button", name="แปลงไฟล์").click()
-    pg.wait_for_selector(".results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "imgconvert_out.webp")
+    pg.locator(".s2-side-bd select, .panel select").first.select_option("webp")
+    pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "imgconvert_out.webp")
     im = Image.open(out)
     im.load()
     assert im.format == "WEBP", f"ชนิดไฟล์ผลลัพธ์ไม่ใช่ WEBP ตามที่เลือก: {im.format}"
@@ -379,7 +379,7 @@ def case_broken_garbage_pdf(pg, path):
     goto(pg, "pdf-to-text")
     pg.set_input_files("input[type=file]", str(path), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="ดึงข้อความ").click()
+    pg.get_by_role("button", name="ดึงข้อความ").filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show.err", timeout=15_000)
     msg = pg.locator(".status-wrap .status").inner_text()
     assert_readable_thai_error(msg, "PDF ข้างในเป็นขยะ")
@@ -390,7 +390,7 @@ def case_broken_empty_xlsx(pg, path):
     goto(pg, "excel-csv")
     pg.set_input_files("input[type=file]", str(path), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="แปลงไฟล์").click()
+    pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show.err", timeout=15_000)
     msg = pg.locator(".status-wrap .status").inner_text()
     assert_readable_thai_error(msg, "XLSX ขนาด 0 ไบต์")

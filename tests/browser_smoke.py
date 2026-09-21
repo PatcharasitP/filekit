@@ -12,10 +12,11 @@ with sync_playwright() as p:
     for i,t in enumerate(ids,1):
         errs.clear()
         pg.goto("about:blank"); pg.goto(f"{BASE}/#/{t}", wait_until="networkidle")
-        try: pg.wait_for_selector(".dz, .tool-head", timeout=12000)
+        try: pg.wait_for_selector(".dz, .s2, .tool-head", timeout=12000)
         except Exception as e: bad.append((t,"ไม่ขึ้นหน้าเครื่องมือ")); print(f"  ❌ {t}"); continue
-        head = pg.locator(".tool-head").inner_text() if pg.locator(".tool-head").count() else ""
-        if pg.locator(".tool-ico .ico-svg").count() != 1:
+        head = pg.locator(".s2-land, .tool-head").first.inner_text() if pg.locator(".s2-land, .tool-head").count() else ""
+        # ‼️ v2 ย้ายไอคอนหัวเรื่องไปอยู่ในหน้าเปล่า (.s2-land-ico) ต้องรับทั้งสองที่
+        if pg.locator(".tool-ico .ico-svg, .s2-land-ico svg").count() < 1:
             bad.append((t, "ยังไม่มีไอคอนวาดเอง (ตกไปใช้อีโมจิ)")); print(f"  ❌ {t} — ไม่มีไอคอน"); continue
         nxt = pg.locator(".next-card").count()
         if nxt < 2: bad.append((t, f"แถว 'ทำอะไรต่อดี' มีแค่ {nxt} ตัว")); print(f"  ❌ {t} — next {nxt}"); continue

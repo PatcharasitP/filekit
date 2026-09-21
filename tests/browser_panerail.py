@@ -17,7 +17,16 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8848")
+BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
+
+# ‼️ ชุดนี้ตรวจ "โครงหน้าเครื่องมือรุ่นเดิม (v1)" ซึ่งยังอยู่ในเว็บและเปิดได้ด้วย ?ui=1
+#    ค่าตั้งต้นของเว็บเปลี่ยนเป็น v2 ไปแล้วตั้งแต่ 21/09/2026 ชุดนี้จึงต้องประกาศให้ชัด
+#    ว่าจะตรวจ v1 ไม่ใช่ปล่อยให้แดงค้างแล้วคิดว่า "เทสพัง" (ของจริงไม่ได้พัง มันคนละโครงกัน)
+# ‼️ ตั้งผ่าน localStorage ไม่ใช่ต่อท้าย URL เพราะเว็บใช้ hash routing
+#    (?ui=1 ต้องอยู่ก่อน # เสมอ ซึ่งพลาดง่ายเวลาประกอบ URL หลายที่ในไฟล์เดียว)
+# ‼️ เมื่อพี่ปอนด์ยืนยันว่าเอา v2 แน่ แล้วโค้ด v1 ถูกลบ ให้ลบชุดนี้พร้อมกัน
+V1_INIT = "try{localStorage.setItem('fk:ui','1')}catch(e){}"
+
 SELFTEST = "--selftest" in sys.argv
 MIN_TAP = 36            # เกณฑ์เดียวกับ tests/browser_layout.py
 CENTRE_MIN = 1150       # วัดจริงได้ 1216px ตั้งเพดานล่างไว้ต่ำกว่าเล็กน้อยกันค่าแกว่ง
@@ -49,6 +58,7 @@ def main():
         b = p.chromium.launch()
         ctx = b.new_context(viewport={"width": 1440, "height": 950})
         pg = ctx.new_page()
+        pg.add_init_script(V1_INIT)
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)[:130]))
 

@@ -328,7 +328,7 @@ with sync_playwright() as p:
             pg0.wait_for_selector(".status.show.err", timeout=10000)
             neg_err_shown = True
         except PWTimeout:
-            neg_opened = pg0.locator(".dz, .tool-head").count() > 0
+            neg_opened = pg0.locator(".dz, .s2, .tool-head").count() > 0
     except Exception:
         pass  # นับเป็น "เปิดไม่ได้" เช่นกัน — สอดคล้องกับสิ่งที่ต้องพิสูจน์
     ck(f"DoD-proof (b): ตัดเน็ตโดยไม่เตรียมก่อน → เปิด '{neg_tool}' ต้องล้มเหลวจริง (ไม่ใช่ทฤษฎี)",
@@ -378,7 +378,7 @@ with sync_playwright() as p:
         pg.goto("about:blank")
         try:
             pg.goto(f"{BASE}/#/{tool}", wait_until="networkidle", timeout=20000)
-            pg.wait_for_selector(".dz, .tool-head", timeout=15000)
+            pg.wait_for_selector(".dz, .s2, .tool-head", timeout=15000)
             has_err_panel = pg.locator(".status.show.err").count() > 0
             real_errs = [e for e in errs if "favicon" not in e.lower()]
             ok = not has_err_panel and not real_errs

@@ -100,7 +100,7 @@ with sync_playwright() as p:
         pg.goto("about:blank")
         pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle")
         pg.wait_for_timeout(900)
-        txt = pg.evaluate("() => { const e = document.querySelector('.tool-head .tex'); return e ? e.innerText : ''; }")
+        txt = pg.evaluate("() => { const e = document.querySelector('.tex'); return e ? e.innerText : ''; }")
         if txt.strip(): shown += 1
         else: missing.append(tid)
     ck(f"① เครื่องมือที่ประกาศไว้ แสดงแถบจริง {shown}/8", not missing, str(missing))
@@ -122,13 +122,18 @@ with sync_playwright() as p:
         pg.goto("about:blank")
         pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle")
         pg.wait_for_timeout(900)
-        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
         pg.wait_for_timeout(4200)
         got_in = pg.evaluate("() => document.querySelectorAll('.file-row').length")
+        # ‼️ ต้องกด "ปุ่มที่ผู้ใช้เห็นจริง" ไม่ใช่ปุ่มใน .actions (แก้ 21/09/2026)
+        #    หน้าเครื่องมือ v2 ยกปุ่มลงมือทำขึ้นไปเป็นปุ่มหลักในแผงขวา แล้วซ่อนปุ่มเดิมใน
+        #    ผืนงานทิ้ง (คลาส s2-lifted) ตัวหาเดิมกรองด้วย offsetParent จึงได้ null ทุกตัว
+        #    และรายงานว่า "แสดงแถบจริง 0/8" ทั้งที่เครื่องมือทำงานปกติ
         pg.evaluate("""() => {
             const skip = /คัดลอก|Copy|ดาวน์โหลด|Download|โหลดไว้|ล้าง|Clear|รีเซ็ต|Reset/i;
-            const s = document.querySelector('.actions, .ws-footer');
-            const b = [...s.querySelectorAll('button.btn')]
+            const scope = document.querySelector('.s2-side-ft, .s2-cta-row, .actions, .ws-footer');
+            if (!scope) return;
+            const b = [...scope.querySelectorAll('button')]
               .find(e => e.offsetParent && !e.disabled && !e.classList.contains('ghost') && !skip.test(e.textContent));
             if (b) b.click();
         }""")
@@ -156,7 +161,7 @@ with sync_playwright() as p:
         p2.goto(f"{BASE}/#/pdf-merge", wait_until="networkidle")
         p2.wait_for_timeout(1000)
         d = p2.evaluate("""() => {
-            const t = document.querySelector('.tool-head .tex');
+            const t = document.querySelector('.tex');
             const bg = getComputedStyle(document.documentElement).getPropertyValue('--stage').trim();
             return [...t.querySelectorAll('.tex-box b, .tex-box span')].map(e => getComputedStyle(e).color).concat([bg]);
         }""")

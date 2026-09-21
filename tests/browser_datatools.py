@@ -143,7 +143,7 @@ def case_split(pg, main):
             "3 กลุ่ม" in summary and "9 แถว" in summary, summary.replace("\n", " | "))
     ck("ตารางพรีวิวแสดงครบ 3 กลุ่ม", pg.locator(".xt tbody tr").count(), 3)
 
-    pg.locator("button.btn", has_text="แยกไฟล์").first.click()
+    pg.locator("button.btn:visible", has_text="แยกไฟล์").first.click()
     pg.wait_for_timeout(4000)
     z = dl_click(pg, pg.locator(".result button").first, DL / "split.zip")
     names = sorted(zipfile.ZipFile(z).namelist())
@@ -163,7 +163,7 @@ def case_split(pg, main):
     pick(pg, "รหัส")
     pg.wait_for_timeout(700)
     ck_true("เลือกคอลัมน์ที่ค่าไม่ซ้ำกันเลย แล้วยังกดแยกได้ (9 กลุ่ม ยังไม่เกินเพดาน 300)",
-            not pg.locator("button.btn", has_text="แยกไฟล์").first.is_disabled())
+            not pg.locator("button.btn:visible", has_text="แยกไฟล์").first.is_disabled())
 
 
 def case_merge(pg, main, other):
@@ -179,7 +179,7 @@ def case_merge(pg, main, other):
             pg.locator(".fail-box").count() > 0
             and "พนักงาน-ข.xlsx" in pg.locator(".fail-box").inner_text())
 
-    pg.locator("button.btn", has_text="รวมไฟล์").first.click()
+    pg.locator("button.btn:visible", has_text="รวมไฟล์").first.click()
     pg.wait_for_timeout(3000)
     x = dl_click(pg, pg.locator(".result button").first, DL / "merged.xlsx")
     ws = openpyxl.load_workbook(x).active
@@ -220,7 +220,7 @@ def case_page_numbers(pg, pdf):
             "4 หน้า จากทั้งหมด 5 หน้า" in pg.locator(".pn-meta").inner_text(),
             pg.locator(".pn-meta").inner_text())
 
-    pg.locator("button.btn", has_text="ใส่เลขหน้า").first.click()
+    pg.locator("button.btn:visible", has_text="ใส่เลขหน้า").first.click()
     pg.wait_for_timeout(6000)
     out = dl_click(pg, pg.locator(".result button").first, DL / "numbered.pdf")
     doc = fitz.open(out)
@@ -237,7 +237,7 @@ def case_page_numbers(pg, pdf):
     pg.locator("input[type=number]").nth(1).fill("99")
     pg.wait_for_timeout(800)
     ck_true("ตั้งเริ่มใส่เลขเกินจำนวนหน้า แล้วยังใส่ได้เพราะถูกหนีบไว้ที่หน้าสุดท้าย",
-            not pg.locator("button.btn", has_text="ใส่เลขหน้า").first.is_disabled(),
+            not pg.locator("button.btn:visible", has_text="ใส่เลขหน้า").first.is_disabled(),
             pg.locator(".pn-meta").inner_text())
 
 
@@ -246,7 +246,7 @@ def case_long_image(pg, pdf):
     open_tool(pg, "pdf-to-longimage")
     pg.locator(".dz input[type=file]").set_input_files(str(pdf))
     pg.wait_for_timeout(1500)
-    pg.locator("button.btn", has_text="ต่อเป็นภาพยาว").first.click()
+    pg.locator("button.btn:visible", has_text="ต่อเป็นภาพยาว").first.click()
     pg.wait_for_timeout(9000)
 
     ck("ต่อ 5 หน้าเป็นภาพเดียว ไม่ใช่หลายภาพ", pg.locator(".result").count(), 1)
@@ -299,7 +299,7 @@ def case_remove_blank(pg, scanned):
     ck_true("หน้าว่างที่มีจุดรบกวนกับแถบเงาริมขอบ ยังวัดได้ว่าไม่มีหมึก",
             all(inks[i] == "0.00%" for i in (1, 3, 5, 7)), str(inks))
 
-    pg.locator("button.btn", has_text="บันทึกไฟล์").first.click()
+    pg.locator("button.btn:visible", has_text="บันทึกไฟล์").first.click()
     pg.wait_for_timeout(2500)
     out = dl_click(pg, pg.locator(".result button").first, DL / "noblank.pdf")
     doc = fitz.open(out)

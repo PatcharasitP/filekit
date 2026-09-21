@@ -287,6 +287,17 @@ LAYOUT_CHECK_JS = """() => {
 
   function visible(el) { return !!el && (!el.checkVisibility || el.checkVisibility()); }
 
+  /* ‼️ ข้ามทุกอย่างที่อยู่ใต้ subtree ที่ถูกสั่ง inert (เพิ่ม 21/09/2026)
+   * หน้าเครื่องมือ v2 วางหน้าเปล่าเป็น "ชั้นลอยทับ" ของเดิมยังอยู่ใน DOM ข้างหลัง
+   * แต่ถูกสั่ง inert ไว้ = กดไม่ได้ Tab ไม่ถึง และโปรแกรมอ่านหน้าจอมองไม่เห็น
+   * ตาผู้ใช้ก็ไม่เห็นด้วย เพราะมีชั้นลอยบังอยู่เต็ม ๆ
+   * ถ้าไม่ข้าม เทสจะฟ้องว่า "ข้อความล้นกล่อง 28 จุด" กับ "ถูกทับ 2016 จุด"
+   * ทั้งที่ทุกจุดอยู่หลังชั้นลอย (จับค่าจริงแล้ว: ปุ่ม 'รวมไฟล์' กว้าง 50 จากที่ต้องใช้ 77
+   *  แต่ inInert = true และ state = landing จึงไม่มีใครเห็นมันเลย)
+   * ‼️ นี่ไม่ใช่การผ่อนเกณฑ์ เป็นการถามให้ตรงกับที่ผู้ใช้เห็นจริง
+   *   ของที่อยู่หลังชั้นลอยจะถูกตรวจตอนเข้าสถานะทำงาน ซึ่งชั้นลอยหายไปแล้ว */
+  function inert(el) { return !!(el && el.closest && el.closest("[inert]")); }
+
   const bodyScrollW = document.body.scrollWidth;
   const bodyClientW = document.body.clientWidth;
   const docScrollW = document.documentElement.scrollWidth;
@@ -304,6 +315,7 @@ LAYOUT_CHECK_JS = """() => {
     if (!p || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(p.tagName)) continue;
     if (seen.has(p)) continue;
     if (!visible(p)) continue;
+    if (inert(p)) continue;
     seen.add(p);
     textEls.push({ el: p, text: t });
   }

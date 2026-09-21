@@ -1,5 +1,7 @@
 import sys, pathlib, os
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import fkui          # ตัวช่วยกลางที่รู้จักโครงหน้า v2
 BASE = os.environ.get("FK_BASE","http://localhost:8899")
 # ‼️ สร้างรูป 30 ใบเองทุกครั้ง (เดิมผูกกับ path ของ session เก่า พอหายก็รันไม่ได้)
 import tempfile, shutil, atexit
@@ -30,7 +32,7 @@ with sync_playwright() as p:
     #    เพราะ <select class="sort-sel"> ของหน้าแรกยังค้างใน DOM หลังสลับมาหน้าเครื่องมือ
     #    คำสั่งเดิมจึงไปตกที่ดรอปดาวน์เรียงลำดับของหน้าแรกแล้วค้างจนหมดเวลา (แดงมาตั้งแต่ 13/09)
     pg.locator("select").filter(has=pg.locator('option[value="png"]')).first.select_option("png")
-    pg.locator("button.btn", has_text="แปลง").first.click()
+    pg.locator("button.btn:visible", has_text="แปลง").first.click()
     pg.wait_for_selector(".btn-cancel:visible", timeout=5000)
     ck("เริ่มงานแล้ว → ปุ่มหยุดโผล่", pg.locator(".btn-cancel:visible").count(), 1)
     # ‼️ ห้ามใช้ .click() ตรงนี้ Playwright จะรอจนงานหนักเสร็จก่อนค่อยกด = ทดสอบผิดเคสเงียบ ๆ
@@ -41,9 +43,19 @@ with sync_playwright() as p:
     ck("บอกว่าหยุดตามที่สั่ง", pg.locator(".fail-box").inner_text(), "หยุดตามที่สั่ง", contains=True)
     ck("ปุ่มหยุดหายไปหลังจบ", pg.locator(".btn-cancel:visible").count(), 0)
     # กดใหม่ต้องเริ่มได้ปกติ ไม่ติดธงยกเลิกค้าง
-    pg.locator("button.btn", has_text="แปลง").first.click()
-    pg.wait_for_timeout(12000)
-    ck("กดแปลงใหม่ → ทำครบ 30 ไฟล์ (ธงยกเลิกไม่ค้าง)", pg.locator(".result").count(), 30)
+    # ‼️ หยุดกลางคันแล้วได้ผลบางส่วน = หน้าเข้าสถานะผลลัพธ์ แผงขวากลายเป็นแผงผลลัพธ์
+    #    ปุ่มลงมือทำจึงหายไปจากจอ ผู้ใช้จริงต้องกด "เริ่มใหม่" หรือ "กลับไปแก้" ก่อน
+    #    ที่นี่ใช้ "เริ่มใหม่" แล้วใส่ไฟล์ชุดเดิมกลับเข้าไป เพราะเป็นรอบที่สะอาดจริง
+    #    นับผลลัพธ์ได้ตรงไปตรงมาว่า 30 ใบ ไม่ปนกับ 7 ใบของรอบที่ถูกหยุด
+    #    (เดิมเทสไปงัดปุ่มที่ถูกแผงผลลัพธ์บังอยู่ แล้วค้างจนหมดเวลา)
+    restart = pg.locator("button:visible, a:visible").filter(has_text="เริ่มใหม่")
+    if restart.count(): restart.first.click(); pg.wait_for_timeout(800)
+    pg.locator("input[type=file]").first.set_input_files(files); pg.wait_for_timeout(1200)
+    pg.locator("select").filter(has=pg.locator('option[value="png"]')).first.select_option("png")
+    pg.locator("button.btn:visible", has_text="แปลง").first.click()
+    pg.wait_for_timeout(14000)
+    ck("กดแปลงใหม่ → ทำครบ 30 ไฟล์ (ธงยกเลิกไม่ค้าง)",
+       pg.locator(".s2-side-res .result, .results .result").count(), 30)
     b.close()
 print(f"\nผ่าน {P} · ตก {len(F)}")
 for i,x in enumerate(F,1): print(f"  {i}. {x}")

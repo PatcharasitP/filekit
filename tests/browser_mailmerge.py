@@ -24,7 +24,7 @@ with sync_playwright() as p:
     ck("ใส่ครบ 2 ไฟล์ → ขั้นที่ 3 ปลดล็อก", pg.locator('.mm-step').nth(2).get_attribute("data-locked"), "0")
     ck("ใส่ครบ 2 ไฟล์ → ขั้นที่ 4 ปลดล็อก", pg.locator('.mm-step').nth(3).get_attribute("data-locked"), "0")
     ck("ข้อความ 'รอ...' ถูกซ่อนไปแล้ว", pg.locator(".step-wait:visible").count(), 0)
-    ck("ปุ่มสร้างกดได้แล้ว", pg.locator("button.btn", has_text="สร้างเอกสารทั้งชุด").is_disabled(), False)
+    ck("ปุ่มสร้างกดได้แล้ว", pg.locator("button.btn:visible", has_text="สร้างเอกสารทั้งชุด").is_disabled(), False)
     # ฟอร์มต้องเรียงตรงแนวกัน (ช่องกรอกทุกช่องอยู่ระดับเดียวกัน)
     # ‼️ ต้องนับเฉพาะช่องที่ "มองเห็นจริง" — ช่องที่ซ่อนอยู่คืน top=0 ทำให้อ่านผลผิดว่าเพี้ยน
     tops = pg.evaluate("""() => [...document.querySelectorAll('.mm-step .row .field')]

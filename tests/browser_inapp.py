@@ -22,7 +22,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8848")
+BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
 SELFTEST = "--selftest" in sys.argv
 ok = fail = 0
 reds = []
@@ -59,9 +59,9 @@ def ck(label, cond, detail=""):
 
 def make_result(pg):
     """ย่อรูปตัวอย่างจนมีปุ่มดาวน์โหลดให้กด"""
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").first.click()
+    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_timeout(2800)
-    pg.get_by_role("button", name="ย่อและบีบอัด").first.click()
+    pg.get_by_role("button", name="ย่อและบีบอัด").filter(visible=True).first.click()
     pg.wait_for_timeout(3500)
 
 
@@ -99,7 +99,7 @@ def main():
         pg.goto(f"{BASE}/#image-resize", wait_until="load", timeout=60000)
         pg.wait_for_timeout(2600)
         make_result(pg)
-        pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+        pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
         pg.wait_for_timeout(2500)
         shared = pg.evaluate("() => window.__shared || []")
         ck("ส่งไฟล์ผ่าน share sheet ของระบบ", len(shared) == 1 and len(shared[0]) == 1, str(shared))
@@ -108,7 +108,7 @@ def main():
         # ผู้ใช้กดยกเลิกใน share sheet = ตั้งใจไม่เอา ห้ามยัดดาวน์โหลดตามมา
         pg.evaluate("() => { navigator.share = async () => { const e = new Error('x');"
                     " e.name = 'AbortError'; throw e; }; }")
-        pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+        pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
         pg.wait_for_timeout(2200)
         ck("ผู้ใช้กดยกเลิกเอง ต้องไม่มีอะไรเด้งตามมา", dl_count["n"] == 0, f"เด้ง {dl_count['n']} ครั้ง")
 
@@ -117,7 +117,7 @@ def main():
         got = ""
         try:
             with pg.expect_download(timeout=12000) as dl:
-                pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+                pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
             got = dl.value.suggested_filename
         except Exception as e:
             got = "ไม่ได้ไฟล์: " + str(e).splitlines()[0][:50]
@@ -137,7 +137,7 @@ def main():
         got = ""
         try:
             with pg.expect_download(timeout=12000) as dl:
-                pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+                pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
             got = dl.value.suggested_filename
         except Exception as e:
             got = "ไม่ได้ไฟล์: " + str(e).splitlines()[0][:50]

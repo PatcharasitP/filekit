@@ -28,7 +28,7 @@ import tempfile
 
 from playwright.sync_api import sync_playwright
 
-BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8848")
+BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
 SELFTEST = "--selftest" in sys.argv
 ok = fail = 0
 reds = []
@@ -100,7 +100,7 @@ def main():
         pg.wait_for_timeout(2400)
         pg.locator("input[type=file]").first.set_input_files(str(jpg))
         pg.wait_for_timeout(2200)
-        pg.get_by_role("button", name="แปลงไฟล์").first.click()
+        pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).first.click()
         pg.wait_for_timeout(5000)
         ck("‼️ แปลงไฟล์ JPG ธรรมดา ต้องไม่โหลดตัวถอด HEIC สักไบต์", not hits, str(hits[:1]))
         ctx.close()
@@ -120,13 +120,13 @@ def main():
         pg.wait_for_timeout(2400)
         pg.locator("input[type=file]").first.set_input_files(str(heic))
         pg.wait_for_timeout(2500)
-        pg.get_by_role("button", name="แปลงไฟล์").first.click()
+        pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).first.click()
         pg.wait_for_timeout(12000)
         status = pg.locator(".status").inner_text().replace("\n", " ")
         got = None
         try:
             with pg.expect_download(timeout=12000) as dl:
-                pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+                pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
             got = tmp / "out.jpg"
             dl.value.save_as(str(got))
         except Exception:
@@ -157,7 +157,7 @@ def main():
                 pg.locator("input[type=file]").first.set_input_files(str(heic))
                 pg.wait_for_timeout(4500)
                 try:
-                    pg.get_by_role("button", name=btn).first.click()
+                    pg.get_by_role("button", name=btn).filter(visible=True).first.click()
                     pg.wait_for_timeout(11000)
                     st = pg.locator(".status").inner_text().replace("\n", " ")
                 except Exception as e:

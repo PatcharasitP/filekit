@@ -389,7 +389,7 @@ def dump_indexeddb(pg, secret, filename_marker):
 def goto(pg, tool_id):
     pg.goto("about:blank")
     pg.goto(f"{BASE}/#/{tool_id}", wait_until="networkidle")
-    pg.wait_for_selector(".tool-head", timeout=STEP_TIMEOUT)
+    pg.wait_for_selector(".s2, .tool-head", timeout=STEP_TIMEOUT)
 
 
 def dl(pg, trigger, filename, timeout=STEP_TIMEOUT):
@@ -411,9 +411,9 @@ def sc_pdf_merge(pg, files):
     main_file_input(pg).first.set_input_files([str(files["pdf_main"]), str(files["pdf_second"])], timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     ck_true("pdf-merge: ไฟล์เข้าครบ 2 แถว", pg.locator(".file-row").count() == 2)
-    pg.get_by_role("button", name="รวมไฟล์").click()
-    pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "pdf_merge_out.pdf")
+    pg.get_by_role("button", name="รวมไฟล์").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "pdf_merge_out.pdf")
     d = fitz.open(str(out))
     ck_true("pdf-merge: จำนวนหน้ารวมถูกต้อง (3)", d.page_count == 3, f"ได้ {d.page_count}")
     text = "".join(pg_.get_text() for pg_ in d)
@@ -426,9 +426,9 @@ def sc_pdf_watermark(pg, files):
     goto(pg, "pdf-watermark")
     main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
-    pg.get_by_role("button", name="ใส่ลายน้ำ").click()
+    pg.get_by_role("button", name="ใส่ลายน้ำ").filter(visible=True).click()
     pg.wait_for_selector(".result", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").click(), "pdf_watermark_out.pdf")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).click(), "pdf_watermark_out.pdf")
     d = fitz.open(str(out))
     ck_true("pdf-watermark: จำนวนหน้าเท่าเดิม (2)", d.page_count == 2, f"ได้ {d.page_count}")
     text = "".join(pg_.get_text() for pg_ in d)
@@ -440,11 +440,11 @@ def sc_pdf_to_text(pg, files):
     goto(pg, "pdf-to-text")
     main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
-    pg.get_by_role("button", name="ดึงข้อความ").click()
+    pg.get_by_role("button", name="ดึงข้อความ").filter(visible=True).click()
     # ‼️ pdf-to-text.js ไม่ได้ใช้ resultRow() ร่วม เขียนปุ่มเองในกล่อง class="actions" (ไม่ใช่ ".result")
     #    ตรวจแล้วกับ tests/browser_files.py:case_pdf_to_text ที่รอ ".results .actions" เหมือนกัน
     pg.wait_for_selector(".results .actions", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด .txt").click(), "pdf_to_text_out.txt")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลด .txt").filter(visible=True).click(), "pdf_to_text_out.txt")
     text = out.read_text(encoding="utf-8-sig")
     ck_true("pdf-to-text: ข้อความที่ดึงมามีคำลับ", MAGIC_SECRET in text)
 
@@ -454,9 +454,9 @@ def sc_pdf_to_images(pg, files):
     goto(pg, "pdf-to-images")
     main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
-    pg.get_by_role("button", name="แปลงเป็นรูป").click()
-    pg.wait_for_selector(".results button", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.locator(".results button", has_text="ZIP").first.click(), "pdf_to_images_out.zip")
+    pg.get_by_role("button", name="แปลงเป็นรูป").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res button, .results button", timeout=STEP_TIMEOUT)
+    out = dl(pg, lambda: pg.locator(".s2-side-res button, .results button", has_text="ZIP").first.click(), "pdf_to_images_out.zip")
     with zipfile.ZipFile(out) as z:
         names = z.namelist()
         ck_true("pdf-to-images: จำนวนรูปตรงจำนวนหน้า (2)", len(names) == 2, f"ได้ {len(names)}")
@@ -470,9 +470,9 @@ def sc_pdf_to_word(pg, files):
     goto(pg, "pdf-to-word")
     main_file_input(pg).first.set_input_files(str(files["pdf_main"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
-    pg.get_by_role("button", name="แปลงเป็น Word").click()
-    pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "pdf_to_word_out.docx")
+    pg.get_by_role("button", name="แปลงเป็น Word").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "pdf_to_word_out.docx")
     d = pydocx.Document(str(out))
     full = "\n".join(p.text for p in d.paragraphs)
     ck_true("pdf-to-word: เอกสาร Word ที่ได้มีคำลับ", MAGIC_SECRET in full)
@@ -483,9 +483,9 @@ def sc_word_to_pdf(pg, files):
     goto(pg, "word-to-pdf")
     main_file_input(pg).first.set_input_files(str(files["docx"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
-    pg.get_by_role("button", name="แปลงเป็น PDF").click()
-    pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "word_to_pdf_out.pdf")
+    pg.get_by_role("button", name="แปลงเป็น PDF").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "word_to_pdf_out.pdf")
     d = fitz.open(str(out))
     text = "".join(pg_.get_text() for pg_ in d)
     ck_true("word-to-pdf: PDF ที่ได้มีคำลับ", MAGIC_SECRET in text)
@@ -496,9 +496,9 @@ def sc_excel_csv(pg, files):
     goto(pg, "excel-csv")
     main_file_input(pg).first.set_input_files(str(files["xlsx"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
-    pg.get_by_role("button", name="แปลงไฟล์").click()
-    pg.wait_for_selector(".results .result", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.locator(".results .result button").first.click(), "excel_csv_out.csv")
+    pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).click()
+    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=STEP_TIMEOUT)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "excel_csv_out.csv")
     text = out.read_text(encoding="utf-8-sig")
     ck_true("excel-csv: CSV ที่ได้มีคำลับ", MAGIC_SECRET in text)
 
@@ -508,11 +508,11 @@ def sc_image_resize(pg, files):
     goto(pg, "image-resize")
     main_file_input(pg).first.set_input_files(str(files["png"]), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
-    pg.get_by_role("button", name="ย่อและบีบอัด").click()
+    pg.get_by_role("button", name="ย่อและบีบอัด").filter(visible=True).click()
     # ‼️ image-resize.js มี UI ของตัวเอง (.rz-* ทั้งหมด) ไม่มี ".results"/".result" เลย
     #    ตรวจแล้วกับ tests/browser_files.py:case_image_resize ที่รอ ".status-wrap .status.show" แทน
     pg.wait_for_selector(".status-wrap .status.show", timeout=STEP_TIMEOUT)
-    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดรูป").click(), "image_resize_out.jpg")
+    out = dl(pg, lambda: pg.get_by_role("button", name="ดาวน์โหลดรูป").filter(visible=True).click(), "image_resize_out.jpg")
     im = Image.open(out); im.verify()
     ck_true("image-resize: ไฟล์รูปที่ได้เปิดได้จริงและมีขนาด > 0", out.exists() and out.stat().st_size > 0)
 
@@ -524,7 +524,7 @@ def sc_pdf_ocr(pg, files):
     pg.wait_for_selector(".file-row", timeout=SIF_TIMEOUT)
     # เลือกภาษาอังกฤษอย่างเดียว (ข้อความในรูปเป็น ASCII ล้วน) — โหลดชุดภาษาเล็กสุด เร็วสุด
     pg.locator('.seg input[value="eng"]').check()
-    pg.get_by_role("button", name="เริ่มอ่าน").click()
+    pg.get_by_role("button", name="เริ่มอ่าน").filter(visible=True).click()
     pg.wait_for_function(
         "() => { const s = document.querySelector('.status'); "
         "return s && (s.classList.contains('ok') || s.classList.contains('err')); }",

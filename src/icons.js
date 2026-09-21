@@ -33,8 +33,8 @@ export const ICONS = {
   "pdf-resize":   `<rect x="3" y="4.5" width="11" height="9" rx="1.6"/><rect x="10" y="10.5" width="11" height="9" rx="1.6"/>`,
   "pdf-nup":      `<rect x="3.2" y="3.2" width="7.4" height="7.4" rx="1.2"/><rect x="13.4" y="3.2" width="7.4" height="7.4" rx="1.2"/><rect x="3.2" y="13.4" width="7.4" height="7.4" rx="1.2"/><rect x="13.4" y="13.4" width="7.4" height="7.4" rx="1.2"/>`,
   "pdf-clean":    `<path d="M6.2 2.6h7.6l5.4 5.4v11.4a2.4 2.4 0 0 1-2.4 2.4H6.2a2.4 2.4 0 0 1-2.4-2.4V5a2.4 2.4 0 0 1 2.4-2.4z"/><path d="M13.8 2.6V8h5.4"/><path d="M8.4 14.2l2.3 2.3 4.6-4.6"/>`,
-  "pdf-redact":   `<path d="M6.2 2.6h7.6l5.4 5.4v11.4a2.4 2.4 0 0 1-2.4 2.4H6.2a2.4 2.4 0 0 1-2.4-2.4V5a2.4 2.4 0 0 1 2.4-2.4z"/><path d="M13.8 2.6V8h5.4"/><rect x="7.4" y="12.4" width="9.2" height="3.4" rx="0.6" fill="currentColor"/>`,
-  "pdf-unlock":   `<rect x="4" y="10.2" width="16" height="11.2" rx="2.4"/><path d="M8 10.2V7a4 4 0 0 1 7.5-1.9"/><path d="M12 14.6v2.6"/>`,
+  "pdf-redact":   `<path d="M3.4 5.6h10.2M3.4 19.4h13.2"/><rect x="3.4" y="9" width="17.2" height="2.6" rx="0.5" fill="currentColor"/><rect x="3.4" y="13.6" width="11.4" height="2.6" rx="0.5" fill="currentColor"/>`,
+  "pdf-unlock":   `<rect x="3.2" y="10.6" width="13.6" height="10.8" rx="2.2"/><path d="M6.8 10.6V7.2a4 4 0 0 1 7.8-1.3"/><path d="M14.6 5.9l2.6 2.2 3.6-4.3"/>`,
   "pdf-watermark":`<path d="M6.2 2.6h7.6l5.4 5.4v11.4a2.4 2.4 0 0 1-2.4 2.4H6.2a2.4 2.4 0 0 1-2.4-2.4V5a2.4 2.4 0 0 1 2.4-2.4z"/><path d="M13.8 2.6V8h5.4"/><path d="M11.6 9.6s4.6 4.7 4.6 7.3a4.6 4.6 0 0 1-9.2 0c0-2.6 4.6-7.3 4.6-7.3z"/>`,
   "pdf-ocr":      `<path d="M7 3h7l4 4v4"/><path d="M14 3v4h4"/><path d="M5 5v14a2 2 0 0 0 2 2h4.5"/><path d="M8.5 10.5h5M8.5 13.5h3"/><circle cx="16.8"cy="16.8"r="3.4"/><path d="M19.3 19.3L21.5 21.5"/>`,
 

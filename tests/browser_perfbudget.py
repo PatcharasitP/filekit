@@ -349,7 +349,7 @@ with sync_playwright() as p:
         try:
             pill.scroll_into_view_if_needed(timeout=5000)
             pill.click(timeout=5000)
-            pg.wait_for_selector(".tool-head", timeout=15000)
+            pg.wait_for_selector(".s2, .tool-head", timeout=15000)
         except PWTimeout:
             ok = False
         dt_ms = (time.time() - t0) * 1000

@@ -33,10 +33,10 @@ export const TOOLS = [
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์", next:["pdf-edit","pdf-merge","pdf-compress"] },
 
-  { id:"pdf-edit",    group:"pdf", icon:"✏️", title:"แก้ไขข้อความบน PDF",
-    desc:"ปิดทับข้อความเดิมแล้วพิมพ์ข้อความใหม่วางแทน ภาษาไทยได้",
+  { id:"pdf-edit",    group:"pdf", icon:"✏️", title:"แก้ไขและเซ็นบน PDF",
+    desc:"ปิดทับข้อความเดิม พิมพ์ใหม่ ไฮไลต์ เซ็นชื่อ และวางรูป ครบในรอบเดียว บันทึกครั้งเดียว ภาษาไทยได้",
     accepts:["pdf"],
-    libs:["pdfjs","pdflib"], keys:"edit แก้ไข ข้อความ ลบข้อความ ปิดทับ วันที่ พิมพ์ทับ redact", next:["pdf-pages","pdf-watermark"] },
+    libs:["pdfjs","pdflib"], keys:"edit แก้ไข ข้อความ ลบข้อความ ปิดทับ วันที่ พิมพ์ทับ redact ไฮไลต์ highlight เน้นข้อความ เซ็น ลายเซ็น sign วางรูป โลโก้ ตราประทับ stamp", next:["pdf-pages","pdf-watermark"] },
 
   { id:"pdf-merge",   group:"pdf", icon:"🔗", title:"รวมไฟล์ PDF",
     desc:"รวมหลายไฟล์เป็นเล่มเดียว ลากสลับลำดับได้",
@@ -54,9 +54,9 @@ export const TOOLS = [
     libs:["pdfjs","pdflib"], keys:"compress บีบอัด ลดขนาด เล็กลง", next:["pdf-merge","pdf-to-images"] },
 
   { id:"pdf-sign",group:"pdf", icon:"🖊", title:"เซ็นชื่อบน PDF",
-    desc:"วาดลายเซ็นหรืออัปโหลดรูป แล้วลากไปวางบนเอกสาร เก็บลายเซ็นไว้ใช้ซ้ำได้",
+    desc:"วาดลายเซ็นหรืออัปโหลดรูป แล้วลากไปวางบนเอกสาร เก็บลายเซ็นไว้ใช้ซ้ำได้ ถ้าต้องแก้ข้อความด้วยให้ใช้ตัวแก้ไขและเซ็น",
     accepts:["pdf"],
-    libs:["pdfjs","pdflib"], keys:"sign signature เซ็น ลายเซ็น เซ็นชื่อ สัญญา ใบลา อนุมัติ", next:["pdf-compress","pdf-watermark"] },
+    libs:["pdfjs","pdflib"], keys:"sign signature เซ็น ลายเซ็น เซ็นชื่อ สัญญา ใบลา อนุมัติ", next:["pdf-edit","pdf-compress","pdf-watermark"] },
 
   { id:"pdf-protect", group:"pdf", icon:"🔒", title:"ใส่รหัสผ่าน PDF",
     desc:"ตั้งรหัสให้ต้องใส่ก่อนเปิดไฟล์ และเลือกได้ว่าให้พิมพ์หรือคัดลอกได้ไหม ทำในเครื่องล้วน ไฟล์ไม่ถูกอัปโหลด",
@@ -390,11 +390,11 @@ const EN_GROUPS = {
 
 const EN_TOOLS = {
   "pdf-pages":        ["Organise PDF pages", "Keep, delete, reorder and rotate pages, with a preview of every page"],
-  "pdf-edit":         ["Edit text on a PDF", "Cover the old text and type new text over it. Thai included"],
+  "pdf-edit":         ["Edit and sign a PDF", "Cover the old text, type new text, highlight, sign and place images in one pass, then save once. Full Thai support"],
   "pdf-merge":        ["Merge PDF files", "Combine several files into one, drag to reorder"],
   "pdf-split":        ["Split a PDF", "Split by page range, every N pages, or one file per page"],
   "pdf-compress":     ["Compress a PDF", "Shrink scans and image-heavy files. See the size before and after"],
-  "pdf-sign":         ["Sign a PDF", "Draw a signature or upload an image, then drag it onto the page. Saved for reuse"],
+  "pdf-sign":         ["Sign a PDF", "Draw or upload a signature, then drag it onto the document and reuse it later. To edit text as well, use Edit and sign a PDF"],
   "pdf-unstamp":      ["Remove layers stamped on a PDF", "Take off a watermark or stamp that was placed on top. See the result before saving, and your real content can never be removed by mistake"],
   "pdf-protect":      ["Password-protect a PDF", "Set a password that must be typed before the file opens, and choose whether printing or copying stays allowed. Done entirely on your device, nothing is uploaded"],
   "pdf-compare":      ["Compare two PDFs", "Find exactly what the newer version changed, down to the word. Works with Thai, and neither file is uploaded anywhere"],

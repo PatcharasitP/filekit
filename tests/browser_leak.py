@@ -188,7 +188,7 @@ def dom_heap(page, cdp, settle_ms=250):
     )
 
 
-def goto_tool(page, tool_id, wait_sel=".dz, .tool-head"):
+def goto_tool(page, tool_id, wait_sel=".dz, .s2, .tool-head"):
     """สลับเครื่องมือแบบผู้ใช้จริง (เปลี่ยน hash ในแท็บเดียว) — ไม่ใช่ page.goto() ซ้ำ"""
     page.evaluate("(id) => { location.hash = '#/' + id; }", tool_id)
     page.wait_for_selector(wait_sel, timeout=10000)
@@ -370,14 +370,14 @@ def main():
             page.wait_for_function(
                 "() => document.querySelectorAll('.file-row').length === 2", timeout=8000
             )
-            page.get_by_role("button", name="สร้างไฟล์ PDF").click()
+            page.get_by_role("button", name="สร้างไฟล์ PDF").filter(visible=True).click()
             page.wait_for_selector(".result", timeout=15000)
             page.wait_for_timeout(200)
             # ‼️ นับเฉพาะรอบ "กดดาวน์โหลด" เท่านั้น — ไม่เทียบกับ before ทั้ง scenario เพราะไฟล์ 2 ใบ
             #    ที่ยังนอนอยู่ใน dropzone มี objectURL ภาพย่อของตัวเองที่ "ยังไม่ควรถูกคืน" (ไฟล์ยังอยู่จริง)
             #    ต้อง isolate เฉพาะ objectURL ที่ download() สร้างตอนกดปุ่มเท่านั้น
             before_click4 = get_url_stats(page)
-            page.get_by_role("button", name="ดาวน์โหลด").click()
+            page.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).click()
             page.wait_for_timeout(300)
             just_after_dl = get_url_stats(page)
             created4 = just_after_dl["created"] - before_click4["created"]

@@ -20,6 +20,15 @@ import os, sys
 from playwright.sync_api import sync_playwright
 
 BASE = os.environ.get("FK_BASE", "http://localhost:8899")
+
+# ‼️ ชุดนี้ตรวจ "โครงหน้าเครื่องมือรุ่นเดิม (v1)" ซึ่งยังอยู่ในเว็บและเปิดได้ด้วย ?ui=1
+#    ค่าตั้งต้นของเว็บเปลี่ยนเป็น v2 ไปแล้วตั้งแต่ 21/09/2026 ชุดนี้จึงต้องประกาศให้ชัด
+#    ว่าจะตรวจ v1 ไม่ใช่ปล่อยให้แดงค้างแล้วคิดว่า "เทสพัง" (ของจริงไม่ได้พัง มันคนละโครงกัน)
+# ‼️ ตั้งผ่าน localStorage ไม่ใช่ต่อท้าย URL เพราะเว็บใช้ hash routing
+#    (?ui=1 ต้องอยู่ก่อน # เสมอ ซึ่งพลาดง่ายเวลาประกอบ URL หลายที่ในไฟล์เดียว)
+# ‼️ เมื่อพี่ปอนด์ยืนยันว่าเอา v2 แน่ แล้วโค้ด v1 ถูกลบ ให้ลบชุดนี้พร้อมกัน
+V1_INIT = "try{localStorage.setItem('fk:ui','1')}catch(e){}"
+
 TOOL = "pdf-pages"
 fails = []
 
@@ -62,6 +71,7 @@ with sync_playwright() as p:
     for w in (1100, 1440, 1600, 1840, 1920):
         ctx = br.new_context(viewport={"width": w, "height": 950})
         pg = ctx.new_page()
+        pg.add_init_script(V1_INIT)
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(f"{BASE}/#/{TOOL}", wait_until="networkidle")
         pg.wait_for_timeout(1200)
@@ -115,6 +125,7 @@ with sync_playwright() as p:
     # ⑤ ลิงก์ข้ามส่วนต้องไม่ทำให้หลุดออกจากหน้าเครื่องมือ
     ctx = br.new_context(viewport={"width": 1920, "height": 950})
     pg = ctx.new_page()
+    pg.add_init_script(V1_INIT)
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(f"{BASE}/#/{TOOL}", wait_until="networkidle")
     pg.wait_for_timeout(1200)
@@ -144,6 +155,7 @@ with sync_playwright() as p:
     ctx2 = br.new_context(viewport={"width": 1920, "height": 950},
                           permissions=["clipboard-read", "clipboard-write"])
     pg2 = ctx2.new_page()
+    pg2.add_init_script(V1_INIT)
     pg2.on("pageerror", lambda e: errs.append(str(e)))
     pg2.goto(f"{BASE}/#/{TOOL}", wait_until="networkidle")
     pg2.wait_for_timeout(1200)

@@ -86,8 +86,8 @@ export function mount(tool) {
     left: { title: tr("ไฟล์", "File"), node: dz.container },
     right: { title: tr("การลบ", "Redaction"), node: el("div", {}, [
       el("div", { class: "rd-warn" },
-         tr("ตัวนี้ลบของจริง ไม่ใช่แค่วางสี่เหลี่ยมทับ หน้าที่ถูกลบจะค้นหาข้อความไม่ได้อีก และย้อนกลับไม่ได้ ให้เก็บไฟล์ต้นฉบับไว้เสมอ",
-            "This removes the content for real, not just a rectangle on top. Redacted pages are no longer searchable and cannot be undone, so always keep your original")),
+         tr("ลบของจริง ไม่ใช่วางสี่เหลี่ยมทับ หน้าที่ลบจะค้นหาไม่ได้และย้อนไม่ได้ เก็บต้นฉบับไว้เสมอ",
+            "Removes the content for real. Redacted pages are no longer searchable and cannot be undone, so keep your original")),
       el("label", { class: "field" }, [
         el("span", {}, tr("ความละเอียดของหน้าที่ถูกลบ", "Quality of redacted pages")),
         qualitySel,

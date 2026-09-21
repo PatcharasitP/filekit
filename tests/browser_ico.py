@@ -49,8 +49,17 @@ with sync_playwright() as pw:
     pg.wait_for_selector(".dz")
     pg.wait_for_timeout(600)
 
+    # ‼️ ต้องมีไฟล์ก่อนถึงจะแตะตัวเลือกได้ (เปลี่ยน 21/09/2026)
+    #    หน้าเครื่องมือ v2 มี "หน้าเปล่า" เป็นชั้นลอยทับตอนยังไม่มีไฟล์
+    #    ของที่อยู่ข้างหลังถูกสั่ง inert คือกดไม่ได้ Tab ไม่ถึง และผู้ใช้ก็มองไม่เห็น
+    #    เทสจึงต้องเดินทางเดียวกับผู้ใช้ คือใส่ไฟล์ก่อน แล้วค่อยเลือกชนิดปลายทาง
+    pg.locator("button", has_text="ลองด้วยไฟล์ตัวอย่าง").first.click()
+    pg.wait_for_timeout(2500)
+
     print("\n① เลือกชนิด ICO")
-    sel = pg.locator(".panel select").first
+    # ‼️ ชี้ด้วยตัวเลือกที่ต้องการ ไม่ใช่เดาว่าดรอปดาวน์อยู่แผงไหน
+    #    เครื่องมือแบบแผงเดี่ยวเก็บตัวเลือกไว้ในผืนงาน ส่วนแบบผังงานอยู่แผงขวา
+    sel = pg.locator("select").filter(has=pg.locator('option[value="ico"]')).first
     opts = sel.locator("option").all_inner_texts()
     ck(f"มีตัวเลือก ICO ในรายการ ({opts})", any("ICO" in o for o in opts), opts)
     sel.select_option("ico")
@@ -61,9 +70,7 @@ with sync_playwright() as pw:
     ck(f"บอกล่วงหน้าว่าไฟล์เดียวมีกี่ขนาด ({note})", "16" in note and "64" in note, note)
 
     print("\n② แปลงจริง")
-    pg.locator("button", has_text="ลองด้วยไฟล์ตัวอย่าง").click()
-    pg.wait_for_timeout(2500)
-    pg.locator("button", has_text="แปลงไฟล์").click()
+    pg.locator("button:visible", has_text="แปลงไฟล์").first.click()
     pg.wait_for_timeout(6000)
     rows = pg.locator(".result")
     ck(f"ได้ผลลัพธ์ออกมา ({rows.count()} ไฟล์)", rows.count() >= 1, rows.count())
@@ -73,7 +80,7 @@ with sync_playwright() as pw:
     print("\n③ ไฟล์ที่ได้ต้องใช้ได้จริง ตรวจจากไบต์")
     out = os.path.join(tempfile.gettempdir(), "fk_probe.ico")
     with pg.expect_download() as d:
-        pg.locator(".result button", has_text="ดาวน์โหลด").first.click()
+        pg.locator(".s2-side-res button:visible, .result button:visible", has_text="ดาวน์โหลด").first.click()
     d.value.save_as(out)
     ico = read_ico(out)
     ck(f"ประเภทเป็นไอคอน ไม่ใช่เคอร์เซอร์ (type={ico['type']})", ico["type"] == 1 and ico["reserved"] == 0, ico)

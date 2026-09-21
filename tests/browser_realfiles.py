@@ -658,9 +658,9 @@ def main():
             pg.wait_for_timeout(2500)
             press(pg, "บีบอัดไฟล์")
             pg.wait_for_selector(".results .result, .results .note.warn", timeout=40000)
-            ck("บีบไฟล์ข้อความแล้วได้ไฟล์ออกมาจริง", pg.locator(".results .result").count() >= 1, True)
+            ck("บีบไฟล์ข้อความแล้วได้ไฟล์ออกมาจริง", pg.locator(".s2-side-res .result, .results .result").count() >= 1, True)
             with pg.expect_download(timeout=25000) as info:
-                pg.locator(".results .result button").first.click()
+                pg.locator(".s2-side-res .result button, .results .result button").first.click()
             out6 = DL / "compressed.pdf"
             info.value.save_as(str(out6))
             ck("บีบแล้วชั้นข้อความยังอยู่ครบทุกหน้า", pages_with_text(out6), 6)
@@ -676,13 +676,13 @@ def main():
             press(pg, "บีบอัดไฟล์")
             pg.wait_for_selector(".results .result, .results .note.warn", timeout=40000)
             ck("ไฟล์ที่บีบต่อไม่ได้โดยไม่เสียข้อความ ต้องไม่ยัดไฟล์ที่ข้อความหายให้เอง",
-               pg.locator(".results .result").count(), 0)
+               pg.locator(".s2-side-res .result, .results .result").count(), 0)
             ck("ต้องมีปุ่มให้ผู้ใช้เลือกเองว่าจะยอมเสียข้อความไหม",
                pg.locator(".results .note.warn button").count(), 1)
             pg.evaluate("() => document.querySelector('.note.warn button').click()")
-            pg.wait_for_selector(".results .result", timeout=40000)
+            pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=40000)
             with pg.expect_download(timeout=25000) as info:
-                pg.locator(".results .result button").first.click()
+                pg.locator(".s2-side-res .result button, .results .result button").first.click()
             out7 = DL / "forced.pdf"
             info.value.save_as(str(out7))
             ck("กดยอมแล้วยังบีบให้ได้จริง (ไม่ได้ปิดทางผู้ใช้)", out7.stat().st_size > 0, True)

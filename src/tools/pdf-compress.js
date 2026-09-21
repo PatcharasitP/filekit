@@ -141,8 +141,8 @@ export function mount(tool) {
       return row;
     }),
     el("div", { class: "cmp-est-note" },
-       tr("สามระดับล่างคือขนาดถ้ายอมให้ทุกหน้ากลายเป็นภาพ ค้นหาข้อความไม่ได้อีก และเป็นค่าประมาณจากการทดลองบีบ 3 หน้าตัวอย่าง ขนาดจริงอาจต่างไปบ้าง",
-          "The three levels below are the size if every page becomes an image, with no searchable text left. They are estimated from three sample pages, so the real size may differ a little")),
+       tr("สามระดับล่างทุกหน้ากลายเป็นภาพ ค้นหาข้อความไม่ได้ ตัวเลขประมาณจาก 3 หน้าตัวอย่าง",
+          "The three levels below turn every page into an image, with no searchable text. Estimated from three sample pages")),
   ]);
 
   const statsBox = el("div", { class: "cmp-stats" }, [

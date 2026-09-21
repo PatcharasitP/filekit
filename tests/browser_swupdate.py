@@ -206,7 +206,7 @@ with sync_playwright() as p:
         NEVER_TOOL = "excel-csv"
         for tool in VISITED_TOOLS:
             pg.goto(f"{base_a}/#/{tool}", wait_until="networkidle", timeout=20000)
-            pg.wait_for_selector(".dz, .tool-head", timeout=15000)
+            pg.wait_for_selector(".dz, .s2, .tool-head", timeout=15000)
         s2 = snap(pg, "หลังเปิด 2 เครื่องมือ (ออนไลน์)")
         # ‼️ ชื่อแคชไลบรารีเปลี่ยนจาก `${VERSION}-libs` เป็น `filekit-libs-v1` เมื่อ 13/09/2026
         #    เพราะชื่อเดิมผูกกับเวอร์ชันแอป ทุก deploy จึงทิ้งไลบรารี 5.9 MB แล้วโหลดใหม่
@@ -239,7 +239,7 @@ with sync_playwright() as p:
         for tool in VISITED_TOOLS:
             try:
                 pg2.goto(f"{base_a}/#/{tool}", timeout=15000)
-                pg2.wait_for_selector(".dz, .tool-head", timeout=10000)
+                pg2.wait_for_selector(".dz, .s2, .tool-head", timeout=10000)
                 has_err = pg2.locator(".status.show.err").count() > 0
                 (opened_fail if has_err else opened_ok).append(tool)
             except Exception:
@@ -256,7 +256,7 @@ with sync_playwright() as p:
                 pg2.wait_for_selector(".status.show.err", timeout=8000)
                 never_fail = True
             except PWTimeout:
-                never_fail = pg2.locator(".dz, .tool-head").count() == 0
+                never_fail = pg2.locator(".dz, .s2, .tool-head").count() == 0
         except Exception:
             never_fail = True
         ck(f"(ข) เครื่องมือที่ 'ไม่เคย' เปิดมาก่อน ('{NEVER_TOOL}') ใช้ออฟไลน์ไม่ได้ (ตามดีไซน์ SWR ไม่ใช่ full-precache)",

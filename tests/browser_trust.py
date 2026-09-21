@@ -27,7 +27,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8848")
+BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
 SELFTEST = "--selftest" in sys.argv
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ok = fail = 0

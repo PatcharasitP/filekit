@@ -172,6 +172,11 @@ body.tool{overflow:hidden}
 
 /* ปุ่มหลัก — ของเดิมคือ .btn ธรรมดา เราแค่ขยายให้เป็นพระเอกของจอ */
 .s2-cta-row{display:flex; gap:10px; align-items:center; width:100%}
+/* ‼️ ปุ่มจริงที่ถูกยกขึ้นไปเป็นปุ่มหลักในแผงแล้ว ต้องหายจากผืนงาน
+   ไม่งั้นคำสั่งเดียวกันจะมีสองใบ ทั้งในสายตาและในโปรแกรมอ่านหน้าจอ
+   ใช้ display:none เพื่อให้หลุดจากต้นไม้ accessibility จริง ๆ
+   (visibility:hidden ยังกินที่ · aria-hidden ยังโดน Tab ได้) */
+.s2-stage .s2-lifted{display:none !important}
 .s2-cta.btn,.s2-cta{
   flex:1 1 auto; min-width:0;
   /* ‼️ ปุ่มหลักใช้สีสนิมของแบรนด์ ไม่ใช่ดำ (พี่ปอนด์เคาะจากต้นแบบ 21/09 ข้อ D3 ทางเลือก A)

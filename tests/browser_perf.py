@@ -210,7 +210,7 @@ with sync_playwright() as p:
         ok = True
         pg.goto(f"{BASE}/#/{tool}", wait_until="commit")
         try:
-            pg.wait_for_selector(".dz, .tool-head", timeout=TOOL_OPEN_BUDGET_MS)
+            pg.wait_for_selector(".dz, .s2, .tool-head", timeout=TOOL_OPEN_BUDGET_MS)
         except PWTimeout:
             ok = False
         dt = (time.time() - t0) * 1000

@@ -524,6 +524,15 @@ export function toolShell2(tool, cfg = {}) {
       };
       new MutationObserver(sync).observe(real, { attributes: true, childList: true, subtree: true, characterData: true });
       sync();
+      /* ‼️ ซ่อนปุ่มจริงทิ้งไว้หลังบ้าน หลังมีปุ่มเงาสะท้อนมันแล้ว (21/09/2026)
+       * ก่อนหน้านี้ปุ่มเดียวกันมีอยู่สองใบบนหน้าจอพร้อมกัน วัดได้จริงที่ pdf-merge
+       * สถานะทำงาน: ปุ่ม "รวมไฟล์" 102x43 ในผืนงาน กับ 410x72 ในแผง ชื่อเดียวกันเป๊ะ
+       * คนใช้โปรแกรมอ่านหน้าจอจึงได้ยินคำสั่งเดียวกันซ้ำสองรอบ และแยกไม่ออกว่าต่างกันยังไง
+       * ‼️ ต้องซ่อนด้วยคลาส ห้ามใช้ property hidden เพราะ sync() สะท้อน real.hidden ไปที่เงา
+       *   ถ้าไปตั้ง real.hidden = true ปุ่มเงาจะหายตามไปด้วยทั้งคู่
+       * ‼️ ปุ่มจริงยังอยู่ใน DOM และยังกดผ่าน real.click() ได้ตามปกติ
+       *   เครื่องมือที่ถือ reference ไว้เปลี่ยนข้อความ เปิดปิด ซ่อน ยังทำงานเหมือนเดิมทุกอย่าง */
+      real.classList.add("s2-lifted");
       ghosts.set(real, ghost);
       if (first) ctaRow.appendChild(ghost);
       else {

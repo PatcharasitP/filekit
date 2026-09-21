@@ -50,8 +50,8 @@ export function mount(tool) {
   const wrap = el("div", { class: "xi-wrap", hidden: true }, [
     bar, grid,
     el("div", { class: "xi-note" },
-       tr("ได้รูปตามความละเอียดที่ฝังอยู่ในไฟล์จริง ไม่ใช่ภาพหน้าจอ รูปที่ถูกครอบหรือหมุนในหน้า จะได้ภาพเต็มใบก่อนถูกจัดวาง",
-          "You get each image at the resolution stored in the file, not a screenshot. Images that were cropped or rotated on the page come out whole, before the layout was applied")),
+       tr("ได้ความละเอียดที่ฝังอยู่จริง ไม่ใช่ภาพหน้าจอ รูปที่ถูกครอบในหน้าจะได้ภาพเต็มใบ",
+          "Each image comes at the resolution stored in the file, not a screenshot. Cropped images come out whole")),
   ]);
 
   const go = button(tr("ดึงรูปทั้งหมด", "Extract every image"), { onclick: run });

@@ -18,7 +18,7 @@ import sys
 from PIL import Image
 from playwright.sync_api import sync_playwright
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("FK_BASE", "http://localhost:8848")
+BASE = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("FK_BASE", "http://localhost:8899")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ok, bad = [], []
 def check(name, cond, got=""):

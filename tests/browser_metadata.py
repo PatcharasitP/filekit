@@ -104,11 +104,16 @@ def press(pg, pattern):
 
 def dl_click(pg, out_path, timeout=25000, label="ดาวน์โหลด"):
     """ปุ่มดาวน์โหลดมี 2 แบบในเว็บนี้: มีตัวหนังสือ "ดาวน์โหลด" หรือไอคอนล้วน (class="btn has-ico")"""
-    loc = pg.locator("button", has_text=label)
+    # ‼️ ต้องเลือกเฉพาะปุ่มที่ "มองเห็นจริง" (เปลี่ยน 21/09/2026)
+    #    สถานะผลลัพธ์ของ v2 ย้ายแถวผลลัพธ์ขึ้นไปไว้ในแผงขวา ส่วนแถวเดิมในผืนงาน
+    #    ยังอยู่ใน DOM แต่ถูกชั้นผลลัพธ์บังไว้ .last จึงไปตกที่ปุ่มที่กดไม่ได้แล้วค้าง
+    loc = pg.locator("button:visible", has_text=label)
     if loc.count() == 0:
-        loc = pg.locator("button.btn.has-ico")
+        loc = pg.locator("button.btn.has-ico:visible")
+    if loc.count() == 0:
+        loc = pg.locator("button", has_text=label)
     with pg.expect_download(timeout=timeout) as info:
-        loc.last.click()
+        loc.first.click()
     info.value.save_as(str(out_path))
     return out_path
 
@@ -330,7 +335,9 @@ def main():
                 pg.mouse.click(r["x"] + r["width"] * 0.15, r["y"] + r["height"] * 0.15)
                 pg.wait_for_timeout(400)
             press(pg, "บันทึกไฟล์เซ็น")
-            pg.wait_for_selector("button.btn.has-ico, button:has-text('ดาวน์โหลด')", timeout=20000)
+            # ‼️ v2 ย้ายแถวผลลัพธ์ไปแผงขวา ปุ่มที่กดได้จริงจึงอยู่คนละที่กับของเดิม
+            pg.wait_for_selector(".s2-side-res button, button.btn.has-ico:visible, "
+                                 "button:visible:has-text('ดาวน์โหลด')", timeout=20000)
             out_sign = DL / "pdf-sign.pdf"
             dl_click(pg, out_sign)
             meta_sign = fitz.open(out_sign).metadata
@@ -389,7 +396,7 @@ def main():
             pg.wait_for_selector(".dz")
             # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
             #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
-            sel = pg.locator(".panel select").first
+            sel = pg.locator(".s2-side-bd select, .panel select").first
             pg.locator(".dz input[type=file]").first.set_input_files(str(pptx1))
             pg.wait_for_timeout(1200)
             ck("powerpoint-to-word: ค่าเริ่มต้นตัวเลือกโน้ต = ไม่เอา (เอาเฉพาะเนื้อสไลด์)", sel.input_value(), "no")

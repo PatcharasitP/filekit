@@ -281,7 +281,7 @@ def run_simple(pg, tool_id, files_rel):
 
 
 def click_go(pg, text, timeout=25_000):
-    pg.get_by_role("button", name=text, exact=True).click()
+    pg.get_by_role("button", name=text, exact=True).filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=timeout)
     pg.wait_for_timeout(450)
 
@@ -294,7 +294,7 @@ def run_sheetpick(pg, tool_id, file_path, download_text=None, extra_wait=0):
         pg.wait_for_timeout(extra_wait)
     if download_text:
         with pg.expect_download():
-            pg.get_by_role("button", name=download_text, exact=True).click()
+            pg.get_by_role("button", name=download_text, exact=True).filter(visible=True).click()
         pg.wait_for_timeout(300)
 
 
@@ -306,7 +306,7 @@ def run_mailmerge(pg, click_text):
     pg.wait_for_timeout(700)
     inputs.nth(1).set_input_files(str(SAMPLES / "ตัวอย่าง-ข้อมูลพนักงาน.xlsx"), timeout=SIF_TIMEOUT)
     pg.wait_for_timeout(1200)
-    pg.get_by_role("button", name=click_text, exact=True).click()
+    pg.get_by_role("button", name=click_text, exact=True).filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=25_000)
     pg.wait_for_timeout(500)
 
@@ -319,7 +319,7 @@ def run_word_replace(pg, click_text):
     row = pg.locator(".rep-row").first
     row.locator("input").nth(0).fill("บริษัท")
     row.locator("input").nth(1).fill("Company Ltd.")
-    pg.get_by_role("button", name=click_text, exact=True).click()
+    pg.get_by_role("button", name=click_text, exact=True).filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
     pg.wait_for_timeout(400)
 
@@ -337,7 +337,7 @@ def run_pdf_sign(pg, click_text):
     # คลิกกลางหน้าเพื่อวางลายเซ็น
     pg.locator(".sign-stage").click(position={"x": 200, "y": 200})
     pg.wait_for_timeout(300)
-    pg.get_by_role("button", name=click_text, exact=True).click()
+    pg.get_by_role("button", name=click_text, exact=True).filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
     pg.wait_for_timeout(400)
 
@@ -348,7 +348,7 @@ def run_thai_encoding(pg, click_text):
     pg.set_input_files("input[type=file]", str(SAMPLES / "ตัวอย่าง-ไทยเพี้ยน-แบบ TIS620.csv"), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".enc-card", timeout=15_000)
     with pg.expect_download():
-        pg.get_by_role("button", name=click_text, exact=True).click()
+        pg.get_by_role("button", name=click_text, exact=True).filter(visible=True).click()
     pg.wait_for_timeout(400)
 
 
@@ -382,7 +382,7 @@ def do_tool_action(pg, tool_id, address_xlsx_path, lang="en"):
         if tool_id == "image-convert":
             # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
             #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
-            pg.locator(".panel select").first.select_option("webp")
+            pg.locator(".s2-side-bd select, .panel select").first.select_option("webp")
         click_go(pg, btn)
     elif tool_id in SHEETPICK:
         file_rel = SHEETPICK[tool_id][0]
@@ -488,7 +488,7 @@ def check_broken(pg, tool_id, path, wait_selector, click_en=None, wait_has_text=
     pg.set_input_files("input[type=file]", str(path), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     if click_en:
-        pg.get_by_role("button", name=click_en, exact=True).click()
+        pg.get_by_role("button", name=click_en, exact=True).filter(visible=True).click()
     if wait_has_text:
         # ‼️ ".ws-empty" ใช้ซ้ำ 2 จุดในหน้า image-resize (กล่อง "ยังไม่มีไฟล์" ของ workspace ที่ถูก
         #    ซ่อนอยู่ + กล่องข้อความพรีวิวพัง) — ต้องเจาะจงด้วย has_text เหมือน tests/browser_files.py
@@ -544,16 +544,16 @@ def check_title_and_switch(pg):
     src = [str(SAMPLES / "ตัวอย่าง-รายงานประจำเดือน.pdf"), str(SAMPLES / "ตัวอย่าง-ใบปะหน้าเอกสาร.pdf")]
     pg.set_input_files("input[type=file]", src, timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
-    pg.get_by_role("button", name="Merge", exact=True).click()
+    pg.get_by_role("button", name="Merge", exact=True).filter(visible=True).click()
     pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
-    results.append(("ก่อนสลับภาษา: มีผลลัพธ์ปรากฏแล้ว (.results .result)", pg.locator(".results .result").count() > 0, ""))
+    results.append(("ก่อนสลับภาษา: มีผลลัพธ์ปรากฏแล้ว (.results .result)", pg.locator(".s2-side-res .result, .results .result").count() > 0, ""))
 
     pg.locator('#lang .langopt[data-lang="th"]').click()
     pg.wait_for_timeout(900)
     lang_after = pg.evaluate("document.documentElement.lang")
     results.append(("สลับกลับ TH: documentElement.lang เปลี่ยนเป็น th จริง", lang_after == "th", f" (ได้ {lang_after!r})"))
     # ดีไซน์จริง: สลับภาษา = reload หน้า (src/i18n.js setLang) → ผลลัพธ์เก่าต้องถูกล้าง ไม่ใช่ค้างเป็นอังกฤษ/ไทยผสม
-    stray_en_result = pg.locator(".results .result").count()
+    stray_en_result = pg.locator(".s2-side-res .result, .results .result").count()
     results.append(("หลังสลับภาษา (reload) ผลลัพธ์เก่าถูกล้าง ไม่ค้างพันภาษา", stray_en_result == 0,
                      f" (เจอ .results .result ค้างอยู่ {stray_en_result} ชิ้น)"))
     left_texts = capture_texts(pg)

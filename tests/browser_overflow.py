@@ -20,7 +20,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8848")
+BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
 SELFTEST = "--selftest" in sys.argv
 SLACK = 2          # ยอมให้เลยขอบได้ 2px เผื่อการปัดเศษของเบราว์เซอร์
 WIDTHS = [1440, 390]

@@ -12,7 +12,18 @@ import sys
 import tempfile
 from playwright.sync_api import sync_playwright
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8848"
+# ‼️ ต้องเคารพ FK_BASE เสมอ ไม่งั้นตัวรันกลางยิงพอร์ตหนึ่ง เทสไปยิงอีกพอร์ตหนึ่ง
+#    แล้วขึ้น ERR_CONNECTION_REFUSED โดยที่ของจริงไม่ได้พังเลย (เจอ 21/09/2026)
+import os
+BASE = (sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].startswith("http")
+        else os.environ.get("FK_BASE", "http://127.0.0.1:8899"))
+# ‼️ ชุดนี้ตรวจ "โครงหน้าเครื่องมือรุ่นเดิม (v1)" ซึ่งยังอยู่ในเว็บและเปิดได้ด้วย ?ui=1
+#    ค่าตั้งต้นของเว็บเปลี่ยนเป็น v2 ไปแล้วตั้งแต่ 21/09/2026 ชุดนี้จึงต้องประกาศให้ชัด
+#    ว่าจะตรวจ v1 ไม่ใช่ปล่อยให้แดงค้างแล้วคิดว่า "เทสพัง" (ของจริงไม่ได้พัง มันคนละโครงกัน)
+# ‼️ ตั้งผ่าน localStorage ไม่ใช่ต่อท้าย URL เพราะเว็บใช้ hash routing
+#    (?ui=1 ต้องอยู่ก่อน # เสมอ ซึ่งพลาดง่ายเวลาประกอบ URL หลายที่ในไฟล์เดียว)
+# ‼️ เมื่อพี่ปอนด์ยืนยันว่าเอา v2 แน่ แล้วโค้ด v1 ถูกลบ ให้ลบชุดนี้พร้อมกัน
+V1_INIT = "try{localStorage.setItem('fk:ui','1')}catch(e){}"
 ok, bad = [], []
 def check(name, cond, got=""):
     """‼️ cond ส่งเป็นฟังก์ชันได้ เพื่อให้ข้อที่ระเบิดกลายเป็น "ตก" ไม่ใช่ "เทสพัง"
@@ -29,6 +40,7 @@ PANEL = ".ws-right .ws-scroll"
 with sync_playwright() as p:
     b = p.chromium.launch()
     pg = b.new_page(viewport={"width": 1440, "height": 950})
+    pg.add_init_script(V1_INIT)
     try:
 
         # ── ① พับแล้วแผงต้องสั้นลงจริง ไม่ใช่แค่ลูกศรหมุน

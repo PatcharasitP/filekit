@@ -48,7 +48,7 @@ with sync_playwright() as p:
     pg = br.new_context(viewport={"width": 1440, "height": 950}).new_page()
 
     go(pg, "pdf-merge")
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_timeout(1300)
 
     opened = open_viewer(pg)
@@ -63,7 +63,7 @@ with sync_playwright() as p:
        f"ยังเปิดอยู่ {open_dialogs(pg)} กล่อง")
 
     try:
-        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click(timeout=4000)
+        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click(timeout=4000)
         pg.wait_for_timeout(900)
         ck("③ ปุ่มในเครื่องมือใหม่คลิกได้", True)
     except Exception as e:
@@ -71,7 +71,7 @@ with sync_playwright() as p:
 
     # กลับหน้าแรกก็ต้องปิดเหมือนกัน
     go(pg, "pdf-merge")
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_timeout(1300)
     open_viewer(pg)
     pg.wait_for_timeout(900)

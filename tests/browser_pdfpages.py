@@ -58,7 +58,7 @@ with sync_playwright() as p:
     seen = 0
     for tool in VIA_PDFLIB + VIA_PDFJS:
         go(pg, tool)
-        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
         pg.wait_for_timeout(3200)
         rows = chips(pg)
         for r in rows:
@@ -75,10 +75,10 @@ with sync_playwright() as p:
 
     # ② ยืนยันไขว้กับผลลัพธ์จริงของเครื่องมือ
     go(pg, "pdf-merge")
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_timeout(3200)
     total = sum(num(r["pages"]) or 0 for r in chips(pg))
-    pg.get_by_role("button", name="รวมไฟล์").first.click()
+    pg.get_by_role("button", name="รวมไฟล์").filter(visible=True).first.click()
     pg.wait_for_timeout(4000)
     out = num(pg.evaluate("""() => {const s = document.querySelector('.result .r-name small');
         return s ? s.textContent : '';}"""))
@@ -92,7 +92,7 @@ with sync_playwright() as p:
     #     บนเครื่องมือที่มี pdf-lib อยู่แล้ว — บั๊กที่ใส่ไม่ถึงจุด ไม่ได้แปลว่าเทสอ่อน)
     reqs.clear()
     go(pg, "pdf-merge")
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_timeout(3500)
     pulled = [u for u in reqs if re.search(r"pdf\.(worker\.)?min\.js", u)]
     ck("③ เครื่องมือที่ใช้ pdf-lib ต้องไม่โหลด pdf.js เพิ่มเพื่อการนี้ (1.37 MB)",
@@ -102,14 +102,14 @@ with sync_playwright() as p:
     bad = []
     for tool in ["image-convert", "word-to-pdf"]:
         go(pg, tool)
-        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+        pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
         pg.wait_for_timeout(2500)
         bad += [r["name"] for r in chips(pg) if (r["pages"] or "").strip()]
     ck("④ ไฟล์ที่ไม่ใช่ PDF ไม่ขึ้นจำนวนหน้า", not bad, f"ขึ้นผิดที่: {bad}")
 
     # ⑤ ลบไฟล์แล้วเลขต้องตามใบที่เหลือ ไม่เลื่อนผิด
     go(pg, "pdf-merge")
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").click()
+    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_timeout(3200)
     pg.evaluate("""() => {const b = document.querySelector('.file-row[data-i="0"] .icon-btn.danger'); if (b) b.click();}""")
     pg.wait_for_timeout(1500)

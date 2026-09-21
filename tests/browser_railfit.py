@@ -24,6 +24,15 @@ import sys
 from playwright.sync_api import sync_playwright
 
 BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
+
+# ‼️ ชุดนี้ตรวจ "โครงหน้าเครื่องมือรุ่นเดิม (v1)" ซึ่งยังอยู่ในเว็บและเปิดได้ด้วย ?ui=1
+#    ค่าตั้งต้นของเว็บเปลี่ยนเป็น v2 ไปแล้วตั้งแต่ 21/09/2026 ชุดนี้จึงต้องประกาศให้ชัด
+#    ว่าจะตรวจ v1 ไม่ใช่ปล่อยให้แดงค้างแล้วคิดว่า "เทสพัง" (ของจริงไม่ได้พัง มันคนละโครงกัน)
+# ‼️ ตั้งผ่าน localStorage ไม่ใช่ต่อท้าย URL เพราะเว็บใช้ hash routing
+#    (?ui=1 ต้องอยู่ก่อน # เสมอ ซึ่งพลาดง่ายเวลาประกอบ URL หลายที่ในไฟล์เดียว)
+# ‼️ เมื่อพี่ปอนด์ยืนยันว่าเอา v2 แน่ แล้วโค้ด v1 ถูกลบ ให้ลบชุดนี้พร้อมกัน
+V1_INIT = "try{localStorage.setItem('fk:ui','1')}catch(e){}"
+
 WIDTHS = [2200, 1920, 1860, 1820, 1780, 1700, 1600, 1560, 1500, 1440, 1366, 1280, 1100]
 TOOLS = ["pbi-bar", "map-coverage", "pdf-merge"]
 MIN_RAIL = 150     # รางแคบกว่านี้อ่านไม่ออก มีก็เหมือนไม่มี
@@ -56,6 +65,7 @@ def run(selftest=False):
             for w in WIDTHS:
                 ctx = b.new_context(viewport={"width": w, "height": 1000})
                 pg = ctx.new_page()
+                pg.add_init_script(V1_INIT)
                 pg.goto(f"{BASE}/#/{t}", wait_until="load", timeout=60000)
                 pg.wait_for_timeout(900)
                 if selftest:

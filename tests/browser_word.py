@@ -236,10 +236,10 @@ def test_word_join(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files([str(a), str(b), str(c)])
     pg.wait_for_timeout(400)
-    pg.locator("button.btn", has_text="รวมไฟล์").click()
+    pg.locator("button.btn:visible", has_text="รวมไฟล์").click()
     wait_status(pg, "รวมเสร็จ")
     out = DL / "join-out.docx"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_click(pg, pg.locator(".s2-side-res .result button, .results .result button"), out)
 
     text = read_docx_text(out.read_bytes())
     ck(tool, "ทั้ง 3 ไฟล์ถูกรวมมาครบ ไม่มีไฟล์ไหนหาย", "พบข้อความทั้ง 3 ไฟล์ในผลลัพธ์",
@@ -270,9 +270,9 @@ def test_word_replace(pg):
     row.locator("input").nth(0).fill(find)
     row.locator("input").nth(1).fill(repl)
     pg.wait_for_timeout(200)
-    pg.locator("button.btn", has_text="แทนที่").click()
+    pg.locator("button.btn:visible", has_text="แทนที่").click()
     wait_status(pg, "จุด ใน")  # ข้อความจบจริง "แทนที่ N จุด ใน M ไฟล์" — ตัดจากคำว่า "กำลังแทนที่…" ที่ขึ้นก่อน
-    results = pg.locator(".results .result")
+    results = pg.locator(".s2-side-res .result, .results .result")
     ck(tool, "แก้ครบทั้ง 2 ไฟล์", "จำนวนไฟล์ผลลัพธ์", results.count(), 2)
 
     for i, fname in enumerate(["rep-1-out.docx", "rep-2-out.docx"]):
@@ -305,10 +305,10 @@ def test_word_clean(pg):
     report_text = pg.locator(".clean-card").inner_text()
     ck(tool, "ก่อนล้าง: ตัวตรวจของเว็บเจอคอมเมนต์ในไฟล์ (พิสูจน์ fixture ใช้ได้จริง)", "คำว่า “คอมเมนต์” ในรายงานก่อนล้าง", "คอมเมนต์" in report_text, True)
 
-    pg.locator("button.btn", has_text="ล้าง").click()
+    pg.locator("button.btn:visible", has_text="ล้าง").click()
     wait_status(pg, "ล้างเสร็จ")
     out = DL / "clean-out.docx"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_click(pg, pg.locator(".s2-side-res .result button, .results .result button"), out)
 
     raw = out.read_bytes()
     zf = zipfile.ZipFile(io.BytesIO(raw))
@@ -348,10 +348,10 @@ def test_word_mailmerge(pg):
     dzs.nth(1).set_input_files(str(xls))
     pg.wait_for_timeout(1200)
 
-    go = pg.locator("button.btn", has_text="สร้างเอกสารทั้งชุด")
+    go = pg.locator("button.btn:visible", has_text="สร้างเอกสารทั้งชุด")
     go.click()  # Playwright รอปุ่มพ้นสถานะ disabled ให้เองก่อนคลิกจริง
     wait_status(pg, "สร้างเอกสารสำเร็จ")
-    results = pg.locator(".results .result")
+    results = pg.locator(".s2-side-res .result, .results .result")
     ck(tool, "ได้เอกสารครบ 3 ไฟล์ (1 แถว = 1 ไฟล์)", "จำนวนไฟล์ผลลัพธ์", results.count(), 3)
 
     texts = []
@@ -384,10 +384,10 @@ def test_word_to_pdf(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(300)
-    pg.locator("button.btn", has_text="แปลงเป็น PDF").click()
+    pg.locator("button.btn:visible", has_text="แปลงเป็น PDF").click()
     wait_status(pg, "แปลงสำเร็จ")
     out = DL / "w2p-out.pdf"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_click(pg, pg.locator(".s2-side-res .result button, .results .result button"), out)
 
     texts = read_pdf_texts(out.read_bytes())
     full = "\n".join(texts)
@@ -412,10 +412,10 @@ def test_pdf_to_word(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(300)
-    pg.locator("button.btn", has_text="แปลงเป็น Word").click()
+    pg.locator("button.btn:visible", has_text="แปลงเป็น Word").click()
     wait_status(pg, "แปลงสำเร็จ")
     out = DL / "p2w-out.docx"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_click(pg, pg.locator(".s2-side-res .result button, .results .result button"), out)
 
     text = read_docx_text(out.read_bytes())
     ck(tool, "ข้อความไทยหน้า 1 ถูกแปลงมาไม่เพี้ยน", "พบข้อความหน้า 1 ในผลลัพธ์ .docx", p1 in text, True)
@@ -439,10 +439,10 @@ def test_pdf_to_word_columns(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(300)
-    pg.locator("button.btn", has_text="แปลงเป็น Word").click()
+    pg.locator("button.btn:visible", has_text="แปลงเป็น Word").click()
     wait_status(pg, "แปลงสำเร็จ")
     out = DL / "p2w-2col-out.docx"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_click(pg, pg.locator(".s2-side-res .result button, .results .result button"), out)
 
     text = read_docx_text(out.read_bytes())
     for i, t in enumerate(left):
@@ -487,10 +487,10 @@ def test_word_to_pdf_old_th_font(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(400)
-    pg.locator("button.btn", has_text="แปลงเป็น PDF").click()
+    pg.locator("button.btn:visible", has_text="แปลงเป็น PDF").click()
     wait_status(pg, "แปลงสำเร็จ")
     out = DL / "old-th-font.pdf"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_click(pg, pg.locator(".s2-side-res .result button, .results .result button"), out)
 
     full = "\n".join(read_pdf_texts(out.read_bytes()))
     ck(tool, "วรรณยุกต์", "อ่านคำว่า 'ชื่อหัวข้อ' ได้ครบ", "ชื่อหัวข้อ" in full, True)

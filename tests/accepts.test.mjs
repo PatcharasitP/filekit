@@ -117,6 +117,39 @@ for (const f of toolFiles.sort()) {
      `ตารางนามสกุลต้องชี้ถูกชนิด (.xlsm -> ${extToKind.get(".xlsm")} · .txt -> ${extToKind.get(".txt")})`);
 }
 
+/* ‼️ เทสเบราว์เซอร์ทุกชุดต้องเคารพ FK_BASE
+ * บทเรียน 21/09/2026: 3 ชุดผูกพอร์ต 8848 ไว้ตายตัว ตัวรันกลางเปิดเซิร์ฟเวอร์พอร์ตอื่น
+ * ชุดพวกนั้นจึงขึ้น ERR_CONNECTION_REFUSED และถูกนับว่า "แดง" มาตลอด
+ * ทั้งที่ของจริงไม่ได้พังเลยสักนิด = หนี้เทสปลอมที่บังหนี้จริงเอาไว้ */
+{
+  const testFiles = readdirSync(join(ROOT, "tests")).filter((n) => n.startsWith("browser_") && n.endsWith(".py"));
+  ck(testFiles.length > 0, `หาไฟล์เทสเบราว์เซอร์เจอ (${testFiles.length} ไฟล์ — ประชากรต้องไม่เป็นศูนย์)`);
+  /* ‼️ ยกเว้นทีละชุดพร้อมเหตุผล ไม่ผ่อนเกณฑ์ทั้งกอง
+     browser_swupdate ต้อง "แก้ไฟล์เว็บแล้วดูว่าผู้ใช้ได้ของใหม่ไหม" จึงต้องคัดลอกเว็บไป
+     สำเนาชั่วคราวแล้วเสิร์ฟเอง ชี้ FK_BASE ไปที่เว็บจริงไม่ได้ เพราะมันจะไปแก้ของจริง */
+    const OWN_SERVER = new Set(["browser_swupdate.py"]);
+  const noEnv = [];
+  for (const f of testFiles) {
+    if (OWN_SERVER.has(f)) continue;
+    const src = readFileSync(join(ROOT, "tests", f), "utf8");
+    if (!/FK_BASE/.test(src)) noEnv.push(f);
+  }
+  ck(noEnv.length === 0,
+     `เทสเบราว์เซอร์ทุกชุดต้องอ่าน FK_BASE (ไม่อ่าน ${noEnv.length})` +
+     (noEnv.length ? "\n      " + noEnv.slice(0, 8).join("\n      ") : ""));
+  const hardPort = [];
+  for (const f of testFiles) {
+    const src = readFileSync(join(ROOT, "tests", f), "utf8");
+    // พอร์ตที่โผล่ในบรรทัดที่ตั้งค่า BASE และไม่ได้อยู่หลัง FK_BASE = ผูกไว้ตายตัว
+    for (const line of src.split("\n")) {
+      if (/^\s*BASE\s*=/.test(line) && /:\d{4}/.test(line) && !/FK_BASE/.test(line)) hardPort.push(`${f}: ${line.trim().slice(0, 70)}`);
+    }
+  }
+  ck(hardPort.length === 0,
+     `บรรทัดที่ตั้งค่า BASE ต้องผ่าน FK_BASE เสมอ (ผูกพอร์ตตายตัว ${hardPort.length})` +
+     (hardPort.length ? "\n      " + hardPort.slice(0, 8).join("\n      ") : ""));
+}
+
 /* ‼️ ตัวเลขจำนวนเครื่องมือที่เขียนค้างไว้ในหน้า HTML
    เพิ่มเครื่องมือจาก 27 เป็น 29 แล้วลืมแก้ในหน้า → ผู้ใช้เห็น "27" แวบหนึ่งก่อน JS แก้เป็น 29
    และ meta ตอนแชร์ลิงก์ (og:description / JSON-LD) ยังโฆษณาเลขเก่าค้างอยู่

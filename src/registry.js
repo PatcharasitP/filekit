@@ -63,6 +63,16 @@ export const TOOLS = [
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"protect encrypt password lock ใส่รหัส ตั้งรหัส รหัสผ่าน ล็อก ล็อค เข้ารหัส ป้องกัน ความลับ ห้ามพิมพ์ ห้ามคัดลอก", next:["pdf-unlock","pdf-watermark"] },
 
+  { id:"pdf-clean", group:"pdf", icon:"🧼", title:"ตรวจ PDF ก่อนส่ง",
+    desc:"ดูว่าไฟล์พกอะไรติดมาบ้าง ชื่อผู้เขียน คอมเมนต์ ช่องฟอร์ม ไฟล์แนบ สคริปต์ แล้วล้างให้ในคลิกเดียว",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdflib"], keys:"clean metadata sanitize ตรวจก่อนส่ง ล้างข้อมูล ชื่อผู้เขียน คอมเมนต์ ฟอร์ม ไฟล์แนบ สคริปต์ ข้อมูลแฝง", next:["pdf-redact","pdf-protect"] },
+
+  { id:"pdf-redact", group:"pdf", icon:"⬛", title:"ลบข้อมูลลับออกจาก PDF",
+    desc:"ลากคลุมส่วนที่ต้องการลบ แล้วข้อความใต้กล่องหายจากไฟล์จริง ไม่ใช่แค่วางสี่เหลี่ยมทับที่ลากคัดลอกออกมาได้",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdfjs","pdflib"], keys:"redact censor ลบข้อมูล ปิดทับ ข้อมูลลับ เซ็นเซอร์ ปกปิด ดำ ลบชื่อ ลบเลขบัตร ลบข้อความจริง", next:["pdf-protect","pdf-clean"] },
+
   { id:"pdf-unlock", group:"pdf", icon:"🔓", title:"ปลดรหัสผ่าน PDF",
     desc:"เอารหัสออกจากไฟล์ที่ต้องพิมพ์รหัสทุกครั้ง หรือปลดข้อห้ามคัดลอกและสั่งพิมพ์ ต้องรู้รหัสก่อน ไม่ใช่เครื่องมือเจาะรหัส",
     accepts:["pdf"], since:"2026-09-21",
@@ -352,6 +362,8 @@ const EN_TOOLS = {
   "pdf-sign":         ["Sign a PDF", "Draw a signature or upload an image, then drag it onto the page. Saved for reuse"],
   "pdf-unstamp":      ["Remove layers stamped on a PDF", "Take off a watermark or stamp that was placed on top. See the result before saving, and your real content can never be removed by mistake"],
   "pdf-protect":      ["Password-protect a PDF", "Set a password that must be typed before the file opens, and choose whether printing or copying stays allowed. Done entirely on your device, nothing is uploaded"],
+  "pdf-clean":        ["Check a PDF before sending", "See what the file is carrying, such as the author name, comments, form fields, attachments and scripts, then clear it all in one click"],
+  "pdf-redact":       ["Redact a PDF for real", "Drag over what must go and the text underneath is removed from the file, not just covered with a rectangle you can still select and copy"],
   "pdf-unlock":       ["Remove a PDF password", "Take the password off a file you have to unlock every time, or lift a ban on copying and printing. You need the password first, this is not a cracking tool"],
   "pdf-watermark":    ["Watermark a PDF", "Stamp text on every page. Choose the position, colour and opacity"],
   "pdf-page-numbers": ["Add page numbers to a PDF", "Number every page. Pick the position and format, use Thai numerals, and skip the cover"],

@@ -28,6 +28,8 @@ export const ICONS = {
   "pdf-page-numbers": `<path d="M9.2 3.2l-2.4 17.6M17.2 3.2l-2.4 17.6M3.4 8.6h17.2M2.6 15.4h17.2"/>`,
   "pdf-unstamp":  `<path d="M6.2 3.4h6.6l4.6 4.6v10.6a2.2 2.2 0 0 1-2.2 2.2H6.2A2.2 2.2 0 0 1 4 18.6V5.6a2.2 2.2 0 0 1 2.2-2.2z"/><path d="M12.8 3.4V8h4.6"/><rect x="12.6"y="12.4"width="8.8"height="6.2"rx="1.4"transform="rotate(-14 17 15.5)"/>`,
   "pdf-protect":  `<rect x="4" y="10.2" width="16" height="11.2" rx="2.4"/><path d="M8 10.2V7a4 4 0 0 1 8 0v3.2"/><path d="M12 14.6v2.6"/>`,
+  "pdf-clean":    `<path d="M6.2 2.6h7.6l5.4 5.4v11.4a2.4 2.4 0 0 1-2.4 2.4H6.2a2.4 2.4 0 0 1-2.4-2.4V5a2.4 2.4 0 0 1 2.4-2.4z"/><path d="M13.8 2.6V8h5.4"/><path d="M8.4 14.2l2.3 2.3 4.6-4.6"/>`,
+  "pdf-redact":   `<path d="M6.2 2.6h7.6l5.4 5.4v11.4a2.4 2.4 0 0 1-2.4 2.4H6.2a2.4 2.4 0 0 1-2.4-2.4V5a2.4 2.4 0 0 1 2.4-2.4z"/><path d="M13.8 2.6V8h5.4"/><rect x="7.4" y="12.4" width="9.2" height="3.4" rx="0.6" fill="currentColor"/>`,
   "pdf-unlock":   `<rect x="4" y="10.2" width="16" height="11.2" rx="2.4"/><path d="M8 10.2V7a4 4 0 0 1 7.5-1.9"/><path d="M12 14.6v2.6"/>`,
   "pdf-watermark":`<path d="M6.2 2.6h7.6l5.4 5.4v11.4a2.4 2.4 0 0 1-2.4 2.4H6.2a2.4 2.4 0 0 1-2.4-2.4V5a2.4 2.4 0 0 1 2.4-2.4z"/><path d="M13.8 2.6V8h5.4"/><path d="M11.6 9.6s4.6 4.7 4.6 7.3a4.6 4.6 0 0 1-9.2 0c0-2.6 4.6-7.3 4.6-7.3z"/>`,
   "pdf-ocr":      `<path d="M7 3h7l4 4v4"/><path d="M14 3v4h4"/><path d="M5 5v14a2 2 0 0 0 2 2h4.5"/><path d="M8.5 10.5h5M8.5 13.5h3"/><circle cx="16.8"cy="16.8"r="3.4"/><path d="M19.3 19.3L21.5 21.5"/>`,

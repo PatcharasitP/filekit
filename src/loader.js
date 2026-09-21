@@ -22,9 +22,13 @@ const REG = {
     },
   },
   pdflib: {
+    /* ‼️ 21/09/2026 เปลี่ยนจาก Hopding/pdf-lib 1.17.1 เป็น fork @cantoo/pdf-lib 2.11.1
+       ตัวเดิมเลิกดูแลแล้ว (push ล่าสุด 17/07/2024) และไม่มีคำสั่งใส่รหัสผ่าน
+       fork นี้สัญญาอนุญาต MIT เหมือนเดิม API เดิมครบ (หายตัวเดียวคือ drawEllipsePath ที่เราไม่ได้ใช้)
+       พิสูจน์แล้วว่าผลลัพธ์ของ 8 เครื่องมือเหมือนเดิมทุกอย่าง (tests/pdflib_swap.py) */
     global: "PDFLib",
     local: "vendor/pdf-lib.min.js",
-    cdn: "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js",
+    cdn: "https://cdn.jsdelivr.net/npm/@cantoo/pdf-lib@2.11.1/dist/pdf-lib.min.js",
   },
   xlsx: {
     global: "XLSX",
@@ -120,8 +124,8 @@ const inflight = new Map(); // ชื่อ -> Promise — กันโหลด
 const SRI = {
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js":
     "sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e",
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js":
-    "sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI",
+  "https://cdn.jsdelivr.net/npm/@cantoo/pdf-lib@2.11.1/dist/pdf-lib.min.js":
+    "sha384-BcRbGROz3cx4LSKcOw2L5YxAxiJPWIEmXRMrYbXu87aSiU5uMQ4qB9v8FEjrBhhq",
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js":
     "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw",
   "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js":

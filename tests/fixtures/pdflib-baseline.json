@@ -282,32 +282,152 @@
  },
  "pdf-compress": {
   "kind": "pdf",
-  "pages": 2,
+  "pages": 12,
   "encrypted": false,
   "detail": [
    {
     "size": [
-     400.0,
-     600.0
+     595.0,
+     842.0
     ],
     "rot": 0,
-    "text": "CP1",
+    "text": "page 1 line 60 compress regression fixture\npage 1 line 84 compress regression fixture\npage 1 line 108 compress regression fixture\npage 1 line 132 compress regression fixture\npage 1 line 156 compress regression fixture\npage 1 line 180 compress regression fixture\npage 1 line 204 compress regression fixture\npage 1 line 228 compress regression fixture\npage 1 line 252 compress regression fixture\npage 1 line 276 compress regression fixture\npage 1 line 300 compress regression fixture\npage 1 line 324 compress regression fixture\npage 1 line 348 compress regression fixture\npage 1 line 372 compress regression fixture\npage 1 line 396 compress regression fixture\npage 1 line 420 compress regression fixture\npage 1 line 444 compress regression fixture\npage 1 line 468 compress regression fixture\npage 1 line 492 compress regression fixture\npage 1 line 516 compress regression fixture\npage 1 line 540 compress regression fixture\npage 1 line 564 compress regression fixture\npage 1 line 588 compress regression fixture\npage 1 line 612 compress regression fixture\npage 1 line 636 compress regression fixture\npage 1 line 660 compress regression fixture\npage 1 line 684 compress regression fixture\npage 1 line 708 compress regression fixture\npage 1 line 732 compress regression fixture\npage 1 line 756 compress regression fixture",
     "images": 0,
     "links": 0,
     "annots": 0,
-    "render": "d82d87cfde73e015"
+    "render": "ceeb0fd138fc21c7"
    },
    {
     "size": [
-     400.0,
-     600.0
+     595.0,
+     842.0
     ],
     "rot": 0,
-    "text": "CP2",
+    "text": "page 2 line 60 compress regression fixture\npage 2 line 84 compress regression fixture\npage 2 line 108 compress regression fixture\npage 2 line 132 compress regression fixture\npage 2 line 156 compress regression fixture\npage 2 line 180 compress regression fixture\npage 2 line 204 compress regression fixture\npage 2 line 228 compress regression fixture\npage 2 line 252 compress regression fixture\npage 2 line 276 compress regression fixture\npage 2 line 300 compress regression fixture\npage 2 line 324 compress regression fixture\npage 2 line 348 compress regression fixture\npage 2 line 372 compress regression fixture\npage 2 line 396 compress regression fixture\npage 2 line 420 compress regression fixture\npage 2 line 444 compress regression fixture\npage 2 line 468 compress regression fixture\npage 2 line 492 compress regression fixture\npage 2 line 516 compress regression fixture\npage 2 line 540 compress regression fixture\npage 2 line 564 compress regression fixture\npage 2 line 588 compress regression fixture\npage 2 line 612 compress regression fixture\npage 2 line 636 compress regression fixture\npage 2 line 660 compress regression fixture\npage 2 line 684 compress regression fixture\npage 2 line 708 compress regression fixture\npage 2 line 732 compress regression fixture\npage 2 line 756 compress regression fixture",
     "images": 0,
     "links": 0,
     "annots": 0,
-    "render": "4bcad82dc949a8d2"
+    "render": "86908d13244ee592"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 3 line 60 compress regression fixture\npage 3 line 84 compress regression fixture\npage 3 line 108 compress regression fixture\npage 3 line 132 compress regression fixture\npage 3 line 156 compress regression fixture\npage 3 line 180 compress regression fixture\npage 3 line 204 compress regression fixture\npage 3 line 228 compress regression fixture\npage 3 line 252 compress regression fixture\npage 3 line 276 compress regression fixture\npage 3 line 300 compress regression fixture\npage 3 line 324 compress regression fixture\npage 3 line 348 compress regression fixture\npage 3 line 372 compress regression fixture\npage 3 line 396 compress regression fixture\npage 3 line 420 compress regression fixture\npage 3 line 444 compress regression fixture\npage 3 line 468 compress regression fixture\npage 3 line 492 compress regression fixture\npage 3 line 516 compress regression fixture\npage 3 line 540 compress regression fixture\npage 3 line 564 compress regression fixture\npage 3 line 588 compress regression fixture\npage 3 line 612 compress regression fixture\npage 3 line 636 compress regression fixture\npage 3 line 660 compress regression fixture\npage 3 line 684 compress regression fixture\npage 3 line 708 compress regression fixture\npage 3 line 732 compress regression fixture\npage 3 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "3282f96d14356063"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 4 line 60 compress regression fixture\npage 4 line 84 compress regression fixture\npage 4 line 108 compress regression fixture\npage 4 line 132 compress regression fixture\npage 4 line 156 compress regression fixture\npage 4 line 180 compress regression fixture\npage 4 line 204 compress regression fixture\npage 4 line 228 compress regression fixture\npage 4 line 252 compress regression fixture\npage 4 line 276 compress regression fixture\npage 4 line 300 compress regression fixture\npage 4 line 324 compress regression fixture\npage 4 line 348 compress regression fixture\npage 4 line 372 compress regression fixture\npage 4 line 396 compress regression fixture\npage 4 line 420 compress regression fixture\npage 4 line 444 compress regression fixture\npage 4 line 468 compress regression fixture\npage 4 line 492 compress regression fixture\npage 4 line 516 compress regression fixture\npage 4 line 540 compress regression fixture\npage 4 line 564 compress regression fixture\npage 4 line 588 compress regression fixture\npage 4 line 612 compress regression fixture\npage 4 line 636 compress regression fixture\npage 4 line 660 compress regression fixture\npage 4 line 684 compress regression fixture\npage 4 line 708 compress regression fixture\npage 4 line 732 compress regression fixture\npage 4 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "ea81bb2fdfa41276"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 5 line 60 compress regression fixture\npage 5 line 84 compress regression fixture\npage 5 line 108 compress regression fixture\npage 5 line 132 compress regression fixture\npage 5 line 156 compress regression fixture\npage 5 line 180 compress regression fixture\npage 5 line 204 compress regression fixture\npage 5 line 228 compress regression fixture\npage 5 line 252 compress regression fixture\npage 5 line 276 compress regression fixture\npage 5 line 300 compress regression fixture\npage 5 line 324 compress regression fixture\npage 5 line 348 compress regression fixture\npage 5 line 372 compress regression fixture\npage 5 line 396 compress regression fixture\npage 5 line 420 compress regression fixture\npage 5 line 444 compress regression fixture\npage 5 line 468 compress regression fixture\npage 5 line 492 compress regression fixture\npage 5 line 516 compress regression fixture\npage 5 line 540 compress regression fixture\npage 5 line 564 compress regression fixture\npage 5 line 588 compress regression fixture\npage 5 line 612 compress regression fixture\npage 5 line 636 compress regression fixture\npage 5 line 660 compress regression fixture\npage 5 line 684 compress regression fixture\npage 5 line 708 compress regression fixture\npage 5 line 732 compress regression fixture\npage 5 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "941b0955105135f5"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 6 line 60 compress regression fixture\npage 6 line 84 compress regression fixture\npage 6 line 108 compress regression fixture\npage 6 line 132 compress regression fixture\npage 6 line 156 compress regression fixture\npage 6 line 180 compress regression fixture\npage 6 line 204 compress regression fixture\npage 6 line 228 compress regression fixture\npage 6 line 252 compress regression fixture\npage 6 line 276 compress regression fixture\npage 6 line 300 compress regression fixture\npage 6 line 324 compress regression fixture\npage 6 line 348 compress regression fixture\npage 6 line 372 compress regression fixture\npage 6 line 396 compress regression fixture\npage 6 line 420 compress regression fixture\npage 6 line 444 compress regression fixture\npage 6 line 468 compress regression fixture\npage 6 line 492 compress regression fixture\npage 6 line 516 compress regression fixture\npage 6 line 540 compress regression fixture\npage 6 line 564 compress regression fixture\npage 6 line 588 compress regression fixture\npage 6 line 612 compress regression fixture\npage 6 line 636 compress regression fixture\npage 6 line 660 compress regression fixture\npage 6 line 684 compress regression fixture\npage 6 line 708 compress regression fixture\npage 6 line 732 compress regression fixture\npage 6 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "b7711f911e786e6e"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 7 line 60 compress regression fixture\npage 7 line 84 compress regression fixture\npage 7 line 108 compress regression fixture\npage 7 line 132 compress regression fixture\npage 7 line 156 compress regression fixture\npage 7 line 180 compress regression fixture\npage 7 line 204 compress regression fixture\npage 7 line 228 compress regression fixture\npage 7 line 252 compress regression fixture\npage 7 line 276 compress regression fixture\npage 7 line 300 compress regression fixture\npage 7 line 324 compress regression fixture\npage 7 line 348 compress regression fixture\npage 7 line 372 compress regression fixture\npage 7 line 396 compress regression fixture\npage 7 line 420 compress regression fixture\npage 7 line 444 compress regression fixture\npage 7 line 468 compress regression fixture\npage 7 line 492 compress regression fixture\npage 7 line 516 compress regression fixture\npage 7 line 540 compress regression fixture\npage 7 line 564 compress regression fixture\npage 7 line 588 compress regression fixture\npage 7 line 612 compress regression fixture\npage 7 line 636 compress regression fixture\npage 7 line 660 compress regression fixture\npage 7 line 684 compress regression fixture\npage 7 line 708 compress regression fixture\npage 7 line 732 compress regression fixture\npage 7 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "7a1df0a532f69354"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 8 line 60 compress regression fixture\npage 8 line 84 compress regression fixture\npage 8 line 108 compress regression fixture\npage 8 line 132 compress regression fixture\npage 8 line 156 compress regression fixture\npage 8 line 180 compress regression fixture\npage 8 line 204 compress regression fixture\npage 8 line 228 compress regression fixture\npage 8 line 252 compress regression fixture\npage 8 line 276 compress regression fixture\npage 8 line 300 compress regression fixture\npage 8 line 324 compress regression fixture\npage 8 line 348 compress regression fixture\npage 8 line 372 compress regression fixture\npage 8 line 396 compress regression fixture\npage 8 line 420 compress regression fixture\npage 8 line 444 compress regression fixture\npage 8 line 468 compress regression fixture\npage 8 line 492 compress regression fixture\npage 8 line 516 compress regression fixture\npage 8 line 540 compress regression fixture\npage 8 line 564 compress regression fixture\npage 8 line 588 compress regression fixture\npage 8 line 612 compress regression fixture\npage 8 line 636 compress regression fixture\npage 8 line 660 compress regression fixture\npage 8 line 684 compress regression fixture\npage 8 line 708 compress regression fixture\npage 8 line 732 compress regression fixture\npage 8 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "5ecbeb49ef65c269"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 9 line 60 compress regression fixture\npage 9 line 84 compress regression fixture\npage 9 line 108 compress regression fixture\npage 9 line 132 compress regression fixture\npage 9 line 156 compress regression fixture\npage 9 line 180 compress regression fixture\npage 9 line 204 compress regression fixture\npage 9 line 228 compress regression fixture\npage 9 line 252 compress regression fixture\npage 9 line 276 compress regression fixture\npage 9 line 300 compress regression fixture\npage 9 line 324 compress regression fixture\npage 9 line 348 compress regression fixture\npage 9 line 372 compress regression fixture\npage 9 line 396 compress regression fixture\npage 9 line 420 compress regression fixture\npage 9 line 444 compress regression fixture\npage 9 line 468 compress regression fixture\npage 9 line 492 compress regression fixture\npage 9 line 516 compress regression fixture\npage 9 line 540 compress regression fixture\npage 9 line 564 compress regression fixture\npage 9 line 588 compress regression fixture\npage 9 line 612 compress regression fixture\npage 9 line 636 compress regression fixture\npage 9 line 660 compress regression fixture\npage 9 line 684 compress regression fixture\npage 9 line 708 compress regression fixture\npage 9 line 732 compress regression fixture\npage 9 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "235f7d27f222efa6"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 10 line 60 compress regression fixture\npage 10 line 84 compress regression fixture\npage 10 line 108 compress regression fixture\npage 10 line 132 compress regression fixture\npage 10 line 156 compress regression fixture\npage 10 line 180 compress regression fixture\npage 10 line 204 compress regression fixture\npage 10 line 228 compress regression fixture\npage 10 line 252 compress regression fixture\npage 10 line 276 compress regression fixture\npage 10 line 300 compress regression fixture\npage 10 line 324 compress regression fixture\npage 10 line 348 compress regression fixture\npage 10 line 372 compress regression fixture\npage 10 line 396 compress regression fixture\npage 10 line 420 compress regression fixture\npage 10 line 444 compress regression fixture\npage 10 line 468 compress regression fixture\npage 10 line 492 compress regression fixture\npage 10 line 516 compress regression fixture\npage 10 line 540 compress regression fixture\npage 10 line 564 compress regression fixture\npage 10 line 588 compress regression fixture\npage 10 line 612 compress regression fixture\npage 10 line 636 compress regression fixture\npage 10 line 660 compress regression fixture\npage 10 line 684 compress regression fixture\npage 10 line 708 compress regression fixture\npage 10 line 732 compress regression fixture\npage 10 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "f2d1f99721244582"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 11 line 60 compress regression fixture\npage 11 line 84 compress regression fixture\npage 11 line 108 compress regression fixture\npage 11 line 132 compress regression fixture\npage 11 line 156 compress regression fixture\npage 11 line 180 compress regression fixture\npage 11 line 204 compress regression fixture\npage 11 line 228 compress regression fixture\npage 11 line 252 compress regression fixture\npage 11 line 276 compress regression fixture\npage 11 line 300 compress regression fixture\npage 11 line 324 compress regression fixture\npage 11 line 348 compress regression fixture\npage 11 line 372 compress regression fixture\npage 11 line 396 compress regression fixture\npage 11 line 420 compress regression fixture\npage 11 line 444 compress regression fixture\npage 11 line 468 compress regression fixture\npage 11 line 492 compress regression fixture\npage 11 line 516 compress regression fixture\npage 11 line 540 compress regression fixture\npage 11 line 564 compress regression fixture\npage 11 line 588 compress regression fixture\npage 11 line 612 compress regression fixture\npage 11 line 636 compress regression fixture\npage 11 line 660 compress regression fixture\npage 11 line 684 compress regression fixture\npage 11 line 708 compress regression fixture\npage 11 line 732 compress regression fixture\npage 11 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "fd1a68af9218a5b9"
+   },
+   {
+    "size": [
+     595.0,
+     842.0
+    ],
+    "rot": 0,
+    "text": "page 12 line 60 compress regression fixture\npage 12 line 84 compress regression fixture\npage 12 line 108 compress regression fixture\npage 12 line 132 compress regression fixture\npage 12 line 156 compress regression fixture\npage 12 line 180 compress regression fixture\npage 12 line 204 compress regression fixture\npage 12 line 228 compress regression fixture\npage 12 line 252 compress regression fixture\npage 12 line 276 compress regression fixture\npage 12 line 300 compress regression fixture\npage 12 line 324 compress regression fixture\npage 12 line 348 compress regression fixture\npage 12 line 372 compress regression fixture\npage 12 line 396 compress regression fixture\npage 12 line 420 compress regression fixture\npage 12 line 444 compress regression fixture\npage 12 line 468 compress regression fixture\npage 12 line 492 compress regression fixture\npage 12 line 516 compress regression fixture\npage 12 line 540 compress regression fixture\npage 12 line 564 compress regression fixture\npage 12 line 588 compress regression fixture\npage 12 line 612 compress regression fixture\npage 12 line 636 compress regression fixture\npage 12 line 660 compress regression fixture\npage 12 line 684 compress regression fixture\npage 12 line 708 compress regression fixture\npage 12 line 732 compress regression fixture\npage 12 line 756 compress regression fixture",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "8cd231f3d67427b3"
    }
   ]
  },

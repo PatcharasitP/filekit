@@ -9,7 +9,7 @@ FileKit เก็บไลบรารีทุกตัวไว้ในเค
 | ไฟล์ใน `vendor/` | ไลบรารี | สัญญาอนุญาต | ต้นทาง |
 |---|---|---|---|
 | `pdf.min.js` , `pdf.worker.min.js` | pdf.js | Apache-2.0 | https://github.com/mozilla/pdf.js |
-| `pdf-lib.min.js` | pdf-lib | MIT | https://github.com/Hopding/pdf-lib |
+| `pdf-lib.min.js` | @cantoo/pdf-lib (fork ที่ยังดูแลอยู่ของ pdf-lib) | MIT | https://github.com/cantoo-scribe/pdf-lib |
 | `xlsx.full.min.js` | SheetJS | Apache-2.0 | https://github.com/SheetJS/sheetjs |
 | `docx.umd.js` | docx | MIT | https://github.com/dolanmiu/docx |
 | `jszip.min.js` | JSZip | MIT หรือ GPL-3.0-or-later | https://github.com/Stuk/jszip |

@@ -19,6 +19,7 @@
 """
 import os
 import sys
+from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
@@ -57,10 +58,29 @@ def ck(label, cond, detail=""):
         print(f"  ❌ {label}" + (f"  ({detail})" if detail else ""))
 
 
+def press_download(pg):
+    """กดปุ่มดาวน์โหลดที่ผู้ใช้เห็นจริงบนจอ
+    ‼️ v2 บนมือถือ ปุ่มดาวน์โหลดรายไฟล์ของเครื่องมือย่อรูปอยู่ในแผ่น "ตัวเลือก" ที่ปิดอยู่
+       สิ่งที่อยู่บนจอจริงหลังทำเสร็จคือ "โหลดทั้งหมด (ZIP)" ซึ่งผ่าน download() ตัวเดียวกัน
+       เทสนี้ถามว่า "กดโหลดแล้วส่งผ่าน share sheet ไหม" ไม่ได้ถามว่าเป็นปุ่มใบไหน
+       จึงกดใบแรกที่มองเห็นและมีคำว่า โหลด (ครอบทั้ง ดาวน์โหลด และ โหลดทั้งหมด)"""
+    import re as _re
+    loc = pg.locator("button:visible").filter(has_text=_re.compile("โหลด"))
+    if not loc.count():
+        loc = pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True)
+    loc.first.click()
+
+
+PHOTO = Path(__file__).resolve().parent.parent / "samples" / "ตัวอย่าง-รูปภาพ-1.jpg"
+
+
 def make_result(pg):
-    """ย่อรูปตัวอย่างจนมีปุ่มดาวน์โหลดให้กด"""
-    pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
-    pg.wait_for_timeout(2800)
+    """ย่อรูปหนึ่งใบจนมีปุ่มดาวน์โหลดให้กด
+    ‼️ ใช้รูปใบเดียวเหมือนเหตุการณ์จริง (พี่ปอนด์ย่อรูปหนึ่งใบจากใน LINE) ไม่ใช่ไฟล์ตัวอย่าง
+       ไฟล์ตัวอย่างมี 2 รูป ซึ่งปุ่มที่เห็นบนจอจะเป็น "โหลดทั้งหมด (ZIP)" แทน "ดาวน์โหลดรูป"
+       (วัดจริง 22/09/2026 จอ 390: 1 รูป = ดาวน์โหลดรูป, 2 รูป = โหลดทั้งหมด (ZIP) ส่วนรายไฟล์อยู่ในแผ่นตัวเลือก)"""
+    pg.locator(".dz input[type=file]").first.set_input_files(str(PHOTO))
+    pg.wait_for_timeout(2200)
     pg.get_by_role("button", name="ย่อและบีบอัด").filter(visible=True).first.click()
     pg.wait_for_timeout(3500)
 
@@ -99,7 +119,7 @@ def main():
         pg.goto(f"{BASE}/#image-resize", wait_until="load", timeout=60000)
         pg.wait_for_timeout(2600)
         make_result(pg)
-        pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
+        press_download(pg)
         pg.wait_for_timeout(2500)
         shared = pg.evaluate("() => window.__shared || []")
         ck("ส่งไฟล์ผ่าน share sheet ของระบบ", len(shared) == 1 and len(shared[0]) == 1, str(shared))
@@ -108,7 +128,7 @@ def main():
         # ผู้ใช้กดยกเลิกใน share sheet = ตั้งใจไม่เอา ห้ามยัดดาวน์โหลดตามมา
         pg.evaluate("() => { navigator.share = async () => { const e = new Error('x');"
                     " e.name = 'AbortError'; throw e; }; }")
-        pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
+        press_download(pg)
         pg.wait_for_timeout(2200)
         ck("ผู้ใช้กดยกเลิกเอง ต้องไม่มีอะไรเด้งตามมา", dl_count["n"] == 0, f"เด้ง {dl_count['n']} ครั้ง")
 
@@ -117,7 +137,7 @@ def main():
         got = ""
         try:
             with pg.expect_download(timeout=12000) as dl:
-                pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
+                press_download(pg)
             got = dl.value.suggested_filename
         except Exception as e:
             got = "ไม่ได้ไฟล์: " + str(e).splitlines()[0][:50]
@@ -137,7 +157,7 @@ def main():
         got = ""
         try:
             with pg.expect_download(timeout=12000) as dl:
-                pg.get_by_role("button", name="ดาวน์โหลด").filter(visible=True).first.click()
+                press_download(pg)
             got = dl.value.suggested_filename
         except Exception as e:
             got = "ไม่ได้ไฟล์: " + str(e).splitlines()[0][:50]

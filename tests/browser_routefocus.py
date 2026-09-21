@@ -51,12 +51,16 @@ with sync_playwright() as pw:
     ck(f"เปลี่ยนหน้าซ้ำ 3 ครั้ง แล้วก้อนเครื่องมือไม่ถูกถอดออกเลย (ถอดไป {rm} ครั้ง)", rm == 0, rm)
 
     print("\n② โฟกัสที่คนใช้คีย์บอร์ดตั้งไว้ ต้องอยู่ครบหลังเปลี่ยนหน้าซ้ำ")
-    pg.locator(".dz").focus()
+    # ‼️ v2: บนหน้าเปล่า กล่องลากไฟล์อยู่หลังชั้นลอย (inert) โฟกัสไม่ได้อยู่แล้ว
+    #    ของที่คนใช้คีย์บอร์ดโฟกัสได้จริงคือปุ่มยักษ์ เทสจึงถามคำถามเดิมกับของที่มีอยู่จริง
+    #    คือ "โฟกัสที่ตั้งไว้ ต้องไม่หลุดหลังเปลี่ยนหน้าซ้ำ"
+    target, want = (".s2-cta-big", "s2-cta-big") if pg.locator(".s2-cta-big:visible").count() else (".dz", "dz")
+    pg.locator(target).first.focus()
     before = pg.evaluate("document.activeElement.className || document.activeElement.tagName")
     pg.evaluate("window.dispatchEvent(new HashChangeEvent('hashchange'))")
     pg.wait_for_timeout(600)
     after = pg.evaluate("document.activeElement.className || document.activeElement.tagName")
-    ck(f"โฟกัสยังอยู่ที่กล่องลากไฟล์ (ก่อน '{before}' หลัง '{after}')", "dz" in (after or ""), after)
+    ck(f"โฟกัสยังอยู่ที่เดิม (ก่อน '{before}' หลัง '{after}')", want in (after or ""), after)
 
     print("\n③ สลับไปเครื่องมืออื่นแล้วกลับมา ต้องยังใช้งานได้ปกติ")
     pg.goto(BASE + "/#/pdf-merge", wait_until="networkidle")

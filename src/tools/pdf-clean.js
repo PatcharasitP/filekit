@@ -159,7 +159,7 @@ export function mount(tool) {
       if (info.fields) items.push({ level: "warn",
         text: tr(`ช่องฟอร์ม ${info.fields} ช่อง ที่ยังกรอกแก้ได้`, `${info.fields} form fields that can still be edited`) });
       if (info.attachments) items.push({ level: "warn",
-        text: tr(`ไฟล์แนบในเอกสาร ${info.attachments} ไฟล์`, `${info.attachments} files attached inside`) });
+        text: tr(`ไฟล์แนบในเอกสาร ${info.attachments} ไฟล์`, `${pl(info.attachments, "file", "files")} attached inside`) });
       if (info.scripts) items.push({ level: "warn",
         text: tr(`สคริปต์ฝังในไฟล์ ${info.scripts} ชุด`, `${info.scripts} embedded scripts`) });
       if (items.length) dirty++;

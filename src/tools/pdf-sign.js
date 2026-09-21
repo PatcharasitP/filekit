@@ -153,7 +153,7 @@ export function mount(tool) {
 
   const ws = workspace(tool, {
     left: { title: tr("เอกสาร PDF", "PDF document"), node: leftNode, hint: tr("เลือกไฟล์แล้วคลิกเลขหน้า", "Choose a file, click a page") },
-    center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ เลือกทางซ้ายเพื่อเซ็น", "No file yet. Choose one on the left") },
+    center: { node: centerNode, empty: tr("ยังไม่มีไฟล์ เลือกไฟล์ PDF ก่อนเพื่อเซ็น", "No file yet. Choose a PDF to sign") },
     right: { title: tr("ลายเซ็นของคุณ", "Your signature"), node: rightNode },
     toolbar: [prevBtn, pageLabel, nextBtn, el("span", { class: "sep" }), fitSw, placeMidBtn, delSelBtn, clearPageBtn],
     toolbarGroups: [tr("หน้า", "Page"), tr("ลายเซ็นบนหน้านี้", "Signatures on this page")],

@@ -8,7 +8,6 @@ import { searchTools, highlightRange } from "./search.js";
 import { el, $, $$, showVeil, filesFromClipboard, useV2 } from "./dom.js";
 import { toolIcon, uiIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic, pl } from "./i18n.js";
-import { inAppBanner } from "./inapp.js";
 
 const toolBox = $("#tool"), grids = $("#tools");
 const search = $("#q"), searchBox = $("#searchbox"), hits = $("#hits"), cats = $("#cats");
@@ -705,10 +704,18 @@ for (const a of $$(".sites a[data-gocat]")) {
 /* ‼️ แถบเตือนตอนเปิดจากแอปแชท ต้องขึ้นตั้งแต่เปิดหน้า ไม่ใช่ตอนกดดาวน์โหลดแล้วพัง
    พี่ปอนด์เจอเองกับ LINE: ย่อรูปเสร็จ กดโหลด แล้ว LINE บอกว่าโหลดไม่ได้
    งานที่ทำมาเสียเปล่าทั้งหมด บอกตั้งแต่แรกผู้ใช้จะได้ย้ายไปเบราว์เซอร์จริงก่อนลงมือ */
-(() => {
-  const bar = inAppBanner();
-  if (!bar) return;
-  const head = document.querySelector("header.top");
-  if (head && head.parentNode) head.parentNode.insertBefore(bar, head.nextSibling);
-  else document.body.prepend(bar);
-})();
+/* ‼️ โหลด inapp.js เฉพาะตอนหน้าตาเหมือนเบราว์เซอร์ในแอป (22/09/2026)
+   เดิมโหลดทุกครั้ง 2.3 KB (บีบแล้ว) ทั้งที่แทบทุกคนไม่ได้เปิดจากแอปแชท
+   แล้วหน้าแรกเกินงบ JS 60 KB ที่พี่ปอนด์ตั้งไว้ (วัดได้ 60,650 B)
+   ‼️ รายชื่อแอปตรงนี้ต้องครอบทุกแอปใน SIGNS ของ inapp.js เสมอ
+      มีเทสบังคับใน tests/accepts.test.mjs ไม่งั้นเพิ่มแอปใหม่แล้วแถบไม่ขึ้นเงียบ ๆ */
+const MAYBE_IN_APP = /Line\/|FBAN|FBAV|FB_IAB|FB4A|Instagram|Messenger|BytedanceWebview|musical_ly|TikTok/i;
+if (MAYBE_IN_APP.test(navigator.userAgent)) {
+  import("./inapp.js").then(({ inAppBanner }) => {
+    const bar = inAppBanner();
+    if (!bar) return;
+    const head = document.querySelector("header.top");
+    if (head && head.parentNode) head.parentNode.insertBefore(bar, head.nextSibling);
+    else document.body.prepend(bar);
+  }).catch(() => {});
+}

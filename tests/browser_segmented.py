@@ -1,5 +1,7 @@
-import sys, os
+import sys, os, pathlib
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import fkui          # ตัวช่วยกลางที่รู้จักโครงหน้า v2
 BASE = os.environ.get("FK_BASE", "http://localhost:8899")
 CASES = [("pdf-watermark", 5), ("word-to-pdf", 5), ("images-to-pdf", 2),
          ("powerpoint-to-pdf", 2), ("pdf-ocr", 3)]
@@ -14,6 +16,8 @@ with sync_playwright() as p:
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     for tid, n_items in CASES:
         pg.goto("about:blank"); pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle"); pg.wait_for_timeout(700)
+        # ‼️ v2: ตัวเลือกอยู่หลังชั้นลอยของหน้าเปล่าจนกว่าจะมีไฟล์ ผู้ใช้จริงใส่ไฟล์ก่อนแล้วค่อยตั้งค่า
+        fkui.leave_landing(pg)
         ck(f"{tid} · ช่องย่อยรวมทุกกลุ่มครบ {n_items}", pg.locator(".seg .seg-item").count(), n_items)
         items = pg.locator(".seg").first.locator(".seg-item")
         before = pg.evaluate("document.querySelector('.seg').value")

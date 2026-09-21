@@ -362,6 +362,15 @@ THEMES = ["dark", "light"]
 def run_page_scan(pg, path_label, theme):
     pg.evaluate(f"document.documentElement.dataset.theme='{theme}'")
     pg.wait_for_timeout(350)
+    # ‼️ รอให้สีที่กำลังเปลี่ยน (CSS transition) จบจริงก่อนวัด ห้ามพึ่งเวลาตายตัวอย่างเดียว (22/09/2026)
+    #    ตอนรันเต็ม 8 ชุดพร้อมกัน เครื่องหน่วง 350ms ยังไม่พอ วัดได้ปุ่มภาษา "EN" 2.84:1 กลางทางเปลี่ยนสี
+    #    รันเดี่ยวสองรอบผ่านทั้งคู่ = ไม่ใช่ของพัง แต่เทสสุ่มจังหวะ ดูเฉพาะ transition เพราะแอนิเมชันวนไม่มีวันจบ
+    try:
+        pg.wait_for_function("""() => document.getAnimations()
+            .filter((a) => typeof CSSTransition !== 'undefined' && a instanceof CSSTransition)
+            .every((a) => a.playState !== 'running')""", timeout=5000)
+    except Exception:
+        pass
     r = pg.evaluate(SCAN_JS)
     label = f"{path_label} · {'โหมดมืด' if theme == 'dark' else 'โหมดสว่าง'}"
 

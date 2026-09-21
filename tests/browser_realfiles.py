@@ -402,7 +402,7 @@ def make_docx_numbered(tag, fmt):
 
 def make_owner_locked_pdf():
     """PDF ที่ล็อกเฉพาะสิทธิ์ (owner password) เปิดอ่านได้ปกติไม่ต้องใส่รหัส
-    แต่ไลบรารีที่เราใช้เขียนไฟล์ถอดรหัสไม่ได้ ถ้าฝืนทำต่อจะได้ไฟล์เสีย"""
+    ไลบรารีเขียนไฟล์ตัวเก่าถอดรหัสไม่ได้ ฝืนทำต่อจะได้ไฟล์เสีย ตัวใหม่ (@cantoo/pdf-lib ตั้งแต่ v139) ถอดได้"""
     d = fitz.open()
     for i in range(3):
         page = d.new_page(width=595, height=842)
@@ -503,7 +503,7 @@ def main():
             print("\n── ① ชีทที่ผู้ใช้ซ่อนไว้ ต้องไม่ถูกส่งออกโดยไม่ถาม ──")
 
             pg.goto(f"{base}/#/excel-csv", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").set_input_files(str(xlsx))
             pg.wait_for_timeout(600)
             press(pg, "แปลงไฟล์")
@@ -525,7 +525,7 @@ def main():
             ck("กดขอเองแล้วได้ชีทที่ซ่อนมาครบ", len([n for n in names2 if "ลับ" in n]), 2)
 
             pg.goto(f"{base}/#/excel-to-pdf", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").set_input_files(str(xlsx))
             pg.wait_for_timeout(600)
             press(pg, "แปลงเป็น PDF")
@@ -546,7 +546,7 @@ def main():
             # ── ② รูปที่หมุนด้วย EXIF ต้องเข้า PDF ถูกทิศ ──────────────────────────
             print("\n── ② รูปถ่ายที่หมุนด้วยแท็ก EXIF ──")
             pg.goto(f"{base}/#/images-to-pdf", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").set_input_files(str(photo))
             pg.wait_for_timeout(1200)
             press(pg, "สร้างไฟล์ PDF")
@@ -578,7 +578,7 @@ def main():
                 return out, hits
 
             pg.goto(f"{base}/#/word-to-pdf", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").set_input_files(str(docx))
             pg.wait_for_timeout(1200)
             press(pg, "แปลง|สร้าง")
@@ -594,7 +594,7 @@ def main():
                [w for w, n in hits.items() if n == 0], [])
 
             pg.goto(f"{base}/#/excel-to-pdf", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").set_input_files(str(narrow))
             pg.wait_for_timeout(900)
             press(pg, "แปลงเป็น PDF")
@@ -616,7 +616,7 @@ def main():
             # ── ④ PDF ที่หน้าถูกหมุนไว้ เลขหน้าต้องอยู่ขอบล่างเสมอ ─────────────────────
             print("\n── ④ เลขหน้าบน PDF ที่หมุนไว้ ──")
             pg.goto(f"{base}/#/pdf-page-numbers", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").set_input_files(str(rotated))
             pg.wait_for_timeout(2000)
             press(pg, "ใส่เลขหน้า|เพิ่มเลขหน้า")
@@ -653,11 +653,14 @@ def main():
             # ── ⑤ บีบอัด PDF ต้องไม่ทำลายชั้นข้อความเงียบ ๆ ────────────────────────────
             print("\n── ⑤ บีบอัด PDF ที่ยังค้นหาข้อความได้ ──")
             pg.goto(f"{base}/#/pdf-compress", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(text_pdf))
             pg.wait_for_timeout(2500)
             press(pg, "บีบอัดไฟล์")
-            pg.wait_for_selector(".results .result, .results .note.warn", timeout=40000)
+            # v2 ย้ายแถวผลลัพธ์ไปแผงผลลัพธ์ และย้ายคำเตือนไปใต้บรรทัด "เสร็จแล้ว" จึงต้องรอทั้งที่เดิมและที่ใหม่
+            # ‼️ ต้องมี :visible ทุกส่วน wait_for_selector หยิบตัวแรกตามลำดับในหน้า ไม่ใช่ตัวแรกที่มองเห็น
+            pg.wait_for_selector(".s2-side-res .result:visible, .s2-res-notes .note.warn:visible, "
+                                 ".results .result:visible, .results .note.warn:visible", timeout=40000)
             ck("บีบไฟล์ข้อความแล้วได้ไฟล์ออกมาจริง", pg.locator(".s2-side-res .result, .results .result").count() >= 1, True)
             with pg.expect_download(timeout=25000) as info:
                 pg.locator(".s2-side-res .result button, .results .result button").first.click()
@@ -670,16 +673,20 @@ def main():
 
             # ไฟล์ที่บีบโครงสร้างมาแล้ว: ห้ามวาดใหม่เป็นภาพให้เอง ต้องหยุดถามก่อน
             pg.goto(f"{base}/#/pdf-compress", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(compact_pdf))
             pg.wait_for_timeout(2500)
             press(pg, "บีบอัดไฟล์")
-            pg.wait_for_selector(".results .result, .results .note.warn", timeout=40000)
+            # v2 ย้ายแถวผลลัพธ์ไปแผงผลลัพธ์ และย้ายคำเตือนไปใต้บรรทัด "เสร็จแล้ว" จึงต้องรอทั้งที่เดิมและที่ใหม่
+            # ‼️ ต้องมี :visible ทุกส่วน wait_for_selector หยิบตัวแรกตามลำดับในหน้า ไม่ใช่ตัวแรกที่มองเห็น
+            pg.wait_for_selector(".s2-side-res .result:visible, .s2-res-notes .note.warn:visible, "
+                                 ".results .result:visible, .results .note.warn:visible", timeout=40000)
             ck("ไฟล์ที่บีบต่อไม่ได้โดยไม่เสียข้อความ ต้องไม่ยัดไฟล์ที่ข้อความหายให้เอง",
                pg.locator(".s2-side-res .result, .results .result").count(), 0)
             ck("ต้องมีปุ่มให้ผู้ใช้เลือกเองว่าจะยอมเสียข้อความไหม",
-               pg.locator(".results .note.warn button").count(), 1)
-            pg.evaluate("() => document.querySelector('.note.warn button').click()")
+               pg.locator(".note.warn button:visible").count(), 1)
+            # กดแบบผู้ใช้ (ต้องมองเห็นและกดได้จริง) ไม่ใช่สั่ง click ผ่าน JS ที่ทะลุได้ทุกอย่าง
+            pg.locator(".note.warn button:visible").first.click()
             pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=40000)
             with pg.expect_download(timeout=25000) as info:
                 pg.locator(".s2-side-res .result button, .results .result button").first.click()
@@ -690,7 +697,7 @@ def main():
             # ── ⑥ รวมไฟล์ Word ต้องไม่ทำเชิงอรรถ/คอมเมนต์ของไฟล์หลังหาย ────────────────
             print("\n── ⑥ รวมไฟล์ Word ที่มีเชิงอรรถ อ้างอิงท้ายเรื่อง และคอมเมนต์ ──")
             pg.goto(f"{base}/#/word-join", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files([str(x) for x in note_docs])
             pg.wait_for_timeout(1500)
             press(pg, "รวมไฟล์|รวมเป็น")
@@ -726,7 +733,7 @@ def main():
             # ── ⑦ ตารางในสไลด์ และการแทนที่คำข้ามขอบเขตกล่องข้อความ ────────────────────
             print("\n── ⑦ ตารางในสไลด์ PowerPoint ──")
             pg.goto(f"{base}/#/powerpoint-to-pdf", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(deck))
             pg.wait_for_timeout(1500)
             press(pg, "แปลง|สร้าง")
@@ -745,7 +752,7 @@ def main():
 
             print("\n── ⑧ แทนที่คำ ห้ามข้ามขอบเขตกล่องข้อความ ──")
             pg.goto(f"{base}/#/word-replace", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(tbox))
             pg.wait_for_timeout(1200)
             boxes = pg.locator("input[type=text]:visible")
@@ -770,7 +777,7 @@ def main():
             # ── ⑨ หัวกระดาษ/ท้ายกระดาษของ Word ต้องติดไปทุกหน้า ──────────────────────
             print("\n── ⑨ หัวกระดาษและท้ายกระดาษ ──")
             pg.goto(f"{base}/#/word-to-pdf", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(hf_doc))
             pg.wait_for_timeout(1200)
             press(pg, "แปลง|สร้าง")
@@ -802,7 +809,7 @@ def main():
             # ── ⑩ รวมไฟล์ Word ที่รูปแบบรายการมีเลขชนกัน ────────────────────────────
             print("\n── ⑩ รูปแบบรายการมีเลขตอนรวมไฟล์ ──")
             pg.goto(f"{base}/#/word-join", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files([str(x) for x in num_docs])
             pg.wait_for_timeout(1500)
             press(pg, "รวมไฟล์|รวมเป็น")
@@ -829,29 +836,44 @@ def main():
             ck("ทุกหมายเลขรายการที่เนื้อหาอ้างถึง มีนิยามรองรับจริง",
                [x for v in used.values() for x in v if x not in defined], [])
 
-            # ── ⑪ PDF ที่เข้ารหัสไว้ ต้องหยุดแล้วบอก ไม่ใช่ยัดไฟล์เสียให้ ────────────────
-            print("\n── ⑪ PDF ที่เข้ารหัสไว้ ──")
+            # ── ⑪ PDF ที่ล็อกเฉพาะสิทธิ์ ต้องได้ไฟล์ที่ใช้ได้จริง ไม่ใช่ไฟล์เสีย ────────────────
+            # ‼️ เปลี่ยนความคาดหวัง 22/09/2026 ตั้งแต่ v139 (@cantoo/pdf-lib) เครื่องมือเปิดไฟล์ล็อกสิทธิ์ได้จริง
+            #    โดยลองรหัสว่างก่อน (ตั้งใจ ดูหมายเหตุใน src/pdfopen.js) ข้อเดิมที่ว่า "ต้องหยุดแล้วบอกว่าเข้ารหัส"
+            #    เขียนตอนไลบรารีเก่าถอดรหัสไม่ได้แล้วเขียนไฟล์เสียออกมา สิ่งที่ผู้ใช้ห่วงจริงคือไฟล์ที่ได้ใช้ได้ไหม
+            #    จึงเปิดไฟล์ผลลัพธ์ตรวจเอง: ต้องเปิดได้โดยไม่ต้องใส่รหัส หน้าครบ และเนื้อหาเดิมอ่านออกทุกหน้า
+            print("\n── ⑪ PDF ที่ล็อกเฉพาะสิทธิ์ ──")
             for tool, btn in [("pdf-split", "แยกไฟล์|แยก"),
                               ("pdf-page-numbers", "ใส่เลขหน้า|เพิ่มเลขหน้า")]:
                 pg.goto("about:blank")
                 pg.goto(f"{base}/#/{tool}", wait_until="networkidle")
-                pg.wait_for_selector(".dz")
+                pg.wait_for_selector(".dz", state="attached")
                 pg.locator(".dz input[type=file]").first.set_input_files(str(locked))
                 pg.wait_for_timeout(2500)
                 press(pg, btn)
                 pg.wait_for_timeout(5000)
                 says = " ".join(pg.locator(".status").all_inner_texts())
-                ck(f"{tool}: ไม่ยัดไฟล์ที่เปิดไม่ขึ้นให้ผู้ใช้",
-                   pg.locator(".result button").count(), 0)
-                ck(f"{tool}: บอกตรง ๆ ว่าเข้ารหัสไว้ และบอกวิธีแก้",
-                   ("เข้ารหัส" in says and "ปลดล็อก" in says), True)
                 ck(f"{tool}: ไม่ขึ้นข้อความ Error แบบดิบ ๆ", "Error:" in says, False)
+                dl_btn = pg.locator(".s2-side-res button:visible, .results .result button:visible").filter(has_text="ดาวน์โหลด")
+                ck(f"{tool}: ทำไฟล์ที่ล็อกสิทธิ์ได้ มีไฟล์ให้ดาวน์โหลด", dl_btn.count() >= 1, True)
+                if not dl_btn.count():
+                    continue
+                with pg.expect_download(timeout=25000) as info:
+                    dl_btn.first.click()
+                out11b = DL / f"locked-{tool}.pdf"
+                info.value.save_as(str(out11b))
+                doc = fitz.open(out11b)
+                ck(f"{tool}: ไฟล์ที่ได้เปิดได้โดยไม่ต้องใส่รหัส", doc.needs_pass, False)
+                ck(f"{tool}: หน้าครบ 3 หน้า", doc.page_count, 3)
+                ck(f"{tool}: เนื้อหาเดิมอ่านออกครบทุกหน้า (ไม่ใช่ไฟล์เสีย)",
+                   [f"page {i + 1} important content" in doc[i].get_text() for i in range(doc.page_count)],
+                   [True] * doc.page_count)
+                doc.close()
 
             # ── ⑫ วันที่จากไฟล์ Excel ต้องไม่เพี้ยนไป 1 วัน ────────────────────────────
             print("\n── ⑫ วันที่จากไฟล์ Excel ──")
             pg.goto("about:blank")
             pg.goto(f"{base}/#/thai-date", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(date_xlsx))
             pg.wait_for_timeout(2500)
             olds = pg.evaluate("() => [...document.querySelectorAll('td.old')].map(e=>e.textContent.trim())")
@@ -865,7 +887,7 @@ def main():
             print("\n── ⑬ วางลายเซ็นบนหน้าที่หมุนไว้ ──")
             pg.goto("about:blank")
             pg.goto(f"{base}/#/pdf-sign", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(rotated))
             pg.wait_for_timeout(4000)
             inputs = pg.locator("input[type=file]")
@@ -914,7 +936,7 @@ def main():
             print("\n── ⑭ PDF ที่มีชั้นซ่อนไว้ ──")
             pg.goto("about:blank")
             pg.goto(f"{base}/#/pdf-split", wait_until="networkidle")
-            pg.wait_for_selector(".dz")
+            pg.wait_for_selector(".dz", state="attached")
             pg.locator(".dz input[type=file]").first.set_input_files(str(layered))
             pg.wait_for_timeout(2500)
             press(pg, "แยกไฟล์|แยก")

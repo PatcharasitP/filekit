@@ -212,6 +212,12 @@ body.tool{overflow:hidden}
   border-bottom:1px dashed var(--line); padding-bottom:4px}
 .s2-res-meta{font-size:13px; color:var(--text-mute); margin-top:4px}
 .s2-res-row{display:flex; gap:8px; margin-top:14px}
+/* ข้อความสรุปของเครื่องมือ (เช่น เล็กลง 6%) ตัวหนังสือเรียบ ไม่ทำเป็นกล่องสี เพราะบรรทัดเสร็จแล้วบอกความสำเร็จอยู่แล้ว */
+.s2-res-msg{margin:0 0 8px; font-size:13.5px; line-height:1.6; color:var(--text-dim)}
+.s2-res-msg[data-kind="err"]{color:color-mix(in srgb,var(--err) 62%,var(--text))}
+/* คำเตือนของเครื่องมือที่ตามผลลัพธ์มา อยู่ใต้บรรทัด เสร็จแล้ว ก่อนรายการไฟล์ ให้เห็นก่อนกดดาวน์โหลด */
+.s2-res-notes{display:flex; flex-direction:column; gap:8px; margin:8px 0 4px}
+.s2-res-notes .note{margin:0}
 .s2-btn2{flex:1 1 0; height:40px; border:1px solid var(--line); background:var(--card);
   color:var(--text); border-radius:var(--r-sm); font-family:inherit; font-size:13.5px; cursor:pointer}
 .s2-btn2:hover{background:var(--card-hi); border-color:var(--ac,var(--brand))}

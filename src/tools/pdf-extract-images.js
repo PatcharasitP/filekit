@@ -10,7 +10,7 @@
 //   ส่วน pdf.js ถอดให้เป็น bitmap ทุกชนิด แล้วเราวาดลง canvas บันทึกเป็น PNG ได้หมด
 import { openPdf, passwordBox, friendlyPdfError } from "../pdfopen.js";
 import { loadLibs } from "../loader.js";
-import { el, dropzone, statusBar, button, field, select, download, downloadButton,
+import { el, dropzone, statusBar, button, field, select, download, downloadButton, saveFile,
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
@@ -194,7 +194,7 @@ export function mount(tool) {
           el("div", { class: "xi-cap" }, tr(`หน้า ${f.page}, ${f.w}x${f.h}, ${fmtBytes(f.blob.size)}`,
                                             `Page ${f.page}, ${f.w}x${f.h}, ${fmtBytes(f.blob.size)}`)),
           button(tr("บันทึก", "Save"), { icon: "download", label: tr(`บันทึก ${f.name}`, `Save ${f.name}`),
-            onclick: () => download(f.blob, f.name) }),
+            onclick: () => saveFile(f.blob, f.name) }),   // รายใบ ไม่สลับหน้า (ดู saveFile ใน ui.js)
         ]);
       }));
 
@@ -214,6 +214,7 @@ export function mount(tool) {
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, found[0].name),
             el("small", {}, `${found[0].w}x${found[0].h}`)]),
+          el("span", { class: "r-size" }, fmtBytes(found[0].blob.size)),
           downloadButton(found[0].blob, found[0].name),
         ]));
       }

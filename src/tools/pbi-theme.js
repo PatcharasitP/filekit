@@ -126,6 +126,11 @@ const STYLE = `
 .ts .panel{font-size:14px; line-height:1.625; color:var(--tfg);
   border-radius:12px; border-color:var(--tbd); padding:24px; display:flex; flex-direction:column; gap:20px}
 @media (max-width:640px){ .ts .panel{padding:14px; gap:14px} }
+/* ‼️ หน้าเครื่องมือ v2 ไม่มี .panel แล้ว เนื้อหาไปอยู่ใน .s2-stage (จับได้ 22/09/2026)
+   ขนาดตัวอักษรกับระยะบรรทัดที่ถอดมาจาก datatraining.io (พี่ปอนด์สั่ง 13/09) จึงหลุดไปเงียบ ๆ
+   วัดได้ว่าตัวอักษรกลายเป็น 15px จาก 14px ที่ออกแบบไว้ ส่วนฟอนต์ยังถูกเพราะ .ts อยู่ที่กรอบนอกสุด
+   ใส่เฉพาะเรื่องตัวอักษร ไม่ใส่ padding/กรอบ เพราะ .s2-stage มีระยะของโครง v2 อยู่แล้ว */
+.ts .s2-stage{font-size:14px; line-height:1.625; color:var(--tfg)}
 .ts-sec{background:var(--tbg); border:1px solid var(--tbd); border-radius:12px; padding:24px; min-width:0}
 @media (max-width:640px){ .ts-sec{padding:16px} }
 /* หัวข้อส่วน มีป้ายเลขลำดับแบบที่พี่ปอนด์ชอบ (/08 FAQ ของเว็บเดียวกัน) */

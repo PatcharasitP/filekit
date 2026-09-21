@@ -21,6 +21,8 @@ import random
 import shutil
 import tempfile
 import zipfile
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import fkui          # ตัวช่วยกลางที่รู้จักโครงหน้า v2
 
 import fitz
 import openpyxl
@@ -168,6 +170,9 @@ def case_split(pg, main):
     ck("กลุ่มไอทีได้ 2 คน บวกหัวตาราง", len(list(ws2.iter_rows(values_only=True))), 3)
 
     # ‼️ เลือกคอลัมน์รหัสที่ไม่ซ้ำกันเลย ต้องเตือนและปิดปุ่ม ไม่ใช่ปล่อยให้สร้าง 9 ไฟล์
+    # ‼️ แยกเสร็จแล้วหน้าเข้าสถานะผลลัพธ์ แผงตัวเลือกถูกแผงผลลัพธ์แทนที่
+    #    ผู้ใช้จริงต้องกด "กลับไปแก้" ก่อนถึงจะเปลี่ยนคอลัมน์ได้ เทสจึงต้องเดินทางเดียวกัน
+    fkui.back_to_work(pg)
     pick(pg, "รหัส")
     pg.wait_for_timeout(700)
     ck_true("เลือกคอลัมน์ที่ค่าไม่ซ้ำกันเลย แล้วยังกดแยกได้ (9 กลุ่ม ยังไม่เกินเพดาน 300)",
@@ -242,6 +247,8 @@ def case_page_numbers(pg, pdf):
     doc.close()
 
     # ‼️ ตั้งให้เริ่มใส่เลขเกินจำนวนหน้า ต้องบอกและปิดปุ่ม ไม่ใช่สร้างไฟล์ที่ไม่มีเลขเลย
+    # ทำเสร็จแล้วหน้าเข้าสถานะผลลัพธ์ ช่องตั้งค่าหายไปจากจอ ผู้ใช้ต้องกด "กลับไปแก้" ก่อนเหมือนกัน
+    fkui.back_to_work(pg)
     pg.locator("input[type=number]:visible").nth(1).fill("99")
     pg.wait_for_timeout(800)
     ck_true("ตั้งเริ่มใส่เลขเกินจำนวนหน้า แล้วยังใส่ได้เพราะถูกหนีบไว้ที่หน้าสุดท้าย",

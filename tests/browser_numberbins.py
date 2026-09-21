@@ -11,6 +11,7 @@
 #
 # รัน: ../.venv/bin/python tests/browser_numberbins.py   (หรือผ่าน tests/run.sh browser_numberbins)
 import os
+import re
 import pathlib
 import socket
 import subprocess
@@ -20,6 +21,9 @@ import time
 
 import openpyxl
 from playwright.sync_api import sync_playwright
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import fkui  # noqa: E402  ตัวช่วยกลางที่รู้จักโครงหน้าเครื่องมือ v2
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="filekit_nbins_"))
@@ -167,7 +171,7 @@ def main():
 
             print("\n── ③ พิมพ์จุดตัดเอง แล้วค่าทุกกลุ่มต้องตรงกับที่คำนวณอิสระ ──")
             pg.evaluate("""(txt) => {
-              const inp = [...document.querySelectorAll('.ws-right input.nb-num')]
+              const inp = [...document.querySelectorAll('.s2-side-bd input.nb-num, .s2-stage input.nb-num, .ws-right input.nb-num')]
                 .find(i => i.placeholder && i.placeholder.includes('0, 5, 10'));
               inp.value = txt;
               inp.dispatchEvent(new Event('change', { bubbles: true }));
@@ -186,7 +190,7 @@ def main():
             #    (ค่า 2.235 ก็อยู่ในกลุ่มนั้น ทั้งที่ป้ายเขียนว่าเริ่มที่ 3)
             ck("ป้ายอัตโนมัติถูกต้องตามจุดตัด", labels, ["≤ 2", "> 2 ถึง 5", "> 5 ถึง 7", "> 7"])
             ok("ข้อมูลมีทศนิยม สวิตช์ป้ายจำนวนเต็มต้องถูกปิดให้เอง",
-               pg.evaluate("() => document.querySelector('.ws-right .nb-switch input').checked") is False)
+               pg.evaluate("() => document.querySelector('.s2-side-bd .nb-switch input, .s2-stage .nb-switch input, .ws-right .nb-switch input').checked") is False)
             ok("ชิปบอกด้วยว่าเปลี่ยนป้ายให้แล้วเพราะมีทศนิยม",
                any("ช่วงแท้" in c for c in
                    pg.evaluate("() => [...document.querySelectorAll('.nb-chip')].map(c => c.textContent)")))
@@ -196,11 +200,15 @@ def main():
 
             print("\n── ④ เปลี่ยนวิธีเสนอจุดตัด แล้วจุดตัดต้องเปลี่ยนจริง ──")
             def breaks_now():
-                return pg.evaluate("""() => ([...document.querySelectorAll('.ws-right input.nb-num')]
+                return pg.evaluate("""() => ([...document.querySelectorAll('.s2-side-bd input.nb-num, .s2-stage input.nb-num, .ws-right input.nb-num')]
                   .find(i => i.placeholder && i.placeholder.includes('0, 5, 10')) || {}).value""")
             def pick_method(v):
                 pg.evaluate("""(v) => {
-                  const s = document.querySelectorAll('.s2-side-bd select, .s2-side-bd select, .ws-right select')[0];
+                  /* ‼️ หาช่องเลือกจากตัวเลือกที่มันมี ห้ามนับลำดับ (22/09/2026)
+                     v2 รวมแผงซ้ายกับขวาไว้แผงเดียว ช่องแรกจึงกลายเป็นช่องเลือกชีต
+                     เทสเลยไปตั้งค่าชีตแทนวิธีแบ่ง จุดตัดไม่เปลี่ยนเลยทั้งสามวิธี */
+                  const s = [...document.querySelectorAll('.s2-side-bd select, .ws-right select')]
+                    .find((x) => [...x.options].some((o) => o.value === 'quantile'));
                   s.value = v; s.dispatchEvent(new Event('change', { bubbles: true }));
                 }""", v)
                 pg.wait_for_timeout(500)
@@ -219,7 +227,7 @@ def main():
 
             print("\n── ⑤ ล็อกรายตัว ต้องชนะจุดตัด และลำดับต้องไม่พัง ──")
             pg.evaluate("""(txt) => {
-              const inp = [...document.querySelectorAll('.ws-right input.nb-num')]
+              const inp = [...document.querySelectorAll('.s2-side-bd input.nb-num, .s2-stage input.nb-num, .ws-right input.nb-num')]
                 .find(i => i.placeholder && i.placeholder.includes('0, 5, 10'));
               inp.value = txt; inp.dispatchEvent(new Event('change', { bubbles: true }));
             }""", ", ".join(str(b) for b in BREAKS))
@@ -227,13 +235,15 @@ def main():
 
             def add_lock(code, group):
                 pg.evaluate("""([code, group]) => {
-                  const ins = [...document.querySelectorAll('.ws-right input.nb-num')];
+                  const ins = [...document.querySelectorAll('.s2-side-bd input.nb-num, .s2-stage input.nb-num, .ws-right input.nb-num')];
                   const k = ins.find(i => i.placeholder && i.placeholder.includes('SKA1029'));
                   const g = ins.find(i => i.placeholder && (i.placeholder.includes('หมวด') || i.placeholder.includes('group')));
                   k.value = code; g.value = group;
                 }""", [code, group])
                 # ‼️ ข้ามปุ่มหัวข้อกลุ่มที่พับได้ ไม่งั้นจะไปกดพับกลุ่ม "ล็อกรายตัว" แทน
-                pg.locator(".ws-right button:not(.ws-fold-btn)", has_text="ล็อก").first.click()
+                #    ต้องตรงคำว่า ล็อก ทั้งปุ่ม เพราะหัวข้อกลุ่มก็มีคำนี้อยู่ในชื่อ
+                pg.locator(".s2-side-bd button:visible:not(.ws-fold-btn), .ws-right button:not(.ws-fold-btn)",
+                           has_text=re.compile(r"^\s*ล็อก\s*$")).first.click()
                 pg.wait_for_timeout(500)
 
             add_lock("KKN1013", "> 7")          # ค่า 0.498 แต่บังคับไปกลุ่มบนสุดที่มีอยู่แล้ว
@@ -287,7 +297,7 @@ def main():
 
             print("\n── ⑧ ไฟล์ที่ดาวน์โหลด ต้องถูกครบทุกแถว (ของจริงที่ผู้ใช้เอาไปใช้) ──")
             with pg.expect_download() as dl:
-                pg.locator(".ws-footer button", has_text="Excel").first.click()
+                fkui.dl_button(pg, "ดาวน์โหลดเป็น Excel").click()
             out = TMP / "out.xlsx"
             dl.value.save_as(str(out))
             wb2 = openpyxl.load_workbook(out)

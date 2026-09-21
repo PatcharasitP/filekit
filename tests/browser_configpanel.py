@@ -30,7 +30,15 @@ def ck(label, ok, detail=""):
 
 SNAP = """([panelSel, groupSel]) => {
   const p = document.querySelector(panelSel);
-  const sc = p.closest('.ws-scroll') || p;
+  /* ‼️ วัดจาก "กล่องที่เลื่อนได้จริง" ไม่ใช่เดาจากชื่อคลาส (แก้ 22/09/2026)
+     โครง v1 เลื่อนใน .ws-scroll ส่วน v2 เลื่อนในแผงขวา (.s2-side-bd) ชื่อไม่เหมือนกัน
+     เดิมหา .ws-scroll ไม่เจอก็ถอยไปวัดตัวแผงเอง ซึ่งไม่ได้เลื่อน สูงเท่าเนื้อหาเสมอ
+     อัตราส่วนจึงออก 1.00 ทั้งก่อนและหลังค้น เทสแดงทั้งที่ช่องค้นหาทำงานปกติ */
+  let sc = p;
+  for (let n = p; n && n !== document.body; n = n.parentElement) {
+    const oy = getComputedStyle(n).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && n.clientHeight > 0) { sc = n; break; }
+  }
   const vis = e => !e.hidden && e.offsetParent !== null;
   return {
     groups: [...p.querySelectorAll(groupSel)].filter(vis).length,

@@ -101,7 +101,9 @@ const FORMAT_PAT = [
   ["pdf",   /pdf/g],
   ["word",  /word|docx/g],
   ["excel", /excel|xlsx/g],
-  ["image", /images?|รูป|ภาพ|jpg|jpeg|png|webp/g],
+  // ‼️ "รูปภาพ" ต้องอยู่ก่อน "รูป" กับ "ภาพ" (22/09/2026) ตัวตัดคำคืน "รูปภาพ" มาเป็นคำเดียว
+  //    ถ้าไม่มีตรงนี้ คำนี้ไม่ถูกนับเป็นชื่อฟอร์แมตเลย "รูปภาพเป็น pdf" จึงไม่ตรงกับ Images เป็น PDF
+  ["image", /images?|รูปภาพ|รูป|ภาพ|jpg|jpeg|png|webp/g],
   ["ppt",   /powerpoint|pptx|สไลด์/g],
   ["text",  /ข้อความ|txt/g],
 ];
@@ -205,6 +207,13 @@ export function scoreTool(t, rawQ) {
       const qf = formatOrder(s), tf = formatOrder(title);
       if (qf.length >= 2 && tf.length >= 2 && qf[0] !== tf[0] && qf.includes(tf[0]) && tf.includes(qf[0])) {
         sc -= 20;
+      }
+      /* ‼️ ทิศตรงกับเครื่องมือแปลง "A เป็น B" ต้องได้คะแนนเพิ่มด้วย ไม่ใช่แค่หักตอนกลับทิศ (22/09/2026)
+         เครื่องมือที่ชื่อมีฟอร์แมตสองตัวแต่ไม่ใช่การแปลง เช่น "ดึงรูปออกจาก PDF" ได้คะแนนเท่ากันหรือมากกว่า
+         จากการตรงแบบข้ามตัวอักษร แล้วแซง "Images เป็น PDF" ไปทั้งที่คนพิมพ์ "รูป pdf" อยากได้ตัวแปลง
+         จำกัดเฉพาะชื่อที่มีคำว่า เป็น ซึ่งคือรูปแบบชื่อของเครื่องมือแปลงทั้งเว็บ */
+      if (qf.length >= 2 && tf.length >= 2 && qf[0] === tf[0] && qf[1] === tf[1] && title.includes(norm("เป็น"))) {
+        sc += 8;
       }
     }
     if (sc > 0) best = Math.max(best, sc - penalty);

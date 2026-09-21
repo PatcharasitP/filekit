@@ -97,6 +97,7 @@ CHECK_JS = """() => {
 
 def run(tools, widths, selftest=False):
     fails, checked, skipped = [], 0, 0
+    via_sheet = []
     with sync_playwright() as p:
         b = p.chromium.launch(headless=True)
         for w in widths:
@@ -105,8 +106,11 @@ def run(tools, widths, selftest=False):
             pg = ctx.new_page()
             for t in tools:
                 pg.goto(f"{BASE}/#/{t}", wait_until="load", timeout=60000)
+                # ‼️ ต้องรอ .s2 ด้วย (แก้ 22/09/2026) หน้า v2 ไม่มี .ws-body กับ .panel แล้ว
+                #    เครื่องมือที่ไม่รับไฟล์จึงรอครบ 15 วินาทีทุกตัวทุกจอ รวมเกินครึ่งชั่วโมง
+                #    ชุดนี้เลยโดนตัดเวลาทิ้งกลางคันโดยไม่ได้พิมพ์อะไรออกมาเลย
                 try:
-                    pg.wait_for_selector(".dz-wrap, .ws-body, .panel", timeout=15000)
+                    pg.wait_for_selector(".dz-wrap, .s2, .ws-body, .panel", timeout=15000)
                 except Exception:
                     pass
                 pg.wait_for_timeout(500)     # เผื่อเครื่องมือที่ต่อ DOM ต่อหลังวาดรอบแรก
@@ -121,6 +125,15 @@ def run(tools, widths, selftest=False):
                     }""")
                     pg.wait_for_timeout(120)
                 m = pg.evaluate(CHECK_JS)
+                # ‼️ เครื่องมือที่ไฟล์เป็นของแถม (เช่นข้อความเป็น PDF) เปิดมาเป็นหน้าทำงานเลย ไม่มีปุ่มยักษ์
+                #    บนจอแคบ ช่องเลือกไฟล์อยู่ในแผ่น "ตัวเลือก" ที่ปิดไว้ ผู้ใช้จริงแตะปุ่มตัวเลือกหนึ่งครั้งก็เจอ
+                #    จึงเดินทางเดียวกับผู้ใช้: แตะปุ่มนั้นแล้วตรวจซ้ำ ต้องเห็นและกดได้จริงเหมือนเดิมทุกข้อ (22/09/2026)
+                if not m.get("skip") and not m["hasPicker"] and pg.locator(".s2-sheetbtn:visible").count():
+                    pg.locator(".s2-sheetbtn:visible").first.click()
+                    pg.wait_for_timeout(450)
+                    m = pg.evaluate(CHECK_JS)
+                    if m["hasPicker"]:
+                        via_sheet.append(f"{t}@{w}")
                 if m.get("skip"):
                     skipped += 1
                     continue
@@ -140,6 +153,8 @@ def run(tools, widths, selftest=False):
             ctx.close()
         b.close()
     print(f"ตรวจ {checked} กรณี (ข้าม {skipped} กรณีที่เครื่องมือไม่รับไฟล์)")
+    if via_sheet:
+        print(f"  เจอช่องเลือกไฟล์หลังแตะปุ่มตัวเลือก {len(via_sheet)} กรณี: {', '.join(via_sheet[:6])}")
     for f in fails:
         print("  ❌", f)
     if not fails:

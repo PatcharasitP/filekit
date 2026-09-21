@@ -131,11 +131,16 @@ with sync_playwright() as p:
         #    และรายงานว่า "แสดงแถบจริง 0/8" ทั้งที่เครื่องมือทำงานปกติ
         pg.evaluate("""() => {
             const skip = /คัดลอก|Copy|ดาวน์โหลด|Download|โหลดไว้|ล้าง|Clear|รีเซ็ต|Reset/i;
-            const scope = document.querySelector('.s2-side-ft, .s2-cta-row, .actions, .ws-footer');
-            if (!scope) return;
-            const b = [...scope.querySelectorAll('button')]
-              .find(e => e.offsetParent && !e.disabled && !e.classList.contains('ghost') && !skip.test(e.textContent));
-            if (b) b.click();
+            /* ‼️ ไล่ตามลำดับความสำคัญ ห้ามใช้ querySelector ที่รวมหลายตัวเลือก (22/09/2026)
+               querySelector คืน "ตัวแรกตามลำดับในหน้า" ซึ่งคือ .actions ในผืนงานที่มาก่อนแผงขวา
+               ปุ่มในนั้นถูกซ่อนไว้หลังบ้านแล้ว ตัวหาเลยไม่เจออะไรกด แล้วรายงานว่า "ไม่มีแถวผลลัพธ์" 17 ตัว */
+            const scopes = ['.s2-cta-row', '.s2-side-ft', '.actions', '.ws-footer']
+              .flatMap((q) => [...document.querySelectorAll(q)]);
+            for (const scope of scopes) {
+              const b = [...scope.querySelectorAll('button')]
+                .find(e => e.offsetParent && !e.disabled && !e.classList.contains('ghost') && !skip.test(e.textContent));
+              if (b) { b.click(); return; }
+            }
         }""")
         pg.wait_for_timeout(8000)
         got = pg.evaluate("""() => {
@@ -160,15 +165,32 @@ with sync_playwright() as p:
         p2 = c2.new_page()
         p2.goto(f"{BASE}/#/pdf-merge", wait_until="networkidle")
         p2.wait_for_timeout(1000)
+        # ‼️ ต้องเทียบกับพื้นที่อยู่หลังตัวหนังสือจริง ไม่ใช่ตัวแปร --stage (แก้ 22/09/2026)
+        #    v2 ย้ายแถบนี้ไปอยู่ใต้จอแรกของหน้าเปล่าซึ่งพื้นสว่าง แต่ --stage ยังเป็นสีเข้มของผืนงานเดิม
+        #    เทสเลยรายงาน 1.11:1 ทั้งที่ภาพจริงเป็นตัวหนังสือเข้มบนพื้นสว่าง อ่านชัด
+        #    จึงไล่ขึ้นไปหาพื้นทึบตัวแรก แล้วซ้อนพื้นโปร่งแสงทุกชั้นทับลงไปตามลำดับ
         d = p2.evaluate("""() => {
+            const parse = (c) => {
+              let m = c.match(/^rgba?\\(([^)]+)\\)/);
+              if (m) { const p = m[1].split(/[\\s,\\/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; }
+              m = c.match(/^color\\(srgb ([^)]+)\\)/);
+              if (m) { const p = m[1].split(/[\\s\\/]+/).filter(Boolean).map(Number); return [p[0] * 255, p[1] * 255, p[2] * 255, p.length > 3 ? p[3] : 1]; }
+              return null;
+            };
+            const behind = (e) => {
+              const layers = [];
+              for (let n = e; n; n = n.parentElement) {
+                const c = parse(getComputedStyle(n).backgroundColor);
+                if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
+              }
+              let base = [255, 255, 255];
+              for (const l of layers.reverse()) base = base.map((v, i) => v * (1 - l[3]) + l[i] * l[3]);
+              return `rgb(${base.map(Math.round).join(',')})`;
+            };
             const t = document.querySelector('.tex');
-            const bg = getComputedStyle(document.documentElement).getPropertyValue('--stage').trim();
-            return [...t.querySelectorAll('.tex-box b, .tex-box span')].map(e => getComputedStyle(e).color).concat([bg]);
+            return [...t.querySelectorAll('.tex-box b, .tex-box span')].map(e => [getComputedStyle(e).color, behind(e)]);
         }""")
-        bg = d[-1]
-        if bg.startswith("#"):
-            bg = f"rgb({int(bg[1:3],16)},{int(bg[3:5],16)},{int(bg[5:7],16)})"
-        worst = min(ratio(c, bg) for c in d[:-1])
+        worst = min(ratio(c, bg) for c, bg in d)
         ck(f"④ โหมด{'สว่าง' if mode == 'light' else 'มืด'} ตัวหนังสือในแถบอ่านออก (แย่สุด {worst:.2f}:1)",
            worst >= 4.5, f"{worst:.2f}")
         c2.close()

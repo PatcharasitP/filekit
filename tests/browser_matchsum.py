@@ -21,6 +21,9 @@ import time
 import openpyxl
 from playwright.sync_api import sync_playwright
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import fkui  # noqa: E402  ตัวช่วยกลางที่รู้จักโครงหน้าเครื่องมือ v2
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="filekit_msum_"))
 P, F = 0, []
@@ -138,7 +141,7 @@ def main():
             chips = pg.evaluate("() => [...document.querySelectorAll('.ms-chip')].map(c => c.textContent)")
             nums = [v for v in VALUES if not isinstance(v, str)]
             ok("รู้เองว่าแถวแรกเป็นข้อมูล ไม่ใช่ชื่อคอลัมน์",
-               pg.evaluate("() => document.querySelector('.ws-left input[type=checkbox]').checked") is False)
+               pg.evaluate("() => document.querySelector('.s2-side-bd input[type=checkbox], .s2-stage input[type=checkbox], .ws-left input[type=checkbox]').checked") is False)
             ok(f"อ่านตัวเลขได้ครบ {len(nums)} แถว",
                any(f"{len(nums)}" in c and "อ่านเป็นตัวเลข" in c for c in chips), f"ได้ {chips}")
             ok("นับแถวที่อ่านไม่ออกแยกไว้ 3 แถว",
@@ -146,9 +149,9 @@ def main():
 
             print("\n── ② ชุดที่รวมกันได้ ต้องครบและถูกทุกชุด ──")
             pg.evaluate("""() => {
-              document.querySelectorAll('.ws-right input.ms-num')[0].value = '400';
+              document.querySelectorAll('.s2-side-bd input.ms-num, .s2-stage input.ms-num, .ws-right input.ms-num')[0].value = '400';
             }""")
-            pg.locator(".ws-footer button", has_text="ค้นหา").first.click()
+            fkui.act(pg, "ค้นหา")
             pg.wait_for_timeout(1200)
             found = sets_on_screen(pg)
             ck("เจอครบทุกชุดที่เป็นไปได้ ไม่ขาดไม่เกิน", set(found), EXPECT_SETS)
@@ -170,14 +173,21 @@ def main():
 
             print("\n── ④ เงื่อนไขที่ผู้ใช้ปรับได้ ต้องมีผลจริง ──")
             def search(target="400", tol="0", lo="1", hi="4", minv="", maxv="", neg=False):
+                # ‼️ ดาวน์โหลดแล้วหน้าเข้าสถานะผลลัพธ์ ปุ่มค้นหาหายไปจากจอ ผู้ใช้ต้องกด "กลับไปแก้" ก่อน
+                fkui.back_to_work(pg)
                 pg.evaluate("""([t, tol, lo, hi, minv, maxv, neg]) => {
-                  const n = document.querySelectorAll('.ws-right input.ms-num');
+                  const n = document.querySelectorAll('.s2-side-bd input.ms-num, .s2-stage input.ms-num, .ws-right input.ms-num');
                   n[0].value = t; n[1].value = tol; n[2].value = lo; n[3].value = hi;
                   n[4].value = minv; n[5].value = maxv;
-                  const sw = document.querySelectorAll('.ws-right input[type=checkbox]')[0];
+                  /* ‼️ หาสวิตช์จากชื่อที่ผู้ใช้เห็น ห้ามนับลำดับ (22/09/2026)
+                     v2 รวมแผงซ้ายกับขวาไว้แผงเดียว สวิตช์ตัวแรกจึงกลายเป็น "แถวแรกเป็นหัวตาราง"
+                     เทสเลยไปสลับหัวตารางแทนค่าติดลบ แล้วได้คำตอบผิดชุดโดยไม่มีอะไรฟ้อง */
+                  const row = [...document.querySelectorAll('.ms-switch-field')]
+                    .find((r) => r.textContent.includes('ติดลบ'));
+                  const sw = row.querySelector('input[type=checkbox]');
                   if (sw.checked !== neg) sw.click();
                 }""", [target, tol, lo, hi, minv, maxv, neg])
-                pg.locator(".ws-footer button", has_text="ค้นหา").first.click()
+                fkui.act(pg, "ค้นหา")
                 pg.wait_for_timeout(900)
                 return sets_on_screen(pg)
 
@@ -203,7 +213,7 @@ def main():
             print("\n── ⑥ ดาวน์โหลดผลเป็น Excel แล้วค่าต้องตรงกับที่โชว์ ──")
             shown = search()
             with pg.expect_download() as dl:
-                pg.locator(".ws-footer button", has_text="ดาวน์โหลด").first.click()
+                fkui.dl_button(pg).click()
             path = TMP / "ผลลัพธ์.xlsx"
             dl.value.save_as(str(path))
             wb = openpyxl.load_workbook(path)
@@ -221,7 +231,7 @@ def main():
             #    Excel จะเปิด Solver มาเป็นค่าว่าง ผู้ใช้กด Solve แล้วไม่มีอะไรเกิดขึ้น
             #    (พิสูจน์กับ Excel จริง 15/09/2026: ไฟล์ที่มีชื่อครบ กด Solve ได้คำตอบใน 0.82 วินาที)
             shown = search(target="400", hi="4")
-            pg.evaluate("() => document.querySelector('input[value=\"excel\"]').click()")
+            pg.locator("label.seg-item:visible", has_text="ทำเองใน Excel").first.click()
             pg.wait_for_timeout(500)
             with pg.expect_download() as dl2:
                 pg.locator(".ms-solverbox button").click()
@@ -252,20 +262,24 @@ def main():
                str(sws["G1"].value).startswith("=SUMPRODUCT("), f"ได้ {sws['G1'].value!r}")
 
             print("\n── ⑧ โหมดวางตัวเลขเอง (ไม่มีไฟล์) ──")
-            pg.goto(f"{base}/#/excel-match-sum", wait_until="networkidle")
-            pg.wait_for_selector(".ms-ta", state="attached")
-            pg.evaluate("""() => {
-              document.querySelector('input[value="paste"]').click();
-              const ta = document.querySelector('.ms-ta');
-              ta.value = "100\\n250.50\\n49.50\\n300";
-              ta.dispatchEvent(new Event('input'));
-            }""")
+            # ‼️ เดินทางเดียวกับผู้ใช้ที่ไม่มีไฟล์ในมือ: เปิดหน้า กดลิงก์บนหน้าเปล่า แล้วพิมพ์
+            #    ของเดิมสั่ง click ผ่าน JS ทะลุหน้าเปล่าที่บังอยู่ จึงผ่านทั้งที่ผู้ใช้จริงเข้าโหมดนี้ไม่ได้เลย (22/09/2026)
+            # เครื่องมือนี้จำเงื่อนไขล่าสุดไว้ (ขั้น ④ ตั้งไม่เกิน 1 รายการ เพดานหนึ่งล้าน แล้วถูกจำไว้)
+            # ขั้นนี้ตรวจทางเข้าแบบไม่มีไฟล์ ไม่ได้ตรวจเรื่องจำค่า จึงเริ่มจากค่าเริ่มต้นเหมือนขั้น ⑨
+            pg.evaluate("() => { try { localStorage.removeItem('filekit-state-excel-match-sum'); } catch {} }")
+            fkui.open_tool(pg, "excel-match-sum", base)
+            ck("เปิดมาไม่มีไฟล์ เริ่มที่หน้าเปล่า", fkui.state(pg), "landing")
+            pg.locator(".s2-land button:visible", has_text="วางตัวเลขเอง").first.click()
             pg.wait_for_timeout(600)
-            disabled = pg.evaluate("() => [...document.querySelectorAll('.ws-footer button')]"
-                                   ".find(b => b.textContent.includes('ค้นหา')).disabled")
-            ok("ปุ่มค้นหากดได้แม้ไม่มีไฟล์", disabled is False)
-            pg.evaluate("() => { document.querySelectorAll('.ws-right input.ms-num')[0].value = '400'; }")
-            pg.locator(".ws-footer button", has_text="ค้นหา").first.click()
+            ck("กดวางตัวเลขเองบนหน้าเปล่าแล้วเข้าสถานะทำงาน", fkui.state(pg), "work")
+            pg.keyboard.type("100\n250.50\n49.50\n300")
+            pg.wait_for_timeout(600)
+            ok("พิมพ์ลงช่องวางตัวเลขได้ทันทีโดยไม่ต้องกดหาช่องเอง",
+               pg.evaluate("() => document.querySelector('.ms-ta').value").count("\n") == 3)
+            ok("ปุ่มค้นหากดได้แม้ไม่มีไฟล์",
+               pg.locator("button.s2-cta:visible", has_text="ค้นหา").first.is_enabled())
+            pg.locator(".s2-side-bd input.ms-num:visible").first.fill("400")
+            fkui.act(pg, "ค้นหา")
             pg.wait_for_timeout(800)
             ck("ค้นจากตัวเลขที่วางเองได้", set(sets_on_screen(pg)),
                {key_of(300, 100), key_of(250.5, 100, 49.5)})
@@ -279,21 +293,23 @@ def main():
             pg.evaluate("() => { try { localStorage.setItem('fk-lang','en'); } catch {} }")
             pg.reload(wait_until="networkidle")
             pg.wait_for_timeout(400)
-            pg.wait_for_selector(".ms-ta", state="attached")
-            pg.evaluate("""() => {
-              document.querySelector('input[value="paste"]').click();
-              const ta = document.querySelector('.ms-ta');
-              ta.value = "100\\n300";
-              ta.dispatchEvent(new Event('input'));
-              document.querySelectorAll('.ws-right input.ms-num')[0].value = '400';
-            }""")
+            pg.wait_for_selector(".s2", state="attached")
+            pg.locator(".s2-land button:visible", has_text="paste numbers").first.click()
             pg.wait_for_timeout(500)
-            pg.locator(".ws-footer button", has_text="Find").first.click()
+            pg.keyboard.type("100\n300")
+            pg.locator(".s2-side-bd input.ms-num:visible").first.fill("400")
+            pg.wait_for_timeout(500)
+            fkui.act(pg, "Find")
             pg.wait_for_timeout(800)
             status = pg.evaluate("() => document.querySelector('.status')?.textContent || ''")
             ok("ชุดเดียวต้องเขียนว่า 1 set ไม่ใช่ 1 sets", "1 set " in status and "1 sets" not in status,
                f"ได้ {status!r}")
-            thai = pg.evaluate("() => (document.querySelector('.ws-body')?.textContent || '')"
+            # ‼️ เดิมอ่านจาก .ws-body ซึ่งไม่มีแล้วใน v2 ได้ข้อความว่างเสมอ ข้อนี้จึงผ่านแบบตาบอด
+            #    ต้องอ่านจากกล่องเครื่องมือทั้งกล่อง และต้องเห็นข้อความจริงก่อน ถึงจะเชื่อว่า "ไม่มีไทย"
+            body = pg.evaluate("() => document.querySelector('.s2')?.textContent || ''")
+            ok("ตัวตรวจอ่านข้อความของเครื่องมือได้จริง (ไม่ใช่ว่างเปล่า)", "Find" in body and len(body) > 200,
+               f"ได้ {len(body)} ตัวอักษร")
+            thai = pg.evaluate("() => (document.querySelector('.s2')?.textContent || '')"
                                ".match(/[\\u0E00-\\u0E7F]+/g) || []")
             ck("ไม่มีภาษาไทยตกค้างในโหมด EN", thai, [])
             pg.evaluate("() => { try { localStorage.removeItem('fk-lang'); } catch {} }")

@@ -20,6 +20,9 @@ import time
 import openpyxl
 from playwright.sync_api import sync_playwright
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import fkui  # noqa: E402  ตัวช่วยกลางที่รู้จักโครงหน้าเครื่องมือ v2
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TMP = pathlib.Path(tempfile.mkdtemp(prefix="filekit_maprel_"))
 P, F = 0, []
@@ -256,7 +259,7 @@ def main():
 
             print("\n── ⑦ กรองระยะขั้นต่ำ ต้องมีผลจริง ──")
             pg.evaluate("""() => {
-              const i = [...document.querySelectorAll('.ws-right input.mr-num')]
+              const i = [...document.querySelectorAll('.s2-side-bd input.mr-num, .s2-stage input.mr-num, .ws-right input.mr-num')]
                 .find(x => x.placeholder && (x.placeholder.includes('ไม่กรอง') || x.placeholder.includes('no filter')));
               i.value = '6'; i.dispatchEvent(new Event('change', { bubbles: true }));
             }""")
@@ -266,7 +269,7 @@ def main():
             left = [r["old"] for r in table_rows(pg)]
             ck("เหลือเฉพาะคู่ที่ย้ายไกลกว่า 6 กม.", sorted(left), sorted([r[0] for r in REAL if r[7] >= 6]))
             pg.evaluate("""() => {
-              const i = [...document.querySelectorAll('.ws-right input.mr-num')]
+              const i = [...document.querySelectorAll('.s2-side-bd input.mr-num, .s2-stage input.mr-num, .ws-right input.mr-num')]
                 .find(x => x.placeholder && (x.placeholder.includes('ไม่กรอง') || x.placeholder.includes('no filter')));
               i.value = ''; i.dispatchEvent(new Event('change', { bubbles: true }));
             }""")
@@ -274,7 +277,7 @@ def main():
 
             print("\n── ⑧ ไฟล์สำหรับ Power BI ต้องพร้อมใส่ Icon Map Pro ──")
             with pg.expect_download() as dl:
-                pg.locator(".ws-footer button", has_text="Power BI").first.click()
+                fkui.dl_button(pg, "Power BI").click()
             out = TMP / "pbi.xlsx"
             dl.value.save_as(str(out))
             wb2 = openpyxl.load_workbook(out)
@@ -299,10 +302,12 @@ def main():
             ck("ระยะทางในไฟล์ตรงกับค่าที่ DAX คำนวณไว้ทุกคู่", got, {r[0]: round(r[7], 2) for r in REAL})
 
             print("\n── ⑨ บันทึกเป็นภาพได้จริง ──")
+            # ดาวน์โหลดไฟล์ Power BI แล้วหน้าเข้าสถานะผลลัพธ์ ผู้ใช้ต้องกด "กลับไปแก้" ก่อนจะเห็นแผนที่อีก
+            fkui.back_to_work(pg)
             pg.locator(".seg-item", has_text="แผนที่").first.click()
             pg.wait_for_timeout(400)
             with pg.expect_download() as dl2:
-                pg.locator(".ws-footer button", has_text="PNG").first.click()
+                fkui.dl_button(pg, "PNG").click()
             png = TMP / "map.png"
             dl2.value.save_as(str(png))
             size = png.stat().st_size

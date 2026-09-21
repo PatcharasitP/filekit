@@ -26,7 +26,7 @@ from playwright.sync_api import sync_playwright
 BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899").rstrip("/")
 FIX = Path(__file__).parent / "fixtures"
 QUICK = ["pdf-pages", "pdf-merge", "pdf-watermark", "pdf-sign", "pbi-donut",
-         "thai-number", "word-clean", "excel-csv", "image-resize", "pq-to-date"]
+         "thai-number", "word-clean", "excel-csv", "image-resize", "pq-to-date", "excel-match-sum"]
 
 TOOL_IDS = """async (base) => (await import(base + '/src/registry.js')).TOOLS.map(t => t.id)"""
 # เครื่องมือที่ "ไฟล์เป็นของแถม" — มีกล่องรับไฟล์ แต่ทำงานได้เลยโดยไม่ต้องมีไฟล์
@@ -178,6 +178,48 @@ def run(tools, selftest=False, starts_empty=frozenset()):
                 m = pg.evaluate(PROBE)
                 check(fails, m["state"] == "work", f"{tid}: ใส่ไฟล์แล้วต้องเข้าสถานะทำงาน", m["state"])
                 check(fails, m["ctaInView"], f"{tid}: ใส่ไฟล์แล้วปุ่มหลักต้องยังอยู่ในจอ", str(m["ctaBox"]))
+            ctx.close()
+
+        # ── เครื่องมือที่มีโหมดวางเอง ต้องเข้าโหมดนั้นได้จากหน้าเปล่า โดยไม่ต้องมีไฟล์ ──
+        # ‼️ หน้าเปล่าบังผืนงานทั้งผืนและสั่ง inert ไว้ ถ้าหน้าเปล่าไม่มีทางเข้า โหมดนี้ก็ใช้ไม่ได้เลย
+        #    (เจอ 22/09/2026 ที่หายอดที่บวกกันได้กับแบ่งช่วงตัวเลข เทสเดิมผ่านเพราะคลิกผ่าน JS ทะลุชั้นที่บัง)
+        # ‼️ ดูจาก DOM ว่าเครื่องมือไหนมีโหมดนี้ ไม่เขียนรายชื่อค้างไว้ เครื่องมือใหม่จะถูกตรวจเอง
+        # ‼️ ต้องตรวจบนมือถือด้วย เพราะช่องวางตัวเลขอยู่ในแผ่นตัวเลือกที่ปิดอยู่ตามปกติ
+        for vname, vp, mob in [("เดสก์ท็อป 1600", {"width": 1600, "height": 900}, False),
+                               ("มือถือ 390", {"width": 390, "height": 844}, True)]:
+            ctx = b.new_context(viewport=vp, locale="th-TH", is_mobile=mob, has_touch=mob)
+            pg = ctx.new_page()
+            for tid in tools:
+                pg.goto("about:blank")
+                pg.goto(f"{BASE}/#/{tid}", wait_until="load", timeout=60000)
+                try:
+                    pg.wait_for_selector(".s2", timeout=15000)
+                except Exception:
+                    continue
+                pg.wait_for_timeout(700)
+                name = pg.evaluate("""() => { const r = document.querySelector('.s2 input[type=radio][value="paste"]');
+                  return r ? (r.closest('label')?.textContent || '').trim() : null; }""")
+                if not name:
+                    continue
+                checked += 1
+                if selftest:
+                    # ‼️ จำลองของพัง: ถอดทางเข้าออกจากหน้าเปล่า ข้อนี้ต้องแดง
+                    pg.evaluate("""(n) => { for (const b of document.querySelectorAll('.s2-land button'))
+                      if (b.textContent.includes(n)) b.remove(); }""", name)
+                link = pg.locator(".s2-land button:visible, .s2-land a:visible").filter(has_text=name)
+                if not link.count():
+                    fails.append(f"{tid} @{vname}: มีโหมด{name} แต่หน้าเปล่าไม่มีทางเข้า ผู้ใช้ที่ไม่มีไฟล์ใช้โหมดนี้ไม่ได้")
+                    continue
+                link.first.click()
+                pg.wait_for_timeout(700)
+                st = pg.evaluate("() => document.querySelector('.s2')?.dataset.state")
+                check(fails, st == "work", f"{tid} @{vname}: กด{name}แล้วต้องเข้าสถานะทำงาน", st)
+                pg.keyboard.type("12")
+                got = pg.evaluate("""() => { const a = document.activeElement; if (!a || a.tagName !== 'TEXTAREA') return null;
+                  const r = a.getBoundingClientRect();
+                  return r.width > 0 && r.height > 0 && r.top < innerHeight && r.bottom > 0 ? a.value : null; }""")
+                check(fails, got is not None and "12" in got,
+                      f"{tid} @{vname}: กด{name}แล้วต้องพิมพ์ลงช่องที่มองเห็นได้ทันที", repr(got))
             ctx.close()
         b.close()
 

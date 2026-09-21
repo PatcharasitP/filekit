@@ -9,7 +9,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const list = (s) => s.split(",").map((x) => x.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
@@ -360,7 +360,8 @@ ck(middotHits.length + htmlMiddot.length === 0,
   for (const f of pyFiles) {
     const txt = readFileSync(join(ROOT, "tests", f), "utf8");
     // จับอาร์กิวเมนต์ตัวแรกที่เป็นสตริง หลัง wait_for_function( (รองรับขึ้นบรรทัดใหม่และ f-string)
-    for (const m of txt.matchAll(/wait_for_function\(\s*(?:#[^\n]*\n\s*)*f?["']([^"']{0,40})/g)) {
+    // ‼️ รองรับสตริงสามอัญประกาศ (""" หรือ ''') ด้วย ไม่งั้นช่องว่างระหว่างอัญประกาศถูกอ่านเป็นนิพจน์เปล่า (22/09/2026)
+    for (const m of txt.matchAll(/wait_for_function\(\s*(?:#[^\n]*\n\s*)*f?(?:"""|'''|["'])([^"']{0,40})/g)) {
       const head = m[1].trimStart();
       if (!head.startsWith("() =>") && !head.startsWith("()=>") && !/^\([\w\s,]*\)\s*=>/.test(head))
         bare.push(`${f}: ${m[1].slice(0, 30)}`);
@@ -470,6 +471,34 @@ ck(middotHits.length + htmlMiddot.length === 0,
     for (const ch of t) { if (ch === "{") d++; else if (ch === "}") d--; } return d; };
   ck(probe("a{b:c}}") === -1, "ตัวตรวจจับ } เกินได้จริง");
   ck(probe("a{b:c} /* } */") === 0, "ตัวตรวจไม่นับปีกกาที่อยู่ในคอมเมนต์");
+}
+
+/* ── หน้าแรกโหลด inapp.js เฉพาะตอนหน้าตาเหมือนเบราว์เซอร์ในแอป (22/09/2026) ──────────
+ * app.js มีรายชื่อแอปแบบย่อไว้ตัดสินใจว่าจะโหลดไหม ต้องครอบทุกแอปที่ inapp.js รู้จัก
+ * ไม่งั้นเพิ่มแอปใหม่ใน SIGNS แล้วแถบเตือนไม่ขึ้นเงียบ ๆ เพราะโมดูลไม่ถูกโหลดเลย
+ * ถ้าผิดจะรู้ได้ยังไง: ลบชื่อแอปสักตัวออกจาก MAYBE_IN_APP ข้อนี้ต้องแดงพร้อมชื่อแอป */
+{
+  const appSrc = readFileSync(join(ROOT, "src/app.js"), "utf8");
+  const m = appSrc.match(/const MAYBE_IN_APP = \/(.+)\/i;/);
+  ck(!!m, "app.js มีรายชื่อแอปสำหรับตัดสินใจโหลด inapp.js");
+  if (m) {
+    const pre = new RegExp(m[1], "i");
+    const { inApp } = await import(pathToFileURL(join(ROOT, "src/inapp.js")).href);
+    // ข้อความบอกตัวตนตัวอย่างของแต่ละแอป (ตัดมาเฉพาะส่วนที่ใช้ระบุแอป)
+    const UA = {
+      LINE: "Mozilla/5.0 (Linux; Android 14) Chrome/126 Mobile Safari/537.36 Line/14.6.2/IAB",
+      Facebook: "Mozilla/5.0 (iPhone) Mobile/15E148 [FBAN/FBIOS;FBAV/470.0]",
+      Instagram: "Mozilla/5.0 (iPhone) Mobile/15E148 Instagram 350.0.0",
+      Messenger: "Mozilla/5.0 (Linux; Android 14) Chrome/126 Mobile Messenger",
+      TikTok: "Mozilla/5.0 (Linux; Android 14) Chrome/126 Mobile BytedanceWebview/d8a21c6",
+    };
+    const plain = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
+    const missed = Object.entries(UA).filter(([name, ua]) => inApp(ua)?.name === name && !pre.test(ua)).map(([n]) => n);
+    const known = Object.entries(UA).filter(([name, ua]) => inApp(ua)?.name === name).length;
+    ck(known === Object.keys(UA).length, `ตัวอย่างครบทุกแอปที่ inapp.js รู้จัก (${known}/${Object.keys(UA).length})`);
+    ck(missed.length === 0, `รายชื่อใน app.js ครอบทุกแอปที่ inapp.js รู้จัก${missed.length ? " ขาด " + missed.join(", ") : ""}`);
+    ck(!pre.test(plain) && !inApp(plain), "เบราว์เซอร์ปกติไม่โหลด inapp.js");
+  }
 }
 
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);

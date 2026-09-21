@@ -61,7 +61,7 @@ with sync_playwright() as p:
         if (!s) return null;
         s.value = [...s.options].find(o => o.textContent.trim() === 'ลำดับ').value;
         s.dispatchEvent(new Event('change', { bubbles: true }));
-        [...document.querySelectorAll('.ws-right button')].find(b => b.textContent.includes('เพิ่มชั้น')).click();
+        [...document.querySelectorAll('.s2-side-bd button, .s2-stage button, .ws-right button')].find(b => b.textContent.includes('เพิ่มชั้น')).click();
         return 'ลำดับ';
     }""")
     pg.wait_for_timeout(1400)

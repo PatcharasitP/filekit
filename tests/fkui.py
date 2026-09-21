@@ -81,6 +81,26 @@ def download(pg, out_path, text="ดาวน์โหลด", timeout=60000):
     return out_path
 
 
+def leave_landing(pg, timeout=15000):
+    """ถ้ายังอยู่หน้าเปล่า ให้ใส่ไฟล์ตัวอย่างเพื่อเข้าสถานะทำงาน
+       ‼️ v2 วางหน้าเปล่าเป็นชั้นลอยทับ และสั่ง inert กับตัวเลือกทั้งหมดข้างหลัง
+          ผู้ใช้จริงจึงแตะตัวเลือกได้หลังมีไฟล์แล้วเท่านั้น (ออกแบบตาม iLovePDF ที่พี่ปอนด์เคาะ)
+          เทสที่ทดสอบตัวเลือก ต้องเดินทางเดียวกัน ไม่ใช่งัดของที่ถูกปิดใช้งานไว้
+       คืน True ถ้าได้ออกจากหน้าเปล่าจริง"""
+    if state(pg) != "landing":
+        return False
+    btn = pg.locator(".s2-link:visible, button:visible").filter(has_text="ลองด้วยไฟล์ตัวอย่าง")
+    if not btn.count():
+        return False
+    btn.first.click()
+    try:
+        pg.wait_for_function("() => document.querySelector('.s2')?.dataset.state !== 'landing'", timeout=timeout)
+    except Exception:
+        return False
+    pg.wait_for_timeout(600)
+    return True
+
+
 def back_to_work(pg, timeout=10000):
     """กลับจากสถานะผลลัพธ์มาหน้าทำงาน เพื่อสั่งงานรอบใหม่
        ‼️ v2 พอมีผลลัพธ์แล้วจะสลับแผงขวาเป็นแผงผลลัพธ์ ปุ่มลงมือทำจึงหายไปจากจอ

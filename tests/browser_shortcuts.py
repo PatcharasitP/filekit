@@ -87,7 +87,7 @@ def main():
         pg.wait_for_timeout(600)
         ck("Ctrl+Z แล้วหน้ากลับมาครบ", seen() == start, f"{seen()} จาก {start}")
         ck("ไม่มีหน้าไหนเหลือค้างแล้ว ปุ่มย้อนการลบต้องปิด",
-           pg.evaluate("""() => { const b = [...document.querySelectorAll('.ws-toolbar button')]
+           pg.evaluate("""() => { const b = [...document.querySelectorAll('.s2-tbar button, .ws-toolbar button')]
                .find(x => /ย้อนการลบ/.test(x.textContent)); return !!b && b.disabled; }"""))
 
         # ── ③ คีย์ลัดหมุนต้องกดซ้ำได้ ไม่ใช่ได้ครั้งเดียวแล้วเงียบ

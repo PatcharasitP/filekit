@@ -31,10 +31,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { el } from "./dom.js";
 import { toolIcon, uiIcon } from "./icons.js";
-import { tr } from "./i18n.js";
+import { tr, pl } from "./i18n.js";
 import { GROUPS, TOOLS } from "./registry.js";
 import {
-  fileState, watchFiles, toolMeta, toolExample, toolFaq, nextSteps, railCopyMd, fmtBytes, download,
+  fileState, treeFiles, watchFiles, setInputFiles, setResultFiles,
+  toolMeta, toolExample, toolFaq, nextSteps, railCopyMd, fmtBytes, download,
 } from "./ui.js";
 
 const GROUP_ACCENT = {
@@ -153,10 +154,11 @@ export function wireToolMenu(tool) {
  * ‼️ เป็นชั้นลอยทับพื้นที่ทำงาน ไม่ใช่การย้ายกล่องรับไฟล์มาไว้ตรงนี้
  *   ปุ่มยักษ์ส่งต่อการกดไปยังปุ่มจริงในกล่อง (ดูหมายเหตุหัวไฟล์ว่าทำไม)
  *   การลากไฟล์ยังทำงานเหมือนเดิมทุกประการ เพราะตัวรับ drop ของกล่องผูกไว้ที่ document อยู่แล้ว */
-function landingBlock(tool, forward) {
+function landingBlock(tool, forward, pasteLink) {
   const big = el("button", { class: "s2-cta-big", type: "button", onclick: () => forward("pick") },
     tool.accepts && tool.accepts.length
-      ? tr(`เลือกไฟล์ ${labelOfAccepts(tool)}`, `Choose ${labelOfAccepts(tool, true)} files`)
+      /* ต่อสตริงแทน template เพราะตรงนี้เป็นชื่อชนิดไฟล์ ไม่ใช่จำนวน (Choose PDF files) เทสพหูพจน์จะได้ไม่จับผิดตัว */
+      ? tr(`เลือกไฟล์ ${labelOfAccepts(tool)}`, "Choose " + labelOfAccepts(tool, true) + " files")
       : tr("เริ่มใช้งาน", "Get started"));
 
   const sample = el("button", { class: "s2-link", type: "button", onclick: () => forward("sample") },
@@ -172,6 +174,7 @@ function landingBlock(tool, forward) {
                                             "Or drop your files anywhere on this page")),
       el("div", { class: "s2-land-row" }, [
         sample,
+        pasteLink,
         el("span", { class: "s2-safe" }, [
           uiIcon("lock", "s2-safe-ico"),
           tr("ไฟล์อยู่ในเครื่องคุณ ไม่ถูกส่งไปที่ไหนทั้งสิ้น", "Your files stay on this device, nothing is uploaded"),
@@ -213,7 +216,7 @@ function resultBlock(tool, files, onAgain, onBack) {
           el("div", { class: "s2-res-meta" }, fmtBytes(one.size)),
         ])
       : el("div", { class: "s2-res-meta" },
-          tr(`ได้ ${files.length} ไฟล์`, `${files.length} files`)),
+          tr(`ได้ ${files.length} ไฟล์`, pl(files.length, "file", "files"))),
     /* ‼️ ต้องมีปุ่มดาวน์โหลดเสมอ (บั๊ก v130 เจอ 21/09/2026)
      * แผงนี้เคยมีแต่ชื่อไฟล์กับขนาด เพราะตอนออกแบบคิดว่าไฟล์ถูกเซฟลงเครื่องไปแล้ว
      * ซึ่งจริงเฉพาะเครื่องมือที่เรียก download() · อีก 18 ตัวใช้ downloadButton()
@@ -316,11 +319,41 @@ export function toolShell2(tool, cfg = {}) {
   ctaRow.append(sheetBtn, mainBtn || el("span"));
   if (subBtns.length) sideFoot.appendChild(el("div", { class: "s2-subrow" }, subBtns));
 
+  /* ── ทางเข้าแบบไม่มีไฟล์ ─────────────────────────────────────────────
+   * เครื่องมือที่มีโหมด "วางตัวเลขเอง" (หายอดที่บวกกันได้, แบ่งช่วงตัวเลข) ใช้งานได้โดยไม่ต้องมีไฟล์
+   * ‼️ หน้าเปล่าของ v2 มีแค่ปุ่มเลือกไฟล์กับไฟล์ตัวอย่าง แล้วสั่ง inert ทั้งผืนงานข้างหลัง
+   *   โหมดวางตัวเลขจึงเข้าไม่ได้เลยถ้าไม่มีไฟล์ในมือ (เจอ 22/09/2026 จากภาพหน้าเปล่าจริง
+   *   ส่วนเทสเดิมผ่านเพราะสั่ง click ผ่าน JS ทะลุชั้นที่บังอยู่ ซึ่งผู้ใช้ทำแบบนั้นไม่ได้)
+   * ดูจาก DOM จริงว่ามีตัวเลือก value="paste" ไหม ไม่ต้องจดในทะเบียน เครื่องมือใหม่ที่มีโหมดนี้ได้ลิงก์เอง
+   * ใช้ข้อความจากตัวเลือกของเครื่องมือเอง จึงแปลภาษาตามไปด้วยโดยไม่ต้องเขียนซ้ำ */
+  const pasteRadio = grid.querySelector('input[type=radio][value="paste"]');
+  const pasteName = pasteRadio ? (pasteRadio.closest("label")?.textContent || "").trim() : "";
+  const pasteLink = pasteRadio ? el("button", { class: "s2-link", type: "button", onclick: startPaste },
+    tr(`หรือ${pasteName}`, `Or ${pasteName.charAt(0).toLowerCase()}${pasteName.slice(1)}`)) : null;
+  const pasting = () => !!(pasteRadio && pasteRadio.checked);
+  function startPaste() {
+    setState("work");
+    if (!pasteRadio.checked) pasteRadio.click();
+    /* บนมือถือ ช่องวางตัวเลขอยู่ในแผ่นตัวเลือกที่ปิดอยู่ ต้องเปิดให้ ไม่งั้นกดแล้วเหมือนไม่มีอะไรเกิดขึ้น */
+    if (sheetBtn.offsetParent) setSheet(true);
+    requestAnimationFrame(() => {
+      const ta = [...grid.querySelectorAll("textarea")].find((t) => t.offsetParent);
+      if (ta) ta.focus();
+    });
+  }
+  /* กลับไปโหมดไฟล์ (ตัวเลือกแรกของกลุ่มเดียวกัน) ตอนเริ่มใหม่ หรือตอนผู้ใช้ลากไฟล์เข้ามาระหว่างวางตัวเลข */
+  function leavePaste() {
+    if (!pasting()) return;
+    const first = [...grid.querySelectorAll("input[type=radio]")].find((r) => r.name === pasteRadio.name);
+    if (first && first !== pasteRadio) first.click();
+  }
+
+  const noteEl = cfg.note ? el("div", { class: "s2-note" }, cfg.note) : null;
   const wrap = el("div", { class: "s2", "data-state": "landing",
     style: `--ac:${accentOf(tool)}` }, [
-    landingBlock(tool, forward),
+    landingBlock(tool, forward, pasteLink),
     grid,
-    cfg.note ? el("div", { class: "s2-note" }, cfg.note) : null,
+    noteEl,
   ]);
 
   /* ── ส่งต่อการกดจากปุ่มยักษ์ไปยังปุ่มจริงในกล่องรับไฟล์ ─────────────────
@@ -359,6 +392,9 @@ export function toolShell2(tool, cfg = {}) {
        inert ปิดทั้งการโฟกัส การกด และซ่อนจากโปรแกรมอ่านหน้าจอในคำสั่งเดียว
        (จับได้เพราะเทสนับ "ของกดได้ในจอ" แล้วหน้าเปล่าได้ 36 ชิ้นทั้งที่ตาเห็นแค่ 4) */
     grid.inert = s === "landing";
+    /* แถบหมายเหตุอยู่นอก grid แต่ก็ถูกหน้าเปล่าบังเหมือนกัน ถ้าไม่ปิดด้วย
+       โปรแกรมอ่านหน้าจอจะอ่านคำเตือนที่ตามองไม่เห็นออกมาก่อนผู้ใช้ใส่ไฟล์ (เทส layout จับได้ 22/09/2026) */
+    if (noteEl) noteEl.inert = s === "landing";
     if (panelMode) requestAnimationFrame(syncSideEmpty);
     restart.hidden = s === "result";
     if (s !== "work") setSheet(false);
@@ -400,7 +436,66 @@ export function toolShell2(tool, cfg = {}) {
      * แล้ว .s2-stat ถูกซ่อนตอนสถานะผลลัพธ์ ปุ่มดาวน์โหลดจึงหายไปทั้งที่บีบอัดสำเร็จ
      * (เห็นกับตา: สถานะขึ้น "เล็กลง 15%" แต่ทั้งหน้าไม่มีปุ่มดาวน์โหลดเลย)
      * กันวนซ้ำด้วยการไม่นับของที่ย้ายเข้าแผงผลลัพธ์ไปแล้ว */
-    return [...wrap.querySelectorAll(".result")].filter((n) => !resultHost.contains(n));
+    return [...wrap.querySelectorAll(".result")].filter((n) => !resultHost.contains(n) && !staleRes.has(n));
+  }
+  /* ‼️ แถวผลลัพธ์ที่มีอยู่ "ตอนไฟล์ในกล่องเปลี่ยน" เป็นของไฟล์ชุดก่อน ห้ามเอามาโชว์อีก (บั๊กจริง 22/09/2026)
+   * ลำดับจริงของกล่องรับไฟล์คือ setInputFiles() ก่อน แล้วค่อยเรียก onChange ของเครื่องมือ
+   * เปลือกหน้าจึงได้ยินว่าไฟล์เปลี่ยน ก่อนที่เครื่องมือจะล้างแถวผลลัพธ์เก่าของตัวเอง
+   * แล้วคว้าแถวเก่านั้นย้ายเข้าแผงผลลัพธ์ไปเฉย ๆ พอเครื่องมือล้างทีหลังก็ล้างไม่โดนแล้ว
+   * อาการที่เห็นกับตา: ใส่เลขหน้า first.pdf เสร็จ ลาก second.pdf ทับ หน้ายังโชว์
+   * "first-มีเลขหน้า.pdf" พร้อมปุ่มดาวน์โหลดที่กดได้ = ผู้ใช้ได้ไฟล์ผิดใบโดยไม่มีอะไรเตือน
+   * (จับลำดับจริงด้วยการใส่จุดบันทึกชั่วคราว: domRes = 1 ทันทีหลังล้างแผงผลลัพธ์)
+   * ใช้ WeakSet จำ "ตัว node" ไม่ไปแตะ node ของเครื่องมือ ตามหลักข้อแรกของไฟล์นี้ */
+  const staleRes = new WeakSet();
+  function markStale() {
+    for (const n of wrap.querySelectorAll(".result, .results > .actions, .results > .note")) staleRes.add(n);
+  }
+  /* ‼️ คำเตือนของเครื่องมือต้องตามผลลัพธ์ไปอยู่ในแผงผลลัพธ์ด้วย (บั๊กจริง 22/09/2026)
+   * เครื่องมือหลายตัวต่อ .note ลงใน .results หลังทำเสร็จ เพื่อบอกเรื่องที่ผู้ใช้ "ต้องรู้ก่อนส่งไฟล์ออก"
+   * เช่น word-to-pdf: "ฟอนต์ไทยรุ่นเก่า แปลงวรรณยุกต์ให้ 7 จุด" และ "มีแก้ไขค้าง ข้อความนั้นจะไปอยู่ใน PDF ด้วย"
+   * แต่เปลือกหน้าย้ายมาเฉพาะแถว .result คำเตือนจึงค้างในผืนงานที่ถูกแผงผลลัพธ์บัง
+   * วัดจริง: กล่องคำเตือนกว้าง 0 สูง 0 = ผู้ใช้ไม่มีทางเห็น
+   * ข้อ "แก้ไขค้าง" ร้ายที่สุด เพราะข้อความที่เขาคิดว่าลบไปแล้วจะไปโผล่ใน PDF ที่ส่งออกไป
+   * ‼️ คำเตือนมักต่อ "หลัง" แถวผลลัพธ์ในจังหวะเดียวกัน ตอนที่ syncState ย้ายแถวไปแล้ว
+   *   จึงต้องมีตัวเฝ้าคอยเก็บตกทีหลังด้วย ไม่ใช่เก็บแค่ตอนสลับสถานะ */
+  function pullNotes() {
+    if (state !== "result") return;
+    const notes = [...wrap.querySelectorAll(".results > .note")]
+      .filter((n) => !resultHost.contains(n) && !staleRes.has(n));
+    if (!notes.length) return;
+    const res = resultHost.querySelector(".s2-res");
+    if (!res) return;
+    let box = res.querySelector(".s2-res-notes");
+    if (!box) {
+      box = el("div", { class: "s2-res-notes" });
+      const done = res.querySelector(".s2-done");
+      if (done) done.after(box); else res.prepend(box);
+    }
+    box.append(...notes);
+  }
+
+  /* ── ข้อความสรุปของเครื่องมือต้องตามมาอยู่ในแผงผลลัพธ์ด้วย (22/09/2026) ──────────
+   * แถบสถานะอยู่ท้ายแผงซึ่งถูกซ่อนตอนสถานะผลลัพธ์ ข้อความสำคัญที่สุดของงานจึงหายไป
+   * เช่นบีบอัด PDF "เล็กลง 6% ... ข้อความยังค้นหาและคัดลอกได้เหมือนเดิม" (เห็นจากภาพจริง)
+   * ตรงกับแผน v2 ข้อ 4.4 ที่พี่ปอนด์เคาะ "ตัวเลขเฉพาะงานเพิ่มได้ เช่นบีบอัดโชว์ เล็กลง 82%"
+   * ‼️ คัดลอกข้อความมาแสดง ไม่ย้าย node เพราะเครื่องมือถือ reference ไว้และยังเขียนทับอยู่
+   * ‼️ เอาเฉพาะผลจบงาน (ok) กับข้อผิดพลาด (err) ข้อความระหว่างทำ (info) เป็นของชั่วคราว */
+  function mirrorStatus() {
+    if (state !== "result") return;
+    const res = resultHost.querySelector(".s2-res");
+    if (!res) return;
+    const src = [...wrap.querySelectorAll(".status.show.ok, .status.show.err")].find((n) => !resultHost.contains(n));
+    const text = src ? src.textContent.trim() : "";
+    let line = res.querySelector(".s2-res-msg");
+    if (!text) { if (line) line.remove(); return; }
+    if (!line) {
+      line = el("p", { class: "s2-res-msg", role: "status" });
+      /* คำเตือนมาก่อนเสมอ (ต้องเห็นก่อนกดดาวน์โหลด) แล้วค่อยเป็นข้อความสรุป */
+      const anchor = res.querySelector(".s2-res-notes") || res.querySelector(".s2-done");
+      if (anchor) anchor.after(line); else res.prepend(line);
+    }
+    if (line.textContent !== text) line.textContent = text;
+    line.dataset.kind = src.classList.contains("err") ? "err" : "ok";
   }
 
   /* ‼️ ปุ่มรวมของผลลัพธ์อยู่คนละที่กับแถวผลลัพธ์ (บั๊ก v130 เจอ 21/09/2026)
@@ -410,7 +505,7 @@ export function toolShell2(tool, cfg = {}) {
    * เครื่องมือแบบแผงเดี่ยวไม่เจออาการนี้เพราะ liftActions() ยกปุ่มพวกนี้ไปแล้ว
    * แต่ liftActions() ไม่ทำงานกับแบบผังงาน ที่นี่จึงต้องรับช่วงเอง */
   function domResultActions() {
-    return [...wrap.querySelectorAll(".results > .actions")].filter((n) => !resultHost.contains(n));
+    return [...wrap.querySelectorAll(".results > .actions")].filter((n) => !resultHost.contains(n) && !staleRes.has(n));
   }
 
   function syncState() {
@@ -419,7 +514,10 @@ export function toolShell2(tool, cfg = {}) {
        เช็คจาก DOM จริง ไม่ใช่จาก tool.accepts เพราะบางตัวรับไฟล์ผ่าน sheetpick
        ซึ่งต่อกล่องเข้ามาทีหลัง จึงต้องดูว่า "ตอนนี้มีกล่องรับไฟล์อยู่จริงไหม" */
     if (!wrap.querySelector(".dz-wrap")) { setState("work"); return; }
-    const { input, result } = fileState();
+    /* ไฟล์ของเครื่องมือนี้เอง ไม่ใช่ค่ากลางทั้งเว็บ (ดู treeFiles ใน ui.js และหมายเหตุที่ตัวเฝ้าข้างล่าง) */
+    const input = treeFiles(wrap);
+    /* หน้าที่ไม่อยู่บนจอ (แวะไปเครื่องมืออื่น) ห้ามหยิบผลลัพธ์กลาง เพราะตอนนั้นเป็นของเครื่องมืออื่น */
+    const { result } = wrap.isConnected ? fileState() : { result: null };
     const domRes = domResults();
     /* ‼️ ต้องจำว่าเคยย้ายผลลัพธ์มาแล้ว เพราะพอย้ายเสร็จ ผืนงานก็ไม่มี .result อีกต่อไป
        ถ้าตรวจจากผืนงานอย่างเดียว สถานะจะเด้งกลับไป work ทันทีในรอบถัดไป
@@ -439,7 +537,7 @@ export function toolShell2(tool, cfg = {}) {
         el("p", { class: "s2-done" }, [
           el("span", { class: "s2-done-ico", "aria-hidden": "true" }, [uiIcon("check", "s2-done-svg")]),
           rows.length <= 1 ? tr("เสร็จแล้ว", "Done")
-                           : tr(`ได้ ${rows.length} ไฟล์`, `${rows.length} files`),
+                           : tr(`ได้ ${rows.length} ไฟล์`, pl(rows.length, "file", "files")),
         ]),
         domAct.length ? el("div", { class: "s2-res-act" }, domAct) : null,
         rows.length ? el("div", { class: "s2-res-list" }, rows) : null,
@@ -450,15 +548,25 @@ export function toolShell2(tool, cfg = {}) {
         ]),
         nextSteps(tool),
       ]);
+      /* คำเตือนที่ย้ายมาแล้วในรอบก่อน ต้องเก็บไว้ ไม่งั้นหายตอนวาดแผงใหม่ (เหมือนเรื่องสะสมแถวผลลัพธ์) */
+      const keptNotes = [...resultHost.querySelectorAll(".s2-res-notes > .note")];
       resultHost.replaceChildren(host);
+      if (keptNotes.length) {
+        const box = el("div", { class: "s2-res-notes" }, keptNotes);
+        const done = host.querySelector(".s2-done");
+        if (done) done.after(box); else host.prepend(box);
+      }
       setState("result");
+      pullNotes();
+      mirrorStatus();
       return;
     }
     if (result && result.length && !manualBack) {
       resultHost.replaceChildren(resultBlock(tool, result,
         () => { manualBack = true; hardReset(); },
-        () => { manualBack = true; setState(input && input.length ? "work" : "landing"); }));
+        () => { manualBack = true; setState((input && input.length) || pasting() ? "work" : "landing"); }));
       setState("result");
+      mirrorStatus();
       return;
     }
     /* ‼️ เครื่องมือที่ "ไฟล์เป็นของแถม" (startsEmpty ในทะเบียน) ต้องไม่ตกไปหน้าเปล่า
@@ -471,29 +579,71 @@ export function toolShell2(tool, cfg = {}) {
      *   ครั้งแรกเขียนลัดออกไว้บนสุด ผลคือสถานะผลลัพธ์ไม่เคยทำงาน ปุ่มดาวน์โหลดจึงค้างอยู่
      *   ท้ายผืนงานจนตกนอกจอ ขึ้นว่า "สร้างเสร็จ 1 หน้า" แต่ไม่มีอะไรให้กด
      *   (เห็นกับตาจากภาพหน้าจอ ไม่ใช่จากเทส เพราะเทสมีทางถอยไปหาปุ่มในผืนงาน) */
-    setState((input && input.length) || tool.startsEmpty ? "work" : "landing");
+    setState((input && input.length) || tool.startsEmpty || pasting() ? "work" : "landing");
   }
   function hardReset() {
     /* กดปุ่มลบของกล่องรับไฟล์ทุกใบ = กลับไปสถานะเริ่มต้นโดยไม่ต้องรีเฟรชหน้า */
     for (const x of wrap.querySelectorAll(".dz-wrap .file-x, .dz-wrap .files .x")) x.click();
+    leavePaste();
     manualBack = false; domResultShown = false;
     resultHost.replaceChildren();
     setTimeout(syncState, 0);
   }
   restart.addEventListener("click", hardReset);
 
-  /* ไฟล์ในกล่องเปลี่ยน = ผู้ใช้เริ่มรอบใหม่ ยกเลิกธง "กลับไปแก้" ให้เอง */
-  let lastInputCount = 0;
+  /* ไฟล์ในกล่องเปลี่ยน = ผู้ใช้เริ่มรอบใหม่ ยกเลิกธง "กลับไปแก้" ให้เอง
+   * ‼️ ต้องเทียบ "ตัวไฟล์" ไม่ใช่ "จำนวนไฟล์" (แก้ 22/09/2026)
+   *   เดิมเทียบแค่จำนวน เครื่องมือไฟล์เดียวที่ลากไฟล์ใหม่มาทับ จำนวนยังเป็น 1 เท่าเดิม
+   *   แผงผลลัพธ์ของไฟล์เก่าจึงค้างอยู่ พร้อมปุ่มดาวน์โหลดไฟล์ผิดใบ (เห็นกับตาที่ pdf-page-numbers)
+   *   ต้นเหตุอีกครึ่งอยู่ที่ setInputFiles ใน ui.js ที่ไม่ล้างผลลัพธ์เก่า แก้คู่กันแล้ว */
+  /* ‼️ ตัวเฝ้าต้องอยู่รอดตอนผู้ใช้แวะไปเครื่องมืออื่น แล้วอ่านไฟล์จากกล่องของตัวเอง (แก้ 22/09/2026)
+   *   เดิมตั้งให้ตัวเฝ้า "ตาย" ทันทีที่หน้าหลุดจากจอ แต่แอปเก็บหน้าเครื่องมือไว้ในแคชแล้วเอากลับมาใช้
+   *   แวะไปเครื่องมืออื่นแล้วกลับมา หน้าเดิมจึงไม่มีตัวเฝ้าเหลือ ลากไฟล์ใหม่ใส่แล้วหน้ายังค้าง
+   *   ผลลัพธ์ของไฟล์เก่า กดดาวน์โหลดได้ไฟล์เก่า (จับได้จากไฟล์ PDF ที่ดาวน์โหลดมาเป็นของเก่าจริง
+   *   ที่ excel-to-pdf ใน tests/browser_realfiles.py)
+   * ‼️ และต้องนับไฟล์จากกล่องของตัวเอง ไม่ใช่ค่ากลาง เพราะค่ากลางคือกล่องใบล่าสุดที่เปลี่ยน
+   *   ของเครื่องมือไหนก็ได้ กลับมาแล้วมันยังเป็นไฟล์ของเครื่องมือที่แวะไป
+   * ‼️ ระหว่างที่หน้าไม่อยู่บนจอห้ามวาดสถานะ ผลลัพธ์กลางตอนนั้นเป็นของเครื่องมืออื่น
+   *   ถ้าเอามาวาด แผงผลลัพธ์ของหน้านี้จะโชว์ไฟล์ของเครื่องมือที่ไม่เกี่ยวกัน
+   *   แต่ยังต้องจดไฟล์ของตัวเองไว้ เพราะตอนเปิดหน้าครั้งแรก ไฟล์ที่พาตามมาจากเครื่องมือก่อนหน้า
+   *   มาถึงก่อนหน้าจะถูกวางลงจอ (ถ้าไม่จด การประกาศครั้งถัดไปจะดูเหมือนไฟล์เปลี่ยน แล้วล้างผลลัพธ์ทิ้ง)
+   *   จดได้ปลอดภัยเพราะนับจากกล่องของตัวเอง เครื่องมืออื่นจึงเปลี่ยนค่านี้ไม่ได้
+   * ถอดตัวเฝ้าจริงเฉพาะตอนแอปทิ้งหน้านี้ออกจากแคช (fk:dispose จาก disposeTree) */
+  /* ‼️ กลับมาจากเครื่องมืออื่นแล้ว ต้องคืนค่ากลางให้เป็นของหน้านี้ด้วย (22/09/2026)
+   *   ค่ากลางคือสิ่งที่ "ทำอะไรต่อดี" จะพาไป ตอนกลับมาแผงผลลัพธ์ยังโชว์ไฟล์ของหน้านี้
+   *   แต่ค่ากลางยังเป็นไฟล์ของเครื่องมือที่แวะไป กดการ์ดแล้วได้ไฟล์ผิดใบไปทำต่อ
+   *   (วัดจริง: ผลลัพธ์ A-file-มีเลขหน้า.pdf แต่การ์ดพา B-file.pdf ไป)
+   *   จึงจำผลลัพธ์ของหน้านี้ไว้ตอนอยู่บนจอ แล้วประกาศกลับตอนกลับมา */
+  const inputKey = () => treeFiles(wrap).map((f) => `${f.name}|${f.size}|${f.lastModified}`).join("\n");
+  let lastInputKey = "";
+  let disposed = false;
+  let away = false;          // หน้านี้เคยหลุดจากจอ (แวะไปเครื่องมืออื่น) และยังไม่ได้คืนค่ากลาง
+  let myResult = null;       // ผลลัพธ์ล่าสุดของหน้านี้ ตอนที่ยังอยู่บนจอ
   const stopWatch = watchFiles(() => {
-    const n = (fileState().input || []).length;
-    if (n !== lastInputCount) { lastInputCount = n; manualBack = false; domResultShown = false; resultHost.replaceChildren(); }
+    const k = inputKey();
+    if (k !== lastInputKey) {
+      lastInputKey = k; manualBack = false; domResultShown = false; resultHost.replaceChildren(); markStale();
+      myResult = null;
+      if (k) leavePaste();
+    }
+    if (!wrap.isConnected) { away = true; return; }
+    if (away) {
+      /* ต้องเก็บค่าไว้ก่อน เพราะการประกาศข้างล่างวนกลับเข้ามาที่ตัวเฝ้านี้ แล้วจดผลลัพธ์ทับเป็นค่าว่าง */
+      const keep = myResult;
+      away = false;
+      setInputFiles(treeFiles(wrap));
+      if (keep) setResultFiles(keep);
+      return;   // การประกาศสองครั้งข้างบนเรียก syncState ให้แล้ว
+    }
+    /* จดเฉพาะตอนมีผลลัพธ์จริง ห้ามจดค่าว่างทับ (เห็นจาก log 22/09/2026)
+       เครื่องมือถัดไปถูกสร้างขณะที่หน้านี้ยังอยู่บนจอระหว่างเปลี่ยนหน้า กล่องรับไฟล์ว่าง ๆ ของมัน
+       ประกาศไฟล์ว่างซึ่งล้างผลลัพธ์กลาง ถ้าจดตามนั้น ผลลัพธ์ของหน้านี้จะหายก่อนได้ใช้
+       ค่านี้ล้างเฉพาะตอนไฟล์ในกล่องของหน้านี้เปลี่ยน (ข้างบน) */
+    const r = fileState().result;
+    if (r && r.length) myResult = r;
     syncState();
-  }, () => mountedOnce && !wrap.isConnected);
-  /* ‼️ ตัวเฝ้าต้องไม่ "ตาย" ก่อนถูกวางลงหน้า ตอนสร้างเสร็จใหม่ ๆ wrap ยังไม่ connected
-     ถ้าเช็ค isConnected ตรง ๆ ตัวเฝ้าจะถูกลบทิ้งตั้งแต่รอบแรก แล้วสถานะจะไม่เปลี่ยนเลย */
-  let mountedOnce = false;
-  requestAnimationFrame(() => { mountedOnce = true; });
-  wrap.addEventListener("fk:dispose", stopWatch);
+  }, () => disposed);
+  wrap.addEventListener("fk:dispose", () => { disposed = true; stopWatch(); });
 
   /* ── ยกปุ่มลงมือทำของเครื่องมือแบบ panel ขึ้นมาเป็นปุ่มหลัก ───────────────
    * เครื่องมือ 28 ตัวที่ยังใช้โครงเดิมวางปุ่มไว้ใน .actions กลางผืนงาน
@@ -556,6 +706,14 @@ export function toolShell2(tool, cfg = {}) {
     const has = sideBody.querySelector("input,select,textarea,button,canvas,.file-row,.dz-wrap,.field,li,tr");
     grid.classList.toggle("side-empty", !has && state !== "result");
   }
+  /* เก็บตกคำเตือนที่เครื่องมือต่อเข้ามาหลังแถวผลลัพธ์ (ดู pullNotes) · หน่วงหนึ่งเฟรมกันเรียกถี่ */
+  let notesQueued = false;
+  new MutationObserver(() => {
+    if (state !== "result" || notesQueued) return;
+    notesQueued = true;
+    requestAnimationFrame(() => { notesQueued = false; pullNotes(); mirrorStatus(); });
+  }).observe(wrap, { childList: true, subtree: true });
+
   if (panelMode) {
     requestAnimationFrame(() => { liftActions(); syncSideEmpty(); });
     new MutationObserver(() => { liftActions(); syncSideEmpty(); })
@@ -569,6 +727,18 @@ export function toolShell2(tool, cfg = {}) {
     resScan = true;
     requestAnimationFrame(() => { resScan = false; syncState(); });
   }).observe(stage, { childList: true, subtree: true });
+  /* ‼️ แถวผลลัพธ์ที่เครื่องมือส่งมากับ cfg.footer เกิดในแผงขวา ไม่ใช่ในผืนงาน (22/09/2026)
+   * ตัวเฝ้าข้างบนดูแค่ผืนงาน แถวของบีบอัด PDF จึงไม่เคยถูกย้ายเข้าแผงผลลัพธ์ ค้างอยู่ในแถบสถานะที่ถูกซ่อน
+   * ข้อมูล "38 KB เป็น 35 KB" ของแถวนั้นเลยไม่มีใครเห็น (วัดจริง: แถวอยู่ในผืนงาน มองไม่เห็น)
+   * ‼️ กรองเฉพาะแถวผลลัพธ์ที่งอกขึ้นนอกแผงผลลัพธ์ ไม่งั้นการวาดแผงผลลัพธ์เองจะวนเรียกตัวเองไม่จบ */
+  new MutationObserver((muts) => {
+    if (resScan) return;
+    const grew = muts.some((m) => [...m.addedNodes].some((n) => n.nodeType === 1 && !resultHost.contains(n)
+      && (n.matches(".result, .results > .actions") || n.querySelector(".result"))));
+    if (!grew) return;
+    resScan = true;
+    requestAnimationFrame(() => { resScan = false; syncState(); });
+  }).observe(side, { childList: true, subtree: true });
 
 
   /* Esc ปิดเมนูกับแผ่นล่าง แล้วคืนโฟกัส */

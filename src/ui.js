@@ -63,6 +63,15 @@ function plainDownload(blob, filename) {
  */
 export function download(blob, filename) {
   announceResult(blob, filename); // ประกาศก่อนเสมอ ผลลัพธ์พร้อมพาไปเครื่องมือถัดไปแม้เซฟไม่สำเร็จ
+  saveFile(blob, filename);
+}
+
+/** บันทึกไฟล์ลงเครื่องเฉย ๆ โดยไม่ประกาศว่าเป็น "ผลลัพธ์ของหน้านี้"
+ *  ‼️ ใช้กับปุ่มโหลดรายชิ้นในแกลเลอรีผลลัพธ์ของเครื่องมือเอง (แก้ 22/09/2026)
+ *     download() ประกาศผลลัพธ์ แล้วหน้า v2 สลับเข้าสถานะผลลัพธ์ที่โชว์เฉพาะไฟล์นั้นไฟล์เดียว
+ *     ย่อรูป 5 ใบ กดโหลดใบแรก แผงรายการรูปหายไปทั้งแผง อีก 4 ใบโหลดทีละใบไม่ได้อีกเลย
+ *     (จับได้จาก tests/browser_stress.py ข้อชื่อไฟล์โหด โหลดสำเร็จ 1/5) */
+export function saveFile(blob, filename) {
   if (!inApp()) { plainDownload(blob, filename); return; }
   saveViaShare(blob, filename).then((how) => { if (how === "download") plainDownload(blob, filename); });
 }
@@ -796,9 +805,22 @@ function forZonesIn(node, fn) {
 export function sleepTree(node) { return forZonesIn(node, (d) => d.sleep()); }
 /** กลับเข้ามาที่เครื่องมือเดิมที่แคชไว้ — วาดภาพย่อกลับมา */
 export function wakeTree(node) { return forZonesIn(node, (d) => d.wake()); }
-/** ถอดออกจากแคชถาวร — คืนทุกอย่างรวมทั้งตัวรับ event ระดับ document */
+/** ถอดออกจากแคชถาวร — คืนทุกอย่างรวมทั้งตัวรับ event ระดับ document
+ *  ‼️ บอกโครงหน้า v2 ด้วย (fk:dispose) ให้ถอดตัวเฝ้าไฟล์ของมันออก ตอนนี้เท่านั้นที่ถอดได้
+ *     เพราะการแค่สลับไปเครื่องมืออื่นไม่ใช่การทิ้ง กลับมาแล้วต้องทำงานต่อได้ (ดู shell2.js) */
 export function disposeTree(node) {
+  if (node && node.querySelectorAll) {
+    for (const w of [node, ...node.querySelectorAll(".s2")]) w.dispatchEvent(new Event("fk:dispose"));
+  }
   return forZonesIn(node, (d) => { zoneDisposers.delete(d); d.dispose(); });
+}
+/** ไฟล์ที่อยู่ในกล่องรับไฟล์ของเครื่องมือนี้เอง (ทุกกล่องใน node เรียงตามลำดับกล่อง)
+ *  ‼️ ต่างจาก fileState().input ที่เป็นค่ากลางทั้งเว็บ ซึ่งคือ "กล่องใบล่าสุดที่เปลี่ยน" ของเครื่องมือไหนก็ได้
+ *     แวะเครื่องมืออื่นแล้วกลับมา ค่ากลางยังเป็นไฟล์ของเครื่องมือที่แวะไป ใช้ตัดสินสถานะหน้าไม่ได้ */
+export function treeFiles(node) {
+  const out = [];
+  forZonesIn(node, (d) => { if (d.files) out.push(...d.files()); });   // ของที่ฝากผ่าน registerCleanup ไม่มีไฟล์
+  return out;
 }
 /** เครื่องมือนี้ยังมีไฟล์ที่ผู้ใช้เลือกไว้ค้างอยู่ไหม — ใช้ตัดสินว่า "ห้ามถอดออกจากแคช"
  *  ผู้ใช้ที่ลากไฟล์ 30 ใบใส่ไว้แล้วแวะไปเครื่องมืออื่น ต้องกลับมาเจอของเดิมครบเสมอ */
@@ -852,9 +874,18 @@ export function setResultFiles(files) {
 }
 /** กล่องรับไฟล์เรียกเองทุกครั้งที่รายการไฟล์เปลี่ยน — เครื่องมือไม่ต้องรู้เรื่องนี้เลย */
 export function setInputFiles(files) {
-  inputFiles = files && files.length ? [...files] : null;
+  const next = files && files.length ? [...files] : null;
+  /* ‼️ ไฟล์ในกล่องเปลี่ยน = ผลลัพธ์เดิมเป็นของไฟล์ชุดก่อน ต้องล้างทิ้ง (บั๊กจริง จับได้ 22/09/2026)
+   * อาการ: ใส่เลขหน้า first.pdf เสร็จ แล้วลาก second.pdf มาวางทับ
+   *   หน้ายังค้างสถานะผลลัพธ์ และโชว์ "first-มีเลขหน้า.pdf" พร้อมปุ่มดาวน์โหลดที่กดได้
+   *   ผู้ใช้จะได้ไฟล์ผิดใบโดยไม่มีอะไรเตือน และ "ทำอะไรต่อดี" ก็จะพาไฟล์เก่าไปเครื่องมือถัดไปด้วย
+   *   (carryFiles คืนผลลัพธ์ก่อนไฟล์ในกล่องเสมอ)
+   * เทียบด้วยชื่อ ขนาด เวลาแก้ไข และลำดับ เพราะสลับลำดับไฟล์ใน "รวมไฟล์" ก็ทำให้ผลเดิมใช้ไม่ได้แล้ว */
+  if (fileKey(next) !== fileKey(inputFiles)) resultFiles = null;
+  inputFiles = next;
   notifyResultWatchers();
 }
+const fileKey = (fs) => (fs || []).map((f) => `${f.name}|${f.size}|${f.lastModified}`).join("\n");
 /** ไฟล์ที่พาไปเครื่องมืออื่นได้ตอนนี้ — ผลลัพธ์มาก่อน ถ้ายังไม่มีก็ใช้ไฟล์ที่โหลดอยู่ */
 export function carryFiles() { return resultFiles || inputFiles || null; }
 /** ไฟล์ที่อยู่ในกล่องกับไฟล์ผลลัพธ์ แยกกัน — โครงหน้า v2 ใช้ตัดสินว่าตอนนี้ควรอยู่สถานะไหน */
@@ -1002,6 +1033,7 @@ export function dropzone(opts = {}) {
   zoneDisposers.add({
     zone,
     hasFiles: () => files.length > 0,
+    files: () => files,
     sleep: releaseThumbs,
     wake() { if (files.length) render(); },
     dispose() {

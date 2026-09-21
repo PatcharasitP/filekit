@@ -172,7 +172,7 @@ with sync_playwright() as p:
     pg.goto(f"{BASE}/#/image-convert", wait_until="networkidle")
     pg.wait_for_selector(".dz")
     with pg.expect_file_chooser() as fcinfo:
-        pg.locator(".dz").click()
+        (pg.locator(".s2-cta-big:visible").first if pg.locator(".s2-cta-big:visible").count() else pg.locator(".dz")).click()
     fc = fcinfo.value
     fc.set_files([str(SAMPLES / "ตัวอย่าง-รูปภาพ-1.jpg"), str(SAMPLES / "ตัวอย่าง-รูปภาพ-2.png")])
     pg.wait_for_timeout(900)
@@ -252,7 +252,7 @@ with sync_playwright() as p:
     pg.wait_for_function("() => !document.querySelector('.loading')", timeout=8000)
     pg.wait_for_timeout(400)
     with pg.expect_file_chooser() as fcinfo:
-        pg.locator(".dz").click()
+        (pg.locator(".s2-cta-big:visible").first if pg.locator(".s2-cta-big:visible").count() else pg.locator(".dz")).click()
     fc = fcinfo.value
     fc.set_files(str(SAMPLES / "ตัวอย่าง-รายงานประจำเดือน.pdf"))
     pg.wait_for_timeout(1800)
@@ -272,7 +272,7 @@ with sync_playwright() as p:
     pg.goto(f"{BASE}/#/image-convert", wait_until="networkidle")
     pg.wait_for_selector(".dz")
     with pg.expect_file_chooser() as fcinfo:
-        pg.locator(".dz").click()
+        (pg.locator(".s2-cta-big:visible").first if pg.locator(".s2-cta-big:visible").count() else pg.locator(".dz")).click()
     fc = fcinfo.value
     fc.set_files([str(SAMPLES / "ตัวอย่าง-รูปภาพ-1.jpg"), str(SAMPLES / "ตัวอย่าง-รูปภาพ-2.png")])
     pg.wait_for_timeout(700)
@@ -316,7 +316,7 @@ with sync_playwright() as p:
     ck("ก่อนทำงาน แถบสถานะว่าง", pg.locator(".status").inner_text().strip(), "")
     pg.wait_for_selector(".dz")
     with pg.expect_file_chooser() as fcinfo:
-        pg.locator(".dz").click()
+        (pg.locator(".s2-cta-big:visible").first if pg.locator(".s2-cta-big:visible").count() else pg.locator(".dz")).click()
     fc = fcinfo.value
     fc.set_files(str(SAMPLES / "ตัวอย่าง-รูปภาพ-1.jpg"))
     pg.wait_for_timeout(600)
@@ -362,12 +362,14 @@ with sync_playwright() as p:
     pg2.wait_for_selector(".dz", timeout=8000)
     ck_true("เปิดหน้าเครื่องมือได้", pg2.locator(".s2-land h1, .tool-head h1").count() >= 1)
     with pg2.expect_file_chooser() as fcinfo:
-        pg2.locator(".dz").click()
+        # หน้าเปล่าของ v2 บังกล่องรับไฟล์ไว้ ผู้ใช้กดปุ่มยักษ์ (ซึ่งส่งต่อไปเปิดหน้าต่างเลือกไฟล์ตัวเดียวกัน)
+        (pg2.locator(".s2-cta-big:visible").first if pg2.locator(".s2-cta-big:visible").count() else pg2.locator(".dz")).click()
     fc = fcinfo.value
     fc.set_files(str(SAMPLES / "ตัวอย่าง-รูปภาพ-1.jpg"))
     pg2.wait_for_timeout(700)
     ck_true("เลือกไฟล์ได้", pg2.locator(".file-row").count() == 1)
-    run2 = pg2.get_by_role("button", name=re.compile("แปลง|บีบอัด|รวม|แยก|สร้าง|ประมวลผล"))
+    # ‼️ เฉพาะปุ่มที่มองเห็น ปุ่มจริงของเครื่องมือถูกซ่อนไว้หลังบ้านเมื่อมีปุ่มเงาในแผงแล้ว
+    run2 = pg2.get_by_role("button", name=re.compile("แปลง|บีบอัด|รวม|แยก|สร้าง|ประมวลผล")).filter(visible=True)
     if run2.count():
         run2.first.click()
         pg2.wait_for_timeout(1800)

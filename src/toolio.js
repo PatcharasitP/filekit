@@ -136,7 +136,7 @@ export const TOOL_IO_ALL = {
    "inMeta": "3 หน้า",
    "outExt": "pdf",
    "outSize": "",
-   "outMeta": "27 KB → 25 KB, ระดับปานกลาง"
+   "outMeta": "27 KB → 26 KB, ระดับปานกลาง"
   },
   "en": {
    "n": 1,
@@ -144,7 +144,7 @@ export const TOOL_IO_ALL = {
    "inMeta": "3 pages",
    "outExt": "pdf",
    "outSize": "",
-   "outMeta": "27 KB → 25 KB, Medium level"
+   "outMeta": "27 KB → 26 KB, Medium level"
   }
  },
  "pdf-merge": {
@@ -171,7 +171,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
-   "outSize": "26 KB",
+   "outSize": "28 KB",
    "outMeta": "3 หน้า, เลข 1 ถึง 3"
   },
   "en": {
@@ -179,7 +179,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
-   "outSize": "26 KB",
+   "outSize": "28 KB",
    "outMeta": "3 pages, numbered 1 to 3"
   }
  },
@@ -207,7 +207,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
-   "outSize": "25 KB",
+   "outSize": "26 KB",
    "outMeta": "3 หน้า"
   },
   "en": {
@@ -215,7 +215,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
-   "outSize": "25 KB",
+   "outSize": "26 KB",
    "outMeta": "3 pages"
   }
  },

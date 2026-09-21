@@ -742,7 +742,7 @@ export function mount(tool) {
       ]),
       el("p", { class: "ms-empty-hint" }, tr(
         "Solver คืนคำตอบเดียวแล้วจบ ไม่บอกว่ามีกี่ชุด และไม่เลือกชุดที่สั้นที่สุด",
-        "Two things Solver will not do: it returns one answer and stops, never saying how many other sets add up the same, and it does not prefer the shortest set (hiding a 4 row answer, it came back with 8 to 12 rows)")),
+        "Solver returns one answer and stops. It never says how many sets there are, and does not pick the shortest")),
       el("p", { class: "ms-empty-hint" }, tooBig
         ? tr(`มี ${n.toLocaleString()} แถว เกินเพดาน 200 ตัวแปรของ Solver ที่ติดมากับ Excel ต้องคัดให้เหลือไม่เกิน 200 แถวก่อน`,
              `The open file has ${pl(n.toLocaleString(), "row", "rows")}, past the 200 variable cap of the Solver bundled with Excel. You would have to narrow it to 200 rows first`)

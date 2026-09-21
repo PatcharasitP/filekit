@@ -46,6 +46,11 @@ def goto(pg, tool_id):
     pg.goto(f"{BASE}/#/{tool_id}", wait_until="networkidle")
 
 
+# ‼️ ตัวเลือกผลลัพธ์ทุกตัวในไฟล์นี้ต้องมี :visible ทุกส่วน (22/09/2026)
+#    wait_for_selector กับ locator.first หยิบ "ตัวแรกตามลำดับในหน้า" ไม่ใช่ตัวแรกที่มองเห็น
+#    (พิสูจน์ด้วยหน้าทดลอง: ปุ่มซ่อนมาก่อน ปุ่มที่เห็นมาทีหลัง แบบไม่มี :visible รอจนหมดเวลา)
+#    v2 ซ่อนปุ่มจริงของเครื่องมือไว้หลังบ้านเมื่อมีปุ่มเงาในแผงแล้ว ปุ่มจริงอยู่ในผืนงานซึ่งมาก่อนแผง
+#    เทสจึงไปรอปุ่มที่ซ่อนอยู่ ทั้งที่ผู้ใช้เห็นปุ่มดาวน์โหลดครบ (pdf-to-images หมดเวลา 25 วินาที)
 def dl(pg, trigger, filename, timeout=20_000):
     with pg.expect_download(timeout=timeout) as di:
         trigger()
@@ -108,8 +113,8 @@ def case_excel_csv(pg):
     pg.set_input_files("input[type=file]", str(SAMPLES / "ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx"), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "excelcsv_out.csv")
+    pg.wait_for_selector(".s2-side-res .result:visible, .results .result:visible", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button:visible, .results .result button:visible").first.click(), "excelcsv_out.csv")
     data = out.read_bytes()
     assert data[:3] == b"\xef\xbb\xbf", "CSV ที่ได้ต้องมี UTF-8 BOM (กันไทยเพี้ยนตอนเปิดด้วย Excel)"
     text = data.decode("utf-8-sig")
@@ -127,8 +132,8 @@ def case_pdf_merge(pg):
     pg.wait_for_selector(".file-row", timeout=15_000)
     assert pg.locator(".file-row").count() == 2, "ไฟล์ที่ใส่ไม่ครบ 2 แถวในรายการ"
     pg.get_by_role("button", name="รวมไฟล์").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "pdfmerge_out.pdf")
+    pg.wait_for_selector(".s2-side-res .result:visible, .results .result:visible", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button:visible, .results .result button:visible").first.click(), "pdfmerge_out.pdf")
     doc = fitz.open(str(out))
     assert doc.page_count == expected_pages, f"หน้าหลังรวมไม่ครบ: ได้ {doc.page_count} ต้องการ {expected_pages}"
     assert doc[0].get_text().strip(), "หน้าแรกของไฟล์ที่รวมแล้วไม่มีข้อความเลย"
@@ -208,8 +213,8 @@ def case_word_clean(pg):
     assert ("ผู้เขียน" in report) or ("รหัสรอบการบันทึก" in report), \
         f"ไม่พบร่องรอย metadata ที่ควรเจอในไฟล์ตัวอย่าง (คาดว่ามี author/rsid): {report}"
     pg.get_by_role("button", name="ล้าง").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "wordclean_out.docx")
+    pg.wait_for_selector(".s2-side-res .result:visible, .results .result:visible", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button:visible, .results .result button:visible").first.click(), "wordclean_out.docx")
 
     with zipfile.ZipFile(out) as z:
         names = z.namelist()
@@ -266,8 +271,8 @@ def case_images_to_pdf(pg):
     pg.wait_for_selector(".file-row", timeout=15_000)
     assert pg.locator(".file-row").count() == 2, "ไฟล์รูปที่ใส่ไม่ครบ 2 แถว"
     pg.get_by_role("button", name="สร้างไฟล์ PDF").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "imgtopdf_out.pdf")
+    pg.wait_for_selector(".s2-side-res .result:visible, .results .result:visible", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button:visible, .results .result button:visible").first.click(), "imgtopdf_out.pdf")
     doc = fitz.open(str(out))
     assert doc.page_count == 2, f"ควรได้ PDF 2 หน้า (1 รูป = 1 หน้า) แต่ได้ {doc.page_count}"
     pix = doc[0].get_pixmap()
@@ -279,8 +284,8 @@ def case_powerpoint_to_word(pg):
     pg.set_input_files("input[type=file]", str(SAMPLES / "ตัวอย่าง-นำเสนอบริษัท.pptx"), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     pg.get_by_role("button", name="แปลงเป็น Word").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res button, .results button", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res button, .results button", has_text="ดาวน์โหลด").first.click(), "ppt2word_out.docx")
+    pg.wait_for_selector(".s2-side-res button:visible, .results button:visible", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res button:visible, .results button:visible", has_text="ดาวน์โหลด").first.click(), "ppt2word_out.docx")
     doc = pydocx.Document(str(out))
     full_text = "\n".join(p.text for p in doc.paragraphs)
     assert re.search(r"[ก-๙]", full_text), "ไม่มีข้อความไทยเลยในเอกสาร Word ที่แปลงออกมา"
@@ -294,8 +299,8 @@ def case_pdf_to_images(pg):
     pg.set_input_files("input[type=file]", str(src), timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     pg.get_by_role("button", name="แปลงเป็นรูป").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res button, .results button", timeout=25_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res button, .results button", has_text="ZIP").first.click(), "pdf2img_out.zip")
+    pg.wait_for_selector(".s2-side-res button:visible, .results button:visible", timeout=25_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res button:visible, .results button:visible", has_text="ZIP").first.click(), "pdf2img_out.zip")
     with zipfile.ZipFile(out) as z:
         names = z.namelist()
         assert len(names) == expected_pages, f"จำนวนรูปไม่ตรงจำนวนหน้า PDF: ได้ {len(names)} ต้องการ {expected_pages}"
@@ -344,8 +349,8 @@ def case_pdf_split(pg):
     assert f"{expected_pages} ไฟล์" in pg.locator(".sp-count").inner_text(), \
         f"ตัวอย่างจำนวนไฟล์ที่จะได้ไม่ตรง: {pg.locator('.sp-count').inner_text()}"
     pg.get_by_role("button", name="แยกไฟล์").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res button, .results button", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res button, .results button", has_text="ZIP").first.click(), "pdfsplit_out.zip")
+    pg.wait_for_selector(".s2-side-res button:visible, .results button:visible", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res button:visible, .results button:visible", has_text="ZIP").first.click(), "pdfsplit_out.zip")
     with zipfile.ZipFile(out) as z:
         names = z.namelist()
         assert len(names) == expected_pages, f"จำนวนไฟล์ที่แยกได้ไม่ตรงจำนวนหน้า: {len(names)} vs {expected_pages}"
@@ -363,10 +368,10 @@ def case_image_convert(pg):
     pg.wait_for_selector(".file-row", timeout=15_000)
     # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
     #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
-    pg.locator(".s2-side-bd select, .panel select").first.select_option("webp")
+    pg.locator(".s2-side-bd select, .s2-stage select, .panel select").first.select_option("webp")
     pg.get_by_role("button", name="แปลงไฟล์").filter(visible=True).click()
-    pg.wait_for_selector(".s2-side-res .result, .results .result", timeout=20_000)
-    out = dl(pg, lambda: pg.locator(".s2-side-res .result button, .results .result button").first.click(), "imgconvert_out.webp")
+    pg.wait_for_selector(".s2-side-res .result:visible, .results .result:visible", timeout=20_000)
+    out = dl(pg, lambda: pg.locator(".s2-side-res .result button:visible, .results .result button:visible").first.click(), "imgconvert_out.webp")
     im = Image.open(out)
     im.load()
     assert im.format == "WEBP", f"ชนิดไฟล์ผลลัพธ์ไม่ใช่ WEBP ตามที่เลือก: {im.format}"
@@ -551,6 +556,9 @@ def redproof(broken):
         log("-- เคส 2/3: pdf-merge (บล็อกไลบรารี pdf-lib ทั้ง local + CDN สำรอง) --")
         pg.route("**/vendor/pdf-lib.min.js", lambda r: r.abort())
         pg.route("**cdnjs.cloudflare.com**pdf-lib**", lambda r: r.abort())
+        # ‼️ 21/09/2026 เปลี่ยนไลบรารีเป็น @cantoo/pdf-lib ซึ่ง CDN สำรองอยู่ที่ jsDelivr ไม่ใช่ cdnjs แล้ว
+        #    บั๊กปลอมที่บล็อกแค่ cdnjs จึงไม่ทำงาน เครื่องมือตกไปโหลดสำรองสำเร็จ แล้วข้อพิสูจน์นี้เขียวผิด ๆ
+        pg.route("**cdn.jsdelivr.net**pdf-lib**", lambda r: r.abort())
         red_ok = False
         try:
             case_pdf_merge(pg)
@@ -560,6 +568,7 @@ def redproof(broken):
             log(f"  ✅ แดงตามคาด: {type(e).__name__}: {str(e).splitlines()[0][:160]}")
         pg.unroute("**/vendor/pdf-lib.min.js")
         pg.unroute("**cdnjs.cloudflare.com**pdf-lib**")
+        pg.unroute("**cdn.jsdelivr.net**pdf-lib**")
         green_ok = run_case("pdf-merge (ถอดบั๊กปลอมแล้ว — ต้องเขียว)", case_pdf_merge, pg)
         proof.append(("pdf-merge (block pdf-lib lib)", red_ok, green_ok))
 

@@ -54,8 +54,8 @@ const STYLE = `
 @media (pointer:coarse){ .mr-switch{height:36px} .mr-track{top:6px;bottom:6px} }
 
 .mr-stage{position:relative;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;
-  background:var(--bg-soft)}
-.mr-canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+  background:var(--bg-soft);width:fit-content;max-width:100%}
+.mr-canvas{display:block;max-width:100%;height:auto;touch-action:none;cursor:crosshair}
 .mr-tip{position:absolute;pointer-events:none;z-index:2;background:var(--card,var(--bg));
   border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 10px;font-size:12.5px;
   line-height:1.65;color:var(--text);box-shadow:0 6px 20px rgba(0,0,0,.18);max-width:260px}
@@ -448,12 +448,22 @@ export function mount(tool) {
     const list = shown();
     if (!list.length) return;
     const dpr = Math.min(2.5, window.devicePixelRatio || 1);
-    const W = Math.max(360, Math.round(stage.clientWidth || 900));
+    /* ‼️ กรอบต้องแนบกับแผนที่ ไม่ใช่กว้างเต็มผืน (แก้ 22/09/2026)
+       หน้า v2 ให้ผืนงานกว้างเกือบเต็มจอ จอ 1920 ได้กรอบ 1438x570 ประเทศไทยตัวเล็กอยู่กลาง
+       ที่ว่างสองข้างรวมเกือบ 1,000 px และติดไปในภาพ PNG ที่ผู้ใช้เอาไปวางสไลด์ด้วย
+       ความสูงยังคุมด้วยจอเหมือนเดิม แล้วให้ความกว้างตามสัดส่วนของสิ่งที่วาด
+       ‼️ วัดที่ว่างจากกล่องแม่ (mapBox) ห้ามวัดจากกรอบแผนที่เอง เพราะกรอบหดตามภาพแล้ว
+          ถ้าวัดจากตัวเอง พอหดครั้งแรกจะไม่มีวันขยายกลับอีก */
+    const room = Math.max(320, Math.round(mapBox.clientWidth || stage.clientWidth || 900));
+    const ratio = frameRatio();
     const maxH = Math.max(320, Math.round((window.innerHeight || 900) * 0.62));
-    const H = Math.round(Math.min(760, maxH, Math.max(320, W * frameRatio())));
+    const H = Math.round(Math.min(760, maxH, Math.max(320, room * ratio)));
+    const W = Math.min(room, Math.max(320, Math.round(H / ratio)));
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
-    canvas.style.height = H + "px";
+    /* สูงตามสัดส่วนจริงของภาพ จอที่แคบกว่าที่วัดไว้จะย่อทั้งภาพลงเท่ากัน ไม่บีบภาพให้เบี้ยว */
+    canvas.style.width = W + "px";
+    canvas.style.height = "";
     const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -721,7 +731,8 @@ export function mount(tool) {
     tip.hidden = false;
     const rect = canvas.getBoundingClientRect();
     const scale = rect.width / view.W;
-    tip.style.left = Math.min(rect.width - 170, hit.x * scale + 12) + "px";
+    /* กรอบแนบกับแผนที่แล้ว จุดฝั่งตะวันออกอยู่ชิดขอบ ต้องวัดความกว้างป้ายจริง ไม่งั้นป้ายโดนขอบตัด */
+    tip.style.left = Math.max(4, Math.min(rect.width - tip.offsetWidth - 4, hit.x * scale + 12)) + "px";
     tip.style.top = Math.max(4, hit.y * scale - 10) + "px";
   });
   canvas.addEventListener("pointerleave", () => { tip.hidden = true; hover = null; });
@@ -779,8 +790,9 @@ export function mount(tool) {
     const s = summarize(shown());
     if (!s.provinces || !s.provinces.length || (s.provinces.length === 1 && !s.provinces[0].province)) {
       provBox.appendChild(el("p", { class: "mr-note" }, tr(
-        "ไฟล์นี้ไม่มีคอลัมน์จังหวัด เลือกคอลัมน์จังหวัดในแผงซ้ายแล้วจะสรุปให้",
-        "This file has no province column. Pick one on the left and the summary appears")));
+        // ไม่บอกทิศ เพราะหน้า v2 ตัวเลือกอยู่แผงขวา และบนมือถืออยู่ในแผ่นตัวเลือก (แก้ 22/09/2026)
+        "ไฟล์นี้ไม่มีคอลัมน์จังหวัด เลือกคอลัมน์จังหวัดในช่อง \"จังหวัด\" ของตัวเลือกแล้วจะสรุปให้",
+        "This file has no province column. Pick one in the Province box of the options and the summary appears")));
       return;
     }
     const maxN = Math.max(...s.provinces.map((p) => p.n));
@@ -865,13 +877,14 @@ export function mount(tool) {
 
   if (typeof ResizeObserver === "function") {
     let lastW = 0;
+    /* เฝ้ากล่องแม่ ไม่ใช่กรอบแผนที่ เพราะกรอบกว้างเท่าภาพที่วาด (ดู draw) จอขยายแล้วกรอบจะไม่ขยับตาม */
     const ro = new ResizeObserver(() => {
-      const w = Math.round(stage.clientWidth || 0);
+      const w = Math.round(mapBox.clientWidth || 0);
       if (!pairs.length || !w || Math.abs(w - lastW) < 24) return;
       lastW = w;
       draw();
     });
-    ro.observe(stage);
+    ro.observe(mapBox);
   }
 
   return ws.wrap;

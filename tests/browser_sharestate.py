@@ -19,7 +19,10 @@
 """
 import os
 import sys
+import pathlib
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import fkui          # ตัวช่วยกลางที่รู้จักโครงหน้า v2
 
 BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899")
 ok = fail = 0
@@ -66,32 +69,38 @@ def set_bins(pg):
     unit.dispatch_event("input")
 
 
-READ_PAGENUM = """() => {
-  const s = [...document.querySelectorAll('.ws-right select, .s2-stage select, .s2-side-bd select, .ws-left select')];
-  const n = [...document.querySelectorAll('input[type=number]')];
-  return {a: s[3] && s[3].value, b: n[0] && n[0].value};
-}"""
-READ_WM = """() => {
-  const t = document.querySelector('.ws-right input[type=text], .ws-left input[type=text]');
-  const r = document.querySelector('input[type=range]');
-  return {a: t && t.value, b: r && r.value};
-}"""
+# ‼️ หาช่องจาก "ตัวเลือกที่ช่องนั้นมี" ห้ามนับลำดับ (22/09/2026)
+#    v2 รวมแผงซ้ายกับขวาไว้แผงเดียว ลำดับช่องจึงเลื่อน ตัวตั้งกับตัวอ่านเคยชี้คนละช่องกัน
+SIZE_SEL = "[...document.querySelectorAll('select')].find(s => [...s.options].map(o => o.value).join(',') === '9,11,13,16')"
+FIRST_NUM = "[...document.querySelectorAll('.s2 input[type=number], .panel input[type=number]')].find(i => i.offsetParent)"
+READ_PAGENUM = f"""() => {{
+  const s = {SIZE_SEL};
+  const n = {FIRST_NUM};
+  return {{a: s && s.value, b: n && n.value}};
+}}"""
+WM_TEXT = "[...document.querySelectorAll('input[type=text]')].find(i => /ลายน้ำ|Watermark/.test(i.placeholder || ''))"
+READ_WM = f"""() => {{
+  const t = {WM_TEXT};
+  const r = document.querySelector('.s2 input[type=range], .panel input[type=range]');
+  return {{a: t && t.value, b: r && r.value}};
+}}"""
 
 
 def set_pagenum(pg):
-    pg.locator(".ws-right select, .ws-left select").nth(3).select_option("16")
+    pg.locator("select:visible").filter(has=pg.locator("option[value='13']")).filter(
+        has=pg.locator("option[value='16']")).first.select_option("16")
     pg.wait_for_timeout(300)
-    n = pg.locator("input[type=number]:visible").first
+    n = pg.locator(".s2 input[type=number]:visible, .panel input[type=number]:visible").first
     n.fill("7")
     n.dispatch_event("input")
 
 
 def set_wm(pg):
-    t = pg.locator(".ws-right input[type=text], .ws-left input[type=text]").first
+    t = pg.locator("input[type=text]:visible[placeholder*='ลายน้ำ'], input[type=text]:visible[placeholder*='Watermark']").first
     t.fill("ห้ามคัดลอก")
     t.dispatch_event("input")
     pg.wait_for_timeout(300)
-    r = pg.locator("input[type=range]").first
+    r = pg.locator(".s2 input[type=range], .panel input[type=range]").first
     r.fill("45")
     r.dispatch_event("input")
 
@@ -99,19 +108,20 @@ def set_wm(pg):
 # ── เพิ่ม 19/09/2026: สามตัวที่ค่าส่วนใหญ่ "ไม่" ผูกกับไฟล์ แม้เครื่องมือจะรับไฟล์ก็ตาม
 #    บันทึกเดิมเหมาว่าทั้งสามผูกกับไฟล์เลยไม่ทำ แต่พอไล่ดูช่องจริงพบว่าที่ผูกกับไฟล์
 #    มีแค่ชีตกับคอลัมน์ซึ่งอยู่แผงซ้าย ส่วนแผงขวาเป็นเงื่อนไขและหน้าตาล้วน
-READ_MATCHSUM = """() => {
-  const r = document.querySelector('.ws-right');
-  return { a: r.querySelector('input.ms-num').value,
-           b: r.querySelector('.ms-switch input').checked ? 'on' : 'off' };
-}"""
+# สวิตช์ "ใช้รายการที่ติดลบด้วย" หาจากชื่อ เพราะในแผงเดียวกันมีสวิตช์ "แถวแรกเป็นหัวตาราง" มาก่อน
+NEG_SW = "[...document.querySelectorAll('.ms-switch-field')].find(r => /ติดลบ|negative/.test(r.textContent)).querySelector('input')"
+READ_MATCHSUM = f"""() => {{
+  return {{ a: document.querySelector('input.ms-num').value,
+           b: {NEG_SW}.checked ? 'on' : 'off' }};
+}}"""
 
 
 def set_matchsum(pg):
-    t = pg.locator(".ws-right input.ms-num").first
+    t = pg.locator("input.ms-num:visible").first
     t.fill("987654.25")
     t.dispatch_event("input")
     pg.wait_for_timeout(200)
-    pg.locator(".ws-right .ms-switch input").first.check()
+    pg.locator(".ms-switch-field:visible", has_text="ติดลบ").locator("input").first.check()
 
 
 READ_COVERAGE = """() => ({ a: document.querySelector('input[type=range]').value,
@@ -128,8 +138,9 @@ def set_coverage(pg):
     c.dispatch_event("input")
 
 
-READ_RELOCATE = """() => ({ a: document.querySelector('.mr-color').value,
-                            b: document.querySelector('.s2-side-bd select, .s2-side-bd select, .ws-right select').value })"""
+DOT_SEL = "[...document.querySelectorAll('select')].find(s => [...s.options].map(o => o.value).join(',') === '3,4.5,6')"
+READ_RELOCATE = f"""() => ({{ a: document.querySelector('.mr-color').value,
+                             b: ({DOT_SEL} || {{}}).value }})"""
 
 
 def set_relocate(pg):
@@ -137,7 +148,7 @@ def set_relocate(pg):
     c.fill("#aa2288")
     c.dispatch_event("input")
     pg.wait_for_timeout(200)
-    pg.locator(".s2-side-bd select, .ws-right select").first.select_option("6")
+    pg.locator("select:visible").filter(has=pg.locator("option[value='4.5']")).first.select_option("6")
 
 
 TOOLS = [
@@ -160,6 +171,8 @@ with sync_playwright() as p:
         pg = ctx.new_page()
         pg.goto(f"{BASE}/#{tid}", wait_until="domcontentloaded", timeout=60000)
         pg.wait_for_timeout(2800)
+        # ‼️ หน้าเปล่าของ v2 บังตัวเลือกทั้งหมดและสั่ง inert ไว้ ผู้ใช้ปรับค่าได้หลังมีไฟล์แล้วเท่านั้น
+        fkui.leave_landing(pg)
         try:
             setter(pg)
         except Exception as e:
@@ -173,7 +186,10 @@ with sync_playwright() as p:
         pg.wait_for_timeout(2800)
         ck("① เปลี่ยนค่าแล้วรีเฟรช ค่ายังอยู่", pg.evaluate(reader), want)
 
-        pg.locator("button", has_text="คัดลอกลิงก์ค่านี้").first.click()
+        # ‼️ รีโหลดแล้วกลับไปหน้าเปล่า ปุ่มคัดลอกลิงก์อยู่หลังชั้นลอย ต้องใส่ไฟล์ก่อนเหมือนผู้ใช้จริง
+        #    (ค่าที่ตั้งไว้ยังอยู่ใน localStorage การใส่ไฟล์ไม่ล้างค่า ข้อ ① ข้างบนพิสูจน์แล้ว)
+        fkui.leave_landing(pg)
+        pg.locator("button:visible", has_text="คัดลอกลิงก์ค่านี้").first.click()
         pg.wait_for_timeout(900)
         link = pg.evaluate("() => navigator.clipboard.readText()") or ""
         ck("② ลิงก์ที่คัดลอกมีสถานะติดมาจริง", "?s=" in link, True)
@@ -214,7 +230,7 @@ with sync_playwright() as p:
             pg.wait_for_timeout(2600)
         setter(pg)
         pg.wait_for_timeout(1200)
-        pg.locator("button", has_text="คัดลอกลิงก์ค่านี้").first.click()
+        pg.locator("button:visible", has_text="คัดลอกลิงก์ค่านี้").first.click()
         pg.wait_for_timeout(800)
         link = pg.evaluate("() => navigator.clipboard.readText()") or ""
         ctx.close()

@@ -186,7 +186,8 @@ def main():
           const c = document.querySelector('.pg');
           return {cols: getComputedStyle(g).gridTemplateColumns.split(' ').filter(Boolean).length,
                   cardW: Math.round(c.getBoundingClientRect().width),
-                  hasRight: !!document.querySelector('.ws-right')};
+                  hasRight: !!document.querySelector('.ws-right, .s2-side'),
+                  v1: !!document.querySelector('.ws-right')};
         }""")
         ck(grid["cols"] >= 4, f"จอกว้างแสดงอย่างน้อย 4 คอลัมน์ (ได้ {grid['cols']})", str(grid))
         ck(grid["cardW"] >= 215, f"การ์ดไม่เล็กลงกว่าเดิม 215px (ได้ {grid['cardW']}px)", str(grid))
@@ -196,8 +197,12 @@ def main():
         #    เจตนาจริงของข้อนี้คือ "แผงขวาต้องไม่กินพื้นที่ภาพ" ไม่ใช่ "ห้ามมีแผงขวา"
         #    จึงเขียนเจตนาตรง ๆ แทน คือมีได้ แต่ตอนเปิดมาต้องพับอยู่
         ck(grid["hasRight"], "มีแผงตัวเลือกอยู่ด้านขวาตามผังเดียวกับเครื่องมืออื่น")
-        ck(pg.evaluate("() => !document.querySelector('.ws-right')?.offsetParent"),
-           "แผงขวาต้องพับอยู่ ไม่กินพื้นที่ภาพตั้งแต่เปิดมา")
+        # ‼️ v2 ไม่มีการพับแผง แผงข้างเป็นที่อยู่ของปุ่มหลักเสมอ (22/09/2026)
+        #    เจตนาของข้อนี้ "แผงขวาต้องไม่กินพื้นที่ภาพ" ถูกวัดแล้วตรง ๆ ด้วยข้อจำนวนคอลัมน์กับความกว้างการ์ดข้างบน
+        #    ข้อพับแผงจึงตรวจเฉพาะตอนเป็นโครง v1 เท่านั้น
+        if grid.get("v1"):
+            ck(pg.evaluate("() => !document.querySelector('.ws-right')?.offsetParent"),
+               "แผงขวาต้องพับอยู่ ไม่กินพื้นที่ภาพตั้งแต่เปิดมา")
 
         # ‼️ ลากสลับหน้าต้องบอกให้เห็นว่าจะไปวางตรงไหน และผลต้องตรงกับที่เห็น
         #    เดิมบอกด้วยการเปลี่ยนสีขอบเท่านั้น ผู้ใช้จึงไม่รู้ว่าลากแล้วเปลี่ยนไหม
@@ -249,7 +254,7 @@ def main():
             pg.wait_for_timeout(500)
 
         # บันทึกจริง แล้วต้องได้ลิงก์ดาวน์โหลดพร้อมจำนวนหน้าถูกต้อง
-        save = pg.query_selector(".ws-footer button:has-text('บันทึก')")
+        save = pg.query_selector("button.s2-cta:has-text('บันทึก'), .ws-footer button:has-text('บันทึก')")
         ck(save is not None and save.is_visible(), "หาปุ่มบันทึกที่กดได้จริงเจอ")
         if save:
             save.click()

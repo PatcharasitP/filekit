@@ -1,4 +1,4 @@
-import { el, dropzone, statusBar, button, field, select, download,
+import { el, dropzone, statusBar, button, field, select, download, saveFile,
          stripExt, fmtBytes, eachFileConcurrent, failedBox, registerCleanup } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
@@ -251,7 +251,8 @@ export function mount(tool) {
         ]),
         r ? el("button", {
           type: "button", class: "icon-btn", title: tr("ดาวน์โหลด", "Download"), "aria-label": tr(`ดาวน์โหลด ${r.name}`, `Download ${r.name}`),
-          onclick: (e) => { e.stopPropagation(); download(r.blob, r.name); },
+          // โหลดรายใบแบบไม่สลับหน้า ไม่งั้นแผงรายการรูปหายแล้วโหลดใบอื่นต่อไม่ได้ (ดู saveFile ใน ui.js)
+          onclick: (e) => { e.stopPropagation(); saveFile(r.blob, r.name); },
         }, [uiIcon("download", "pg-ico")]) : null,
       ]));
     });

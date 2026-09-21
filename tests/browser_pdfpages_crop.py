@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory() as td:
         pg.set_input_files("input[type=file]", [src])
         pg.wait_for_timeout(6000)
 
-        bar = pg.locator(".ws-toolbar button, .ws-canvas button")
+        bar = pg.locator(".s2-tbar button:visible, .s2-canvas button:visible, .ws-toolbar button, .ws-canvas button")
         # ② หน้าเต็มกระดาษอยู่แล้ว ต้องไม่ครอบมั่ว
         pg.locator(".pg").nth(0).click()
         pg.wait_for_timeout(500)
@@ -131,20 +131,24 @@ with tempfile.TemporaryDirectory() as td:
         print(f"      ลำดับไฟล์ที่ได้: {tags}")
 
         with pg.expect_download(timeout=60000) as dl:
-            pg.locator(".ws-footer button, .actions button").filter(has_text="บันทึก").first.click()
+            # v2: ปุ่มบันทึกคือปุ่มหลักในแผงขวา แล้วแถวผลลัพธ์ย้ายไปอยู่แผงผลลัพธ์ (ปุ่มที่มองเห็นเท่านั้น)
+            pg.locator("button.s2-cta:visible, .ws-footer button, .actions button").filter(has_text="บันทึก").first.click()
             pg.wait_for_timeout(3000)
-            pg.locator(".result button").filter(has_text="ดาวน์โหลด").first.click()
+            pg.locator(".s2-side-res .result button:visible, .results .result button:visible").filter(has_text="ดาวน์โหลด").first.click()
         dl.value.save_as(out)
         # ── ⑧ ‼️ รอยต่อไปเครื่องมือแก้ข้อความ ต้องพาไฟล์ไปด้วย
         #    พี่ปอนด์ถามว่าควรรวมสองเครื่องมือเข้าด้วยกันไหม (18/09/2026)
         #    ทั้งคู่โหลดไลบรารีชุดเดียวกัน (pdfjs+pdflib) การแยกจึงไม่ได้ทำให้หนักขึ้น
         #    ปัญหาจริงคือ "รอยต่อ" — ลิงก์ในหมายเหตุเคยเป็นลิงก์เปล่า กดแล้วไฟล์หาย
         #    ต้องไปเลือกไฟล์ใหม่ ซึ่งทำให้รู้สึกว่าเป็นคนละเครื่องมือ
+        # ‼️ ต้องเปิดหน้าใหม่จริง ๆ (ผ่าน about:blank) ไม่งั้น goto ไปที่อยู่เดิมจะไม่โหลดอะไรใหม่เลย
+        #    หน้ายังค้างสถานะผลลัพธ์ของรอบก่อน แถบเครื่องมือถูกแผงผลลัพธ์บังไว้ (เห็นจากภาพจริง 22/09/2026)
+        pg.goto("about:blank")
         pg.goto(f"{BASE}/#pdf-pages", wait_until="domcontentloaded", timeout=60000)
         pg.wait_for_timeout(2400)
-        pg.set_input_files("input[type=file]", [src])
+        pg.set_input_files(".dz input[type=file]", [src])
         pg.wait_for_timeout(6000)
-        bar2 = pg.locator(".ws-toolbar button, .ws-canvas button")
+        bar2 = pg.locator(".s2-tbar button:visible, .s2-canvas button:visible, .ws-toolbar button, .ws-canvas button")
         bar2.filter(has_text="แก้ข้อความบนหน้า").first.click()
         pg.wait_for_timeout(5000)
         ck("⑧ ปุ่มไปแก้ข้อความ ต้องไปถึงเครื่องมือนั้นจริง",

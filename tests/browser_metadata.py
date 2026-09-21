@@ -396,7 +396,8 @@ def main():
             pg.wait_for_selector(".dz")
             # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
             #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
-            sel = pg.locator(".s2-side-bd select, .panel select").first
+            # ‼️ ชี้ด้วยตัวเลือก "no" ที่ต้องการอ่านค่า (เครื่องมือแบบแผงเดี่ยวเก็บดรอปดาวน์ไว้ในผืนงาน ไม่ใช่แผงข้าง)
+            sel = pg.locator("select").filter(has=pg.locator('option[value="no"]')).first
             pg.locator(".dz input[type=file]").first.set_input_files(str(pptx1))
             pg.wait_for_timeout(1200)
             ck("powerpoint-to-word: ค่าเริ่มต้นตัวเลือกโน้ต = ไม่เอา (เอาเฉพาะเนื้อสไลด์)", sel.input_value(), "no")

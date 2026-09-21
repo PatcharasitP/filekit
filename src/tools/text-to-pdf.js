@@ -30,8 +30,10 @@ export function mount(tool) {
   const results = el("div", { class: "results" });
 
   const ta = el("textarea", { class: "tp-ta", spellcheck: "false",
-    placeholder: tr("พิมพ์หรือวางข้อความที่นี่ หรือลากไฟล์ .txt มาวางทางซ้าย",
-                    "Type or paste your text here, or drop a .txt file on the left") });
+    /* ‼️ ห้ามบอกทิศทาง (แก้ 22/09/2026) เดิมเขียนว่า "มาวางทางซ้าย" แต่หน้า v2 แผงอยู่ขวา
+       และบนมือถืออยู่ในแผ่นตัวเลือก · วางไฟล์ลงตรงไหนของหน้าก็รับ (ลองลากลงช่องนี้เองแล้ว ข้อความเข้าครบ) */
+    placeholder: tr("พิมพ์หรือวางข้อความที่นี่ หรือลากไฟล์ .txt มาวางตรงไหนก็ได้",
+                    "Type or paste your text here, or drop a .txt file anywhere on the page") });
   const counter = el("span", { class: "grow" });
   const clearBtn = button(tr("ล้างข้อความ", "Clear"), { ghost: true, onclick: () => { ta.value = ""; sync(); } });
   const wrap = el("div", { class: "tp-wrap" }, [
@@ -85,7 +87,7 @@ export function mount(tool) {
     const lines = text ? text.split("\n").length : 0;
     counter.textContent = chars
       ? tr(`${chars.toLocaleString("th-TH")} ตัวอักษร, ${lines.toLocaleString("th-TH")} บรรทัด`,
-           `${chars.toLocaleString()} characters, ${lines.toLocaleString()} lines`)
+           `${pl(chars.toLocaleString(), "character", "characters")}, ${pl(lines.toLocaleString(), "line", "lines")}`)
       : tr("ยังไม่มีข้อความ", "No text yet");
     go.disabled = !text.trim();
   }
@@ -108,7 +110,7 @@ export function mount(tool) {
       ta.value = text;
       sync();
       st.ok(tr(`อ่านไฟล์แล้ว ${text.length.toLocaleString("th-TH")} ตัวอักษร`,
-               `Loaded ${text.length.toLocaleString()} characters`));
+               `Loaded ${pl(text.length.toLocaleString(), "character", "characters")}`));
     } catch (e) {
       st.err(tr("อ่านไฟล์ไม่ได้: ", "Couldn't read the file: ") + e.message);
     }

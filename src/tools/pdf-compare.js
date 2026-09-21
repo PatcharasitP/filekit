@@ -12,7 +12,7 @@
 //   ③ Intl.Segmenter ตัดคำไทยได้ดี จึงชี้จุดที่ต่างได้ระดับคำ ไม่ใช่ฟ้องทั้งบรรทัด
 import { openPdf, passwordBox, friendlyPdfError } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, downloadButton,
-         stripExt, yieldToBrowser } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { diffLines } from "../textdiff.js";
 import { tr, pl } from "../i18n.js";
@@ -242,6 +242,7 @@ export function mount(tool) {
         results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, name),
             el("small", {}, tr("สรุปผลเป็นไฟล์ข้อความ เอาไปแนบอีเมลได้", "A text summary you can attach to an email"))]),
+          el("span", { class: "r-size" }, fmtBytes(blob.size)),
           downloadButton(blob, name),
         ]));
       }

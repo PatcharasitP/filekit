@@ -282,7 +282,9 @@ def run_simple(pg, tool_id, files_rel):
 
 def click_go(pg, text, timeout=25_000):
     pg.get_by_role("button", name=text, exact=True).filter(visible=True).click()
-    pg.wait_for_selector(".status-wrap .status.show", timeout=timeout)
+    # ‼️ v2 สลับเป็นแผงผลลัพธ์เมื่อทำเสร็จ แถบสถานะยังอยู่แต่ถูกซ่อน (วัดจริง: "Done, 1 page, 6 rows" อยู่ครบ)
+    #    คำถามของชุดนี้คือ "ทำงานจบไหม และข้อความเป็นภาษาถูกไหม" จึงรอแค่ว่ามีสถานะขึ้นแล้ว
+    pg.wait_for_selector(".status-wrap .status.show", state="attached", timeout=timeout)
     pg.wait_for_timeout(450)
 
 
@@ -320,7 +322,7 @@ def run_word_replace(pg, click_text):
     row.locator("input").nth(0).fill("บริษัท")
     row.locator("input").nth(1).fill("Company Ltd.")
     pg.get_by_role("button", name=click_text, exact=True).filter(visible=True).click()
-    pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
+    pg.wait_for_selector(".status-wrap .status.show", state="attached", timeout=20_000)
     pg.wait_for_timeout(400)
 
 
@@ -338,7 +340,7 @@ def run_pdf_sign(pg, click_text):
     pg.locator(".sign-stage").click(position={"x": 200, "y": 200})
     pg.wait_for_timeout(300)
     pg.get_by_role("button", name=click_text, exact=True).filter(visible=True).click()
-    pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
+    pg.wait_for_selector(".status-wrap .status.show", state="attached", timeout=20_000)
     pg.wait_for_timeout(400)
 
 
@@ -382,7 +384,8 @@ def do_tool_action(pg, tool_id, address_xlsx_path, lang="en"):
         if tool_id == "image-convert":
             # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
             #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
-            pg.locator(".s2-side-bd select, .panel select").first.select_option("webp")
+            # ‼️ ชี้ดรอปดาวน์ด้วยตัวเลือกที่ต้องการ (เครื่องมือแผงเดี่ยวเก็บไว้ในผืนงาน ไม่ใช่แผงข้าง)
+            pg.locator("select").filter(has=pg.locator('option[value="webp"]')).first.select_option("webp")
         click_go(pg, btn)
     elif tool_id in SHEETPICK:
         file_rel = SHEETPICK[tool_id][0]
@@ -545,7 +548,13 @@ def check_title_and_switch(pg):
     pg.set_input_files("input[type=file]", src, timeout=SIF_TIMEOUT)
     pg.wait_for_selector(".file-row", timeout=15_000)
     pg.get_by_role("button", name="Merge", exact=True).filter(visible=True).click()
-    pg.wait_for_selector(".status-wrap .status.show", timeout=20_000)
+    pg.wait_for_selector(".status-wrap .status.show", state="attached", timeout=20_000)
+    # ‼️ แถบสถานะขึ้นตั้งแต่ "กำลังรวม" ก่อนแถวผลลัพธ์จะมา นับทันทีจึงแพ้เวลาเป็นบางรอบ
+    #    (รอบ 1 ผ่าน รอบ 2 ตก ในการรันเต็ม 22/09/2026) ต้องรอแถวผลลัพธ์ที่มองเห็นจริงก่อนค่อยนับ
+    try:
+        pg.wait_for_selector(".s2-side-res .result:visible, .results .result:visible", timeout=20_000)
+    except Exception:
+        pass
     results.append(("ก่อนสลับภาษา: มีผลลัพธ์ปรากฏแล้ว (.results .result)", pg.locator(".s2-side-res .result, .results .result").count() > 0, ""))
 
     pg.locator('#lang .langopt[data-lang="th"]').click()

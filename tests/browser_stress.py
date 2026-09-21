@@ -8,6 +8,8 @@ import os, sys, io, time, shutil, tempfile, pathlib
 from PIL import Image
 import fitz  # pymupdf
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import fkui          # ตัวช่วยกลางที่รู้จักโครงหน้า v2
 
 # ‼️ wait_for_function ต้องส่ง "สตริงที่เป็นฟังก์ชันลูกศร" เท่านั้น (`() => ...`)
 #    ถ้าส่งเป็นนิพจน์เปล่า ๆ Playwright จะไปใช้ eval() ในหน้าเว็บ ซึ่ง Content-Security-Policy
@@ -123,7 +125,11 @@ def case1_many_files(b):
         mem1 = pg.evaluate("performance.memory ? performance.memory.usedJSHeapSize : null")
         if mem0 is not None:
             print(f"     หน่วยความจำ: {mem0/1024/1024:.1f}MB → {mem1/1024/1024:.1f}MB (Δ{(mem1-mem0)/1024/1024:+.1f}MB)")
-        ck_true(f"[{tool}] ปุ่มยังกดได้หลังทำเสร็จ (ไม่ค้าง)", btn.is_enabled())
+        # ‼️ ทำเสร็จแล้ว v2 สลับแผงขวาเป็นแผงผลลัพธ์ ปุ่มลงมือทำจึงไม่อยู่บนจอ
+        #    คำถามของข้อนี้คือ "ปุ่มไม่ค้างหลังงานหนัก" จึงต้องกลับไปหน้าทำงานก่อนแบบผู้ใช้จริง
+        fkui.back_to_work(pg)
+        ck_true(f"[{tool}] ปุ่มยังกดได้หลังทำเสร็จ (ไม่ค้าง)",
+                pg.locator("button.btn:visible", has_text=btn_text).first.is_enabled())
         print("     status:", pg.locator(".status").inner_text())
         ck_true(f"[{tool}] ไม่มี console/page error", len(errs) == 0, str(errs)[:200])
         pg.close()
@@ -403,7 +409,9 @@ def case6_rapid_hash(b):
         pg.evaluate(f"location.hash = '#/{tid}'")
         pg.wait_for_timeout(60)  # เร็วกว่าจังหวะ render ปกติโดยตั้งใจ
     pg.wait_for_timeout(1500)
-    ck("สลับ hash 20 ครั้งรวด → ไม่มี tool ซ้อนกัน (เหลือ .tool-head เดียว)", pg.locator(".tool-head").count(), 1)
+    # v2 ไม่มี .tool-head แล้ว เปลือกหน้าเครื่องมือคือ .s2 (นับเฉพาะที่อยู่ใน #tool จริง ของในแคชไม่นับ)
+    ck("สลับ hash 20 ครั้งรวด → ไม่มี tool ซ้อนกัน (เหลือเครื่องมือเดียวในหน้า)",
+       pg.locator("#tool .s2, #tool .tool-head").count(), 1)
     ok = ck_true("สลับ hash 20 ครั้งรวด → ไม่มี console/page error หลุดออกมา", len(errs) == 0, str(errs)[:300])
     if not ok:
         bug("เบา — console error แต่ไม่กระทบการใช้งาน", "สลับ hash เร็ว ๆ (20 ครั้ง/~1.2s) → เกิด unhandled 'Transition was skipped' ซ้ำหลายครั้ง",
@@ -430,7 +438,7 @@ def case7_navigate_away(b):
     pg.evaluate("location.hash = '#/pdf-merge'")
     pg.wait_for_timeout(3000)
     ck_true("สลับหน้าไปเครื่องมืออื่นระหว่างงานยังไม่จบ → หน้าใหม่เปิดได้ปกติ",
-            "รวมไฟล์ PDF" in pg.locator(".tool-head h1").inner_text())
+            "รวมไฟล์ PDF" in pg.locator("#tool .s2-land h1, #tool .s2-side-hd h2, #tool .tool-head h1").first.inner_text())
     pg.wait_for_timeout(5000)  # ให้งานพื้นหลัง (ถ้ายังทำอยู่) มีเวลาจบ
     ck_true("สลับหน้ากลางคัน → ไม่มี console/page error ค้างหลุดออกมา", len(errs) == 0, str(errs)[:300])
     pg.close(); ctx.close()

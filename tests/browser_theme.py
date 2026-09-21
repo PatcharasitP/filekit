@@ -178,17 +178,25 @@ with sync_playwright() as pw:
     pg.locator(".ts-pal .th-sw", has_text="ดินเผา").click()
     pg.wait_for_timeout(500)
     # ‼️ ฟอนต์ของเขาคือ system-ui ซึ่งบน Windows = Segoe UI ของเราตั้งเป็นเครื่องมือนี้เท่านั้น
-    ff = pg.evaluate("getComputedStyle(document.querySelector('.ts .panel')).fontFamily")
+    ff = pg.evaluate("getComputedStyle(document.querySelector('.ts .s2-stage, .ts .panel')).fontFamily")
     ck(f"ตัวเครื่องมือใช้ฟอนต์ Segoe UI ไม่ใช่ Sarabun ({ff[:40]})", ff.startswith('"Segoe UI"') and "Sarabun" not in ff, ff)
-    fs = pg.evaluate("getComputedStyle(document.querySelector('.ts .panel')).fontSize")
+    fs = pg.evaluate("getComputedStyle(document.querySelector('.ts .s2-stage, .ts .panel')).fontSize")
     ck("ขนาดตัวอักษรพื้น 14px เท่าของเขา", fs == "14px", fs)
     h2 = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('.ts-h')); return [s.fontSize, s.fontWeight, s.lineHeight]; })()")
     ck("หัวข้อส่วน 18px/28px น้ำหนัก 500 เท่าที่วัดจากของเขา", h2 == ["18px", "500", "28px"], h2)
     # ‼️ ไอเดียหลักของเขา ทั้งหน้าทาสีของธีมที่กำลังสร้าง แถบหัว แถบล่าง ปุ่มที่เลือก ปุ่มสร้างไฟล์
     tp_before = pg.evaluate("getComputedStyle(document.querySelector('.ts')).getPropertyValue('--tp').trim()")
-    head_bg = pg.evaluate("getComputedStyle(document.querySelector('.ts .tool-head')).backgroundImage")
-    foot_bg = pg.evaluate("getComputedStyle(document.querySelector('.ts-foot')).backgroundImage")
-    ck("แถบหัวเป็นไล่สีของธีม ส่วนแถบล่างพื้นเรียบ (ไม่ซ้ำกันจนรก)", "linear-gradient" in head_bg and foot_bg == "none", [head_bg[:60], foot_bg[:60]])
+    # ‼️ หน้า v2 ไม่มีแถบหัวของเครื่องมือแล้ว (ใช้แถบหัวของเว็บร่วมกันทุกเครื่องมือ)
+    #    และปุ่มหลักเป็นสีสนิมเดียวกันทั้งเว็บตามที่พี่ปอนด์เคาะข้อ D3 เมื่อ 21/09/2026
+    #    สีของธีมจึงไปอยู่ที่ของในเครื่องมือเอง เช่นปุ่มขนาดที่เลือก (ตรวจอีกข้อข้างล่าง)
+    #    ข้อนี้กันไม่ให้ใครเผลอทาปุ่มหลักด้วยสีธีม ซึ่งจะขัดข้อ D3 และสีอ่อนบางชุดอ่านตัวขาวไม่ออก
+    if pg.locator(".ts .tool-head").count():
+        head_bg = pg.evaluate("getComputedStyle(document.querySelector('.ts .tool-head')).backgroundImage")
+        foot_bg = pg.evaluate("getComputedStyle(document.querySelector('.ts-foot')).backgroundImage")
+        ck("แถบหัวเป็นไล่สีของธีม ส่วนแถบล่างพื้นเรียบ (ไม่ซ้ำกันจนรก)", "linear-gradient" in head_bg and foot_bg == "none", [head_bg[:60], foot_bg[:60]])
+    else:
+        cta = pg.evaluate("(() => { const b = document.querySelector('.ts .s2-cta'); const c = getComputedStyle(b); return [c.backgroundColor, c.backgroundImage]; })()")
+        ck("ปุ่มหลักเป็นสีสนิมเดียวกันทั้งเว็บ ไม่ถูกทาด้วยสีธีม (ข้อ D3)", cta == ["rgb(180, 69, 31)", "none"], cta)
     pg.locator(".ts-pal .th-sw", has_text="True Corporation").click()
     pg.wait_for_timeout(600)
     tp_after = pg.evaluate("getComputedStyle(document.querySelector('.ts')).getPropertyValue('--tp').trim()")
@@ -258,7 +266,7 @@ with sync_playwright() as pw:
     clipped = pg.evaluate("""() => [...document.querySelectorAll('.th-ct, .th-vt')]
         .filter(e => e.scrollWidth - e.clientWidth > 1).map(e => e.textContent)""")
     ck(f"ไม่มีชื่อไหนถูกตัดข้อความ ({clipped})", not clipped, clipped)
-    pw_ = pg.locator(".th-prevwrap").bounding_box()["width"]; pnl = pg.locator(".ts .panel").bounding_box()["width"]
+    pw_ = pg.locator(".th-prevwrap").bounding_box()["width"]; pnl = pg.locator(".ts .s2-stage, .ts .panel").first.bounding_box()["width"]
     ck(f"พรีวิวเต็มความกว้างของแผง ({pw_:.0f} จาก {pnl:.0f})", pw_ > pnl * 0.85)
     sp = pg.locator(".th-area").bounding_box()
     ck(f"กราฟเส้นเรนเดอร์จริง ไม่ใช่กล่องเปล่า ({sp['width']:.0f}x{sp['height']:.0f})", sp["width"] > 50 and sp["height"] > 30, sp)
@@ -304,7 +312,9 @@ with sync_playwright() as pw:
     en.locator("details.ts-json").evaluate("d => d.open = true")
     en.locator("details.ts-check").evaluate("d => d.open = true")
     en.wait_for_timeout(300)
-    panel = en.locator(".panel").inner_text()
+    # v2 ไม่มี .panel แล้ว พื้นที่ทำงานคือผืนงานกับแผงขวา (.s2-work) ส่วน .panel เหลือไว้ให้โครงเดิม (?ui=1)
+    panel = en.locator(".s2-work, .panel").first.inner_text()
+    ck("ตัวตรวจอ่านข้อความในพื้นที่ทำงานได้จริง (ไม่ใช่ว่าง)", len(panel) > 200, len(panel))
     thai = sorted(set(re.findall(r"[฀-๿]+", panel)))
     ck("โหมดอังกฤษไม่มีภาษาไทยหลุดในพื้นที่ทำงาน", not thai, thai[:8])
     ck("โหมดอังกฤษไม่มี error", not en_errs, en_errs)

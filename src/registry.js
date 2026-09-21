@@ -63,6 +63,11 @@ export const TOOLS = [
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"protect encrypt password lock ใส่รหัส ตั้งรหัส รหัสผ่าน ล็อก ล็อค เข้ารหัส ป้องกัน ความลับ ห้ามพิมพ์ ห้ามคัดลอก", next:["pdf-unlock","pdf-watermark"] },
 
+  { id:"pdf-compare", group:"pdf", icon:"⇄", title:"เทียบ PDF สองฉบับ",
+    desc:"หาว่าฉบับใหม่แก้ตรงไหนบ้าง ชี้ถึงระดับคำ รองรับภาษาไทย และไฟล์ไม่ถูกอัปโหลดไปไหน",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdfjs"], keys:"compare diff เทียบ เปรียบเทียบ สองฉบับ แก้ตรงไหน ฉบับแก้ไข สัญญา ร่าง ต่างกัน", next:["pdf-clean","pdf-protect"] },
+
   { id:"pdf-crop", group:"pdf", icon:"⬚", title:"ครอบตัดขอบ PDF",
     desc:"ลากคลุมส่วนที่อยากเก็บ ตัดขอบดำจากไฟล์สแกนหรือขอบขาวเยอะเกินไปของสไลด์ ใช้กับทุกหน้าหรือเฉพาะหน้าคี่คู่ได้",
     accepts:["pdf"], since:"2026-09-21",
@@ -377,6 +382,7 @@ const EN_TOOLS = {
   "pdf-sign":         ["Sign a PDF", "Draw a signature or upload an image, then drag it onto the page. Saved for reuse"],
   "pdf-unstamp":      ["Remove layers stamped on a PDF", "Take off a watermark or stamp that was placed on top. See the result before saving, and your real content can never be removed by mistake"],
   "pdf-protect":      ["Password-protect a PDF", "Set a password that must be typed before the file opens, and choose whether printing or copying stays allowed. Done entirely on your device, nothing is uploaded"],
+  "pdf-compare":      ["Compare two PDFs", "Find exactly what the newer version changed, down to the word. Works with Thai, and neither file is uploaded anywhere"],
   "pdf-crop":         ["Crop a PDF", "Drag over what you want to keep. Trims black edges from scans or too much white space around slides, on every page or just the odd or even ones"],
   "pdf-resize":       ["Change a PDF's paper size", "Switch to A4, A5, Letter or another size. Choose whether to fit the whole page or fill the paper. Text stays searchable"],
   "pdf-nup":          ["Multiple pages per sheet, or a booklet", "Save paper with 2, 4, 6 or 9 pages per sheet, or lay it out as a folded booklet with the pages in the right order"],

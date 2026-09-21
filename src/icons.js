@@ -28,6 +28,7 @@ export const ICONS = {
   "pdf-page-numbers": `<path d="M9.2 3.2l-2.4 17.6M17.2 3.2l-2.4 17.6M3.4 8.6h17.2M2.6 15.4h17.2"/>`,
   "pdf-unstamp":  `<path d="M6.2 3.4h6.6l4.6 4.6v10.6a2.2 2.2 0 0 1-2.2 2.2H6.2A2.2 2.2 0 0 1 4 18.6V5.6a2.2 2.2 0 0 1 2.2-2.2z"/><path d="M12.8 3.4V8h4.6"/><rect x="12.6"y="12.4"width="8.8"height="6.2"rx="1.4"transform="rotate(-14 17 15.5)"/>`,
   "pdf-protect":  `<rect x="4" y="10.2" width="16" height="11.2" rx="2.4"/><path d="M8 10.2V7a4 4 0 0 1 8 0v3.2"/><path d="M12 14.6v2.6"/>`,
+  "pdf-compare":  `<path d="M3.5 8.2h13.2M13.2 4.6l3.5 3.6-3.5 3.6"/><path d="M20.5 15.8H7.3M10.8 12.2l-3.5 3.6 3.5 3.6"/>`,
   "pdf-crop":     `<path d="M6.5 2.6v12.8a2 2 0 0 0 2 2h12.9"/><path d="M2.6 6.5h12.9a2 2 0 0 1 2 2v12.9"/>`,
   "pdf-resize":   `<rect x="3" y="4.5" width="11" height="9" rx="1.6"/><rect x="10" y="10.5" width="11" height="9" rx="1.6"/>`,
   "pdf-nup":      `<rect x="3.2" y="3.2" width="7.4" height="7.4" rx="1.2"/><rect x="13.4" y="3.2" width="7.4" height="7.4" rx="1.2"/><rect x="3.2" y="13.4" width="7.4" height="7.4" rx="1.2"/><rect x="13.4" y="13.4" width="7.4" height="7.4" rx="1.2"/>`,

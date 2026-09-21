@@ -58,6 +58,11 @@ export const TOOLS = [
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"sign signature เซ็น ลายเซ็น เซ็นชื่อ สัญญา ใบลา อนุมัติ", next:["pdf-compress","pdf-watermark"] },
 
+  { id:"pdf-protect", group:"pdf", icon:"🔒", title:"ใส่รหัสผ่าน PDF",
+    desc:"ตั้งรหัสให้ต้องใส่ก่อนเปิดไฟล์ และเลือกได้ว่าให้พิมพ์หรือคัดลอกได้ไหม ทำในเครื่องล้วน ไฟล์ไม่ถูกอัปโหลด",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdflib"], keys:"protect encrypt password lock ใส่รหัส ตั้งรหัส รหัสผ่าน ล็อก ล็อค เข้ารหัส ป้องกัน ความลับ ห้ามพิมพ์ ห้ามคัดลอก", next:["pdf-merge","pdf-watermark"] },
+
   { id:"pdf-watermark",group:"pdf", icon:"💧", title:"ใส่ลายน้ำ PDF",
     desc:"ประทับข้อความไทย-อังกฤษลงทุกหน้า เลือกตำแหน่ง สี และความเข้มได้",
     accepts:["pdf"],
@@ -341,6 +346,7 @@ const EN_TOOLS = {
   "pdf-compress":     ["Compress a PDF", "Shrink scans and image-heavy files. See the size before and after"],
   "pdf-sign":         ["Sign a PDF", "Draw a signature or upload an image, then drag it onto the page. Saved for reuse"],
   "pdf-unstamp":      ["Remove layers stamped on a PDF", "Take off a watermark or stamp that was placed on top. See the result before saving, and your real content can never be removed by mistake"],
+  "pdf-protect":      ["Password-protect a PDF", "Set a password that must be typed before the file opens, and choose whether printing or copying stays allowed. Done entirely on your device, nothing is uploaded"],
   "pdf-watermark":    ["Watermark a PDF", "Stamp text on every page. Choose the position, colour and opacity"],
   "pdf-page-numbers": ["Add page numbers to a PDF", "Number every page. Pick the position and format, use Thai numerals, and skip the cover"],
   "pdf-remove-blank": ["Remove blank pages from a scan", "Duplex scans leave a blank page between every sheet. Each page is checked for you, and you can keep or drop any of them yourself"],

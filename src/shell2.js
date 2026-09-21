@@ -428,14 +428,21 @@ export function toolShell2(tool, cfg = {}) {
     if (domRes.length || domAct.length) domResultShown = true;
     if ((domRes.length || domAct.length || domResultShown) && !manualBack) {
       if (!domRes.length && !domAct.length) { setState("result"); return; }
+      /* ‼️ ต้องสะสมแถวที่เคยย้ายมาแล้ว ไม่ใช่แทนที่ทั้งก้อน (บั๊กเจอ 21/09/2026)
+       * เครื่องมือที่ทำหลายไฟล์วาดแถวผลลัพธ์ทีละแถว และประกาศผลทุกแถว
+       * ตัวนี้จึงถูกเรียกหลายรอบ รอบหลัง ๆ ผืนงานเหลือเฉพาะแถวใหม่
+       * เพราะแถวเก่าถูกย้ายมาแผงขวาไปแล้ว ถ้า replaceChildren ทั้งก้อน แถวเก่าจะหายไป
+       * (เห็นกับตา: ใส่รหัส 2 ไฟล์ สถานะบอก "ใส่รหัสให้ 2 ไฟล์แล้ว" แต่ดาวน์โหลดได้ไฟล์เดียว) */
+      const kept = [...resultHost.querySelectorAll(".s2-res-list > .result")];
+      const rows = [...kept, ...domRes];
       const host = el("div", { class: "s2-res" }, [
         el("p", { class: "s2-done" }, [
           el("span", { class: "s2-done-ico", "aria-hidden": "true" }, [uiIcon("check", "s2-done-svg")]),
-          domRes.length <= 1 ? tr("เสร็จแล้ว", "Done")
-                             : tr(`ได้ ${domRes.length} ไฟล์`, `${domRes.length} files`),
+          rows.length <= 1 ? tr("เสร็จแล้ว", "Done")
+                           : tr(`ได้ ${rows.length} ไฟล์`, `${rows.length} files`),
         ]),
         domAct.length ? el("div", { class: "s2-res-act" }, domAct) : null,
-        domRes.length ? el("div", { class: "s2-res-list" }, domRes) : null,
+        rows.length ? el("div", { class: "s2-res-list" }, rows) : null,
         el("div", { class: "s2-res-row" }, [
           el("button", { class: "s2-btn2", type: "button",
             onclick: () => { manualBack = true; setState("work"); } }, tr("กลับไปแก้", "Back to editing")),

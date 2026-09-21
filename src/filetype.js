@@ -9,8 +9,17 @@ export const TYPES = {
   pdf:  { label: "PDF",        ext: [".pdf"] },
   docx: { label: "Word",       ext: [".docx"] },
   doc:  { label: "Word รุ่นเก่า", ext: [".doc"] },
-  xlsx: { label: "Excel",      ext: [".xlsx", ".xls"] },
+  xlsx: { label: "Excel",      ext: [".xlsx", ".xls", ".xlsm"] },
   csv:  { label: "CSV",        ext: [".csv"] },
+  /* ‼️ ไฟล์ข้อความล้วน เพิ่ม 21/09/2026 หลังจับได้ว่าเป็นบั๊กบนเว็บจริง
+     เครื่องมือ 5 ตัวเขียนบนกล่องเองว่ารับ ".txt" แล้วผู้ใช้ลากมาวางกลับขึ้นว่า
+     "ไฟล์นี้ไม่ใช่ชนิดที่รองรับ" เพราะตารางนี้ไม่รู้จักนามสกุลเหล่านั้นเลย
+     (จับจริงด้วยเบราว์เซอร์: thai-encoding, number-bins, excel-match-sum ปฏิเสธทั้งหมด
+      .xlsm ก็โดนด้วยเหตุเดียวกัน) · รวมเป็นชนิดเดียวแทนที่จะแตกเป็น 6 ชนิด
+     เพราะผู้ใช้มองเป็นก้อนเดียวว่า "ไฟล์ข้อความ" และชิปหน้าแรกจะได้ไม่บาน
+     ‼️ ตัวกันซ้ำอยู่ที่ tests/accepts.test.mjs — ทุกชนิดที่เครื่องมือประกาศใน expect
+        ต้องมีจริงในตารางนี้ ไม่งั้นเทสแดงทันที */
+  txt:  { label: "ไฟล์ข้อความ", ext: [".txt", ".tsv", ".json", ".sql", ".log", ".md"] },
   pptx: { label: "PowerPoint", ext: [".pptx"] },
   ppt:  { label: "PowerPoint รุ่นเก่า", ext: [".ppt"] },
   image:{ label: "รูปภาพ",     ext: [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".heic"] },
@@ -23,6 +32,7 @@ const LABEL_EN = {
   pdf: "a PDF", docx: "a Word document", doc: "an old Word (.doc) file",
   xlsx: "an Excel file", csv: "a CSV file", pptx: "a PowerPoint file",
   ppt: "an old PowerPoint (.ppt) file", image: "an image", zip: "a ZIP file",
+  txt: "a text file",
 };
 
 // เครื่องมือที่ "ควรไป"เมื่อเอาไฟล์ชนิดนั้นมาผิดที่ · [toolId, ข้อความไทย, ข้อความอังกฤษ(ถ้าข้อความไทยมี)]
@@ -35,6 +45,7 @@ const SUGGEST = {
   pptx:  ["powerpoint-to-word", "PowerPoint → Word"],
   ppt:   [null, "ไฟล์ .ppt รุ่นเก่ายังไม่รองรับ บันทึกเป็น .pptx ก่อนแล้วลองใหม่", "Old .ppt files aren't supported yet. Save as .pptx first, then try again."],
   image: ["images-to-pdf", "รูปภาพ → PDF", "Image → PDF"],
+  txt:   ["text-to-pdf", "ข้อความ → PDF", "Text → PDF"],
 };
 
 /** ไฟล์ว่าง 0 ไบต์ — เช็คได้แน่นอนโดยไม่ต้องเดา ควรเรียกก่อนพยายามอ่านไฟล์ใด ๆ ทั้งนั้น */
@@ -89,7 +100,7 @@ export function detectType(file) {
    เดิมคืนไทยเสมอ ทำให้หน้าอังกฤษขึ้นคำว่า "รูปภาพ" ปนอยู่ (พี่ปอนด์จับได้ 08/09/2026)
    ‼️ คนละชุดกับ LABEL_EN ข้างบนซึ่งเป็นวลีในประโยค ("an image") ใช้เป็นป้ายเดี่ยวไม่ได้
    ชื่อส่วนใหญ่เป็นคำสากลอยู่แล้ว (PDF/Word/Excel) จึงมีเฉพาะตัวที่ต่างจริง */
-const LABEL_SHORT_EN = { image: "Image", doc: "Word (legacy)", ppt: "PowerPoint (legacy)" };
+const LABEL_SHORT_EN = { image: "Image", doc: "Word (legacy)", ppt: "PowerPoint (legacy)", txt: "Text" };
 export const typeLabel = (kind) =>
   (IS_EN ? LABEL_SHORT_EN[kind] || TYPES[kind]?.label : TYPES[kind]?.label)
   || tr("ไฟล์ชนิดนี้", "this file type");

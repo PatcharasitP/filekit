@@ -203,6 +203,11 @@ export const TOOLS = [
     accepts:["docx"],
     libs:["mammoth","jspdf"], keys:"word docx pdf แปลง", next:["pdf-merge","pdf-sign"] },
 
+  { id:"text-to-pdf", group:"doc", icon:"📄", title:"ข้อความเป็น PDF",
+    desc:"วางข้อความหรือลากไฟล์ .txt มา ได้ PDF ที่ฝังฟอนต์ไทยให้แล้ว ตัดบรรทัดไม่ฉีกคำ",
+    accepts:["txt"], since:"2026-09-21", startsEmpty:true,
+    libs:["jspdf"], keys:"text txt ข้อความ โน้ต note บันทึก พิมพ์ เป็น pdf แปลง ตัวอักษร พิมพ์ข้อความ", next:["pdf-merge","pdf-page-numbers"] },
+
   { id:"powerpoint-to-word",group:"ppt", icon:"📽", title:"PowerPoint เป็น Word",
     desc:"ดึงข้อความทุกสไลด์ หัวข้อย่อย และโน้ตผู้บรรยาย เป็นเอกสาร Word",
     accepts:["pptx"],
@@ -215,7 +220,7 @@ export const TOOLS = [
 
   { id:"excel-match-sum", group:"excel", icon:"🎯", since:"2026-09-15", title:"หายอดที่บวกกันได้เท่านี้",
     desc:"เงินเข้าก้อนเดียวแต่ในระบบเป็นหลายใบ หาให้ว่าใบไหนบ้างรวมกันได้พอดี ตั้งเงื่อนไขได้ว่ากี่ใบ ช่วงยอดเท่าไร ยอมคลาดเคลื่อนได้แค่ไหน และบอกตรง ๆ ว่าคำตอบมีกี่ชุด",
-    accepts:["xlsx","xls","xlsm","csv","txt"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx"],
     keys:"solver subset sum กระทบยอด reconcile หายอด รวมกันได้ จับคู่ยอด เงินโอน ใบแจ้งหนี้ ผลต่าง หาตัวที่หาย combination excel solver what combination adds up",
     next:["excel-split","excel-csv"] },
@@ -227,12 +232,12 @@ export const TOOLS = [
 
   { id:"excel-split", group:"excel", icon:"✂️", title:"แยกไฟล์ Excel ตามคอลัมน์",
     desc:"เลือกคอลัมน์แล้วแยกเป็นไฟล์ละกลุ่ม (ZIP) หรือไฟล์เดียวแยกเป็นชีท",
-    accepts:["xlsx","csv"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx","jszip"], keys:"split แยก แบ่ง group แผนก สาขา จังหวัด ตามคอลัมน์ excel", next:["excel-to-pdf","thai-encoding"] },
 
   { id:"excel-merge", group:"excel", icon:"🧲", title:"รวมหลายไฟล์ Excel",
     desc:"ต่อแถวจากหลายไฟล์เป็นไฟล์เดียว จับคู่คอลัมน์ด้วยชื่อหัวตาราง ไม่ใช่ตำแหน่ง",
-    accepts:["xlsx","csv"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx"], keys:"merge รวม ต่อ combine consolidate หลายไฟล์ สาขา excel", next:["excel-split","excel-to-pdf"] },
   { id:"excel-to-pdf",group:"excel", icon:"📕", title:"Excel เป็น PDF",
     desc:"แปลงแต่ละชีทเป็นตารางในไฟล์ PDF",
@@ -246,7 +251,7 @@ export const TOOLS = [
 
   { id:"thai-encoding", group:"thai", icon:"🩹", title:"ซ่อมไฟล์ไทยเพี้ยน",
     desc:"เปิด CSV แล้วเจอ “เธชเธงเธฑ” หรือ “à¸ªà¸§” ตรวจการเข้ารหัสให้เอง แล้วบันทึกใหม่เป็น UTF-8",
-    accepts:["csv","txt","tsv","json","sql","log","md"],
+    accepts:["csv","txt"],
     libs:["jszip"], keys:"encoding tis-620 windows-874 utf-8 เพี้ยน ต่างดาว อ่านไม่ออก มั่ว csv ภาษาไทย ยึกยือ", next:["excel-csv","thai-date"] },
 
   { id:"thai-date", group:"thai", icon:"📅", title:"สลับปี พ.ศ. กับ ค.ศ. ทั้งคอลัมน์",
@@ -293,7 +298,7 @@ export const TOOLS = [
 
   { id:"pbi-matrix-details", group:"powerbi", icon:"🧾", since:"2026-09-12", title:"รายละเอียดหลายคอลัมน์ในช่องเดียวของ Matrix",
     desc:"ยุบหลายคอลัมน์ให้อยู่ในช่องเดียวของ Matrix โดยหัวแถวยังตรึงอยู่ที่เดิม แปลงทุกชนิดข้อมูลเป็นข้อความให้ก่อน ยอด 0 กับค่า FALSE จึงไม่หาย",
-    accepts:["xlsx","xls","xlsm","csv","txt"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx"], keys:"matrix dax measure text power bi ตรึงคอลัมน์ freeze รายละเอียด transaction details concatenatex sqlbi ยุบคอลัมน์ ข้อความในตาราง",
     next:["pbi-bar","excel-to-pq"] },
 
@@ -304,27 +309,27 @@ export const TOOLS = [
 
   { id:"pa-parse-json", group:"powerautomate", icon:"🧩", since:"2026-09-11", title:"ตารางเป็น Schema ของ Parse JSON",
     desc:"อ่านทั้งคอลัมน์ก่อนตัดสินชนิด ช่องที่เคยว่างจริงจะประกาศ null ให้เอง กัน flow พังตอนเจอแถวว่าง",
-    accepts:["xlsx","xls","xlsm","csv","txt"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx"], keys:"power automate flow parse json schema พาร์ส เจสัน โฟลว์ สคีมา อัตโนมัติ",
     next:["excel-to-pq","pbi-donut"] },
 
   { id:"map-coverage", group:"powerbi", icon:"⭕", since:"2026-09-18", title:"แผนที่พื้นที่รอบจุด",
     desc:"มีพิกัดจุดศูนย์กลาง เช่น สายที่ลูกค้าแจ้ง แล้วอยากรู้ว่ารอบ ๆ มีอะไรอยู่บ้าง ลากไฟล์เข้ามาแล้วเลื่อนแถบรัศมี ภาพกับตัวเลขขยับตามทันที บอกว่าจุดไหนใกล้ที่สุด วงไหนไม่มีอะไรเลย แล้วส่งออกเป็นชีตให้ Icon Map Pro ใน Power BI ทำ slicer ปรับรัศมีต่อได้",
-    accepts:["xlsx","xls","csv","txt"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx"],
     keys:"map แผนที่ รัศมี radius วง circle พื้นที่ area coverage buffer call center คอลเซ็นเตอร์ ใกล้ที่สุด nearest ระยะทาง distance haversine icon map pro wkt polygon slicer จุดศูนย์กลาง ครอบคลุม",
     next:["map-relocate","excel-to-pq"] },
 
   { id:"map-relocate", group:"powerbi", icon:"🗺", since:"2026-09-16", title:"แผนที่การย้ายที่ตั้ง",
     desc:"ไฟล์พิกัดจุดเดิมกับจุดใหม่ กลายเป็นแผนที่ประเทศไทยที่มีจุด เส้นเชื่อม และระยะทางทันที ปรับสีขนาดป้ายเองได้ บันทึกเป็นภาพไปใส่สไลด์ หรือได้ชีตพร้อมใส่ Icon Map Pro ใน Power BI",
-    accepts:["xlsx","xls","xlsm","csv","txt"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx"],
     keys:"map แผนที่ ย้ายสถานี relocate relocation กระจัด พิกัด lat lon latitude longitude ระยะทาง distance haversine icon map pro wkt linestring polygon รัศมี site move จุดเดิม จุดใหม่",
     next:["number-bins","pbi-bar"] },
 
   { id:"number-bins", group:"powerquery", icon:"📶", since:"2026-09-16", title:"จัดกลุ่มตัวเลขเป็นช่วง",
     desc:"เห็นการกระจายจริงก่อน แล้วให้เครื่องเสนอจุดตัดมาเทียบ 4 แบบ ลากปรับเองได้ ล็อกบางรายการไปหมวดที่ต้องการเองก็ได้ และได้คอลัมน์เลขเรียงคู่มาเสมอ กราฟจึงไม่เรียงมั่ว",
-    accepts:["xlsx","xls","xlsm","csv","txt"],
+    accepts:["xlsx","csv","txt"],
     libs:["xlsx"],
     keys:"bin binning จัดกลุ่ม แบ่งช่วง ช่วงตัวเลข band bucket range histogram การกระจาย อายุงาน sla ค่าเช่า ระยะทาง quantile quartile decile jenks natural breaks เลขกลม group by range sort by column เรียงมั่ว เรียงผิด",
     next:["pq-group-concat","excel-to-pq"] },
@@ -411,6 +416,7 @@ const EN_TOOLS = {
   "pdf-to-word":      ["PDF to Word", "Turn the content into an editable DOCX document"],
   "pdf-to-excel":     ["PDF to Excel", "Capture the tables inside a PDF as an XLSX file"],
   "word-to-pdf":      ["Word to PDF", "Convert DOCX to PDF with full Thai support, several files at a time"],
+  "text-to-pdf":      ["Text to PDF", "Paste text or drop a .txt file and get a PDF with a Thai font already embedded, wrapped without breaking words"],
   "excel-to-pdf":     ["Excel to PDF", "Lay every sheet out as a table in a PDF"],
   "images-to-pdf":    ["Images to PDF", "Combine many images into one PDF, page size fitted automatically"],
   "image-convert":    ["Convert image format", "Move between PNG, JPG, WEBP and set the quality, or build a .ico file to use as your site favicon"],

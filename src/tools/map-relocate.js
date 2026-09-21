@@ -146,7 +146,7 @@ export function mount(tool) {
   const chips = el("div", { class: "mr-chips" });
   const dz = dropzone({
     accept: ".xlsx,.xlsm,.xls,.csv,.txt", multiple: false,
-    expect: ["xlsx", "xls", "xlsm", "csv", "txt"],
+    expect: ["xlsx", "csv", "txt"],
     expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("ไฟล์ที่มีพิกัดจุดเดิมและจุดใหม่อยู่ในแถวเดียวกัน", "A file with the old and the new coordinates on the same row"),
     samples: [["samples/ตัวอย่าง-ย้ายที่ตั้งสถานี.xlsx",

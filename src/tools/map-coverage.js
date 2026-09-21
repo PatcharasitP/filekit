@@ -73,13 +73,13 @@ export function mount(tool) {
 
   // ── แผงซ้าย รับไฟล์และเลือกคอลัมน์ ────────────────────────────────
   const dzC = dropzone({ accept: ".xlsx,.xls,.csv,.txt", multiple: false, thumbs: false,
-    expect: ["xlsx", "xls", "csv", "txt"],
+    expect: ["xlsx", "csv", "txt"],
     hint: tr("ไฟล์จุดศูนย์กลาง เช่น สายที่ลูกค้าแจ้ง", "Centre points file, for example customer calls"),
     samples: [["samples/ตัวอย่าง-จุดที่ลูกค้าแจ้ง.xlsx",
                "ตัวอย่างจุดที่ลูกค้าแจ้ง 8 จุด (Excel)", "Sample of 8 customer calls (Excel)"]],
     onChange: () => readC() });
   const dzS = dropzone({ accept: ".xlsx,.xls,.csv,.txt", multiple: false, thumbs: false,
-    expect: ["xlsx", "xls", "csv", "txt"],
+    expect: ["xlsx", "csv", "txt"],
     hint: tr("ไฟล์จุดบริวาร เช่น สถานีที่มีสัญญา", "Surrounding points file, for example contracted sites"),
     samples: [["samples/ตัวอย่าง-สถานีรอบจุด.xlsx",
                "ตัวอย่างสถานี 60 แห่ง มีทั้งในวงและนอกวง (Excel)",

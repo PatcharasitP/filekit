@@ -47,6 +47,76 @@ for (const f of toolFiles.sort()) {
   }
 }
 
+/* ‼️ ชนิดไฟล์ที่เครื่องมือ "ประกาศว่ารับ" ต้องเป็นชนิดที่ตัวแยกชนิดไฟล์รู้จักจริง
+ *
+ * บทเรียนแพง 21/09/2026 (จับได้ด้วยเบราว์เซอร์จริงตอนทำเครื่องมือข้อความเป็น PDF):
+ *   เครื่องมือ 7 ตัวเขียน expect เป็น ["xlsx","xls","xlsm","csv","txt"] และ
+ *   ["csv","txt","tsv","json","sql","log","md"] ซึ่งดูสมเหตุสมผลมาก
+ *   แต่ detectType() ใน filetype.js รู้จักแค่ 9 ชนิด ไม่มี txt/tsv/json/sql/log/md/xlsm เลย
+ *   ผลคือกล่องรับไฟล์เขียนบนหน้าจอเองว่ารับ ".txt" แล้วพอผู้ใช้ลากมาวางจริง
+ *   ขึ้นว่า "ไฟล์นี้ไม่ใช่ชนิดที่รองรับ" — พังเงียบบนเว็บจริงโดยไม่มีอะไรฟ้องเลย
+ *   (ชื่อชนิดที่ไม่มีจริงไม่ทำให้ error มันแค่ไม่เคย match อะไรเท่านั้น)
+ *
+ * ‼️ และตรวจย้อนอีกทาง: นามสกุลทุกตัวใน accept ของกล่อง (ตัวที่โชว์ในหน้าต่างเลือกไฟล์)
+ *    ต้องเดินไปจบที่ชนิดที่อยู่ใน expect ได้จริง ไม่งั้นก็เป็นบั๊กหน้าตาเดียวกัน
+ *    คือ "เลือกได้จากหน้าต่าง แต่พอเลือกแล้วโดนปฏิเสธ" */
+{
+  const ft = readFileSync(join(ROOT, "src/filetype.js"), "utf8");
+  const typesBlock = ft.match(/export const TYPES\s*=\s*\{([\s\S]*?)\n\};/);
+  ck(!!typesBlock, "อ่านตาราง TYPES จาก filetype.js ได้");
+  const extOf = new Map();          // kind -> [".ext", ...]
+  if (typesBlock) {
+    for (const m of typesBlock[1].matchAll(/^\s*(\w+):\s*\{[^}]*ext:\s*\[([^\]]*)\]/gm)) {
+      extOf.set(m[1], list(m[2]));
+    }
+  }
+  const knownKinds = new Set([...extOf.keys()]);
+  ck(knownKinds.size >= 9, `อ่านชนิดไฟล์จาก TYPES ได้ (${knownKinds.size} ชนิด — ประชากรต้องไม่เป็นศูนย์)`);
+  // ชนิดที่ detectType เดาจาก MIME ได้เองแม้นามสกุลไม่ตรง
+  const extToKind = new Map();
+  for (const [kind, exts] of extOf) for (const e of exts) if (!extToKind.has(e)) extToKind.set(e, kind);
+
+  const badKind = [], badAccept = [];
+  for (const f of toolFiles.sort()) {
+    const src = readFileSync(join(ROOT, "src/tools", f), "utf8");
+    for (const dz of src.matchAll(/expect:\s*\[([^\]]*)\]/g)) {
+      for (const k of list(dz[1])) if (!knownKinds.has(k)) badKind.push(`${f}: "${k}"`);
+    }
+    /* จับคู่ accept กับ expect ภายใน "ก้อน dropzone({...}) เดียวกัน" เท่านั้น
+       ‼️ ครั้งแรกเขียนเป็น accept แล้วมองหา expect ตัวถัดไปในระยะ 400 ตัวอักษร
+          ได้ผลบวกลวงทันทีที่ word-mailmerge ซึ่งมีสองกล่องติดกันและเขียน expect
+          ไว้ "ก่อน" accept กล่องนั้นจึงไปจับคู่กับ expect ของกล่องถัดไปแทน
+          ต้องนับวงเล็บปีกกาเอาขอบเขตก้อนจริง ไม่ใช่เดาจากระยะห่าง */
+    for (const d of src.matchAll(/dropzone\(\{/g)) {
+      let i = d.index + d[0].length - 1, depth = 0, end = i;
+      for (; i < src.length; i++) {
+        if (src[i] === "{") depth++;
+        else if (src[i] === "}") { depth--; if (!depth) { end = i; break; } }
+      }
+      const blk = src.slice(d.index, end);
+      const acc = blk.match(/accept:\s*"([^"]*)"/), exp = blk.match(/expect:\s*\[([^\]]*)\]/);
+      if (!acc || !exp) continue;
+      const want = new Set(list(exp[1]));
+      for (const raw of acc[1].split(",").map((x) => x.trim().toLowerCase())) {
+        if (!raw.startsWith(".")) continue;          // MIME เช่น application/pdf ข้ามไป
+        const kind = extToKind.get(raw);
+        if (!kind || !want.has(kind)) badAccept.push(`${f}: accept มี "${raw}" แต่ expect รับไม่ถึง`);
+      }
+    }
+  }
+  ck(badKind.length === 0,
+     `ชนิดใน expect ต้องมีอยู่จริงใน TYPES ของ filetype.js (ผิด ${badKind.length})` +
+     (badKind.length ? "\n      " + badKind.slice(0, 8).join("\n      ") : ""));
+  ck(badAccept.length === 0,
+     `นามสกุลใน accept ของกล่องต้องเดินไปจบที่ชนิดใน expect ได้ (ผิด ${badAccept.length})` +
+     (badAccept.length ? "\n      " + badAccept.slice(0, 8).join("\n      ") : ""));
+  // ‼️ พิสูจน์ว่าเครื่องตรวจจับได้จริง ไม่ใช่ผ่านเพราะหาไม่เจอ
+  ck(!knownKinds.has("tsv") && !knownKinds.has("xlsm"),
+     "เครื่องตรวจอ่านรายชื่อชนิดจากไฟล์จริง (ชื่อที่ไม่มีในตารางต้องไม่ถูกนับว่ามี)");
+  ck(extToKind.get(".xlsm") === "xlsx" && extToKind.get(".txt") === "txt",
+     `ตารางนามสกุลต้องชี้ถูกชนิด (.xlsm -> ${extToKind.get(".xlsm")} · .txt -> ${extToKind.get(".txt")})`);
+}
+
 /* ‼️ ตัวเลขจำนวนเครื่องมือที่เขียนค้างไว้ในหน้า HTML
    เพิ่มเครื่องมือจาก 27 เป็น 29 แล้วลืมแก้ในหน้า → ผู้ใช้เห็น "27" แวบหนึ่งก่อน JS แก้เป็น 29
    และ meta ตอนแชร์ลิงก์ (og:description / JSON-LD) ยังโฆษณาเลขเก่าค้างอยู่

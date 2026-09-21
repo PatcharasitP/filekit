@@ -20,7 +20,7 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: ".csv,.txt,.tsv,.json,.sql,.log,.md",
-    expect: ["csv", "txt", "tsv", "json", "sql", "log", "md"], expectLabel: tr("ไฟล์ข้อความหรือ CSV", "a text or CSV file"),
+    expect: ["csv", "txt"], expectLabel: tr("ไฟล์ข้อความหรือ CSV", "a text or CSV file"),
     hint: tr(".csv .txt .tsv .json (หลายไฟล์ได้)", ".csv .txt .tsv .json (multiple files)"),
     onChange: scan,
   });

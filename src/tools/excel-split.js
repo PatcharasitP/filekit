@@ -83,7 +83,7 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv,.txt,.tsv", multiple: false,
-    expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
+    expect: ["xlsx", "csv", "txt"], expectLabel: tr("ไฟล์ Excel, CSV หรือไฟล์ข้อความ", "an Excel, CSV or text file"),
     hint: tr("ครั้งละ 1 ไฟล์", "One file at a time"),
     onChange: load,
   });

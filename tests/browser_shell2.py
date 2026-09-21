@@ -29,6 +29,10 @@ QUICK = ["pdf-pages", "pdf-merge", "pdf-watermark", "pdf-sign", "pbi-donut",
          "thai-number", "word-clean", "excel-csv", "image-resize", "pq-to-date"]
 
 TOOL_IDS = """async (base) => (await import(base + '/src/registry.js')).TOOLS.map(t => t.id)"""
+# เครื่องมือที่ "ไฟล์เป็นของแถม" — มีกล่องรับไฟล์ แต่ทำงานได้เลยโดยไม่ต้องมีไฟล์
+# จึงต้องเข้าสถานะทำงานทันที ไม่ใช่ขึ้นหน้าเปล่าที่บังไม่ให้พิมพ์อะไรได้
+STARTS_EMPTY = """async (base) => (await import(base + '/src/registry.js')).TOOLS
+  .filter(t => t.startsEmpty).map(t => t.id)"""
 
 PROBE = """() => {
   const vis = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e);
@@ -87,7 +91,7 @@ def check(fails, ok, label, detail=""):
         fails.append(label + (f" — {detail}" if detail else ""))
 
 
-def run(tools, selftest=False):
+def run(tools, selftest=False, starts_empty=frozenset()):
     fails, checked = [], 0
     pdf = FIX / "sample-3pages.pdf"
     with sync_playwright() as pw:
@@ -128,8 +132,11 @@ def run(tools, selftest=False):
                 check(fails, m["clickable"] <= budget,
                       f"{tid} @{vname} [{st}]: ของกดได้เกินงบ", f"{m['clickable']} > {budget}")
                 # เครื่องมือที่รับไฟล์ ต้องมีปุ่มยักษ์ให้เริ่ม · ที่ไม่รับไฟล์ ต้องเข้าสถานะทำงานเลย
-                if m["hasPicker"]:
+                if m["hasPicker"] and tid not in starts_empty:
                     check(fails, st == "landing", f"{tid} @{vname}: เครื่องมือที่รับไฟล์ต้องเริ่มที่หน้าเปล่า", st)
+                elif tid in starts_empty:
+                    # ‼️ ไฟล์เป็นของแถม จึงห้ามมีหน้าเปล่ามาบัง ต้องพิมพ์ได้ทันทีที่เปิด
+                    check(fails, st == "work", f"{tid} @{vname}: เครื่องมือที่ไฟล์เป็นของแถมต้องเข้าสถานะทำงานเลย", st)
                 else:
                     check(fails, st == "work", f"{tid} @{vname}: เครื่องมือที่ไม่รับไฟล์ต้องเข้าสถานะทำงานเลย", st)
                 # ยกเว้นเฉพาะเครื่องมือที่ไม่มีปุ่มลงมือทำเดียวโดยธรรมชาติจริง ๆ
@@ -187,17 +194,18 @@ def run(tools, selftest=False):
 
 if __name__ == "__main__":
     selftest = "--selftest" in sys.argv
-    if "--quick" in sys.argv or selftest:
-        tools = QUICK
-    else:
-        with sync_playwright() as p:
-            b = p.chromium.launch(headless=True)
-            pg = b.new_context().new_page()
-            pg.goto(BASE + "/", wait_until="load", timeout=60000)
-            tools = pg.evaluate(TOOL_IDS, BASE)
-            b.close()
-        print(f"อ่านทะเบียนได้ {len(tools)} เครื่องมือ")
-    code = run(tools, selftest)
+    with sync_playwright() as p:
+        b = p.chromium.launch(headless=True)
+        pg = b.new_context().new_page()
+        pg.goto(BASE + "/", wait_until="load", timeout=60000)
+        # ‼️ อ่านรายชื่อ "ไฟล์เป็นของแถม" จากทะเบียนจริงเสมอ ไม่เขียนชื่อค้างไว้ในเทส
+        #    (ชื่อที่เขียนค้างจะลืมอัปเดตทุกครั้งที่เพิ่มเครื่องมือ)
+        starts_empty = set(pg.evaluate(STARTS_EMPTY, BASE))
+        all_tools = pg.evaluate(TOOL_IDS, BASE)
+        b.close()
+    tools = QUICK if ("--quick" in sys.argv or selftest) else all_tools
+    if tools is all_tools: print(f"อ่านทะเบียนได้ {len(tools)} เครื่องมือ")
+    code = run(tools, selftest, starts_empty)
     if selftest:
         print("\nโหมดพิสูจน์:", "✅ เทสจับของพังได้จริง" if code else "🔴 เทสไม่จับอะไรเลย ใช้ไม่ได้")
         sys.exit(0 if code else 1)

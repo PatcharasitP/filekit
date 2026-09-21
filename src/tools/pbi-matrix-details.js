@@ -377,7 +377,7 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: ".xlsx,.xlsm,.xls,.csv,.txt", multiple: false,
-    expect: ["xlsx", "xls", "xlsm", "csv", "txt"],
+    expect: ["xlsx", "csv", "txt"],
     expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("เปิดไฟล์ตัวอย่างของตารางที่จะใช้ หัวตารางอยู่แถวบนสุด",
              "Open a sample export of the table you will use, header on the top row"),

@@ -61,7 +61,7 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: ".xlsx,.xls,.csv,.txt,.tsv", reorder: true,
-    expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "Excel or CSV files"),
+    expect: ["xlsx", "csv", "txt"], expectLabel: tr("ไฟล์ Excel, CSV หรือไฟล์ข้อความ", "Excel, CSV or text files"),
     hint: tr("ลากได้หลายไฟล์ สลับลำดับได้", "Drop several files, drag to reorder"),
     onChange: load,
   });
@@ -135,7 +135,7 @@ export function mount(tool) {
       const missing = base.filter((h) => !mineSet.has(h));
       const extra = mine.filter((h) => !baseSet.has(h));
       const reordered = !missing.length && !extra.length
-        && base.join(" ") !== mine.join(" ");
+        && base.join("\u0000") !== mine.join("\u0000");
       if (missing.length || extra.length || reordered) out.push({ name: f.name, missing, extra, reordered });
     }
     return out;

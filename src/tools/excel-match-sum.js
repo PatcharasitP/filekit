@@ -122,7 +122,7 @@ export function mount(tool) {
 
   const dz = dropzone({
     accept: ".xlsx,.xlsm,.xls,.csv,.txt", multiple: false,
-    expect: ["xlsx", "xls", "xlsm", "csv", "txt"],
+    expect: ["xlsx", "csv", "txt"],
     expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("เปิดไฟล์ที่มีหัวตารางแถวบนสุด", "Open a file whose top row is the header"),
     onChange: onFiles,

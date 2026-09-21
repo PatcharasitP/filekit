@@ -128,6 +128,13 @@ const STYLE = `
   border-radius:50%;border:0;background:var(--danger,#c0392b);color:#fff;font-size:10px;line-height:17px;
   padding:0;cursor:pointer}
 .pe-grp[hidden]{display:none}
+/* ‼️ แถบเลื่อนปรับขนาดกว้าง 0 จนมองไม่เห็นและลากไม่ได้ (จับค่าจริง 21/09/2026 ได้ w=0)
+   input[type=range] ไม่มีความกว้างในตัวเอง พอถูกวางใน flex row ที่ไม่ได้บอกความกว้าง
+   มันจึงยุบเหลือศูนย์ แล้วดูเหมือน "ไม่มีช่องนี้" มากกว่าดูเหมือนของพัง
+   แก้ที่ field ให้ยืดเต็มแถว แล้วตัวแถบเลื่อนกว้างเต็ม field */
+.pe-right .row{align-items:end}
+.pe-right .row > .field{flex:1 1 auto;min-width:0}
+.pe-right input[type=range]{width:100%;min-width:120px}
 .pe-hint{font-size:12.5px;line-height:1.6;color:var(--text-mute);padding:9px 12px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm,10px)}
 `;
@@ -386,7 +393,6 @@ export function mount(tool) {
       el("div", { class: "pe-sign" }, [pad.node, el("div", { class: "row" }, [padUse, padClear]), signUpBtn, signUpInput]),
       el("h3", {}, tr("ที่บันทึกไว้", "Saved")),
       savedBox,
-      el("div", { class: "row" }, [field(tr("ความกว้างบนหน้า", "Width on the page"), stampSize), stampSizeVal]),
       el("div", { class: "pe-hint" },
         tr("เป็นภาพวางทับหน้าเอกสาร ไม่ใช่ลายเซ็นดิจิทัลที่มีใบรับรองทางกฎหมาย",
            "This is an image on top of the page, not a certificate-based digital signature")),
@@ -395,6 +401,12 @@ export function mount(tool) {
       el("h3", {}, tr("รูปที่จะวาง", "Image to place")),
       el("div", { class: "row" }, [imgBtn, imgInput]),
       imgPreview,
+    ]),
+    /* ‼️ แถบปรับความกว้างใช้ร่วมกันทั้งลายเซ็นและรูป จึงต้องเป็น "กลุ่มของตัวเอง"
+       ที่โชว์สองโหมด ห้ามเอา node ตัวเดียวไปใส่สองกลุ่ม เพราะ element หนึ่งตัว
+       อยู่ได้ที่เดียวใน DOM กลุ่มหลังจะดึงมันออกจากกลุ่มแรกเงียบ ๆ
+       (จับได้จากการไล่สายพ่อแม่: แถบเลื่อนไปโผล่ในกลุ่มที่ถูกซ่อน จึงกว้าง 0) */
+    grp(["sign", "image"], [
       el("div", { class: "row" }, [field(tr("ความกว้างบนหน้า", "Width on the page"), stampSize), stampSizeVal]),
     ]),
   ];

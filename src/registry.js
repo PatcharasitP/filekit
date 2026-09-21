@@ -123,6 +123,11 @@ export const TOOLS = [
     accepts:["pdf","image"],
     libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร ตัวหนังสือ รูปภาพ ภาพถ่าย recognize", next:["pdf-to-text","pdf-to-word"] },
 
+  { id:"pdf-extract-images", group:"pdf", icon:"🖼", title:"ดึงรูปออกจาก PDF",
+    desc:"ได้รูปที่ฝังอยู่ในไฟล์ตามความละเอียดจริง ไม่ใช่ภาพหน้าจอ เลือกข้ามไอคอนเล็ก ๆ ได้",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdfjs","jszip"], keys:"extract images ดึงรูป เอารูปออก รูปภาพใน pdf แกะรูป โบรชัวร์ ภาพประกอบ", next:["image-resize","pdf-to-images"] },
+
   { id:"pdf-to-powerpoint", group:"pdf", icon:"📽", title:"PDF เป็น PowerPoint",
     desc:"หนึ่งหน้าเป็นหนึ่งสไลด์ เอาไปฉายหรือแทรกในเด็คอื่นได้ บอกตรง ๆ ว่าสไลด์เป็นภาพ แก้ข้อความข้างในไม่ได้",
     accepts:["pdf"], since:"2026-09-21",
@@ -398,6 +403,7 @@ const EN_TOOLS = {
   "pdf-page-numbers": ["Add page numbers to a PDF", "Number every page. Pick the position and format, use Thai numerals, and skip the cover"],
   "pdf-remove-blank": ["Remove blank pages from a scan", "Duplex scans leave a blank page between every sheet. Each page is checked for you, and you can keep or drop any of them yourself"],
   "pdf-ocr":          ["OCR (read text from scans)", "Read Thai and English text out of scanned PDFs as plain text or a searchable PDF"],
+  "pdf-extract-images": ["Extract images from a PDF", "Get the pictures embedded in the file at their real resolution, not a screenshot. You can skip small icons"],
   "pdf-to-powerpoint": ["PDF to PowerPoint", "One page becomes one slide, ready to present or drop into another deck. Each slide is a picture, so the text inside cannot be edited"],
   "pdf-to-images":    ["PDF to images", "Turn every page into PNG or JPG at the resolution you choose"],
   "pdf-to-longimage": ["PDF to one long image", "Stack every page into a single tall image, ready to send in a chat with no download step"],

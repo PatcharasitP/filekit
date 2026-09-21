@@ -34,7 +34,7 @@ import { toolIcon, uiIcon } from "./icons.js";
 import { tr } from "./i18n.js";
 import { GROUPS, TOOLS } from "./registry.js";
 import {
-  fileState, watchFiles, toolMeta, toolExample, toolFaq, nextSteps, railCopyMd, fmtBytes,
+  fileState, watchFiles, toolMeta, toolExample, toolFaq, nextSteps, railCopyMd, fmtBytes, download,
 } from "./ui.js";
 
 const GROUP_ACCENT = {
@@ -214,6 +214,19 @@ function resultBlock(tool, files, onAgain, onBack) {
         ])
       : el("div", { class: "s2-res-meta" },
           tr(`ได้ ${files.length} ไฟล์`, `${files.length} files`)),
+    /* ‼️ ต้องมีปุ่มดาวน์โหลดเสมอ (บั๊ก v130 เจอ 21/09/2026)
+     * แผงนี้เคยมีแต่ชื่อไฟล์กับขนาด เพราะตอนออกแบบคิดว่าไฟล์ถูกเซฟลงเครื่องไปแล้ว
+     * ซึ่งจริงเฉพาะเครื่องมือที่เรียก download() · อีก 18 ตัวใช้ downloadButton()
+     * ซึ่งแปลว่า "ยังไม่เซฟ รอผู้ใช้กด" แต่ทั้งสองทางประกาศผลลัพธ์ด้วยคำสั่งเดียวกัน
+     * เปลือกหน้าจึงแยกไม่ออก ผลคือ pdf-compress บีบเสร็จแล้วไม่มีอะไรให้กดเลย
+     * ทางแก้ที่ไม่ต้องพึ่งจังหวะเวลา: วาดปุ่มจากไฟล์ที่ได้มาเสมอ
+     * ถ้าไฟล์ถูกเซฟไปแล้วจริง การมีปุ่มเซฟซ้ำก็ไม่เสียหาย ดีกว่าไม่มีทางออก */
+    el("div", { class: "s2-res-dl" }, files.map((f) => el("button", {
+      class: "btn has-ico", type: "button",
+      "aria-label": tr(`ดาวน์โหลด ${f.name}`, `Download ${f.name}`),
+      onclick: () => download(f, f.name),
+    }, [uiIcon("download"), el("span", {}, files.length === 1
+      ? tr("ดาวน์โหลด", "Download") : f.name)]))),
     el("div", { class: "s2-res-row" }, [
       el("button", { class: "s2-btn2", type: "button", onclick: onBack }, tr("กลับไปแก้", "Back to editing")),
       el("button", { class: "s2-btn2", type: "button", onclick: onAgain }, tr("เริ่มใหม่", "Start over")),
@@ -350,6 +363,19 @@ export function toolShell2(tool, cfg = {}) {
     restart.hidden = s === "result";
     if (s !== "work") setSheet(false);
     /* ‼️ ย้ายโฟกัสเมื่อสถานะเปลี่ยน ไม่งั้นคนใช้คีย์บอร์ดจะค้างอยู่กับปุ่มที่หายไปแล้ว */
+    /* ‼️ แถบปุ่มรองต้องตามขึ้นมาอยู่ในแผงผลลัพธ์ (บั๊ก v130 เจอ 21/09/2026)
+     * ปุ่ม "ดาวน์โหลด ZIP" ของเครื่องมือแบบแผงเดี่ยวถูก liftActions() ยกมาไว้ที่แถบล่างสุดของแผง
+     * ซึ่งอยู่ใต้รายการ "ทำอะไรต่อดี" พอทำเสร็จจริงบนมือถือจึงต้องเลื่อนยาวมากกว่าจะเจอ
+     * (เห็นกับตาจากภาพ: จอ 390 ปุ่มอยู่นอกจอไปเลย) ย้ายมาไว้บนสุดของแผงผลลัพธ์แทน
+     * ย้ายได้ปลอดภัยเพราะเป็นปุ่มเงาที่เปลือกหน้าสร้างเอง ไม่ใช่ของเครื่องมือ */
+    const subrow = side.querySelector(".s2-subrow");
+    if (subrow) {
+      if (s === "result") {
+        /* วางใต้บรรทัด "ได้ N ไฟล์" ไม่ใช่เหนือมัน จะได้อ่านเรียงกันว่า เสร็จแล้ว แล้วเอาไฟล์ยังไง */
+        const done = resultHost.querySelector(".s2-res > .s2-done");
+        if (done) done.after(subrow); else resultHost.prepend(subrow);
+      } else if (!sideFoot.contains(subrow)) sideFoot.appendChild(subrow);
+    }
     if (s === "result") {
       const dl = resultHost.querySelector("button, a");
       if (dl && document.activeElement && wrap.contains(document.activeElement)) dl.focus();
@@ -368,7 +394,23 @@ export function toolShell2(tool, cfg = {}) {
      ‼️ ย้ายทั้งกองมาแผงขวา ปลอดภัยเพราะไม่มีเครื่องมือไหนค้นหาแถวผลลัพธ์จากตำแหน่งของมัน
         (ต่างจากกล่องรับไฟล์ที่เครื่องมือค้น .file-row จากพ่อของมันเอง) */
   function domResults() {
-    return [...wrap.querySelectorAll(".s2-stage .result")];
+    /* ‼️ ต้องกวาดทั้งกล่อง ไม่ใช่เฉพาะในผืนงาน (บั๊ก v130 เจอ 21/09/2026)
+     * เครื่องมือวางแถวผลลัพธ์ได้สองทาง คือต่อลง body หรือส่งมากับ cfg.footer
+     * pdf-compress ส่ง results มากับ footer ซึ่งเปลือกหน้าเอาไปใส่ .s2-stat
+     * แล้ว .s2-stat ถูกซ่อนตอนสถานะผลลัพธ์ ปุ่มดาวน์โหลดจึงหายไปทั้งที่บีบอัดสำเร็จ
+     * (เห็นกับตา: สถานะขึ้น "เล็กลง 15%" แต่ทั้งหน้าไม่มีปุ่มดาวน์โหลดเลย)
+     * กันวนซ้ำด้วยการไม่นับของที่ย้ายเข้าแผงผลลัพธ์ไปแล้ว */
+    return [...wrap.querySelectorAll(".result")].filter((n) => !resultHost.contains(n));
+  }
+
+  /* ‼️ ปุ่มรวมของผลลัพธ์อยู่คนละที่กับแถวผลลัพธ์ (บั๊ก v130 เจอ 21/09/2026)
+   * เครื่องมือ 11 ตัววางปุ่ม "ดาวน์โหลด ZIP" หรือปุ่มดาวน์โหลดหลักไว้ที่ .results > .actions
+   * ซึ่งไม่ใช่ .result จึงไม่ถูกย้ายมาแผงขวา แล้วค้างอยู่ในผืนงานที่ถูกบังตอนสถานะผลลัพธ์
+   * ผลคือกดไม่ได้เลย (Playwright ฟ้องว่า .s2-stage intercepts pointer events)
+   * เครื่องมือแบบแผงเดี่ยวไม่เจออาการนี้เพราะ liftActions() ยกปุ่มพวกนี้ไปแล้ว
+   * แต่ liftActions() ไม่ทำงานกับแบบผังงาน ที่นี่จึงต้องรับช่วงเอง */
+  function domResultActions() {
+    return [...wrap.querySelectorAll(".results > .actions")].filter((n) => !resultHost.contains(n));
   }
 
   function syncState() {
@@ -382,16 +424,18 @@ export function toolShell2(tool, cfg = {}) {
     /* ‼️ ต้องจำว่าเคยย้ายผลลัพธ์มาแล้ว เพราะพอย้ายเสร็จ ผืนงานก็ไม่มี .result อีกต่อไป
        ถ้าตรวจจากผืนงานอย่างเดียว สถานะจะเด้งกลับไป work ทันทีในรอบถัดไป
        (เจอกับตาตอนต่อ pdf-to-images: ผลลัพธ์ย้ายมาถูกที่แล้ว แต่หน้ายังเป็นสถานะทำงาน) */
-    if (domRes.length) domResultShown = true;
-    if ((domRes.length || domResultShown) && !manualBack) {
-      if (!domRes.length) { setState("result"); return; }
+    const domAct = panelMode ? [] : domResultActions();
+    if (domRes.length || domAct.length) domResultShown = true;
+    if ((domRes.length || domAct.length || domResultShown) && !manualBack) {
+      if (!domRes.length && !domAct.length) { setState("result"); return; }
       const host = el("div", { class: "s2-res" }, [
         el("p", { class: "s2-done" }, [
           el("span", { class: "s2-done-ico", "aria-hidden": "true" }, [uiIcon("check", "s2-done-svg")]),
-          domRes.length === 1 ? tr("เสร็จแล้ว", "Done")
-                              : tr(`ได้ ${domRes.length} ไฟล์`, `${domRes.length} files`),
+          domRes.length <= 1 ? tr("เสร็จแล้ว", "Done")
+                             : tr(`ได้ ${domRes.length} ไฟล์`, `${domRes.length} files`),
         ]),
-        el("div", { class: "s2-res-list" }, domRes),
+        domAct.length ? el("div", { class: "s2-res-act" }, domAct) : null,
+        domRes.length ? el("div", { class: "s2-res-list" }, domRes) : null,
         el("div", { class: "s2-res-row" }, [
           el("button", { class: "s2-btn2", type: "button",
             onclick: () => { manualBack = true; setState("work"); } }, tr("กลับไปแก้", "Back to editing")),
@@ -466,7 +510,9 @@ export function toolShell2(tool, cfg = {}) {
       ghosts.set(real, ghost);
       if (first) ctaRow.appendChild(ghost);
       else {
-        let sub = sideFoot.querySelector(".s2-subrow");
+        /* หาจากทั้งแผง เพราะตอนสถานะผลลัพธ์ แถบปุ่มรองถูกย้ายขึ้นไปอยู่ในแผงผลลัพธ์
+           ถ้าหาจาก sideFoot อย่างเดียวจะไม่เจอแล้วสร้างใหม่ ปุ่มจะกระจายอยู่สองที่ */
+        let sub = side.querySelector(".s2-subrow");
         if (!sub) { sub = el("div", { class: "s2-subrow" }); sideFoot.appendChild(sub); }
         sub.appendChild(ghost);
       }
@@ -510,9 +556,17 @@ export function toolShell2(tool, cfg = {}) {
     if (menu.isOpen() && !e.target.closest(".s2-menu") && !e.target.closest(".s2-menubtn")) menu.close();
   });
 
+  /* ‼️ body ต้องเป็น stage เสมอ ห้ามคืน cfg.center.node (บั๊ก v130 เจอ 21/09/2026)
+   * สัญญาเดิมของ v1 คือ body = "กล่องใหญ่ที่เครื่องมือต่อของเพิ่มได้" ไม่ใช่ที่วางของกลางผืนงาน
+   * เครื่องมือ 9 ตัวต่อของลง body (ตารางผลลัพธ์, โน้ต, style, ตัวดักคีย์บอร์ด)
+   * พอ body กลายเป็น cfg.center.node ของพวกนั้นก็โดน 2 เด้ง
+   *   ① showCanvas(false) สั่ง cfg.center.node.hidden = true พาของที่ต่อไว้หายไปด้วย
+   *   ② เครื่องมือที่วาดผังกลางใหม่ทุกครั้ง (pdf-split) ล้าง node นั้นทิ้งพร้อมของที่ต่อไว้
+   * ผลคือ pdf-split ขึ้น "แยกได้ 3 ไฟล์" แต่ไม่มีปุ่มดาวน์โหลดทั้งหน้า เอาไฟล์ออกไม่ได้เลย
+   * คืนเป็น stage แล้ว .result ที่เครื่องมือวาดจะถูก domResults() เจอ และย้ายไปแผงขวาตามที่ออกแบบไว้ */
   return {
     wrap,
-    body: panelMode ? stage : (cfg.center ? cfg.center.node : stage),
+    body: stage,
     grid, canvas, side, stage,
     setState, forward,
     setBusy: (on) => grid.classList.toggle("busy", !!on),

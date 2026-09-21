@@ -291,6 +291,12 @@ body.tool{overflow:hidden}
 /* ผลลัพธ์หลายไฟล์ที่ย้ายมาจากผืนงาน */
 .s2-res-list{display:flex; flex-direction:column; gap:8px; margin:12px 0}
 .s2-res-list .result{margin:0}
+/* ปุ่มรวมของผลลัพธ์ (เช่น ดาวน์โหลด ZIP) ที่ย้ายมาจากผืนงาน ต้องเด่นกว่าปุ่มรายไฟล์ */
+.s2-res-dl{display:flex; flex-direction:column; gap:8px; margin:12px 0}
+.s2-res-dl .btn{width:100%; justify-content:center; min-height:44px}
+.s2-res-act{display:flex; flex-direction:column; gap:8px; margin:12px 0 4px}
+.s2-res-act .actions{display:flex; flex-wrap:wrap; gap:8px; margin:0}
+.s2-res-act .actions .btn{flex:1 1 auto; min-width:0; justify-content:center; min-height:44px}
 
 
 /* ── สถานะผลลัพธ์: ผืนงานต้องไม่โชว์ฟอร์มเดิมค้างไว้ ─────────────────────
@@ -307,8 +313,14 @@ body.tool{overflow:hidden}
 .s2-done-big span{font-size:14px; color:var(--text-mute)}
 /* ปุ่มหลักเดิมหมดหน้าที่ในสถานะผลลัพธ์ ปุ่มดาวน์โหลดของแต่ละไฟล์อยู่ในแผงแล้ว */
 .s2[data-state="result"] .s2-cta-row,
-.s2[data-state="result"] .s2-subrow,
 .s2[data-state="result"] .s2-stat{display:none}
+/* ‼️ .s2-subrow ห้ามซ่อนตอนสถานะผลลัพธ์ (บั๊ก v130 เจอ 21/09/2026)
+ * เดิมซ่อนทั้งแถบล่างเพราะคิดว่า "ทำเสร็จแล้วไม่ต้องมีปุ่มลงมือทำอีก" ซึ่งจริงเฉพาะปุ่มหลัก
+ * แต่ปุ่มรองของเครื่องมือแบบแผงเดี่ยวคือปุ่มดาวน์โหลด ZIP ที่ liftActions() ยกมาไว้ตรงนี้
+ * ผลคือคนแปลง PDF 3 หน้าเป็นรูปแล้วกดดาวน์โหลดรวดเดียวไม่ได้ ต้องกดทีละใบ
+ * ปุ่มรองตัวอื่นที่โผล่ตามมาด้วยไม่ทำให้เสียหาย ดีกว่าปุ่มดาวน์โหลดหายไปเงียบ ๆ */
+.s2[data-state="result"] .s2-subrow{margin:0 0 4px; display:flex; flex-wrap:wrap; gap:8px}
+.s2[data-state="result"] .s2-subrow .btn{flex:1 1 auto; min-width:0; justify-content:center; min-height:44px}
 .s2[data-state="result"] .s2-side-ft{border-top:0; padding-block:0}
 
 /* ── แผงตั้งค่าแบบแน่นบนเมาส์ (ยกกฎเดิมของ .ws-right มาใช้กับแผงใหม่) ─────

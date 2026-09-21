@@ -1,0 +1,345 @@
+{
+ "pdf-merge": {
+  "kind": "pdf",
+  "pages": 3,
+  "encrypted": false,
+  "detail": [
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "MERGE-A1",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "5d112465c6dfc1de"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "MERGE-B1",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "0d3c2ccdf174df62"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "MERGE-B2",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "c7da6795582068be"
+   }
+  ]
+ },
+ "pdf-split": {
+  "kind": "zip",
+  "count": 3,
+  "detail": [
+   {
+    "name": "sp-หน้า1-2.pdf",
+    "kind": "pdf",
+    "pages": 2,
+    "encrypted": false,
+    "detail": [
+     {
+      "size": [
+       400.0,
+       600.0
+      ],
+      "rot": 0,
+      "text": "SP1",
+      "images": 0,
+      "links": 0,
+      "annots": 0,
+      "render": "4f644fcf42a0dc44"
+     },
+     {
+      "size": [
+       400.0,
+       600.0
+      ],
+      "rot": 0,
+      "text": "SP2",
+      "images": 0,
+      "links": 0,
+      "annots": 0,
+      "render": "f6af8197ed1b5494"
+     }
+    ]
+   },
+   {
+    "name": "sp-หน้า3-4.pdf",
+    "kind": "pdf",
+    "pages": 2,
+    "encrypted": false,
+    "detail": [
+     {
+      "size": [
+       400.0,
+       600.0
+      ],
+      "rot": 0,
+      "text": "SP3",
+      "images": 0,
+      "links": 0,
+      "annots": 0,
+      "render": "c49b045f6cd353c6"
+     },
+     {
+      "size": [
+       400.0,
+       600.0
+      ],
+      "rot": 0,
+      "text": "SP4",
+      "images": 0,
+      "links": 0,
+      "annots": 0,
+      "render": "da36a1eefa62a276"
+     }
+    ]
+   },
+   {
+    "name": "sp-หน้า5.pdf",
+    "kind": "pdf",
+    "pages": 1,
+    "encrypted": false,
+    "detail": [
+     {
+      "size": [
+       400.0,
+       600.0
+      ],
+      "rot": 0,
+      "text": "SP5",
+      "images": 0,
+      "links": 0,
+      "annots": 0,
+      "render": "9eb537e37c02a894"
+     }
+    ]
+   }
+  ]
+ },
+ "pdf-pages": {
+  "kind": "pdf",
+  "pages": 3,
+  "encrypted": false,
+  "detail": [
+   {
+    "size": [
+     600.0,
+     400.0
+    ],
+    "rot": 90,
+    "text": "PG1",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "22b9287d7ec2b4f6"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "PG3",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "23eb90b895c99451"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "PG4",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "f96b23707e65687a"
+   }
+  ]
+ },
+ "pdf-watermark": {
+  "kind": "pdf",
+  "pages": 2,
+  "encrypted": false,
+  "detail": [
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "WM1",
+    "images": 1,
+    "links": 0,
+    "annots": 0,
+    "render": "8d0232c9d46418c0"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "WM2",
+    "images": 1,
+    "links": 0,
+    "annots": 0,
+    "render": "fb12f82b955cfede"
+   }
+  ]
+ },
+ "pdf-page-numbers": {
+  "kind": "pdf",
+  "pages": 3,
+  "encrypted": false,
+  "detail": [
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "PN1\n1",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "5d5ce39396ec71ae"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "PN2\n2",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "2b12e33affab531c"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "PN3\n3",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "4ed5ccc07dec91b7"
+   }
+  ]
+ },
+ "images-to-pdf": {
+  "kind": "pdf",
+  "pages": 2,
+  "encrypted": false,
+  "detail": [
+   {
+    "size": [
+     448.0,
+     348.0
+    ],
+    "rot": 0,
+    "text": "",
+    "images": 1,
+    "links": 0,
+    "annots": 0,
+    "render": "484e1269c59de523"
+   },
+   {
+    "size": [
+     348.0,
+     348.0
+    ],
+    "rot": 0,
+    "text": "",
+    "images": 1,
+    "links": 0,
+    "annots": 0,
+    "render": "64e24fa5384a0e6f"
+   }
+  ]
+ },
+ "pdf-compress": {
+  "kind": "pdf",
+  "pages": 2,
+  "encrypted": false,
+  "detail": [
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "CP1",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "d82d87cfde73e015"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "CP2",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "4bcad82dc949a8d2"
+   }
+  ]
+ },
+ "pdf-remove-blank": {
+  "kind": "pdf",
+  "pages": 2,
+  "encrypted": false,
+  "detail": [
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "RB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit \nRB1 ··············· FileKit  ··············· FileKit",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "d1bfdb4bd1587242"
+   },
+   {
+    "size": [
+     400.0,
+     600.0
+    ],
+    "rot": 0,
+    "text": "RB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit \nRB3 ··············· FileKit  ··············· FileKit",
+    "images": 0,
+    "links": 0,
+    "annots": 0,
+    "render": "4fd0dfb4b2cc668a"
+   }
+  ]
+ }
+}

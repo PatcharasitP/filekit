@@ -58,6 +58,48 @@ def dl_click(pg, locator, path):
     return path
 
 
+# ‼️ โครง v2 (21/09/2026) ย้ายที่อยู่ของปุ่ม เทสเดิมจึงพังทั้งชุดทั้งที่เครื่องมือยังทำงานถูก
+#    ① ปุ่มลงมือทำ: shell2 สร้าง "ปุ่มเงา" .s2-cta ในแผงขวาที่สะท้อนปุ่มจริงใน .actions
+#       ทั้งคู่เป็น button.btn ข้อความเดียวกัน และ visible ทั้งคู่ (ปุ่มจริงซ่อนด้วย clip ไม่ใช่ display)
+#       locator เดิมจึงเจอ 2 ตัวแล้วพังด้วย strict mode violation
+#    ② ปุ่มผลลัพธ์: ไฟล์เดียวไปอยู่ .s2-res-list .result ส่วนปุ่มรองไปอยู่ .s2-subrow
+#       ของเดิม .results .result button จึงว่าง (จับค่าจริงแล้ว: .results มี 1 แต่ .results .result = 0)
+#    ทางแก้: ถามจาก "ปุ่มที่ผู้ใช้เห็นจริง" แทนการผูกกับโครง DOM จะทนทั้งโครงเก่าและใหม่
+
+def act(pg, text, timeout=20000):
+    """กดปุ่มลงมือทำของเครื่องมือ (เลือกปุ่มที่ผู้ใช้เห็นจริงในแผงขวาก่อน)"""
+    cta = pg.locator("button.s2-cta").filter(has_text=text)
+    loc = cta if cta.count() else pg.locator("button.btn").filter(has_text=text)
+    loc.first.wait_for(state="visible", timeout=timeout)
+    loc.first.click()
+
+
+def dl_result(pg, path, has_text=None, timeout=25000):
+    """กดปุ่มดาวน์โหลดผลลัพธ์แล้วเซฟไฟล์ (ครอบคลุมทั้งที่อยู่เก่าและใหม่)"""
+    # ‼️ ต้องหาในแผงขวาก่อนเสมอ เพราะปุ่มตัวจริงที่ยังค้างอยู่ในผืนงานอาจถูกของอื่นทับจนกดไม่ได้
+    #    (เจอจริง: pdf-to-text ปุ่มจริงถูก .preview-text ทับ ส่วนปุ่มเงาในแผงขวากดได้ปกติ)
+    #    Playwright เรียง locator ตามลำดับใน DOM ไม่ใช่ลำดับที่เขียน จึงต้องแยกเป็น 2 ชั้นจริง ๆ
+    # ‼️ ต้องเจาะจง "แผงผลลัพธ์" ไม่ใช่ทั้งแผงขวา ไม่งั้นจะไปเจอปุ่มตั้งค่าอื่น
+    #    (เจอจริง: pdf-page-numbers มีปุ่ม "คัดลอกลิงก์ค่านี้" อยู่ในแผง กดแล้วไม่มีไฟล์ลงมา)
+    side = ".s2-side-res button:visible, .s2-subrow button:visible"
+    stage = (".s2-res-list .result button:visible, .results .result button:visible, "
+             ".results button:visible, .result button:visible")
+    loc = pg.locator(side)
+    if has_text:
+        loc = loc.filter(has_text=has_text)
+    try:
+        loc.first.wait_for(state="visible", timeout=6000)
+    except Exception:
+        loc = pg.locator(stage)
+        if has_text:
+            loc = loc.filter(has_text=has_text)
+        loc.first.wait_for(state="visible", timeout=timeout)
+    with pg.expect_download() as dlinfo:
+        loc.first.click()
+    dlinfo.value.save_as(str(path))
+    return path
+
+
 # ── สร้างไฟล์ตัวอย่าง (รู้คำตอบล่วงหน้าเพราะสร้างเอง) ─────────────────────────
 
 def make_pdf(path, texts, size=(400, 600), thai=False):
@@ -122,10 +164,10 @@ def test_pdf_merge(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files([str(a), str(b), str(c)])
     pg.wait_for_timeout(400)
-    pg.locator("button.btn", has_text="รวมไฟล์").click()
+    act(pg, "รวมไฟล์")
     wait_status(pg, "รวมเสร็จ")
     out = DL / "merge-out.pdf"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_result(pg, out)
 
     data = out.read_bytes()
     texts = read_pdf_texts(data)
@@ -146,10 +188,10 @@ def test_pdf_split(pg):
     pg.locator('input[type=radio][value="every"]').check()
     pg.locator('input[type=number]').fill("2")
     pg.wait_for_timeout(300)
-    pg.locator("button.btn", has_text="แยกไฟล์").click()
+    act(pg, "แยกไฟล์")
     wait_status(pg, "แยกได้")
     out = DL / "split-out.zip"
-    dl_click(pg, pg.locator(".results button", has_text="ZIP"), out)
+    dl_result(pg, out, "ZIP")
 
     zf = zipfile.ZipFile(out)
     names = zf.namelist()
@@ -187,10 +229,10 @@ def test_pdf_pages(pg):
     rot_btn.hover(); rot_btn.click()
     pg.wait_for_timeout(200)
 
-    pg.get_by_role("button", name="บันทึก", exact=True).click()
+    act(pg, "บันทึก")
     wait_status(pg, "บันทึกแล้ว")
     out = DL / "pages-out.pdf"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_result(pg, out)
 
     doc = read_pdf(out.read_bytes())
     ck(tool, "เหลือ 3 หน้า (ลบไป 1 จาก 4)", "จำนวนหน้าหลังลบ", doc.page_count, 3)
@@ -215,10 +257,10 @@ def test_images_to_pdf(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files([str(x) for x in paths])
     pg.wait_for_timeout(400)
-    pg.locator("button.btn", has_text="สร้างไฟล์ PDF").click()
+    act(pg, "สร้างไฟล์ PDF")
     wait_status(pg, "สร้าง PDF")
     out = DL / "i2p-out.pdf"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_result(pg, out)
 
     doc = read_pdf(out.read_bytes())
     ck(tool, "จำนวนหน้า = จำนวนรูปที่อัปโหลด (3 รูป)", "จำนวนหน้า", doc.page_count, 3)
@@ -238,10 +280,10 @@ def test_pdf_to_images(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(300)
-    pg.locator("button.btn", has_text="แปลงเป็นรูป").click()
+    act(pg, "แปลงเป็นรูป")
     wait_status(pg, "แปลงเสร็จ")
     out = DL / "p2i-out.zip"
-    dl_click(pg, pg.locator(".results button", has_text="ZIP"), out)
+    dl_result(pg, out, "ZIP")
 
     zf = zipfile.ZipFile(out)
     names = zf.namelist()
@@ -264,10 +306,10 @@ def test_pdf_to_text(pg):
     pg.wait_for_selector(".dz")
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(300)
-    pg.locator("button.btn", has_text="ดึงข้อความ").click()
+    act(pg, "ดึงข้อความ")
     wait_status(pg, "ดึงข้อความสำเร็จ")
     out = DL / "text-out.txt"
-    dl_click(pg, pg.locator(".results button", has_text="ดาวน์โหลด .txt"), out)
+    dl_result(pg, out, ".txt")
 
     raw = out.read_bytes()
     ck(tool, "ไฟล์ .txt มี UTF-8 BOM (กันภาษาไทยเพี้ยนใน Excel/Notepad)", "3 ไบต์แรก", raw[:3], b"\xef\xbb\xbf")
@@ -289,13 +331,14 @@ def test_image_resize(pg):
     # โหมด "กำหนดความกว้าง" — ต้องเลือกโหมดก่อน เพราะเปลี่ยนโหมดจะรีเซ็ตค่าช่องกรอกกลับเป็นค่าเริ่มต้นเสมอ
     # ‼️ ต้องจำกัดขอบเขตไว้ในแผงเครื่องมือ เพราะหน้าแรกมี <select> เรียงลำดับ
     #    ที่ยังอยู่ใน DOM (ซ่อนด้วย CSS) locator("select") เปล่า ๆ จึงเจอ 2 ตัวแล้วพัง
-    pg.locator(".panel select").first.select_option("width")
-    pg.locator("input[type=number]").fill("300")
+    #    v2 ไม่มี .panel แล้ว ตัวเลือกย้ายไปแผงขวา .s2-side-bd (จับค่าจริง 21/09/2026)
+    pg.locator(".s2-side-bd select, .panel select").first.select_option("width")
+    pg.locator(".s2-side-bd input[type=number], .panel input[type=number], input[type=number]").first.fill("300")
     pg.wait_for_timeout(400)
-    pg.locator("button.btn", has_text="ย่อและบีบอัด").click()
+    act(pg, "ย่อและบีบอัด")
     wait_status(pg, "เสร็จ")
     out = DL / "resize-out.jpg"
-    dl_click(pg, pg.locator("button.btn", has_text="ดาวน์โหลดรูป"), out)
+    dl_result(pg, out, "ดาวน์โหลดรูป")
 
     im = Image.open(out)
     ck(tool, "ความกว้างย่อเหลือ 300 พิกเซลพอดีตามที่ตั้งค่า", "ความกว้างผลลัพธ์ (px)", im.size[0], 300)
@@ -314,10 +357,10 @@ def test_image_convert(pg):
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(300)
     # ค่าเริ่มต้นของหน้านี้คือแปลงเป็น JPG อยู่แล้ว
-    pg.locator("button.btn", has_text="แปลงไฟล์").click()
+    act(pg, "แปลงไฟล์")
     wait_status(pg, "แปลงเสร็จ")
     out = DL / "convert-out.jpg"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_result(pg, out)
 
     raw = out.read_bytes()
     ck(tool, "ไฟล์ผลลัพธ์เป็น JPEG จริงตาม magic bytes (ไม่ใช่แค่เปลี่ยนนามสกุล)", "2 ไบต์แรก (SOI marker)", raw[:2], b"\xff\xd8")
@@ -340,10 +383,10 @@ def test_excel_csv(pg):
     # ทิศทางเริ่มต้นคือ Excel → CSV อยู่แล้ว
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(300)
-    pg.locator("button.btn", has_text="แปลงไฟล์").click()
+    act(pg, "แปลงไฟล์")
     wait_status(pg, "แยกได้")
     out = DL / "csv-out.csv"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_result(pg, out)
 
     raw = out.read_bytes()
     ck(tool, "CSV มี UTF-8 BOM ตามที่โฆษณาไว้ (กันไทยเพี้ยนใน Excel)", "3 ไบต์แรก", raw[:3], b"\xef\xbb\xbf")
@@ -364,10 +407,10 @@ def test_pdf_watermark(pg):
     pg.locator(".dz input[type=file]").set_input_files(str(src))
     pg.wait_for_timeout(500)
     # ข้อความลายน้ำมีค่าเริ่มต้นอยู่แล้ว ("เอกสารลับ ห้ามเผยแพร่") ไม่ต้องพิมพ์เพิ่ม
-    pg.locator("button.btn", has_text="ใส่ลายน้ำ").click()
+    act(pg, "ใส่ลายน้ำ")
     wait_status(pg, "ใส่ลายน้ำครบ")
     out = DL / "wm-out.pdf"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_result(pg, out)
 
     doc = read_pdf(out.read_bytes())
     ck(tool, "จำนวนหน้าไม่เปลี่ยนหลังใส่ลายน้ำ", "จำนวนหน้า", doc.page_count, 3)
@@ -400,16 +443,15 @@ def test_pdf_sign(pg):
     pg.mouse.up()
     pg.wait_for_timeout(300)
 
-    pg.locator("button.btn", has_text="ใช้ลายเซ็น").click()
+    act(pg, "ใช้ลายเซ็น")
     pg.wait_for_timeout(200)
     pg.locator(".sign-stage").click()
     pg.wait_for_timeout(200)
 
-    save_btn = pg.get_by_role("button", name="บันทึกไฟล์เซ็นแล้ว")
-    save_btn.click()
+    act(pg, "บันทึกไฟล์เซ็นแล้ว")
     wait_status(pg, "เซ็นแล้ว")
     out = DL / "sign-out.pdf"
-    dl_click(pg, pg.locator(".results .result button"), out)
+    dl_result(pg, out)
 
     doc = read_pdf(out.read_bytes())
     ck(tool, "จำนวนหน้าไม่เปลี่ยนหลังเซ็น", "จำนวนหน้า", doc.page_count, 2)

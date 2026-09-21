@@ -80,18 +80,33 @@ export function mount(tool) {
   const leftNode = el("div", { class: "sp-left" }, [dz.container, infoBox]);
 
   // ── แผงขวา: โหมดแยก + ช่องกรอก + สรุปว่าจะได้กี่ไฟล์ ─────────────────────
-  const modeSeg = segmented([["range", tr("ตามช่วงหน้า", "By page range")], ["every", tr("ทุก N หน้า", "Every N pages")], ["each", tr("ทีละหน้า", "One page each")]], "range");
+  const modeSeg = segmented([["range", tr("ตามช่วงหน้า", "By page range")], ["every", tr("ทุก N หน้า", "Every N pages")], ["each", tr("ทีละหน้า", "One page each")], ["size", tr("ตามขนาดไฟล์", "By file size")]], "range");
   const rangeInput = el("input", { type: "text", placeholder: tr("เช่น 1-3,5,8-", "e.g. 1-3,5,8-"), value: "1-" });
   const everyInput = el("input", { type: "number", min: "1", value: "1" });
   const fRange = field(tr("ช่วงหน้าที่ต้องการ", "Page range"), rangeInput, tr("คั่นด้วย , เช่น 1-3,7,10-", "Separate with , e.g. 1-3,7,10-"));
   const fEvery = field(tr("แยกทุกกี่หน้า", "Split every N pages"), everyInput, tr("เช่น 2 = ไฟล์ละ 2 หน้า", "e.g. 2 = 2 pages per file"));
   fEvery.style.display = "none";
+  /* ‼️ เคสจริงที่โหมดนี้แก้: แนบอีเมลแล้วโดนตีกลับเพราะไฟล์ใหญ่เกินโควตา
+     ค่าเริ่มต้น 20 MB เพราะ Gmail กับ Outlook จำกัดที่ 25 MB แต่การเข้ารหัสฐาน 64 ทำให้ไฟล์โตขึ้นราว 33%
+     ตั้ง 20 ไว้จึงยังปลอดภัยหลังแนบจริง (ไม่ใช่เลขที่ตั้งลอย ๆ) */
+  /* ‼️ ต้องรับทศนิยม ไม่งั้นคนที่ต้องส่งไฟล์เข้าระบบที่จำกัด 500 KB ตั้งค่าไม่ได้เลย
+     (เจอตอนทดสอบเอง: ตั้ง min=1 แล้วไฟล์ 653 KB ตั้งเพดานให้เล็กกว่าตัวเองไม่ได้) */
+  const sizeInput = el("input", { type: "number", min: "0.1", step: "0.5", value: "20" });
+  const fSize = field(tr("แต่ละไฟล์ไม่เกินกี่ MB", "Maximum MB per file"), sizeInput,
+    tr("แนบอีเมลมักจำกัด 25 MB แต่การแนบทำให้ไฟล์โตขึ้นราว 33% ตั้ง 20 จึงปลอดภัยกว่า",
+       "Email limits are usually 25 MB, but attaching inflates a file by about 33%, so 20 is safer"));
+  fSize.style.display = "none";
+
+  /* ‼️ ต้องบอกก่อนกด ไม่ใช่ปล่อยให้รู้ตอนไฟล์ออกมาแล้วว่ายังเกินเพดานอยู่
+     เครื่องมือสัญญาว่า "แต่ละไฟล์ไม่เกิน X" ถ้าทำไม่ได้กับบางหน้า ต้องพูดออกมา
+     (เจอตอนทดสอบ 21/09/2026: ตั้ง 0.2 MB แล้วได้ไฟล์ 222 KB โดยไม่มีคำเตือนอะไรเลย) */
+  const sizeWarn = el("div", { class: "note warn", hidden: true });
 
   const summaryCount = el("div", { class: "sp-count" }, tr("เลือกไฟล์ก่อนเพื่อดูตัวอย่าง", "Choose a file first to preview"));
   const summaryList = el("div", { class: "sp-sumlist" });
   const rightNode = el("div", { class: "sp-right" }, [
     field(tr("รูปแบบการแยก", "Split mode"), modeSeg, tr("แผนผังกลางอัปเดตทันที", "The diagram updates instantly")),
-    fRange, fEvery,
+    fRange, fEvery, fSize, sizeWarn,
     summaryCount, summaryList,
   ]);
 
@@ -117,20 +132,28 @@ export function mount(tool) {
   modeSeg.addEventListener("change", () => {
     fRange.style.display = modeSeg.value === "range" ? "" : "none";
     fEvery.style.display = modeSeg.value === "every" ? "" : "none";
+    fSize.style.display = modeSeg.value === "size" ? "" : "none";
     updateAll();
   });
   rangeInput.addEventListener("input", updateAll);
   everyInput.addEventListener("input", updateAll);
+  /* ‼️ ลืมบรรทัดนี้ตอนเพิ่มโหมดใหม่ แล้วพรีวิวบอก "จะได้ 1 ไฟล์" ขณะที่ผลจริงได้ 4 ไฟล์
+     ซึ่งเป็นความไม่ตรงกันชนิดที่ทำลายความเชื่อใจมากที่สุด เพราะผู้ใช้ตัดสินใจจากพรีวิว */
+  sizeInput.addEventListener("input", updateAll);
 
   // ── โหลดไฟล์เพื่อรู้จำนวนหน้า (ใช้ pdf-lib ตัวเดียวกับที่จะใช้แยกจริงตอนกด "แยกไฟล์") ──
   async function loadFile() {
     const myFile = file;
     loading = true; loadError = null; cache = null;
+    pageBytes = null; byteToken++;
     updateAll();
     try {
       const { doc, encrypted, hiddenLayers } = await loadPdfLib(myFile);
       if (file !== myFile) return; // ผู้ใช้เปลี่ยนไฟล์ระหว่างโหลด — ทิ้งผลเก่า
       cache = { file: myFile, doc, encrypted, hiddenLayers, total: doc.getPageCount() };
+      /* วัดขนาดจริงต่อหน้าในพื้นหลัง โหมดแยกตามขนาดจะแม่นขึ้นเองเมื่อวัดเสร็จ */
+      pageBytes = null; byteToken++;
+      measurePages(doc, byteToken);
     } catch (e) {
       if (file !== myFile) return;
       loadError = tr("เปิดไฟล์ไม่ได้: ", "Couldn't open file: ") + e.message;
@@ -138,6 +161,27 @@ export function mount(tool) {
       if (file === myFile) loading = false;
       updateAll();
     }
+  }
+
+  /* ขนาดจริงของแต่ละหน้าเมื่อถูกแยกออกมาเป็นไฟล์เดี่ยว วัดครั้งเดียวต่อไฟล์
+     ‼️ ต้องวัดของจริง ไม่ใช่หารเฉลี่ย เพราะหน้าที่มีรูปกับหน้าข้อความล้วนต่างกันสิบเท่าได้
+        ถ้าใช้ค่าเฉลี่ยแล้วบอกผู้ใช้ว่า "ไม่เกิน 20 MB" ไฟล์จริงอาจทะลุไปมาก ซึ่งคือการโกหก */
+  let pageBytes = null, byteToken = 0;
+  async function measurePages(doc, token) {
+    const { PDFDocument } = PDFLib;
+    const n = doc.getPageCount();
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) {
+      if (token !== byteToken) return;
+      const one = await PDFDocument.create();
+      const [pg] = await one.copyPages(doc, [i]);
+      one.addPage(pg);
+      out[i] = (await one.save()).byteLength;
+      if (i % 4 === 3) await yieldToBrowser();
+    }
+    if (token !== byteToken) return;
+    pageBytes = out;
+    updateAll();
   }
 
   // ── ตรรกะเดียวกันทั้งพรีวิวและตอนแยกจริง — กันพรีวิวกับผลลัพธ์ไม่ตรงกัน ──
@@ -155,6 +199,27 @@ export function mount(tool) {
       for (let i = 1; i <= total; i += n)
         groups.push(Array.from({ length: Math.min(n, total - i + 1) }, (_, k) => i + k));
       return { groups, error: null };
+    }
+    if (modeSeg.value === "size") {
+      const capMB = Math.max(0.1, +sizeInput.value || 20);
+      const cap = capMB * 1024 * 1024;
+      /* ‼️ ใช้ขนาดจริงต่อหน้าถ้าวัดไว้แล้ว (pageBytes) ถ้ายังไม่มีก็ใช้ค่าเฉลี่ย
+         พรีวิวกับผลจริงจึงตรงกันเสมอเมื่อการวัดเสร็จ และก่อนหน้านั้นก็ยังพอบอกทิศทางได้
+         ‼️ หน้าที่ใหญ่เกินเพดานด้วยตัวมันเอง ต้องยอมให้อยู่ไฟล์เดียวโดด ๆ
+            แยกให้เล็กกว่านั้นไม่ได้แล้ว และการวนไม่จบคือบั๊กที่แย่กว่าไฟล์ใหญ่ */
+      const avg = file && total ? file.size / total : 0;
+      const sizeOf = (i) => (pageBytes && pageBytes[i - 1]) || avg;
+      const groups = [];
+      const tooBig = [];        // หน้าที่ใหญ่เกินเพดานด้วยตัวมันเอง แยกให้เล็กกว่านี้ไม่ได้แล้ว
+      let cur = [], curSize = 0;
+      for (let i = 1; i <= total; i++) {
+        const sz = sizeOf(i);
+        if (sz > cap) tooBig.push(i);
+        if (cur.length && curSize + sz > cap) { groups.push(cur); cur = []; curSize = 0; }
+        cur.push(i); curSize += sz;
+      }
+      if (cur.length) groups.push(cur);
+      return { groups, error: null, approx: !pageBytes, tooBig };
     }
     return { groups: Array.from({ length: total }, (_, i) => [i + 1]), error: null };
   }
@@ -207,9 +272,27 @@ export function mount(tool) {
   function updateAll() {
     const total = cache ? cache.total : null;
     let groups = [], error = null;
+    let tooBig = [], approx = false;
     if (file && !loadError && !loading && total != null) {
       const r = computeGroups(total);
       groups = r.groups; error = r.error;
+      tooBig = r.tooBig || []; approx = !!r.approx;
+    }
+    /* คำเตือนสองแบบที่ต้องพูดตรง ๆ ก่อนผู้ใช้กด */
+    if (modeSeg.value === "size" && total != null && !error) {
+      const msgs = [];
+      if (tooBig.length) {
+        const list = tooBig.slice(0, 6).join(", ") + (tooBig.length > 6 ? "…" : "");
+        msgs.push(tr(
+          `หน้า ${list} ใหญ่กว่าเพดานด้วยตัวเอง แยกให้เล็กกว่านี้ไม่ได้ ไฟล์ของหน้าเหล่านี้จะยังเกินอยู่ ถ้าต้องการให้เล็กลงจริงต้องบีบอัดไฟล์ก่อน`,
+          `Page ${list} is larger than the limit on its own, so it cannot be split any smaller. Those files will still be over. Compress the PDF first if you need them smaller`));
+      }
+      if (approx) msgs.push(tr("กำลังวัดขนาดจริงของแต่ละหน้าอยู่ ตัวเลขจะแม่นขึ้นในอีกครู่",
+                               "Measuring each page's real size, these numbers get more accurate in a moment"));
+      sizeWarn.textContent = msgs.join(" ");
+      sizeWarn.hidden = !msgs.length;
+    } else {
+      sizeWarn.hidden = true;
     }
     renderLeft(total);
     renderCenter(total, groups, error);

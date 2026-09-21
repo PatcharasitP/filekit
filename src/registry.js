@@ -63,6 +63,21 @@ export const TOOLS = [
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"protect encrypt password lock ใส่รหัส ตั้งรหัส รหัสผ่าน ล็อก ล็อค เข้ารหัส ป้องกัน ความลับ ห้ามพิมพ์ ห้ามคัดลอก", next:["pdf-unlock","pdf-watermark"] },
 
+  { id:"pdf-crop", group:"pdf", icon:"⬚", title:"ครอบตัดขอบ PDF",
+    desc:"ลากคลุมส่วนที่อยากเก็บ ตัดขอบดำจากไฟล์สแกนหรือขอบขาวเยอะเกินไปของสไลด์ ใช้กับทุกหน้าหรือเฉพาะหน้าคี่คู่ได้",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdfjs","pdflib"], keys:"crop trim ครอบตัด ตัดขอบ ขอบดำ สแกน ขอบขาว ย่อกรอบ", next:["pdf-resize","pdf-nup"] },
+
+  { id:"pdf-resize", group:"pdf", icon:"📐", title:"เปลี่ยนขนาดกระดาษ PDF",
+    desc:"เปลี่ยนเป็น A4, A5, Letter หรือขนาดอื่น เลือกได้ว่าจะย่อให้เห็นครบหรือขยายเต็มกระดาษ ข้อความยังค้นหาได้",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdflib"], keys:"resize paper size ขนาดกระดาษ a4 a5 letter legal เปลี่ยนขนาด ย่อขยาย แนวตั้ง แนวนอน", next:["pdf-nup","pdf-crop"] },
+
+  { id:"pdf-nup", group:"pdf", icon:"▦", title:"หลายหน้าต่อแผ่น และหนังสือเล่มเล็ก",
+    desc:"ประหยัดกระดาษด้วย 2, 4, 6 หรือ 9 หน้าต่อแผ่น หรือจัดเป็นเล่มพับครึ่งเย็บกลางที่เรียงหน้าถูกต้อง",
+    accepts:["pdf"], since:"2026-09-21",
+    libs:["pdflib"], keys:"nup booklet หลายหน้าต่อแผ่น ประหยัดกระดาษ พับครึ่ง เย็บกลาง เล่มเล็ก สูจิบัตร คู่มือ 2in1 4in1", next:["pdf-resize","pdf-merge"] },
+
   { id:"pdf-clean", group:"pdf", icon:"🧼", title:"ตรวจ PDF ก่อนส่ง",
     desc:"ดูว่าไฟล์พกอะไรติดมาบ้าง ชื่อผู้เขียน คอมเมนต์ ช่องฟอร์ม ไฟล์แนบ สคริปต์ แล้วล้างให้ในคลิกเดียว",
     accepts:["pdf"], since:"2026-09-21",
@@ -362,6 +377,9 @@ const EN_TOOLS = {
   "pdf-sign":         ["Sign a PDF", "Draw a signature or upload an image, then drag it onto the page. Saved for reuse"],
   "pdf-unstamp":      ["Remove layers stamped on a PDF", "Take off a watermark or stamp that was placed on top. See the result before saving, and your real content can never be removed by mistake"],
   "pdf-protect":      ["Password-protect a PDF", "Set a password that must be typed before the file opens, and choose whether printing or copying stays allowed. Done entirely on your device, nothing is uploaded"],
+  "pdf-crop":         ["Crop a PDF", "Drag over what you want to keep. Trims black edges from scans or too much white space around slides, on every page or just the odd or even ones"],
+  "pdf-resize":       ["Change a PDF's paper size", "Switch to A4, A5, Letter or another size. Choose whether to fit the whole page or fill the paper. Text stays searchable"],
+  "pdf-nup":          ["Multiple pages per sheet, or a booklet", "Save paper with 2, 4, 6 or 9 pages per sheet, or lay it out as a folded booklet with the pages in the right order"],
   "pdf-clean":        ["Check a PDF before sending", "See what the file is carrying, such as the author name, comments, form fields, attachments and scripts, then clear it all in one click"],
   "pdf-redact":       ["Redact a PDF for real", "Drag over what must go and the text underneath is removed from the file, not just covered with a rectangle you can still select and copy"],
   "pdf-unlock":       ["Remove a PDF password", "Take the password off a file you have to unlock every time, or lift a ban on copying and printing. You need the password first, this is not a cracking tool"],

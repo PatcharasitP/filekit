@@ -22,6 +22,21 @@ const PREVIEW_BEFORE_SCALE = 2.2;
 // ‼️ ฝัง <style> ในโมดูลนี้ตรง ๆ — ห้ามแก้ assets/css/tool.css (มีคนอื่นทำงานไฟล์นั้นพร้อมกัน)
 const STYLE = `
 .cmp-left,.cmp-right{display:flex;flex-direction:column;gap:9px}
+.cmp-est{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.cmp-est-hd{font-size:12.5px;color:var(--text-mute);margin-bottom:2px}
+.cmp-est-row{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:6px 10px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);color:var(--text);
+  font-family:inherit;font-size:13.5px;cursor:pointer;text-align:start}
+.cmp-est-row:hover{border-color:var(--g-pdf)}
+.cmp-est-row.on{border-color:var(--g-pdf);border-width:2px;padding:5px 9px;font-weight:700}
+.cmp-est-keep{cursor:default;background:var(--bg-soft)}
+.cmp-est-keep:hover{border-color:var(--line)}
+.cmp-est-name{flex:1 1 auto;min-width:0}
+.cmp-est-size{font-variant-numeric:tabular-nums;white-space:nowrap}
+.cmp-est-pct{font-variant-numeric:tabular-nums;white-space:nowrap;min-width:52px;text-align:end;font-weight:700}
+.cmp-est-pct.good{color:var(--ok)}
+.cmp-est-pct.bad{color:var(--text-mute);font-weight:400}
+.cmp-est-note{font-size:11.5px;line-height:1.55;color:var(--text-mute);margin-top:4px}
 .cmp-stats{display:flex;flex-direction:column;gap:8px;padding:12px 14px;margin-top:2px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm)}
 .cmp-stat{display:flex;align-items:center;justify-content:space-between;font-size:13px;gap:10px}
@@ -87,11 +102,49 @@ export function mount(tool) {
 
   /* ── ขวา: ระดับการบีบ + ตัวเลขสรุป ─────────────────────────────────── */
   const level = select([["light", tr("เบา (คมชัดสุด)", "Light (sharpest)")], ["medium", tr("ปานกลาง (แนะนำ)", "Medium (recommended)")], ["strong", tr("แรง (ไฟล์เล็กสุด)", "Strong (smallest file)")]], "medium");
-  level.addEventListener("change", () => renderAfterPreview());
+  level.addEventListener("change", () => { renderAfterPreview(); markSelected(); });
 
   const statOrigin = el("span", { class: "cmp-stat-v" }, "-");
   const statNew = el("span", { class: "cmp-stat-v" }, "-");
   const statDiff = el("span", { class: "cmp-stat-v" }, "-");
+  /* ‼️ บอกขนาดโดยประมาณของทุกระดับ "ก่อนกด" (ถอดจาก Soda PDF ที่วัดมา 21/09/2026)
+   * ของเดิมผู้ใช้ต้องกดบีบจริงถึงจะรู้ว่าได้เท่าไร ถ้าไม่พอใจก็ต้องเปลี่ยนระดับแล้วกดใหม่
+   * ตัวประมาณบีบจริง 3 หน้าที่สุ่มจากหัว กลาง ท้ายเล่ม แล้วเทียบสัดส่วน
+   * ‼️ ต้องสุ่มจากทั่วเล่ม ไม่ใช่ 3 หน้าแรก เพราะเอกสารไทยมักมีปกกับสารบัญที่เบามาก
+   *   ถ้าวัดแค่หัวเล่มจะประมาณต่ำกว่าความจริงหลายเท่า แล้วผู้ใช้จะรู้สึกว่าเราโกหก */
+  const estRows = {};
+  /* ‼️ แถวแรกคือเส้นทางที่เครื่องมือ "ลองก่อนเสมอ" คือบีบโครงสร้างโดยไม่แตะเนื้อหา
+   * ต้องมีอยู่ในตาราง ไม่งั้นผู้ใช้จะเห็นการ์ดบอกว่าเล็กลง 56% แล้วพอกดจริงกลับขึ้นว่า
+   * "บีบให้เล็กลงโดยไม่ทำให้ข้อความหายไม่ได้" ซึ่งดูเหมือนเราโกหก
+   * (เจอจริงตอนทดสอบ 21/09/2026 ก่อนปล่อย) */
+  const keepRow = (() => {
+    const size = el("span", { class: "cmp-est-size" }, "…");
+    const pct = el("span", { class: "cmp-est-pct" }, "");
+    const row = el("div", { class: "cmp-est-row cmp-est-keep" }, [
+      el("span", { class: "cmp-est-name" }, tr("เก็บข้อความไว้ (ลองก่อนเสมอ)", "Keep the text (tried first)")),
+      size, pct,
+    ]);
+    estRows.__keep = { size, pct, row };
+    return row;
+  })();
+  const estBox = el("div", { class: "cmp-est" }, [
+    el("div", { class: "cmp-est-hd" }, tr("ขนาดโดยประมาณของแต่ละระดับ", "Estimated size at each level")),
+    keepRow,
+    ...Object.entries(levelDefs()).map(([k, v]) => {
+      const size = el("span", { class: "cmp-est-size" }, "…");
+      const pct = el("span", { class: "cmp-est-pct" }, "");
+      estRows[k] = { size, pct };
+      const row = el("button", { class: "cmp-est-row", type: "button",
+        onclick: () => { level.value = k; level.dispatchEvent(new Event("change")); } },
+        [el("span", { class: "cmp-est-name" }, v.label), size, pct]);
+      estRows[k].row = row;
+      return row;
+    }),
+    el("div", { class: "cmp-est-note" },
+       tr("สามระดับล่างคือขนาดถ้ายอมให้ทุกหน้ากลายเป็นภาพ ค้นหาข้อความไม่ได้อีก และเป็นค่าประมาณจากการทดลองบีบ 3 หน้าตัวอย่าง ขนาดจริงอาจต่างไปบ้าง",
+          "The three levels below are the size if every page becomes an image, with no searchable text left. They are estimated from three sample pages, so the real size may differ a little")),
+  ]);
+
   const statsBox = el("div", { class: "cmp-stats" }, [
     statRow(tr("ขนาดเดิม", "Original size"), statOrigin),
     statRow(tr("ขนาดใหม่", "New size"), statNew),
@@ -131,7 +184,7 @@ export function mount(tool) {
     },
     right: {
       title: tr("ตัวเลือก", "Options"),
-      node: el("div", { class: "cmp-right" }, [field(tr("ระดับการบีบอัด", "Compression level"), level), statsBox]),
+      node: el("div", { class: "cmp-right" }, [field(tr("ระดับการบีบอัด", "Compression level"), level), estBox, statsBox]),
     },
     toolbar: [
       el("span", { class: "cmp-toolbar-hint" }, tr("หน้าแรก, ลากเทียบได้", "Page 1, drag to compare")),
@@ -182,6 +235,67 @@ export function mount(tool) {
     frame.setAttribute("aria-valuenow", String(Math.round(p)));
   }
 
+  /* ── ตัวประมาณขนาด ───────────────────────────────────────────────────
+   * บีบจริง 3 หน้าที่กระจายทั่วเล่ม แล้วเทียบสัดส่วนไบต์ต่อหน้ากับทั้งไฟล์
+   * ‼️ ยกเลิกได้ด้วย token เดียวกับพรีวิว เพราะผู้ใช้อาจเปลี่ยนไฟล์ระหว่างที่ยังคำนวณไม่เสร็จ */
+  let estToken = 0;
+  function markSelected() {
+    for (const [k, r] of Object.entries(estRows)) r.row.classList.toggle("on", k === level.value);
+  }
+  function resetEst() {
+    for (const r of Object.values(estRows)) { r.size.textContent = "…"; r.pct.textContent = ""; }
+  }
+  async function estimateAll(token) {
+    if (!pdfDoc || !file) return;
+    const n = pdfDoc.numPages;
+
+    /* แถวแรก: บีบโครงสร้างโดยไม่แตะเนื้อหา ใช้คำสั่งชุดเดียวกับที่ run() ใช้จริง
+       จะได้ไม่มีทางที่ตัวเลขบนการ์ดกับผลจริงจะไม่ตรงกัน */
+    try {
+      const { PDFDocument } = PDFLib;
+      const keepDoc = await PDFDocument.load(new Uint8Array(await file.arrayBuffer()),
+                                             { ignoreEncryption: true, updateMetadata: false });
+      keepDoc.setTitle(""); keepDoc.setAuthor(""); keepDoc.setSubject("");
+      keepDoc.setKeywords([]); keepDoc.setCreator(""); keepDoc.setProducer("");
+      const kept = await keepDoc.save({ useObjectStreams: true });
+      if (token !== estToken) return;
+      const d = 1 - kept.byteLength / file.size;
+      estRows.__keep.size.textContent = "≈ " + fmtBytes(kept.byteLength);
+      /* ‼️ เกณฑ์ 2% ต้องตรงกับที่ run() ใช้ตัดสินใจ ไม่งั้นการ์ดกับพฤติกรรมจริงจะขัดกัน */
+      estRows.__keep.pct.textContent = d > 0.02
+        ? `-${Math.round(d * 100)}%`
+        : tr("ไม่เล็กลงพอ", "not enough");
+      estRows.__keep.pct.className = "cmp-est-pct " + (d > 0.02 ? "good" : "bad");
+    } catch {
+      if (token !== estToken) return;
+      estRows.__keep.size.textContent = tr("ไม่ได้", "n/a");
+      estRows.__keep.pct.textContent = "";
+    }
+
+    /* หัว กลาง ท้าย · ไฟล์สั้นกว่า 3 หน้าก็ใช้เท่าที่มี */
+    const picks = [...new Set([1, Math.ceil(n / 2), n])].slice(0, 3);
+    for (const [key, def] of Object.entries(levelDefs())) {
+      let sampled = 0;
+      for (const num of picks) {
+        if (token !== estToken) return;
+        const page = await pdfDoc.getPage(num);
+        const blob = await renderPageToBlob(page, def.scale, def.q);
+        page.cleanup();
+        sampled += blob.size;
+        await yieldToBrowser();
+      }
+      if (token !== estToken) return;
+      /* ขนาดที่คาด = ไบต์เฉลี่ยต่อหน้า คูณจำนวนหน้า บวกโครงไฟล์อีกเล็กน้อย */
+      const est = Math.round((sampled / picks.length) * n * 1.02);
+      const diff = 1 - est / file.size;
+      estRows[key].size.textContent = "≈ " + fmtBytes(est);
+      estRows[key].pct.textContent = diff > 0
+        ? `-${Math.round(diff * 100)}%`
+        : tr("ไม่เล็กลง", "no gain");
+      estRows[key].pct.className = "cmp-est-pct " + (diff > 0.02 ? "good" : "bad");
+    }
+  }
+
   function statRow(label, valueNode) {
     return el("div", { class: "cmp-stat" }, [el("span", { class: "cmp-stat-k" }, label), valueNode]);
   }
@@ -208,6 +322,8 @@ export function mount(tool) {
     st.clear();
     results.innerHTML = "";
     resetStats();
+    resetEst();
+    estToken++;
     revokePreviewUrls();
     if (pdfDoc) { try { pdfDoc.destroy(); } catch { /* เอกสารเดิมถูกทิ้งไปแล้วก็ไม่เป็นไร */ } pdfDoc = null; }
     docPromise = null;
@@ -227,6 +343,9 @@ export function mount(tool) {
       if (token !== previewToken) return;
       setHandlePos(50);
       ws.showCanvas(true);
+      markSelected();
+      estToken++;
+      estimateAll(estToken);
     } catch (e) {
       if (token !== previewToken) return;
       st.err(tr("เปิดพรีวิวไม่ได้: ", "Couldn't open preview: ") + e.message);

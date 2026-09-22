@@ -176,6 +176,11 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
 .alt{margin:8px 2px 0; font-size:13px; line-height:1.6}
 .linkbtn{padding:0; border:0; background:none; color:var(--brand-text); font:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
 .note{margin:0; text-align:center; color:var(--text-mute); font-size:13px; line-height:1.6}
+/* ทางเลือกรอง: ตัวหนังสือเล็ก จาง ไม่แย่งสายตาจากปุ่มหลัก (โปร่ง บาง จาง) */
+.more{margin:0; display:flex; flex-wrap:wrap; justify-content:center; gap:4px 28px; color:var(--text-mute); font-size:13px; line-height:1.7}
+.more-g{white-space:nowrap}
+.more .linkbtn{font-size:13px; margin-inline-start:4px}
+.linkbtn:disabled{color:var(--text-mute); text-decoration:none; cursor:not-allowed; opacity:.6}
 
 /* draw.io ตัววาดที่ซ่อนอยู่ (src/engine.js) ‼️ ห้าม display:none หรือวางนอกจอ ให้โปร่งใสอยู่ในจอแทน
    Chrome หน่วงการทำงานของ iframe ต่างโดเมนที่ถูกซ่อนหรืออยู่นอกจอ · ขนาดไม่เกินจอ กันมือถือเลื่อนข้างได้ */
@@ -223,8 +228,11 @@ html.in-room body{overflow:hidden}
   .ed{flex:none; height:240px; min-height:0}
   .canvas{flex:none; height:auto; min-height:220px}
   .canvas img{position:static; display:block; width:auto; max-width:100%; height:auto; max-height:none; margin:0 auto; padding:14px; cursor:default}
-  .act{position:sticky; bottom:0; z-index:3; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--card);
-    border-top:1px solid var(--line-soft); gap:6px}
+  .act{display:contents}
+  .act-row{position:sticky; bottom:0; z-index:3; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--card);
+    border-top:1px solid var(--line-soft)}
+  .note,.more{padding:6px 16px 0}
+  .more{padding-bottom:18px; gap:4px 18px}
   .cta{height:56px; font-size:17px}
   .sec{height:56px; padding:0 16px; font-size:14px}
   .note{font-size:12px}

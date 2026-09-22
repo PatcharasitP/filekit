@@ -551,7 +551,21 @@ renderCats();
  *    = วาดรายการเครื่องมือ 2 ครั้งติดกันทุกครั้งที่เปิดเว็บ เนื้อหาโป่งสองที ดัน footer หลุดจอ
  *    วัดจริงได้ CLS 0.174 (เพดานที่ยอมรับกันคือ 0.05) ทั้งที่รอบที่สองได้ผลเหมือนเดิมเป๊ะ
  *    (จับได้จาก tests/browser_perfbudget.py ด้วย MutationObserver นับการแทนที่ #tools) */
-if (location.hash.replace(/^#\/?/, "")) route();
+/* ‼️ ไฟล์ที่ส่งมาจาก FlowKit (flow/) ผ่าน IndexedDB (src/handoff.js แผน FlowKit D5)
+ *    ธงใน sessionStorage บอกว่ามีของรอรับ โหลดตัวรับเฉพาะตอนเห็นธง หน้าแรกปกติไม่โหลดอะไรเพิ่ม
+ *    ต้องฝากไฟล์ (stashFiles) ให้เสร็จก่อนเปิดเครื่องมือ เพราะกล่องรับไฟล์หยิบของฝากตอนสร้างครั้งเดียว */
+let handoffWaiting = false;
+try { handoffWaiting = !!sessionStorage.getItem("fk:handoff"); } catch { /* โหมดส่วนตัว */ }
+if (handoffWaiting) {
+  import("./handoff.js").then((h) => h.receive()).then(async (rec) => {
+    if (rec && byId(rec.tool)) {
+      uiMod = uiMod || await import("./ui.js");
+      uiMod.stashFiles(rec.files);
+      if (location.hash !== "#/" + rec.tool) { location.hash = "#/" + rec.tool; return; }
+    }
+    if (location.hash.replace(/^#\/?/, "")) route();
+  }).catch(() => { if (location.hash.replace(/^#\/?/, "")) route(); });
+} else if (location.hash.replace(/^#\/?/, "")) route();
 
 // เอียงปึกกระดาษในฉากเปิดตามเมาส์เล็กน้อย ให้รู้สึกเป็น 3 มิติจริงไม่ใช่ภาพนิ่ง
 // ‼️ เปิดเฉพาะเครื่องที่มีเมาส์จริง — บนจอสัมผัส pointermove จะยิงตอนเลื่อนหน้า ทำให้กระตุก

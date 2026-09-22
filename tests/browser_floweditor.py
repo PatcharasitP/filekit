@@ -93,7 +93,7 @@ def main():
                 ck("ตัวตรวจอ่านผังตัวอย่างได้ 6 กล่อง (ประชากรไม่เป็นศูนย์)", before == SAMPLE, str(before))
                 open_room(pg); wipe_in_room(pg); press_room_button(pg, "บันทึก และ ออก")
                 ck("ตัวตรวจเห็นว่าผังหลังแก้ต่างจากผังเดิม", boxes(pg) != before)
-                pg.click("#cvnote button")
+                pg.click("#cvnote button:has-text('วาดใหม่จากข้อความ')")
                 pg.wait_for_timeout(2500)
                 ck("ตัวตรวจเห็นว่าผังถูกวาดทับกลับเป็นผังจากข้อความ", boxes(pg) == SAMPLE)
                 b.close()
@@ -122,7 +122,7 @@ def main():
             press_room_button(pg, "บันทึก และ ออก")
             ck("บันทึกแล้ว พรีวิวเป็นผังที่แก้ (ลบทุกกล่องแล้ว เหลือ 0)", boxes(pg) == [], str(boxes(pg)))
             ck("มีป้ายบอกว่าผังนี้แก้ด้วยมือ พร้อมปุ่มวาดใหม่จากข้อความ",
-               not pg.evaluate("() => document.querySelector('#cvnote').hidden") and pg.locator("#cvnote button").count() == 1)
+               not pg.evaluate("() => document.querySelector('#cvnote').hidden") and pg.locator("#cvnote button", has_text="วาดใหม่จากข้อความ").count() == 1)
             with pg.expect_download() as d:
                 pg.click("#dl")
             p = tmp / "edited.png"; d.value.save_as(str(p))
@@ -140,7 +140,7 @@ def main():
                 restored = None
             ck("‼️ โหลดหน้าใหม่ ได้ผังที่แก้กลับมา ไม่ใช่ผังจากข้อความ", restored == [], str(restored))
             ck("โหลดหน้าใหม่ ข้อความที่พิมพ์ยังอยู่ และป้ายยังบอกสถานะถูก", pg.input_value("#src").startswith("ข้อความใหม่หลังแก้") and "ข้อความเปลี่ยนแล้ว" in pg.inner_text("#cvnote"))
-            pg.click("#cvnote button")
+            pg.click("#cvnote button:has-text('วาดใหม่จากข้อความ')")
             got = None
             for _ in range(60):
                 pg.wait_for_timeout(500)
@@ -175,6 +175,46 @@ def main():
                 dropped = False
             ck("ลากไฟล์ .drawio.png มาวางบนหน้า ห้องแก้ไขเปิดเอง", drop_ok and dropped)
             if dropped: press_room_button(pg, "ออก", discard=True)
+
+            print("\n━━ ฉ. จัดวางใหม่ กับไฟล์ SVG ━━")
+            if not pg.evaluate("() => document.querySelector('#cvnote').hidden"):
+                pg.click("#cvnote button:has-text('วาดใหม่จากข้อความ')")
+            set_text(pg, "ขั้นหนึ่ง\nขั้นสอง\nผ่านไหม?\n  ผ่าน: ขั้นสาม\n  ไม่ผ่าน: กลับไป: ขั้นหนึ่ง")
+            want = sorted(["ขั้นหนึ่ง", "ขั้นสอง", "ผ่านไหม?", "ขั้นสาม"])
+            for _ in range(60):
+                pg.wait_for_timeout(500)
+                if state(pg) == "ready" and boxes(pg) == want: break
+            open_room(pg); press_room_button(pg, "บันทึก และ ออก")
+            lay = pg.locator("#cvnote button", has_text="จัดวางใหม่")
+            ck("ผังที่แก้ด้วยมือและไม่มีกรอบกลุ่ม มีปุ่มจัดวางใหม่", lay.count() == 1)
+            if lay.count():
+                src0 = pg.evaluate("() => document.querySelector('#png').currentSrc")
+                lay.click()
+                try:
+                    pg.wait_for_function("(p) => document.querySelector('#png').currentSrc !== p && document.querySelector('#canvas').dataset.state === 'ready'", arg=src0, timeout=30000); ok = True
+                except Exception:
+                    ok = False
+                ck("กดจัดวางใหม่ ได้ผังใหม่ กล่องครบเท่าเดิม ยังเป็นผังที่แก้ด้วยมือ", ok and boxes(pg) == want and not pg.evaluate("() => document.querySelector('#cvnote').hidden"),
+                   str(boxes(pg)))
+            with pg.expect_download() as d:
+                pg.click("#dlsvg")
+            svgp = tmp / "edited.svg"; d.value.save_as(str(svgp))
+            pg.set_input_files("#filein", str(svgp))
+            try:
+                pg.wait_for_function("() => document.querySelector('#room').dataset.state === 'ready' && !document.querySelector('#room').hidden", timeout=60000)
+                f = editor_frame(pg); svg_ok = f is not None and f.evaluate("() => document.body.innerText.includes('ขั้นสาม')")
+            except Exception:
+                svg_ok = False
+            ck("เปิดไฟล์ SVG ที่ FlowKit ส่งออก ห้องแก้ไขเปิดพร้อมผังเดิม", svg_ok)
+            if svg_ok: press_room_button(pg, "ออก", discard=True)
+            pg.click("#cvnote button:has-text('วาดใหม่จากข้อความ')")
+            set_text(pg, "[ฝ่ายขาย] รับคำสั่ง\n[คลัง] จัดของ")
+            for _ in range(60):
+                pg.wait_for_timeout(500)
+                if state(pg) == "ready" and boxes(pg) == sorted(["รับคำสั่ง", "จัดของ", "ฝ่ายขาย", "คลัง"]): break
+            open_room(pg); press_room_button(pg, "บันทึก และ ออก")
+            ck("ผังที่มีกรอบกลุ่มไม่มีปุ่มจัดวางใหม่ (จัดแล้วกล่องหลุดกรอบ)", pg.locator("#cvnote button", has_text="จัดวางใหม่").count() == 0
+               and not pg.evaluate("() => document.querySelector('#cvnote').hidden"))
             ck("ไม่มี error บนหน้า", not errs, str(errs[:3]))
             b.close()
     finally:

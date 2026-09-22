@@ -15,7 +15,10 @@ import { SAMPLES } from "./samples.js";
 const $ = (s) => document.querySelector(s);
 const ta = $("#src"), hl = $("#hl"), hint = $("#hint"), msg = $("#msg");
 const canvas = $("#canvas"), img = $("#png"), cvmsg = $("#cvmsg"), cvnote = $("#cvnote"), live = $("#live"), dl = $("#dl");
-const editBtn = $("#edit"), room = $("#room"), fileIn = $("#filein");
+const editBtn = $("#edit"), room = $("#room"), fileIn = $("#filein"), dlSvg = $("#dlsvg"), dlXml = $("#dlxml");
+const sendBtns = [...document.querySelectorAll("[data-send]")];
+/** ปุ่มที่ใช้ได้เมื่อมีผังพร้อม (ดาวน์โหลด , แบบอื่น , ส่งต่อ) เปิดปิดพร้อมกันเสมอ */
+const setReady = (on) => { for (const b of [dl, dlSvg, dlXml, ...sendBtns]) b.disabled = !on; };
 const KINDS = ["steps", "org", "system", "timeline"];
 const SAMPLE = SAMPLES[IS_EN ? "en" : "th"];
 const DEBOUNCE_MS = 400;                          // แผนเฟส 2 ข้อ 5
@@ -262,11 +265,11 @@ const engine = createEngine({
       setCanvas("error", [tr("ยังต่อตัววาดผังไม่ได้", "Cannot reach the diagram engine yet"),
         tr("ตัววาดผังโหลดมาจาก diagrams.net ถ้าเน็ตช้ารอสักครู่ ผังจะขึ้นเอง ถ้าเครือข่ายบล็อกเว็บนี้จะวาดไม่ได้",
            "It loads from diagrams.net. On a slow connection just wait, the diagram appears by itself. A network that blocks that site cannot draw")], true);
-      dl.disabled = true;
+      setReady(false);
     } else if (s === "offline") {
       setCanvas("error", [tr("ไม่ได้ต่ออินเทอร์เน็ต", "You are offline"),
         tr("ตัววาดผังต้องโหลดจาก diagrams.net ต่อเน็ตแล้วผังจะขึ้นเอง", "The diagram engine loads from diagrams.net, it draws as soon as you are back online")], true);
-      dl.disabled = true;
+      setReady(false);
     } else if (s === "ready" && waiting && canvas.dataset.state === "error") {
       setCanvas("booting", [tr("กำลังวาดผัง", "Drawing")]);
     }
@@ -297,7 +300,7 @@ function show(png, xml, name, alt) {
   img.alt = alt;
   img.hidden = false;
   setCanvas("ready");
-  dl.disabled = false;
+  setReady(true);
   editBtn.disabled = false;
 }
 
@@ -326,7 +329,24 @@ function paintEditNote() {
   go.title = "";
   go.setAttribute("aria-label", tr("วาดใหม่จากข้อความ ส่วนที่แก้ด้วยมือจะหาย", "Redraw from the text, manual edits will be lost"));
   go.addEventListener("click", () => { edited = null; savedRecord = null; writeRecord(null); lastMmd = ""; paintEditNote(); update(); });
-  cvnote.append(b, go);
+  cvnote.append(b);
+  /* ‼️ จัดวางใหม่ใช้ได้เฉพาะผังที่ไม่มีกรอบกลุ่ม ผังมีกลุ่มแล้วกล่องกระจายหลุดกรอบ (ยิงจริง engine_probe11 shots/relayout-sheet.png) */
+  if (current && current.xml && !/mermaidId="n:g\d+"|container=1|swimlane/.test(current.xml)) {
+    const lay = document.createElement("button");
+    lay.type = "button";
+    lay.textContent = tr("จัดวางใหม่", "Tidy the layout");
+    lay.addEventListener("click", () => {
+      lay.disabled = true;
+      engine.relayout(current.xml).then((out) => {
+        savedRecord = { xml: out.xml, name: current.name, text: edited.text, kind: edited.kind };
+        writeRecord(savedRecord);
+        show(out.png, out.xml, current.name, tr("ผังที่แก้ด้วยมือ", "Diagram with manual edits"));
+        paintEditNote();
+      }, (e) => { console.warn("FlowKit relayout", e); lay.disabled = false; });
+    });
+    cvnote.append(lay);
+  }
+  cvnote.append(go);
 }
 
 const editor = createEditor({
@@ -380,8 +400,17 @@ function fileProblem(text) {
 }
 async function openFile(file) {
   if (!file) return;
-  const name = (file.name.replace(/\.(drawio\.png|drawio\.xml|png|drawio|xml)$/i, "").trim() || "FlowKit") + ".drawio.png";
+  const name = (file.name.replace(/\.(drawio\.png|drawio\.xml|drawio\.svg|png|drawio|xml|svg)$/i, "").trim() || "FlowKit") + ".drawio.png";
   try {
+    if (/\.svg$/i.test(file.name) || file.type === "image/svg+xml") {
+      /* SVG ที่ draw.io ฝังผังไว้ในแอตทริบิวต์ content ของแท็ก svg (ไฟล์ที่ปุ่มโหลด SVG ของเราทำ ก็เป็นแบบนี้) */
+      const svg = new DOMParser().parseFromString(await file.text(), "image/svg+xml").documentElement;
+      const content = svg && svg.getAttribute("content");
+      if (!content) {
+        return fileProblem(tr(`${file.name} เป็นภาพ SVG ธรรมดา ไม่มีผัง draw.io ฝังอยู่`, `${file.name} is a plain SVG with no draw.io diagram inside`));
+      }
+      return openRoom({ xml: content }, name);
+    }
     if (/\.png$/i.test(file.name) || file.type === "image/png") {
       if (!hasDiagram(new Uint8Array(await file.arrayBuffer()))) {
         return fileProblem(tr(`${file.name} เป็นภาพธรรมดา ไม่มีผัง draw.io ฝังอยู่ เปิดแก้ได้เฉพาะไฟล์ .drawio.png`,
@@ -421,13 +450,13 @@ function update() {
   showMessages(r);
   if (edited) { paintEditNote(); return; }        // ผังที่แก้ด้วยมือ ข้อความไม่วาดทับเอง (ผู้ใช้เลือกผ่านป้าย)
   if (r.empty) {
-    current = null; lastMmd = ""; img.hidden = true; dl.disabled = true; editBtn.disabled = true;
+    current = null; lastMmd = ""; img.hidden = true; setReady(false); editBtn.disabled = true;
     setCanvas("empty", [isPhone() ? tr("พิมพ์ข้อความข้างบน ผังจะขึ้นตรงนี้", "Type above and the diagram shows up here")
                                   : tr("พิมพ์ข้อความทางซ้าย ผังจะขึ้นตรงนี้", "Type on the left and the diagram shows up here")]);
     return;
   }
   if (r.error) {
-    dl.disabled = true;
+    setReady(false);
     setCanvas(current ? "stale" : "empty", [tr(`แก้${lineLabel(r.error.line)} ก่อน`, `Fix ${lineLabel(r.error.line).toLowerCase()} first`),
       tr("ผังจะวาดใหม่ให้เอง", "and the diagram redraws by itself")]);
     return;
@@ -436,7 +465,7 @@ function update() {
   const mmd = toMermaid(model);
   if (mmd === lastMmd && current) {
     current.name = fileName(model);               // ชื่อ: เปลี่ยนอย่างเดียว ผังไม่ต้องวาดใหม่
-    setCanvas("ready"); dl.disabled = false;
+    setCanvas("ready"); setReady(true);
     return;
   }
   const my = ++ver;
@@ -454,9 +483,17 @@ function update() {
     setCanvas("error", [tr("วาดผังนี้ไม่สำเร็จ", "This diagram could not be drawn"),
       e && e.kind === "incomplete" ? tr("ตัววาดได้กล่องไม่ครบ ลองเปลี่ยนเครื่องหมายแปลก ๆ ในข้อความ", "Some boxes went missing, try removing unusual symbols")
                                    : tr("ลองใหม่อีกครั้ง ถ้ายังไม่ได้ ลองแบ่งผังให้เล็กลง", "Try again, or split the diagram into smaller ones")], true);
-    dl.disabled = true;
+    setReady(false);
   }).finally(() => { if (my === ver) delete live.dataset.busy; });
 }
+
+/* วาง XML ของ draw.io (เช่นที่ AI เขียนให้ หรือก๊อปจาก draw.io) ลงช่องพิมพ์ = เปิดเป็นผังในห้องแก้ไข ไม่ยัดเป็นข้อความ */
+ta.addEventListener("paste", (e) => {
+  const t = (e.clipboardData && e.clipboardData.getData("text/plain")) || "";
+  if (!/^\s*(<\?xml[^>]*>\s*)?<(mxfile|mxGraphModel)\b/.test(t)) return;
+  e.preventDefault();
+  openRoom({ xml: t.trim() }, "FlowKit.drawio.png");
+});
 
 ta.addEventListener("input", () => {
   saveDraft();
@@ -465,15 +502,40 @@ ta.addEventListener("input", () => {
   timer = setTimeout(update, DEBOUNCE_MS);
 });
 
-dl.addEventListener("click", () => {
-  if (!current) return;
-  const { blob, name } = current;
-  if (inapp && inapp.inApp()) {
-    inapp.saveViaShare(blob, name).then((how) => { if (how === "download") plainDownload(blob, name); });
-    return;
-  }
+dl.addEventListener("click", () => { if (current) save(current.blob, current.name); });
+/* ── ส่งออกแบบอื่น (แผนเฟส 3 ข้อ 1) ── */
+const baseName = () => (current ? current.name.replace(/\.drawio\.png$/i, "") : "FlowKit");
+function save(blob, name) {
+  if (inapp && inapp.inApp()) { inapp.saveViaShare(blob, name).then((how) => { if (how === "download") plainDownload(blob, name); }); return; }
   plainDownload(blob, name);
+}
+dlSvg.addEventListener("click", () => {
+  if (!current || !current.xml) return;
+  dlSvg.disabled = true;
+  engine.exportSvg(current.xml).then(({ svg }) => save(svg, baseName() + ".svg"), (e) => {
+    console.warn("FlowKit svg", e);
+    fileProblem(tr("ส่งออก SVG ไม่สำเร็จ ลองอีกครั้ง", "Could not export the SVG, try again"));
+  }).finally(() => { dlSvg.disabled = !current; });
 });
+dlXml.addEventListener("click", () => {
+  if (!current || !current.xml) return;
+  save(new Blob([current.xml], { type: "application/vnd.jgraph.mxfile" }), baseName() + ".drawio");
+});
+/* ── ส่งต่อเข้าเครื่องมือของ FileKit (แผนเฟส 3 ข้อ 5 , D5) ไม่ต้องดาวน์โหลดแล้วอัปโหลดซ้ำ ── */
+for (const b of sendBtns) b.addEventListener("click", async () => {
+  if (!current) return;
+  for (const x of sendBtns) x.disabled = true;
+  try {
+    const { send } = await import("../../src/handoff.js");
+    await send([new File([current.blob], current.name, { type: "image/png" })], b.dataset.send);
+    location.href = "../#/" + b.dataset.send;
+  } catch (e) {
+    console.warn("FlowKit handoff", e);
+    fileProblem(tr("ส่งต่อไม่สำเร็จ ดาวน์โหลดไฟล์แล้วเปิดเครื่องมือเองได้", "Could not hand it over, download the file and open the tool yourself"));
+    for (const x of sendBtns) x.disabled = false;
+  }
+});
+
 function plainDownload(blob, name) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

@@ -65,8 +65,8 @@
         data-en-al="Diagram text" aria-describedby="hint keys msg"></textarea>
     </div>
     <p class="hint" id="hint"></p>
-    <p class="alt"><button class="linkbtn" id="openfile" type="button" data-en="Open an existing .drawio.png to keep editing">เปิดไฟล์ .drawio.png เดิมมาแก้ต่อ</button>
-      <input type="file" id="filein" accept=".png,.drawio,.xml,image/png" hidden></p>
+    <p class="alt"><button class="linkbtn" id="openfile" type="button" data-en="Open an existing .drawio.png, .drawio or .svg to keep editing">เปิดไฟล์ผังเดิม (.drawio.png , .drawio , .svg) มาแก้ต่อ</button>
+      <input type="file" id="filein" accept=".png,.drawio,.xml,.svg,image/png,image/svg+xml" hidden></p>
     <p class="sr" id="keys" data-en="Tab indents the line, Shift and Tab moves it back. Press Escape then Tab to leave the box.">กด Tab เพื่อย่อหน้า กด Shift กับ Tab เพื่อถอยออก กด Esc แล้วกด Tab เพื่อออกจากช่องพิมพ์</p>
     <div class="msg" id="msg" aria-live="polite"></div>
   </section>
@@ -87,6 +87,16 @@
       <button class="sec" id="edit" type="button" disabled data-en="Edit by hand">ลากแก้ต่อ</button>
     </div>
     <p class="note" data-en="You get a .drawio.png file that drops straight into slides and opens in draw.io for more editing">ได้ไฟล์ .drawio.png วางในสไลด์ได้เลย และเปิดแก้ต่อใน draw.io ได้</p>
+    <!-- แผนเฟส 3 ข้อ 1 กับ 5: ส่งออกแบบอื่น และส่งต่อเข้าเครื่องมือของ FileKit โดยไม่ต้องดาวน์โหลดแล้วอัปโหลดซ้ำ (src/handoff.js) -->
+    <p class="more" id="more">
+      <span class="more-g"><span data-en="Also save as">โหลดแบบอื่น</span>
+        <button class="linkbtn" id="dlsvg" type="button" disabled>SVG</button> ,
+        <button class="linkbtn" id="dlxml" type="button" disabled>.drawio</button></span>
+      <span class="more-g"><span data-en="Continue in FileKit">ส่งต่อใน FileKit</span>
+        <button class="linkbtn" type="button" data-send="images-to-pdf" disabled data-en="Make a PDF">รวมเป็น PDF</button> ,
+        <button class="linkbtn" type="button" data-send="image-resize" disabled data-en="Shrink it">ย่อรูป</button> ,
+        <button class="linkbtn" type="button" data-send="image-convert" disabled data-en="Change image type">แปลงชนิดรูป</button></span>
+    </p>
   </div>
 </main>
 

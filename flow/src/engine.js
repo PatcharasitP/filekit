@@ -78,6 +78,15 @@ export function stretchXY(xml, kx = 1, ky = 1) {
 /** จำนวนกล่อง (รวมกรอบกลุ่ม) ใน xml ของ draw.io */
 export const countVertices = (xml) => (String(xml).match(/vertex="1"/g) || []).length;
 
+/** data URI ของ SVG (base64 หรือเข้ารหัส URL) เป็น Blob */
+function svgBlob(uri) {
+  const s = String(uri);
+  if (!s.startsWith("data:image/svg+xml")) throw new EngineError("bad-png", "svg");
+  const body = s.slice(s.indexOf(",") + 1);
+  const text = /;base64,/.test(s.slice(0, 40)) ? new TextDecoder().decode(Uint8Array.from(atob(body), (c) => c.charCodeAt(0))) : decodeURIComponent(body);
+  return new Blob([text], { type: "image/svg+xml" });
+}
+
 export function pngBlob(uri) {
   const head = "data:image/png;base64,";
   if (typeof uri !== "string" || !uri.startsWith(head)) throw new EngineError("bad-png");
@@ -89,11 +98,11 @@ export function pngBlob(uri) {
 
 /**
  * @param {{ onState?: (s: "booting"|"slow"|"ready"|"unreachable"|"offline") => void }} opts
- * @returns {{ render(mermaid: string, expectBoxes?: number, stretch?: {x?: number, y?: number}): Promise<{png: Blob, xml: string} | {stale: true}>, retry(): void, boot(): Promise<void> }}
+ * @returns {{ render, renderXml, relayout, exportSvg, retry(): void, boot(): Promise<void> }}
  */
 export function createEngine({ onState = () => {} } = {}) {
   let frame = null, boot$ = null, ready = false, seq = 0;
-  let running = false, queued = null;          // วาดทีละใบ ใบที่รอคิวเก็บแค่ใบล่าสุด (พิมพ์รัว ๆ ไม่ต้องวาดทุกตัวอักษร)
+  let running = false;                        // วาดทีละใบ (ดูคิวข้างล่าง)
   const waiters = new Set();
 
   window.addEventListener("message", (ev) => {
@@ -153,48 +162,69 @@ export function createEngine({ onState = () => {} } = {}) {
     for (const w of [...waiters]) { waiters.delete(w); w.fail(new EngineError("reset")); }
   }
 
-  async function drawOnce(mermaid, expectBoxes, xmlIn, stretch = {}) {
+  const PNG_OUT = { action: "export", format: "xmlpng", scale: 2, border: 16, background: "#ffffff" };
+
+  /** งานหนึ่งชิ้น: วาดจาก Mermaid , วาด xml เดิม , จัดวางใหม่ , หรือส่งออก SVG */
+  async function drawOnce(job) {
     await boot();
-    if (xmlIn) {                               // ผังที่แก้ด้วยมือแล้ว (กู้คืนหลังโหลดหน้าใหม่) วาดตามที่เป็น ไม่แตะฟอนต์หรือสีของผู้ใช้
-      await call({ action: "load", autosave: 0, xml: xmlIn }, "load");
-      const o = await call({ action: "export", format: "xmlpng", scale: 2, border: 16, background: "#ffffff" }, "export");
-      return { png: pngBlob(o.data), xml: o.xml || xmlIn };
+    if (job.xml) {
+      /* ผังที่แก้ด้วยมือแล้ว วาดตามที่เป็น ไม่แตะฟอนต์หรือสีของผู้ใช้ */
+      await call({ action: "load", autosave: 0, xml: job.xml }, "load");
+      if (job.svg) {
+        /* ‼️ xmlsvg ไม่ใช่ svg: แบบหลังไม่ฝังผังไว้ในไฟล์ เปิดกลับมาแก้ไม่ได้ (ยิงจริง engine_probe11 ไม่มี content=)
+           embedFonts ฝัง Sarabun ในไฟล์ เปิดเครื่องที่ไม่มีฟอนต์แล้วไทยไม่เพี้ยน (เฟส 0 ข้อ จ) */
+        const o = await call({ action: "export", format: "xmlsvg", embedImages: true, embedFonts: true, border: 16, background: "#ffffff" }, "export");
+        return { svg: svgBlob(o.data) };
+      }
+      if (job.layout) {
+        /* ‼️ จัดวางใหม่ด้วย mxHierarchicalLayout ของ draw.io ใช้ได้กับผังที่ไม่มีกรอบกลุ่มเท่านั้น
+           ผังมีกลุ่มแล้วกล่องกระจายหลุดกรอบ เส้นตัดกันมั่ว (ยิงจริง engine_probe11 ภาพ shots/relayout-sheet.png) app.js เป็นคนกัน */
+        await call({ action: "layout", layouts: [{ layout: "mxHierarchicalLayout", config: { orientation: "north", intraCellSpacing: 40, interRankCellSpacing: 60 } }] }, "layout");
+      }
+      const o = await call(PNG_OUT, "export");
+      return { png: pngBlob(o.data), xml: o.xml || job.xml };
     }
-    const first = await call({ action: "load", autosave: 0, descriptor: { format: "mermaid", data: mermaid } }, "load");
+    const first = await call({ action: "load", autosave: 0, descriptor: { format: "mermaid", data: job.mermaid } }, "load");
     const got = countVertices(first.xml);
-    if (expectBoxes && got < expectBoxes) throw new EngineError("incomplete", `${got}/${expectBoxes}`);
+    if (job.expectBoxes && got < job.expectBoxes) throw new EngineError("incomplete", `${got}/${job.expectBoxes}`);
+    const stretch = job.stretch || {};
     const xml = stretchXY(restyleGroups(restyleFont(first.xml)), stretch.x, stretch.y);
     await call({ action: "load", autosave: 0, xml }, "load");
-    const out = await call({ action: "export", format: "xmlpng", scale: 2, border: 16, background: "#ffffff" }, "export");
+    const out = await call(PNG_OUT, "export");
     return { png: pngBlob(out.data), xml: out.xml || xml };
   }
 
+  /* ‼️ คิว: งานพรีวิว (พิมพ์รัว ๆ) เก็บแค่ใบล่าสุด แต่งานที่ผู้ใช้กดเอง (จัดวางใหม่ , โหลด SVG) ห้ามถูกทิ้ง
+     ไม่งั้นกดแล้วเงียบเพราะพิมพ์ต่อพอดี */
+  const queue = [];
   async function pump() {
-    while (queued) {
-      const job = queued; queued = null;
-      running = true;
-      try { job.resolve(await drawOnce(job.mermaid, job.expectBoxes, job.xml, job.stretch)); }
+    if (running) return;
+    running = true;
+    while (queue.length) {
+      const job = queue.shift();
+      try { job.resolve(await drawOnce(job)); }
       catch (e) { if (e && e.kind === "timeout") reset(); job.reject(e); }
-      finally { running = false; }
     }
+    running = false;
+  }
+  function enqueue(job, coalesce) {
+    return new Promise((resolve, reject) => {
+      if (coalesce) {
+        for (let i = queue.length - 1; i >= 0; i--) if (queue[i].preview) { queue[i].resolve({ stale: true }); queue.splice(i, 1); }
+      }
+      queue.push({ ...job, preview: coalesce, resolve, reject });
+      pump();
+    });
   }
 
   return {
-    render(mermaid, expectBoxes = 0, stretch = {}) {
-      return new Promise((resolve, reject) => {
-        if (queued) queued.resolve({ stale: true });
-        queued = { mermaid, expectBoxes, stretch, resolve, reject };
-        if (!running) pump();
-      });
-    },
-    /** วาด xml ของ draw.io ที่มีอยู่แล้วเป็น PNG (ผังที่แก้ด้วยมือ) เข้าคิวเดียวกับ render */
-    renderXml(xml) {
-      return new Promise((resolve, reject) => {
-        if (queued) queued.resolve({ stale: true });
-        queued = { xml, resolve, reject };
-        if (!running) pump();
-      });
-    },
+    render(mermaid, expectBoxes = 0, stretch = {}) { return enqueue({ mermaid, expectBoxes, stretch }, true); },
+    /** วาด xml ของ draw.io ที่มีอยู่แล้วเป็น PNG (ผังที่แก้ด้วยมือ กู้คืนหลังโหลดหน้าใหม่) */
+    renderXml(xml) { return enqueue({ xml }, true); },
+    /** จัดวางกล่องใหม่ทั้งผัง (ผังที่แก้ด้วยมือจนเละ) คืน PNG กับ xml ใหม่ */
+    relayout(xml) { return enqueue({ xml, layout: true }, false); },
+    /** ส่งออกเป็น SVG ที่ฝังทั้งฟอนต์และผัง (เปิดกลับมาแก้ใน draw.io ได้) */
+    exportSvg(xml) { return enqueue({ xml, svg: true }, false); },
     /** เริ่มใหม่ทั้งตัว (ปุ่มลองใหม่ หรือเน็ตกลับมา) งานที่ค้างรอ iframe ตัวเก่าจบด้วย reset ไม่ค้างคิว */
     retry() { reset(); boot(); },
     boot,

@@ -289,6 +289,32 @@ def main():
         dx = drawio_xml(data) or ""
         ck("ไฟล์ที่ดาวน์โหลดมีผัง draw.io ฝังอยู่ ครบทุกกล่อง", sorted(t for t, _ in cells(dx)) == sorted(["เริ่มงาน", "ตรวจสัญญา", MARK, "จบงานนี้"]),
            f"ได้ {[t for t, _ in cells(dx)]}")
+        # แบบอื่น (แผนเฟส 3 ข้อ 1): SVG ที่ฝังทั้งฟอนต์และผัง , .drawio ที่เป็น XML ล้วน
+        with pg.expect_download() as d:
+            pg.click("#dlsvg")
+        svg_path = TMP / "got.svg"; d.value.save_as(str(svg_path)); svg = svg_path.read_text(encoding="utf-8")
+        content = re.search(r'<svg\b[^>]*\scontent="([^"]*)"', svg)
+        ck("โหลดแบบ SVG ได้ชื่อเดียวกัน ฝังฟอนต์ Sarabun ในไฟล์ (เปิดเครื่องที่ไม่มีฟอนต์แล้วไทยไม่เพี้ยน)",
+           d.value.suggested_filename == "แผนต่อสัญญา ปี 2569.svg" and svg.count("@font-face") >= 1, f"{d.value.suggested_filename} font-face {svg.count('@font-face')}")
+        ck("SVG ที่ได้ฝังผังไว้ด้วย เปิดกลับมาแก้ใน draw.io ได้", bool(content) and "mxfile" in html.unescape(content.group(1)))
+        with pg.expect_download() as d:
+            pg.click("#dlxml")
+        xml_path = TMP / "got.drawio"; d.value.save_as(str(xml_path)); xtext = xml_path.read_text(encoding="utf-8")
+        ck("โหลดแบบ .drawio ได้ XML ของผังครบทุกกล่อง", d.value.suggested_filename == "แผนต่อสัญญา ปี 2569.drawio"
+           and sorted(t for t, _ in cells(xtext)) == sorted(["เริ่มงาน", "ตรวจสัญญา", MARK, "จบงานนี้"]), d.value.suggested_filename)
+        # วาง XML ของ draw.io ลงช่องพิมพ์ = เปิดเป็นผังในห้องแก้ไข (แผนเฟส 5 ทางเข้า ④)
+        before_text = pg.input_value("#src")
+        pg.evaluate("""(x) => { const ta = document.querySelector('#src'); const dt = new DataTransfer(); dt.setData('text/plain', x);
+            ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); }""", xtext)
+        try:
+            pg.wait_for_function("() => document.querySelector('#room').dataset.state === 'ready' && !document.querySelector('#room').hidden", timeout=60000); opened = True
+        except Exception:
+            opened = False
+        ck("วาง XML ของ draw.io ลงช่องพิมพ์ ห้องแก้ไขเปิดพร้อมผังนั้น ข้อความในช่องไม่ถูกยัด XML เข้าไป", opened and pg.input_value("#src") == before_text)
+        if opened:
+            fr = next((f for f in pg.frames if "embed.diagrams.net" in f.url and f.evaluate("() => !!document.querySelector('.geMenubar')")), None)
+            if fr: fr.get_by_text("ออก", exact=True).first.click()
+            pg.wait_for_function("() => document.querySelector('#room').hidden", timeout=20000)
 
         # ── ฉ. ข้อความไม่ออกจากเครื่อง ─────────────────────────────────────
         print("\n━━ ฉ. ข้อความไม่ออกจากเครื่อง ━━")

@@ -1,15 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+<!-- ‼️ พื้นน้ำเงินเต็มใบ ตัว F ขาว (พี่ปอนด์ 23/09/2026 ไอคอนแท็บซ้ำกับ FlowKit จนแยกไม่ออก)
+     FileKit = สี่เหลี่ยมน้ำเงิน , FlowKit = สี่เหลี่ยมม่วง (flowkit/assets/icons/favicon.svg) -->
 <style>
-.bg{fill:#eef0fb}
-.f{fill:#2f3ea3}
-.fold{fill:#6c4fd1}
-@media (prefers-color-scheme: dark){
-.bg{fill:#12142a}
-.f{fill:#eef1ff}
-.fold{fill:#9d7bff}
-}
+.bg{fill:#2f3ea3}
+@media (prefers-color-scheme: dark){ .bg{fill:#4c60d6} }
 </style>
 <rect class="bg" x="0" y="0" width="16" height="16" rx="3"/>
-<path class="f" d="M4,3 L10,3 L12,5 L12,6 L7,6 L7,8 L11,8 L11,10 L7,10 L7,13 L4,13 Z"/>
-<path class="fold" d="M10,3 L12,3 L12,5 Z"/>
+<path fill="#ffffff" d="M4,3 L10,3 L12,5 L12,6 L7,6 L7,8 L11,8 L11,10 L7,10 L7,13 L4,13 Z"/>
+<path fill="#ffffff" fill-opacity=".62" d="M10,3 L12,3 L12,5 Z"/>
 </svg>

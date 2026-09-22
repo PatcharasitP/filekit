@@ -522,7 +522,7 @@ ck(middotHits.length + htmlMiddot.length === 0,
   ck(/navigator\.onLine!==false/.test(finline[0] || ""), "ออฟไลน์ไม่พาไป ให้เห็นข้อความแทนหน้าเน็ตหลุด");
   const leftovers = readdirSync(join(ROOT, "flow")).filter((n) => n !== "index.html");
   ck(!leftovers.length, `ไม่มีของที่ย้ายไป FlowKit แล้วค้างใน flow/` + (leftovers.length ? " เจอ " + leftovers.join(", ") : ""));
-  ck(/<li><a href="\/flowkit\/" aria-label="FlowKit"><span>Flow<\/span><b>Kit<\/b><\/a><\/li>/.test(html) && /<a class="door" href="\/flowkit\/">/.test(html),
+  ck(/<li><a href="\/flowkit\/" aria-label="FlowKit"[^>]*>(<svg[\s\S]*?<\/svg>)?<span>Flow<\/span><b>Kit<\/b><\/a><\/li>/.test(html) && /<a class="door" href="\/flowkit\/">/.test(html),
      "หน้าแรกชี้ /flowkit/ ทั้งแถบท้ายเว็บ และการ์ดประตูบนมือถือ");
   ck(!/href="flow\//.test(html), "หน้าแรกไม่มีลิงก์ไป flow/ เหลือ");
   const sw = readFileSync(join(ROOT, "sw.js"), "utf8");

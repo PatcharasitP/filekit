@@ -247,11 +247,16 @@ body.tool .skip{display:none}
   border-bottom-color:var(--line-soft);
 }
 .brand{display:flex; align-items:center; gap:10px; cursor:pointer; border:0; background:none; color:inherit; padding:2px 4px; margin-inline-start:-4px; min-height:40px; font-size:16px; font-weight:700; line-height:1.25}
+/* ‼️ โลโก้หัวเว็บเป็นน้ำเงินของ FileKit (พี่ปอนด์ 23/09/2026 "แล้วของ FileKit ไม่ทำด้วยเหรอ")
+   เดิมเป็นสี่เหลี่ยมสีเดียวกับตัวหนังสือ ซึ่งซ้ำกับ FlowKit จนแยกไม่ออกตอนเปิดสองแท็บ
+   ตอนนี้ FileKit = น้ำเงิน , FlowKit = ม่วง (FlowKit/home.css กับ draw/draw.css ใช้ #6c4fd1) */
 .brand .mark{
   width:34px;height:34px;border-radius:10px; display:grid;place-items:center; flex:none;
-  background:var(--text); color:var(--bg);
+  background:#2f3ea3; color:#fff;
   box-shadow:none;
 }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .brand .mark{background:#4c60d6} }
+:root[data-theme="dark"] .brand .mark{background:#4c60d6}
 .mark-svg{width:18px;height:18px;display:block}
 .top .spacer{flex:1}
 .iconbtn{
@@ -858,6 +863,18 @@ footer::before{content:""; position:absolute; inset-inline:0; top:0; height:1px;
 body.tool #tool{display:block}
 body.tool #home{display:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* ‼️ แถบเว็บในเครือแบบ sqlbi (พี่ปอนด์ขอ 23/09/2026 จากหน้า sqlbi.com): FileKit กับ FlowKit มีไอคอนติดชื่อ , ทุกอันมีป้ายบอกตอนชี้
+   ป้ายทำด้วย CSS ล้วน (content:attr(data-tip)) สลับภาษาด้วย :root[lang="en"] ไม่ต้องแตะสคริปต์แปลภาษาที่ถูก hash ไว้ใน CSP
+   ระยะข้างลดจาก 20 เป็น 16 พิกเซล เพราะไอคอนทำให้แถบยาวขึ้น 42 พิกเซล แล้ว BKK Dashboard ตกบรรทัด (วัดจริงที่จอ 1280) */
+.sites a{position:relative; padding-inline:16px}
+.sites a .ico{width:17px; height:17px; flex:none; align-self:center; display:block}
+.sites a::after{content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 7px); transform:translateX(-50%);
+  background:#14161c; color:#eef1ff; border:1px solid rgba(255,255,255,.15); border-radius:7px; padding:5px 10px;
+  font-size:12.5px; font-weight:400; line-height:1.5; white-space:nowrap; letter-spacing:0; box-shadow:0 10px 24px -10px rgba(0,0,0,.7);
+  opacity:0; visibility:hidden; transition:opacity .12s ease}
+.sites a:hover::after,.sites a:focus-visible::after{opacity:1; visibility:visible}
+:root[lang="en"] .sites a::after{content:attr(data-tip-en)}
+@media (prefers-reduced-motion: reduce){ .sites a::after{transition:none} }
 </style>
 </head>
 <body>
@@ -980,16 +997,16 @@ body.tool #home{display:none}
      ‼️ มือถือซ่อนทั้งแถบตามของเขา (ลองให้ตกบรรทัดแล้วหางหน้ายาว ปุ่มลงมือทำหลุดจอ ดูคอมเมนต์ใน CSS) -->
 <nav class="network" aria-label="เว็บและหมวดในเครือ FileKit" data-en-al="FileKit family of sites and tool groups">
   <ul class="sites">
-    <li><a class="self" href="#/" data-gocat="" aria-label="FileKit"><span>File</span><b>Kit</b></a></li>
-    <li><a href="#/freebies"><b data-en="Freebies">ของแจกฟรี</b></a></li>
-    <li><a href="#/" data-gocat="excel"><b data-en="Excel">Excel</b></a></li>
-    <li><a href="#/" data-gocat="powerbi" aria-label="Power BI"><span>Power</span><b>BI</b></a></li>
-    <li><a href="#/" data-gocat="powerquery" aria-label="Power Query"><span>Power</span><b>Query</b></a></li>
-    <li><a href="#/" data-gocat="powerautomate" aria-label="Power Automate"><span>Power</span><b>Automate</b></a></li>
-    <li><a href="#/" data-gocat="thai"><b data-en="Thai docs">งานไทย</b></a></li>
-    <li><a href="/flowkit/" aria-label="FlowKit"><span>Flow</span><b>Kit</b></a></li>
-    <li><a href="https://patcharasitp.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio"><span>Port</span><b>folio</b></a></li>
-    <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard"><span>BKK</span><b>Dashboard</b></a></li>
+    <li><a class="self" href="#/" data-gocat="" aria-label="FileKit" data-tip="เครื่องมือจัดการไฟล์ 64 ตัว" data-tip-en="64 file tools"><svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12,4 L31,4 L36,9 L36,14 L22,14 L22,20 L31,20 L31,30 L22,30 L22,44 L12,44 Z"/></svg><span>File</span><b>Kit</b></a></li>
+    <li><a href="#/freebies" data-tip="ไฟล์แจกฟรี ใช้ได้เลย" data-tip-en="Free files to use"><b data-en="Freebies">ของแจกฟรี</b></a></li>
+    <li><a href="#/" data-gocat="excel" data-tip="เครื่องมือสาย Excel" data-tip-en="Excel tools"><b data-en="Excel">Excel</b></a></li>
+    <li><a href="#/" data-gocat="powerbi" aria-label="Power BI" data-tip="เครื่องมือสาย Power BI" data-tip-en="Power BI tools"><span>Power</span><b>BI</b></a></li>
+    <li><a href="#/" data-gocat="powerquery" aria-label="Power Query" data-tip="เครื่องมือสาย Power Query" data-tip-en="Power Query tools"><span>Power</span><b>Query</b></a></li>
+    <li><a href="#/" data-gocat="powerautomate" aria-label="Power Automate" data-tip="เครื่องมือสาย Power Automate" data-tip-en="Power Automate tools"><span>Power</span><b>Automate</b></a></li>
+    <li><a href="#/" data-gocat="thai" data-tip="เครื่องมือเอกสารไทย" data-tip-en="Thai document tools"><b data-en="Thai docs">งานไทย</b></a></li>
+    <li><a href="/flowkit/" aria-label="FlowKit" data-tip="วาดผังจากข้อความ" data-tip-en="Diagrams from text"><svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="7" width="15" height="12" rx="3.2" fill="currentColor"/><path d="M14.5 19v7.5a3.5 3.5 0 0 0 3.5 3.5h7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><rect x="26" y="24" width="15" height="12" rx="3.2" fill="currentColor"/></svg><span>Flow</span><b>Kit</b></a></li>
+    <li><a href="https://patcharasitp.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio" data-tip="ผลงานและโปรเจกต์" data-tip-en="Work and projects"><span>Port</span><b>folio</b></a></li>
+    <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard" data-tip="แดชบอร์ดข้อมูลกรุงเทพ" data-tip-en="Bangkok data dashboard"><span>BKK</span><b>Dashboard</b></a></li>
   </ul>
 </nav>
 

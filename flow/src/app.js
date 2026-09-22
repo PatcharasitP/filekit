@@ -238,8 +238,11 @@ img.addEventListener("click", () => {
 const unzoom = () => { delete canvas.dataset.zoom; };
 
 /* ต่อ draw.io ไม่ได้: บอกตรง ๆ ว่าโหลดมาจากไหน กดลองใหม่ได้ และถ้าต่อได้ทีหลังผังขึ้นเองไม่ต้องกด */
+let engineState = "booting";
+const engineDown = () => engineState === "offline" || engineState === "unreachable";
 const engine = createEngine({
   onState(s) {
+    engineState = s;
     const waiting = !current || canvas.dataset.state === "error";
     if (s === "slow" && canvas.dataset.state === "booting") {
       setCanvas("booting", [tr("กำลังเตรียมตัววาดผัง", "Getting the diagram engine ready"),
@@ -296,7 +299,8 @@ function update() {
   }
   const my = ++ver;
   live.dataset.busy = "";
-  if (!current && canvas.dataset.state !== "booting") setCanvas("booting", [tr("กำลังวาดผัง", "Drawing")]);
+  /* ‼️ ห้ามทับข้อความต่อไม่ได้ด้วย "กำลังวาด" (เคยทับจนผู้ใช้ออฟไลน์ไม่รู้ว่าทำไมผังไม่ขึ้น จับได้ใน tests/browser_swpages.py) */
+  if (!current && !engineDown() && canvas.dataset.state !== "booting") setCanvas("booting", [tr("กำลังวาดผัง", "Drawing")]);
   engine.render(mmd, model.nodes.length).then((out) => {
     if (out.stale || my !== ver) return;
     if (current) URL.revokeObjectURL(current.url);
@@ -349,5 +353,5 @@ addEventListener("online", () => { if (canvas.dataset.state === "error") retry()
 
 setKind(kind, true);
 setCanvas("booting", [tr("กำลังเตรียมตัววาดผัง", "Getting the diagram engine ready")]);
-engine.boot().catch(() => {});
+engine.boot();                                    // ออฟไลน์ตั้งแต่เปิด onState บอกผู้ใช้ทันที ไม่ต้องรอ
 update();

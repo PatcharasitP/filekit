@@ -12,6 +12,11 @@ const VERSION = "filekit-v147";
 const SHELL = `${VERSION}-shell`;
 /* เพดานเวลารอเครือข่ายตอนเปิดหน้าเว็บ ครบเวลาแล้วใช้แคชทันที */
 const NAV_NET_TIMEOUT_MS = 1200;
+/* หน้าที่เปิดตรงได้ (path เทียบกับที่อยู่ของ service worker) กับกุญแจแคชของหน้านั้น ‼️ เพิ่มหน้าใหม่ต้องเพิ่มที่นี่ */
+const PAGES = {
+  "": "./index.html", "index.html": "./index.html",
+  "flow/": "./flow/index.html", "flow/index.html": "./flow/index.html",
+};
 
 /* ‼️‼️ แคชไลบรารี **ห้ามผูกกับเวอร์ชันของแอป**
  *
@@ -123,11 +128,20 @@ self.addEventListener("fetch", (e) => {
    *    และไฟล์อื่นทั้งหมด (js/css/ฟอนต์) ยังหยิบจากแคชก่อนเหมือนเดิม ความเร็วโดยรวมจึงไม่เปลี่ยน
    */
   if (request.mode === "navigate") {
+    /* ‼️ แต่ละหน้าต้องมีกุญแจแคชของตัวเอง (แก้ 22/09/2026 ตอนเพิ่มหน้า flow/ ของ FlowKit)
+     *    เดิมตอบทุกหน้าด้วยแคชของ index.html และเอาหน้าไหนก็ตามที่โหลดได้ไปเขียนทับกุญแจนั้น
+     *    ผลที่จับได้จริงใน tests/browser_swpages.py:
+     *    ① เปิด /flow/ ตอนเน็ตช้าเกิน 1.2 วินาที ได้หน้าแรกของ FileKit แทน
+     *    ② เปิด FlowKit แล้วกลับหน้าแรกตอนเน็ตช้า ได้ FlowKit (แคชหน้าแรกถูกเขียนทับ)
+     *    หน้าที่ไม่อยู่ในรายการ ปล่อยเบราว์เซอร์จัดการเอง ไม่ต้องแตะแคช */
+    const rel = url.pathname.slice(new URL(self.registration.scope).pathname.length);
+    const key = sameOrigin ? PAGES[rel] : undefined;
+    if (!key) return;
     e.respondWith(
       caches.open(SHELL).then(async (cache) => {
-        const cached = await cache.match("./index.html");
+        const cached = await cache.match(key);
         const net = fetch(request)
-          .then((res) => { if (res.ok) cache.put("./index.html", res.clone()); return res; });
+          .then((res) => { if (res.ok) cache.put(key, res.clone()); return res; });
         if (!cached) return net;                       // ยังไม่เคยมีแคช ต้องรอเครือข่ายอยู่แล้ว
         const wait = new Promise((r) => setTimeout(() => r(null), NAV_NET_TIMEOUT_MS));
         const first = await Promise.race([net.catch(() => null), wait]);

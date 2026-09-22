@@ -1,0 +1,47 @@
+{
+  "definition": {
+    "triggers": {
+      "Recurrence": { "type": "Recurrence", "description": "ทุกวัน 8 โมงเช้า" }
+    },
+    "actions": {
+      "Try": {
+        "type": "Scope",
+        "description": "ส่งเมลเตือนงานที่ครบกำหนด",
+        "runAfter": {},
+        "actions": {
+          "Get_rows": { "type": "OpenApiConnection", "description": "อ่านรายการจากตาราง", "runAfter": {} },
+          "Filter_due": { "type": "Query", "description": "กรองเฉพาะที่ครบกำหนด", "runAfter": { "Get_rows": ["Succeeded"] } },
+          "Has_items": {
+            "type": "If",
+            "description": "มีรายการไหม",
+            "runAfter": { "Filter_due": ["Succeeded"] },
+            "actions": {
+              "For_each_item": {
+                "type": "Foreach",
+                "runAfter": {},
+                "actions": {
+                  "Compose_html": { "type": "Compose", "description": "ประกอบเนื้อเมล", "runAfter": {} },
+                  "Send_mail": { "type": "OpenApiConnection", "description": "ส่งเมลถึงผู้รับผิดชอบ", "runAfter": { "Compose_html": ["Succeeded"] } }
+                }
+              }
+            },
+            "else": {
+              "actions": {
+                "Log_nothing": { "type": "Compose", "description": "บันทึกว่าวันนี้ไม่มีงาน", "runAfter": {} }
+              }
+            }
+          }
+        }
+      },
+      "Catch": {
+        "type": "Scope",
+        "description": "ถ้ามีขั้นไหนพัง",
+        "runAfter": { "Try": ["Failed", "TimedOut"] },
+        "actions": {
+          "Notify_admin": { "type": "OpenApiConnection", "description": "แจ้งผู้ดูแลว่า flow พัง", "runAfter": {} },
+          "Stop_failed": { "type": "Terminate", "description": "จบแบบล้มเหลว", "runAfter": { "Notify_admin": ["Succeeded"] } }
+        }
+      }
+    }
+  }
+}

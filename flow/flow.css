@@ -115,6 +115,14 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
 .ed-hl{position:absolute; inset:0; color:transparent; overflow:hidden; pointer-events:none; scrollbar-gutter:stable; overflow-y:hidden}
 .ed-hl mark{background:var(--hl); color:transparent; border-radius:3px; box-shadow:0 0 0 3px var(--hl)}
 .hint{margin:10px 2px 0; color:var(--text-mute); font-size:13px; line-height:1.65}
+/* หน้า Power Automate: ช่องพิมพ์เป็น JSON อ่านง่ายกว่าด้วยฟอนต์ความกว้างเท่ากัน ตัวเล็กลงให้บรรทัดยาวไม่ตัดบ่อย
+   ‼️ เปลี่ยนสองชั้นพร้อมกันเสมอ (เหตุผลเดียวกับข้างบน) */
+.ed[data-kind="pa"] textarea,.ed[data-kind="pa"] .ed-hl{font:400 13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* ตัวเลือกดูผังของ flow ที่มีกรอบ แถวเล็กใต้ช่องพิมพ์ ไม่แย่งสายตา */
+.paview{display:flex; align-items:center; gap:8px; margin:10px 2px 0; font-size:13.5px; color:var(--text-dim)}
+.paview[hidden]{display:none}
+.paview select{flex:1; min-width:0; height:36px; padding:0 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg);
+  color:var(--text); font:400 14px/1 var(--font)}
 
 /* ข้อผิดพลาดกับคำเตือน: บอกบรรทัด บอกทางแก้ ไม่ใช่ป๊อปอัป */
 .msg:empty{display:none}

@@ -1,0 +1,43 @@
+{
+  "displayName": "ประมวลผลไฟล์รายเดือน",
+  "definition": {
+    "triggers": { "manual": { "type": "Request", "description": "กดเริ่มเอง" } },
+    "actions": {
+      "Main": {
+        "type": "Scope",
+        "description": "งานหลัก",
+        "runAfter": {},
+        "actions": {
+          "List_files": { "type": "OpenApiConnection", "description": "ดึงรายชื่อไฟล์", "runAfter": {} },
+          "For_each_file": {
+            "type": "Foreach",
+            "description": "ทีละไฟล์",
+            "runAfter": { "List_files": ["Succeeded"] },
+            "actions": {
+              "Process_file": {
+                "type": "Scope",
+                "description": "อ่านและตรวจไฟล์",
+                "runAfter": {},
+                "actions": {
+                  "Read_file": { "type": "OpenApiConnection", "description": "อ่านไฟล์", "runAfter": {} },
+                  "Validate": { "type": "Compose", "description": "ตรวจรูปแบบ", "runAfter": { "Read_file": ["Succeeded"] } }
+                }
+              },
+              "Move_file": { "type": "OpenApiConnection", "description": "ย้ายไฟล์ไปโฟลเดอร์เสร็จแล้ว", "runAfter": { "Process_file": ["Succeeded"] } }
+            }
+          },
+          "Wait_for_sync": {
+            "type": "Until",
+            "description": "ระบบปลายทางซิงก์ครบ",
+            "runAfter": { "For_each_file": ["Succeeded"] },
+            "actions": {
+              "Check_sync": { "type": "Http", "description": "ถามสถานะการซิงก์", "runAfter": {} },
+              "Wait_a_minute": { "type": "Wait", "description": "รอ 1 นาที", "runAfter": { "Check_sync": ["Succeeded"] } }
+            }
+          }
+        }
+      },
+      "Report": { "type": "OpenApiConnection", "description": "ส่งรายงานสรุป", "runAfter": { "Main": ["Succeeded"] } }
+    }
+  }
+}

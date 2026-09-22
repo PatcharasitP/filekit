@@ -58,19 +58,23 @@
       <button class="type" type="button" data-kind="org" aria-pressed="false" data-en="Org chart">องค์กร</button>
       <button class="type" type="button" data-kind="system" aria-pressed="false" data-en="Systems">ระบบ</button>
       <button class="type" type="button" data-kind="timeline" aria-pressed="false" data-en="Timeline">ไทม์ไลน์</button>
+      <!-- ทางเข้า ② (แผนเฟส 4) ช่องพิมพ์รับ JSON ของ flow แทนข้อความ ที่เหลือใช้ท่อเดียวกันทั้งหมด -->
+      <button class="type" type="button" data-kind="pa" aria-pressed="false">Power Automate</button>
     </div>
     <div class="ed" id="ed">
       <div class="ed-hl" id="hl" aria-hidden="true"></div>
       <textarea id="src" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="ข้อความของผัง"
         data-en-al="Diagram text" aria-describedby="hint keys msg"></textarea>
     </div>
+    <!-- flow ที่มีกรอบ: ดูทั้ง flow , ย่อกรอบละกล่อง , หรือดูข้างในทีละกรอบเป็นผังแยก (แผน SPEC ข้อ 4) -->
+    <p class="paview" id="paview" hidden><label for="pa-sel" data-en="Show">แสดง</label> <select id="pa-sel"></select></p>
     <p class="hint" id="hint"></p>
     <!-- ทางเข้าอื่นของต้นแบบ A (แผนเฟส 5) ตัวหนังสือเล็ก จาง ไม่แย่งช่องพิมพ์ -->
     <p class="alt"><span data-en="Or start from">หรือเริ่มจาก</span>
       <button class="linkbtn" id="opentpl" type="button" data-en="a template">เทมเพลต</button> ,
       <button class="linkbtn" id="openai" type="button" data-en="an AI draft">ให้ AI ช่วยร่าง</button> ,
       <button class="linkbtn" id="openfile" type="button" data-en="a diagram file">ไฟล์ผังเดิม</button>
-      <input type="file" id="filein" accept=".png,.drawio,.xml,.svg,image/png,image/svg+xml" hidden></p>
+      <input type="file" id="filein" accept=".png,.drawio,.xml,.svg,.json,image/png,image/svg+xml,application/json" hidden></p>
     <p class="sr" id="keys" data-en="Tab indents the line, Shift and Tab moves it back. Press Escape then Tab to leave the box.">กด Tab เพื่อย่อหน้า กด Shift กับ Tab เพื่อถอยออก กด Esc แล้วกด Tab เพื่อออกจากช่องพิมพ์</p>
     <div class="msg" id="msg" aria-live="polite"></div>
   </section>

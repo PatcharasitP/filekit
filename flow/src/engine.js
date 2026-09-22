@@ -75,6 +75,31 @@ export function stretchXY(xml, kx = 1, ky = 1) {
     .replace(/<mxPoint\b[^>]*>/g, (tag) => (/\sas="offset"/.test(tag) ? tag : xy(tag)));
 }
 
+/* ‼️ กรอบกลุ่มซ้อนกัน draw.io คำนวณจุดเสียบเส้นเพี้ยน (จับค่าจริง 22/09/2026 engine_probe12 , engine_probe13)
+ *    เส้น Compose → Send mail ในกรอบวนที่อยู่ในกรอบ Try ได้ entryY=1 คือเสียบก้นกล่องปลายทางทั้งที่กล่องอยู่ข้างล่าง เส้นจึงทะลุกล่อง
+ *    และเส้นจากกรอบชั้นแรกดิ่งเข้ากล่องในกรอบชั้นที่สามก็โดนแบบเดียวกัน (ผัง nested3)
+ *    กรอบชั้นเดียวได้ค่าถูกทุกเส้น (ผังที่พิมพ์ทุกชนิดมีกรอบชั้นเดียว ไม่โดนฟังก์ชันนี้) , ผังซ้อนมีแค่ผังจาก Power Automate
+ *    จึงล้างจุดเสียบของเส้นที่แตะของในกรอบซ้อน (อยู่ในกรอบซ้อน หรือต้นทางปลายทางอยู่ลึกตั้งแต่ชั้นสอง) ให้ draw.io ลากจากขอบถึงขอบเอง */
+export function fixNestedEdges(xml) {
+  const s = String(xml);
+  const attr = (tag, a) => { const m = tag.match(new RegExp(`\\s${a}="([^"]*)"`)); return m ? m[1] : null; };
+  const parentOf = new Map(), groups = new Set();
+  for (const m of s.matchAll(/(<UserObject\b[^>]*>)\s*(<mxCell\b[^>]*>)|<mxCell\b[^>]*>/g)) {
+    const uo = m[1] || "", cell = m[2] || m[0];
+    const id = attr(uo || cell, "id");
+    parentOf.set(id, attr(cell, "parent"));
+    if (/\bmermaidId="n:g\d+"/.test(uo)) groups.add(id);
+  }
+  /** จำนวนกรอบที่ครอบกล่องนี้อยู่ */
+  const depth = (id) => { let n = 0; for (let p = parentOf.get(id); p && groups.has(p); p = parentOf.get(p)) n++; return n; };
+  if (![...groups].some((g) => depth(g) > 0)) return s;
+  const touchesNested = (tag) => { const p = attr(tag, "parent");
+    return (groups.has(p) && depth(p) > 0) || depth(attr(tag, "source")) > 1 || depth(attr(tag, "target")) > 1; };
+  return s.replace(/<mxCell\b[^>]*\bedge="1"[^>]*>/g, (tag) => (touchesNested(tag)
+    ? tag.replace(/(\sstyle=")([^"]*)(")/, (_, a, st, b) => a + st.replace(/(^|;)(?:exit|entry)(?:X|Y|Dx|Dy|Perimeter)=[^;]*/g, "").replace(/^;+/, "") + b)
+    : tag));
+}
+
 /** จำนวนกล่อง (รวมกรอบกลุ่ม) ใน xml ของ draw.io */
 export const countVertices = (xml) => (String(xml).match(/vertex="1"/g) || []).length;
 
@@ -188,7 +213,7 @@ export function createEngine({ onState = () => {} } = {}) {
     const got = countVertices(first.xml);
     if (job.expectBoxes && got < job.expectBoxes) throw new EngineError("incomplete", `${got}/${job.expectBoxes}`);
     const stretch = job.stretch || {};
-    const xml = stretchXY(restyleGroups(restyleFont(first.xml)), stretch.x, stretch.y);
+    const xml = stretchXY(fixNestedEdges(restyleGroups(restyleFont(first.xml))), stretch.x, stretch.y);
     await call({ action: "load", autosave: 0, xml }, "load");
     const out = await call(PNG_OUT, "export");
     return { png: pngBlob(out.data), xml: out.xml || xml };

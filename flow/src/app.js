@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { tr, IS_EN, setLang } from "../../src/i18n.js";
 import { parseText } from "./parse.js";
+import { parsePA, prunePA, viewOptions, applyView } from "./parse-pa.js";
 import { toMermaid, STRETCH } from "./to-mermaid.js";
 import { createEngine } from "./engine.js";
 import { createEditor } from "./editor.js";
@@ -21,7 +22,7 @@ const editBtn = $("#edit"), room = $("#room"), fileIn = $("#filein"), dlSvg = $(
 const sendBtns = [...document.querySelectorAll("[data-send]")];
 /** ปุ่มที่ใช้ได้เมื่อมีผังพร้อม (ดาวน์โหลด , แบบอื่น , ส่งต่อ) เปิดปิดพร้อมกันเสมอ */
 const setReady = (on) => { for (const b of [dl, dlSvg, dlXml, ...sendBtns]) b.disabled = !on; };
-const KINDS = ["steps", "org", "system", "timeline"];
+const KINDS = ["steps", "org", "system", "timeline", "pa"];        // pa = flow ของ Power Automate (ช่องพิมพ์รับ JSON)
 const SAMPLE = SAMPLES[IS_EN ? "en" : "th"];
 const DEBOUNCE_MS = 400;                          // แผนเฟส 2 ข้อ 5
 const isPhone = () => matchMedia("(max-width:760px)").matches;
@@ -82,10 +83,13 @@ const HINTS = {
              "One line is one arrow, write from -> to: what moves, use --> for dashed and <-> for both ways"),
   timeline: tr("หนึ่งบรรทัดคือหนึ่งช่วง เขียนว่า ช่วงเวลา: งาน , ย่อหน้าเพื่อเพิ่มงานในช่วงเดียวกัน",
                "One line is one period, write period: task, indent to add more tasks to the same period"),
+  /* ‼️ เลี่ยงคำว่า แอ็กชัน ในบรรทัดนี้: Chrome ตัดคำไทยทับศัพท์คำนี้กลางคำเป็น แอ็ กับ กชัน บนจอมือถือ (เห็นเองกับตา 22/09/2026) */
+  pa: tr("วาง flow ของ Power Automate ตรงนี้ ได้ทั้งก้อนที่คัดลอกจากกล่อง Scope ที่ครอบทั้ง flow และไฟล์ definition.json , ค่าที่ตั้งไว้ในแต่ละขั้นถูกตัดทิ้งตั้งแต่ตอนวาง ชื่อกล่องมาจาก description แก้ตรงนี้ได้เลย",
+         "Paste a Power Automate flow here, a block copied from a container action (like a Scope around the whole flow) or a definition.json file. Action values are removed as you paste, box names come from the description, edit them right here"),
 };
 const DRAFT_KEY = "fk-flow";
 let kind = "steps";
-const texts = { steps: null, org: null, system: null, timeline: null };   // null = ยังเป็นตัวอย่าง
+const texts = { steps: null, org: null, system: null, timeline: null, pa: null };   // null = ยังเป็นตัวอย่าง
 try {
   const d = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null");
   if (d && KINDS.includes(d.kind)) kind = d.kind;
@@ -101,6 +105,7 @@ function setKind(k, first = false) {
   if (!first) saveDraft();
   kind = k;
   for (const b of document.querySelectorAll("#types .type")) b.setAttribute("aria-pressed", String(b.dataset.kind === k));
+  $("#ed").dataset.kind = k;                      // หน้า Power Automate ใช้ฟอนต์ความกว้างเท่ากัน (flow.css)
   hint.textContent = HINTS[k];
   ta.value = textOf(k);
   ta.scrollTop = 0;
@@ -286,7 +291,7 @@ function fileName(model) {
   return (safe || "FlowKit") + ".drawio.png";
 }
 const KIND_NAME = { steps: tr("ผังขั้นตอน", "Process diagram"), org: tr("ผังองค์กร", "Org chart"),
-  system: tr("ผังระบบ", "Systems diagram"), timeline: tr("ไทม์ไลน์", "Timeline") };
+  system: tr("ผังระบบ", "Systems diagram"), timeline: tr("ไทม์ไลน์", "Timeline"), pa: tr("ผัง Power Automate", "Power Automate flow") };
 
 /** เอาภาพผัง (PNG ฝัง XML) ขึ้นจอ และเป็นไฟล์ที่ปุ่มดาวน์โหลดจะให้ */
 function show(png, xml, name, alt) {
@@ -404,6 +409,12 @@ async function openFile(file) {
   if (!file) return;
   const name = (file.name.replace(/\.(drawio\.png|drawio\.xml|drawio\.svg|png|drawio|xml|svg)$/i, "").trim() || "FlowKit") + ".drawio.png";
   try {
+    if (/\.json$/i.test(file.name) || file.type === "application/json") {
+      /* definition.json ในไฟล์ export ของ flow หรือไฟล์ใน Workflows/ ของ solution */
+      const flow = prunePA(await file.text());
+      if (!flow) return fileProblem(tr(`${file.name} ไม่ใช่ flow ของ Power Automate`, `${file.name} is not a Power Automate flow`));
+      return putFlow(flow);
+    }
     if (/\.svg$/i.test(file.name) || file.type === "image/svg+xml") {
       /* SVG ที่ draw.io ฝังผังไว้ในแอตทริบิวต์ content ของแท็ก svg (ไฟล์ที่ปุ่มโหลด SVG ของเราทำ ก็เป็นแบบนี้) */
       const svg = new DOMParser().parseFromString(await file.text(), "image/svg+xml").documentElement;
@@ -444,17 +455,37 @@ addEventListener("drop", (e) => {
   openFile(e.dataTransfer.files[0]);
 });
 
+/* ── ตัวเลือกดูผังของ flow ที่มีกรอบ: ทั้ง flow , ย่อกรอบละกล่อง , ดูข้างในทีละกรอบ (แผน SPEC ข้อ 4) ── */
+const paview = $("#paview"), paSel = $("#pa-sel");
+let view = "all";
+function fillView(m) {
+  const opts = m ? viewOptions(m) : [];
+  paview.hidden = !opts.length;
+  if (!opts.length) { view = "all"; return; }
+  if (!opts.some((o) => o.value === view)) view = "all";   // แก้ JSON จนกรอบที่เลือกไว้หายไปแล้ว
+  if ([...paSel.options].map((o) => o.value + o.text).join("|") !== opts.map((o) => o.value + o.label).join("|")) {
+    paSel.replaceChildren(...opts.map((o) => new Option(o.label, o.value)));
+  }
+  paSel.value = view;
+}
+paSel.addEventListener("change", () => { view = paSel.value; update(); });
+
 let lastMmd = "", current = null, ver = 0, timer = 0;
 function update() {
   clearTimeout(timer);
-  const r = parseText(ta.value, kind);
+  const r = kind === "pa" ? parsePA(ta.value) : parseText(ta.value, kind);
+  fillView(kind === "pa" ? r.model : null);
+  if (r.model && kind === "pa") r.model = applyView(r.model, view);
   paintHighlight(r.error ? r.error.line : 0);
   showMessages(r);
   if (edited) { paintEditNote(); return; }        // ผังที่แก้ด้วยมือ ข้อความไม่วาดทับเอง (ผู้ใช้เลือกผ่านป้าย)
   if (r.empty) {
     current = null; lastMmd = ""; img.hidden = true; setReady(false); editBtn.disabled = true;
-    setCanvas("empty", [isPhone() ? tr("พิมพ์ข้อความข้างบน ผังจะขึ้นตรงนี้", "Type above and the diagram shows up here")
-                                  : tr("พิมพ์ข้อความทางซ้าย ผังจะขึ้นตรงนี้", "Type on the left and the diagram shows up here")]);
+    setCanvas("empty", [kind === "pa"
+      ? (isPhone() ? tr("วาง flow ของ Power Automate ข้างบน ผังจะขึ้นตรงนี้", "Paste a Power Automate flow above and the diagram shows up here")
+                   : tr("วาง flow ของ Power Automate ทางซ้าย ผังจะขึ้นตรงนี้", "Paste a Power Automate flow on the left and the diagram shows up here"))
+      : (isPhone() ? tr("พิมพ์ข้อความข้างบน ผังจะขึ้นตรงนี้", "Type above and the diagram shows up here")
+                   : tr("พิมพ์ข้อความทางซ้าย ผังจะขึ้นตรงนี้", "Type on the left and the diagram shows up here"))]);
     return;
   }
   if (r.error) {
@@ -489,13 +520,29 @@ function update() {
   }).finally(() => { if (my === ver) delete live.dataset.busy; });
 }
 
+/** flow ของ Power Automate ที่วางหรือลากมา: ตัดของลับทิ้งก่อนลงช่องพิมพ์ แล้ววาดเป็นผังใหม่ในหน้า Power Automate
+ *  ‼️ ใช้ insertText ทับทั้งช่อง กด Ctrl+Z แล้วได้ของเดิมคืน , ผังที่แก้ด้วยมือค้างอยู่ถือว่าเริ่มผังใหม่ (แบบเดียวกับเลือกเทมเพลต) */
+function putFlow(pruned) {
+  if (edited) { edited = null; savedRecord = null; writeRecord(null); paintEditNote(); }
+  if (kind !== "pa") setKind("pa");
+  view = "all";
+  ta.focus(); ta.select();
+  insert(pruned);
+  update();
+}
+
 /* วาง XML ของ draw.io (เช่นที่ AI เขียนให้ หรือก๊อปจาก draw.io) ลงช่องพิมพ์ = เปิดเป็นผังในห้องแก้ไข ไม่ยัดเป็นข้อความ
+   วาง JSON ของ flow ใน Power Automate (หน้าไหนก็ได้) = สลับไปหน้า Power Automate พร้อมตัดของลับทิ้ง
    คำตอบของ AI ที่ห่อด้วยกรอบโค้ด ``` ตัดกรอบทิ้งให้เหลือข้อความผังล้วน */
 ta.addEventListener("paste", (e) => {
   const t = (e.clipboardData && e.clipboardData.getData("text/plain")) || "";
+  const flow = /^\s*\{/.test(t) ? prunePA(t) : null;
   if (/^\s*(<\?xml[^>]*>\s*)?<(mxfile|mxGraphModel)\b/.test(t)) {
     e.preventDefault();
     openRoom({ xml: t.trim() }, "FlowKit.drawio.png");
+  } else if (flow) {
+    e.preventDefault();
+    putFlow(flow);
   } else if (/```/.test(t)) {
     e.preventDefault();
     insert(cleanAnswer(t));
@@ -538,6 +585,7 @@ for (const d of document.querySelectorAll(".dlg")) {
   const refresh = () => { pre.value = buildPrompt(kind, desc.value, LANG_KEY); };
   desc.addEventListener("input", refresh);
   $("#openai").addEventListener("click", () => {
+    if (kind === "pa") setKind("steps");          // AI ร่างเป็นข้อความ หน้า Power Automate รับแต่ JSON ของ flow จริง
     $("#ai-kind").textContent = tr(`ชนิดผัง: ${KIND_NAME[kind]} (เปลี่ยนได้ที่ปุ่มชนิดผังเหนือช่องพิมพ์)`, `Diagram type: ${KIND_NAME[kind]} (change it with the type buttons above the box)`);
     done.textContent = "";
     refresh();

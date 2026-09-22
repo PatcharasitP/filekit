@@ -1,0 +1,26 @@
+{
+  "nodeId": "For_each_request",
+  "serializedValue": {
+    "type": "Foreach",
+    "runAfter": {},
+    "actions": {
+      "Read_type": { "type": "Compose", "runAfter": {} },
+      "Route_by_type": {
+        "type": "Switch",
+        "description": "งานประเภทไหน",
+        "runAfter": { "Read_type": ["Succeeded"] },
+        "cases": {
+          "Repair": { "case": "repair", "actions": { "Assign_technician": { "type": "Compose", "description": "มอบงานให้ช่าง", "runAfter": {} } } },
+          "Purchase": { "case": "purchase", "actions": { "Ask_purchasing": { "type": "Compose", "description": "ส่งจัดซื้อ", "runAfter": {} } } },
+          "Question": { "case": "question", "actions": {} }
+        },
+        "default": { "actions": { "Flag_unknown": { "type": "Compose", "description": "ติดธงว่าไม่รู้จักประเภท", "runAfter": {} } } }
+      },
+      "Mark_done": { "type": "Compose", "description": "ทำเครื่องหมายว่าจัดการแล้ว", "runAfter": { "Route_by_type": ["Succeeded"] } }
+    }
+  },
+  "allConnectionData": {},
+  "staticResults": {},
+  "isScopeNode": true,
+  "mslaNode": true
+}

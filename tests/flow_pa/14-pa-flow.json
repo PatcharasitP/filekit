@@ -1,0 +1,10 @@
+{"nodeId":"Scope_Main","serializedValue":{"type":"Scope","description":"ส่งเมลแจ้งเตือนรายวัน","actions":{
+ "Get_rows":{"type":"OpenApiConnection","description":"อ่านรายการจากตาราง","runAfter":{}},
+ "Filter_due":{"type":"Query","description":"กรองเฉพาะที่ครบกำหนด","runAfter":{"Get_rows":["Succeeded"]}},
+ "Has_items":{"type":"If","description":"มีรายการไหม","runAfter":{"Filter_due":["Succeeded"]},
+   "actions":{"For_each_item":{"type":"Foreach","description":"วนทีละรายการ","runAfter":{},"actions":{
+       "Compose_html":{"type":"Compose","description":"ประกอบเนื้อเมล","runAfter":{}},
+       "Send_mail":{"type":"OpenApiConnection","description":"ส่งเมล","runAfter":{"Compose_html":["Succeeded"]}}}}},
+   "else":{"actions":{"Log_empty":{"type":"Compose","description":"บันทึกว่าไม่มีรายการ","runAfter":{}}}}},
+ "Notify_fail":{"type":"OpenApiConnection","description":"แจ้งผู้ดูแลว่า flow พัง","runAfter":{"Has_items":["Failed","TimedOut"]}}
+}},"allConnectionData":{},"staticResults":{},"isScopeNode":true,"mslaNode":true}

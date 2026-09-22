@@ -63,8 +63,10 @@ export function toMermaid(m) {
   const out = [`flowchart ${direction(m)}`];
   const outgoing = new Set(m.edges.map((e) => e.from));
   const first = m.nodes[0] ? m.nodes[0].id : null;
-  /* กล่องแรกกับกล่องที่ไม่มีเส้นออกเป็นแคปซูล เห็นจุดเริ่มกับจุดจบทันที (D6) เฉพาะผังขั้นตอน */
-  const capsule = (n) => m.kind === "steps" && n.shape !== "ask" && (n.id === first || !outgoing.has(n.id));
+  /* กล่องแรกกับกล่องที่ไม่มีเส้นออกเป็นแคปซูล เห็นจุดเริ่มกับจุดจบทันที (D6) เฉพาะผังขั้นตอน
+     ผัง Power Automate บอกเองว่ากล่องไหนเริ่มกับจบ (ตัวเริ่ม flow กับ Terminate) เพราะขั้นสุดท้ายในกรอบวนไม่ใช่จุดจบ */
+  const capsule = (n) => n.shape === "start" || n.shape === "end" ||
+    (m.kind === "steps" && n.shape !== "ask" && (n.id === first || !outgoing.has(n.id)));
 
   const byGroup = new Map();
   for (const n of m.nodes) if (n.group) (byGroup.get(n.group) || byGroup.set(n.group, []).get(n.group)).push(n);

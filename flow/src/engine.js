@@ -51,10 +51,43 @@ export function restyleFont(xml) {
  *    สั่งสีผ่าน Mermaid ไม่ได้ เพราะ draw.io ข้ามคำสั่ง style กับ class (engine_probe5) จึงแก้ใน xml แทน
  *    ใช้สีขาวเทาชุดเดียวกับหน้าเว็บ (W3) และคงรูป light-dark() ไว้ให้ draw.io สลับเองตอนเปิดแก้ในธีมมืด
  *    ‼️ จำกลุ่มได้จาก mermaidId="n:g<เลข>" ซึ่งเป็น id ของเราเอง (กล่องเป็น n<เลข> กลุ่มเป็น g<เลข> ใน to-mermaid.js) */
-const GROUP_LOOK = { fillColor: "light-dark(#f6f5f3,#1b1d22)", strokeColor: "light-dark(#cfccc5,#4a505c)", fontColor: "light-dark(#585d68,#a8adb8)" };
+/* ‼️ กรอบไม่มีสีพื้นตั้งแต่ v157 (พี่ปอนด์เลือกแบบ ข) 22/09/2026): ชื่อกรอบต้องบังเส้นที่ลอดใต้มัน (ดู edgesBelowGroups)
+ *    ชื่อจึงมีพื้นหลังสีเดียวกับหน้ากระดาษ (default = ขาวในภาพ มืดในห้องแก้ไขธีมมืด ลองแล้วทั้งสองแบบ)
+ *    ถ้ากรอบมีสีพื้น พื้นกรอบจะบังเส้นที่วิ่งเข้าไปในกรอบจนลูกศรหาย (ลองแล้ว mask_probe M3) */
+const GROUP_LOOK = { fillColor: "none", strokeColor: "light-dark(#cfccc5,#4a505c)", fontColor: "light-dark(#585d68,#a8adb8)" };
 export function restyleGroups(xml) {
   return String(xml).replace(/<UserObject\b[^>]*\bmermaidId="n:g\d+"[^>]*>\s*<mxCell\b[^>]*>/g, (block) =>
-    block.replace(/\b(fillColor|strokeColor|fontColor)=[^;"]*/g, (_, k) => `${k}=${GROUP_LOOK[k]}`));
+    block.replace(/\b(fillColor|strokeColor|fontColor)=[^;"]*/g, (_, k) => `${k}=${GROUP_LOOK[k]}`)
+      .replace(/(\s(?:style|mermaidBaseStyle)=")([^"]*)(")/g, (_, a, st, b) =>
+        a + (/(^|;)labelBackgroundColor=/.test(st) ? st : `${st}${st && !st.endsWith(";") ? ";" : ""}labelBackgroundColor=default;`) + b));
+}
+
+/* ‼️ เส้นลากทับชื่อกรอบ (เจอเอง 22/09/2026 ตอนเทียบ ELK , พี่ปอนด์เลือกแบบ ข) ชื่อกรอบบังเส้น ภาพ title-fix-choice.png)
+ *    XML จาก Mermaid เรียงลูกของแต่ละตัวแม่เป็น กรอบย่อย กล่อง แล้วเส้น draw.io วาดตามลำดับ เส้นจึงทับชื่อกรอบเสมอ
+ *    ย้ายเส้นไปไว้ถัดจากตัวแม่ของมันทันที (ก่อนกรอบกับกล่องทุกตัว) ชื่อกรอบที่มีพื้นหลัง (restyleGroups) จึงบังเส้นแทน
+ *    กดเลือกเส้นในห้องแก้ไขได้เหมือนเดิมทุกจังหวะ (ลองกด 1 ถึง 4 ครั้งเทียบกับแบบเดิม mask_room.py)
+ *    ‼️ ตรวจว่าแยกชิ้นครบก่อนสลับ ถ้าต่อกลับแล้วไม่ตรงของเดิม คืน xml เดิม (ไม่เสี่ยงทำผังหาย) , ผังที่ไม่มีกรอบคืนเดิมทุกตัวอักษร */
+export function edgesBelowGroups(xml) {
+  const s = String(xml);
+  if (!/mermaidId="n:g\d+"/.test(s)) return s;
+  const m = s.match(/<root>([\s\S]*)<\/root>/);
+  if (!m) return s;
+  const parts = m[1].match(/<UserObject\b[\s\S]*?<\/UserObject>|<mxCell\b[^>]*\/>|<mxCell\b[\s\S]*?<\/mxCell>/g) || [];
+  if (parts.join("").replace(/\s+/g, "") !== m[1].replace(/\s+/g, "")) return s;
+  const attr = (tag, a) => { const r = tag.match(new RegExp(`\\s${a}="([^"]*)"`)); return r ? r[1] : null; };
+  const info = parts.map((p) => {
+    const cell = (p.match(/<mxCell\b[^>]*>/) || [""])[0];
+    return { p, id: attr(p.match(/^<[^>]*>/)[0], "id"), parent: attr(cell, "parent"), edge: /\sedge="1"/.test(cell) };
+  });
+  const ids = new Set(info.filter((x) => !x.edge).map((x) => x.id)), under = new Map();
+  for (const x of info) if (x.edge && ids.has(x.parent)) (under.get(x.parent) || under.set(x.parent, []).get(x.parent)).push(x.p);
+  const out = [];
+  for (const x of info) {
+    if (x.edge && ids.has(x.parent)) continue;
+    out.push(x.p);
+    if (!x.edge && under.has(x.id)) out.push(...under.get(x.id));
+  }
+  return s.slice(0, m.index) + "<root>" + out.join("") + "</root>" + s.slice(m.index + m[0].length);
 }
 
 /* ‼️ ยืดผังหลังนำเข้า (พี่ปอนด์ทัก 22/09/2026: ผังระบบป้ายเส้นทับกัน)
@@ -276,7 +309,7 @@ export function createEngine({ onState = () => {} } = {}) {
     const got = countVertices(first.xml);
     if (job.expectBoxes && got < job.expectBoxes) throw new EngineError("incomplete", `${got}/${job.expectBoxes}`);
     const stretch = job.stretch || {};
-    const xml = elbowEdges(stretchXY(fixNestedEdges(restyleGroups(restyleFont(first.xml))), stretch.x, stretch.y), job.elbow);
+    const xml = elbowEdges(stretchXY(edgesBelowGroups(fixNestedEdges(restyleGroups(restyleFont(first.xml)))), stretch.x, stretch.y), job.elbow);
     await call({ action: "load", autosave: 0, xml }, "load");
     const out = await call(PNG_OUT, "export");
     return { png: pngBlob(out.data), xml: out.xml || xml };

@@ -95,8 +95,32 @@ console.log("\n━━ เปลี่ยนฟอนต์ใน XML ที่ d
   const g = '<UserObject label="ฝ่ายขาย" mermaidId="n:g1" mermaidBaseStyle="x"><mxCell style="verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);" vertex="1"/></UserObject>'
     + '<UserObject label="กล่องธรรมดา" mermaidId="n:n1"><mxCell style="fillColor=default;strokeColor=#8a8f98;" vertex="1"/></UserObject>';
   const gg = restyleGroups(g);
-  ck(!/ffffde|aaaa33/.test(gg) && /fillColor=light-dark\(#f6f5f3,#1b1d22\)/.test(gg), "‼️ กรอบกลุ่มเลิกเป็นสีเหลืองของ Mermaid เปลี่ยนเป็นขาวเทาที่ยังสลับธีมได้");
+  ck(!/ffffde|aaaa33/.test(gg) && /fillColor=none;strokeColor=light-dark\(#cfccc5,#4a505c\)/.test(gg), "‼️ กรอบกลุ่มเลิกเป็นสีเหลืองของ Mermaid เปลี่ยนเป็นกรอบเทาไม่มีสีพื้น (v157 แบบ ข) ที่พี่ปอนด์เลือก)");
+  ck((gg.match(/labelBackgroundColor=default/g) || []).length === 2, "‼️ ชื่อกรอบมีพื้นหลังสีหน้ากระดาษ ทั้ง style และ mermaidBaseStyle (ไว้บังเส้นที่ลอดใต้ชื่อ)", gg);
   ck(gg.includes('mermaidId="n:n1"><mxCell style="fillColor=default;strokeColor=#8a8f98;"'), "กล่องธรรมดาไม่ถูกแตะ");
+}
+
+console.log("\n━━ ชื่อกรอบบังเส้น แทนเส้นทับชื่อกรอบ (v157 แบบ ข) ━━");
+{
+  const { edgesBelowGroups } = await imp("flow/src/engine.js");
+  /* หน้าตาแบบที่ draw.io คืนมาจริง: ในตัวแม่เดียวกัน กรอบย่อยมาก่อน แล้วกล่อง แล้วเส้น (เส้นมีทั้งแบบห่อ UserObject และ mxCell ล้วน) */
+  const x = '<mxfile><diagram><mxGraphModel><root>\n  <mxCell id="0" />\n  <mxCell id="1" parent="0" />\n'
+    + '  <UserObject label="งานหลัก" mermaidId="n:g1" id="2"><mxCell style="s" vertex="1" parent="1"><mxGeometry as="geometry" /></mxCell></UserObject>\n'
+    + '  <UserObject label="วน" mermaidId="n:g2" id="3"><mxCell style="s" vertex="1" parent="2"><mxGeometry as="geometry" /></mxCell></UserObject>\n'
+    + '  <UserObject label="อ่าน" mermaidId="n:n1" id="4"><mxCell style="s" vertex="1" parent="3"><mxGeometry as="geometry" /></mxCell></UserObject>\n'
+    + '  <UserObject label="เริ่ม" mermaidId="n:n2" id="5"><mxCell style="s" vertex="1" parent="1"><mxGeometry as="geometry" /></mxCell></UserObject>\n'
+    + '  <UserObject label="" mermaidId="e:n2-&gt;n1#0" id="6"><mxCell edge="1" parent="1" source="5" target="4" style="e"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1" y="2" /></Array></mxGeometry></mxCell></UserObject>\n'
+    + '  <mxCell id="7" edge="1" parent="2" source="4" target="4" style="e"><mxGeometry relative="1" as="geometry" /></mxCell>\n'
+    + '</root></mxGraphModel></diagram></mxfile>';
+  const y = edgesBelowGroups(x);
+  const order = [...y.matchAll(/<(?:UserObject|mxCell)\b[^>]*\sid="(\d+)"/g)].map((mm) => mm[1]);
+  ck(order.join(",") === "0,1,6,2,7,3,4,5", "‼️ เส้นทุกเส้นย้ายไปถัดจากตัวแม่ทันที ก่อนกรอบกับกล่อง (ชื่อกรอบวาดทีหลังจึงบังเส้น)", order.join(","));
+  const bag = (t) => [...t.matchAll(/<(UserObject|mxCell)\b[^>]*>/g)].map((mm) => mm[0]).sort().join("|");
+  ck(bag(y) === bag(x) && y.includes('<mxPoint x="1" y="2" />'), "ไม่มีชิ้นไหนหายหรือเพี้ยน แค่สลับลำดับ (จุดหักของเส้นยังอยู่)");
+  const flat = '<root><mxCell id="0" /><mxCell id="1" parent="0" /><UserObject label="ก" mermaidId="n:n1" id="2"><mxCell vertex="1" parent="1" /></UserObject><mxCell id="3" edge="1" parent="1" /></root>';
+  ck(edgesBelowGroups(flat) === flat, "ผังที่ไม่มีกรอบได้ XML เดิมทุกตัวอักษร");
+  const odd = x.replace("</root>", "<Unknown /></root>");
+  ck(edgesBelowGroups(odd) === odd, "‼️ เจอชิ้นที่แยกไม่ออก คืนของเดิมทั้งก้อน ไม่เสี่ยงทำผังหาย");
 }
 
 console.log("\n━━ ยืดผังระบบ กันป้ายเส้นเบียดกัน (พี่ปอนด์ทัก 22/09/2026) ━━");

@@ -84,6 +84,28 @@ def backwards_edges(xml):
     return bad
 
 
+def titles_over_edges(xml):
+    """ชื่อกรอบต้องบังเส้น (v157 แบบ ข): ทุกเส้นอยู่ก่อนกรอบที่มีตัวแม่เดียวกันในลำดับ XML (draw.io วาดตามลำดับ)
+    กรอบไม่มีสีพื้น และชื่อกรอบมีพื้นหลังสีหน้ากระดาษ  คืนรายการที่ผิด (ว่าง = ผ่าน)"""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(xml).find(".//root")
+    except Exception:
+        return ["อ่าน XML ไม่ได้"]
+    info = []
+    for el in list(root):
+        c = el if el.tag == "mxCell" else el.find("mxCell")
+        if c is None: continue
+        info.append((el.get("id"), c.get("parent"), c.get("edge") == "1",
+                     el.tag == "UserObject" and (el.get("mermaidId") or "").startswith("n:g"), c.get("style") or "", el.get("label") or ""))
+    bad = []
+    for i, (gid, gpar, _, isg, st, lab) in enumerate(info):
+        if not isg: continue
+        if "fillColor=none" not in st or "labelBackgroundColor=default" not in st: bad.append(f"กรอบ {lab[:20]} สไตล์ไม่บังเส้น")
+        bad += [f"เส้น {eid} อยู่หลังกรอบ {lab[:20]}" for j, (eid, epar, ise, _, _, _) in enumerate(info) if ise and epar == gpar and j > i]
+    return bad
+
+
 def boxes(pg, text, view="all"):
     """กล่องกับกรอบที่ผังควรมี คิดด้วยโมดูลตัวเดียวกับหน้าเว็บ"""
     return pg.evaluate("""async ([t, v]) => { const { parsePA, applyView } = await import('./src/parse-pa.js'); const r = parsePA(t);
@@ -180,6 +202,8 @@ def main():
         ck("เลือกไฟล์ definition .json ได้ผังกรอบซ้อน 3 ชั้นครบ", got == sorted(want) and len(want) == 12, str(got))
         xml = drawio_xml(preview_png(pg)) or ""
         ck("‼️ กรอบซ้อน 3 ชั้น ไม่มีเส้นทะลุกล่อง", xml and not backwards_edges(xml), str(backwards_edges(xml)))
+        ck("‼️ ชื่อกรอบทุกชั้นบังเส้นที่ลอดใต้ (เส้นอยู่ก่อนกรอบ กรอบไม่มีสีพื้น ชื่อมีพื้นหลัง) ไม่มีเส้นทับชื่อกรอบ",
+           xml.count('mermaidId="n:g') == 4 and not titles_over_edges(xml), str(titles_over_edges(xml)[:3]))
         pg.screenshot(path=str(SHOTS / "pa-nested3.png"))
         broken = box.replace('"type": "Scope",', '"type": "Scope"', 1)
         pg.evaluate("(t) => { const ta = document.querySelector('#src'); ta.focus(); ta.select(); document.execCommand('insertText', false, t); }", broken)
@@ -238,6 +262,16 @@ def selftest(b):
     first = re.search(r'<mxCell\b[^>]*\bedge="1"[^>]*entryY=0;[^>]*>', xml)
     bad = xml.replace(first.group(0), first.group(0).replace("entryY=0;", "entryY=1;", 1), 1) if first else xml
     ck("ตัวตรวจเส้นจับเส้นที่เสียบก้นกล่องที่อยู่ข้างล่างได้", bad != xml and len(backwards_edges(bad)) == 1, str(backwards_edges(bad)))
+    # ตัวตรวจชื่อกรอบ: ผังจริงที่มีกรอบต้องผ่าน , ย้ายเส้นไปท้ายสุด (ลำดับแบบเดิมก่อน v157) หรือใส่สีพื้นกรอบคืน ต้องถูกฟ้อง
+    pg.click("#types [data-kind=pa]"); pg.wait_for_timeout(1500); ready(pg); pg.wait_for_timeout(800)
+    gx = drawio_xml(preview_png(pg)) or ""
+    ck("ตัวตรวจชื่อกรอบไม่ฟ้องผัง Power Automate ปกติ (มีกรอบให้ตรวจจริง)", 'mermaidId="n:g' in gx and not titles_over_edges(gx), str(titles_over_edges(gx)[:2]))
+    e = re.search(r'<UserObject\b[^>]*mermaidId="e:[^"]*"[^>]*>[\s\S]*?</UserObject>', gx)
+    late = gx.replace(e.group(0), "", 1).replace("</root>", e.group(0) + "</root>", 1) if e else gx
+    # ‼️ แก้ที่ style ของ mxCell ในกรอบ (fillColor=none ตัวแรกในข้อความอยู่ใน mermaidBaseStyle ซึ่งไม่มีผลกับภาพ แก้ตรงนั้นแล้วตัวตรวจไม่เห็น ถูกต้องแล้ว)
+    gray = re.sub(r'(<UserObject\b[^>]*mermaidId="n:g\d+"[^>]*>\s*<mxCell\b[^>]*\sstyle="[^"]*?)fillColor=none', r"\1fillColor=#f6f5f3", gx, count=1)
+    ck("ตัวตรวจชื่อกรอบจับเส้นที่อยู่หลังกรอบ และกรอบที่มีสีพื้นได้", gray != gx and bool(titles_over_edges(late)) and bool(titles_over_edges(gray)),
+       f"late {titles_over_edges(late)[:1]} gray {titles_over_edges(gray)[:1]}")
     b.close()
     return finish()
 

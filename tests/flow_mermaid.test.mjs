@@ -99,5 +99,21 @@ console.log("\n━━ เปลี่ยนฟอนต์ใน XML ที่ d
   ck(gg.includes('mermaidId="n:n1"><mxCell style="fillColor=default;strokeColor=#8a8f98;"'), "กล่องธรรมดาไม่ถูกแตะ");
 }
 
+console.log("\n━━ ยืดผังระบบแนวตั้ง กันป้ายเส้นเบียดกัน (พี่ปอนด์ทัก 22/09/2026) ━━");
+{
+  const { stretchY } = await imp("flow/src/engine.js");
+  const { STRETCH_Y } = await imp("flow/src/to-mermaid.js");
+  const xml = '<UserObject label="กลุ่ม" mermaidId="n:g1" id="2"><mxCell style="x" vertex="1" parent="1"><mxGeometry x="10" y="100" width="300" height="200" as="geometry"/></mxCell></UserObject>'
+    + '<UserObject label="ในกลุ่ม" mermaidId="n:n1" id="3"><mxCell style="x" vertex="1" parent="2"><mxGeometry x="20" y="150" width="80" height="40" as="geometry"/></mxCell></UserObject>'
+    + '<mxCell edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="5" y="60" as="sourcePoint"/><Array as="points"><mxPoint x="50" y="80"/></Array></mxGeometry></mxCell>'
+    + '<mxCell value="ป้าย" vertex="1" connectable="0" parent="4"><mxGeometry x="-0.2" y="12" relative="1" as="geometry"><mxPoint x="3" y="7" as="offset"/></mxGeometry></mxCell>';
+  const out = stretchY(xml, 1.5);
+  ck(/mermaidId="n:g1"[^]*?y="150" width="300" height="300"/.test(out), "กรอบกลุ่มยืดทั้งตำแหน่งและความสูง กล่องข้างในไม่ล้นกรอบ");
+  ck(/mermaidId="n:n1"[^]*?y="225" width="80" height="40"/.test(out), "กล่องธรรมดายืดแค่ตำแหน่ง ความสูงเท่าเดิม");
+  ck(out.includes('<mxPoint x="5" y="90" as="sourcePoint"/>') && out.includes('<mxPoint x="50" y="120"/>'), "จุดหักของเส้นยืดตาม");
+  ck(out.includes('<mxGeometry x="-0.2" y="12" relative="1" as="geometry">') && out.includes('<mxPoint x="3" y="7" as="offset"/>'), "ตำแหน่งป้ายบนเส้น (relative กับ offset) ไม่ถูกแตะ");
+  ck(stretchY(xml, 1) === xml && STRETCH_Y.system > 1 && !STRETCH_Y.steps, "ยืดเฉพาะผังระบบ ผังขั้นตอนไม่ยืด (สูงเกินสไลด์อยู่แล้ว)");
+}
+
 console.log(`\n${fail.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ, ตก ${fail.length} ข้อ`);
 process.exit(fail.length ? 1 : 0);

@@ -137,9 +137,10 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
 .canvas{flex:1; min-height:0; position:relative; border-radius:14px; background:#fff; border:1px solid var(--line-soft); overflow:hidden}
 /* ‼️ วางกลางด้วย inset:0 + margin:auto แล้วให้ขนาดมาจากตัวภาพเอง (srcset 2x = ขนาดจริงของผัง) โดยมี max จำกัดไม่ให้ล้นกรอบ
    ห้ามใช้ object-fit:scale-down: วัดแล้ว Chrome คิดจากพิกเซลดิบ ไม่สนความหนาแน่นของ srcset ผังเล็กจึงยังถูกขยาย 1.7 เท่า (22/09/2026) */
-.canvas img{position:absolute; inset:0; margin:auto; width:auto; height:auto; max-width:calc(100% - 40px); max-height:calc(100% - 40px); cursor:zoom-in;
+.canvas img{position:absolute; inset:0; margin:auto; width:auto; height:auto; max-width:calc(100% - 40px); max-height:calc(100% - 40px);
   transition:opacity var(--t-micro) var(--ease)}
-/* กดที่ผังเพื่อดูขนาดจริงแล้วเลื่อนดู กดอีกทีกลับมาเห็นทั้งผัง */
+/* กดที่ผังเพื่อดูขนาดจริงแล้วเลื่อนดู กดอีกทีกลับมาเห็นทั้งผัง (เฉพาะผังที่ถูกย่อ app.js ตั้ง data-zoomable ให้) */
+.canvas[data-zoomable] img{cursor:zoom-in}
 .canvas[data-zoom]{overflow:auto}
 .canvas[data-zoom] img{position:static; display:block; margin:20px auto; width:auto; height:auto; max-width:none; max-height:none; cursor:zoom-out}
 .canvas[data-state="error"] img,.canvas[data-state="stale"] img{opacity:.35}

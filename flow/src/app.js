@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { tr, IS_EN, setLang } from "../../src/i18n.js";
 import { parseText } from "./parse.js";
-import { toMermaid } from "./to-mermaid.js";
+import { toMermaid, STRETCH_Y } from "./to-mermaid.js";
 import { createEngine } from "./engine.js";
 import { createEditor } from "./editor.js";
 import { SAMPLES } from "./samples.js";
@@ -232,12 +232,21 @@ function setCanvas(state, text = "", withRetry = false) {
     cvmsg.append(r);
   }
 }
-/* กดที่ผัง = ดูขนาดจริงแล้วเลื่อนดู กดอีกทีกลับมาเห็นทั้งผัง */
+/* กดที่ผัง = ดูขนาดจริงแล้วเลื่อนดู กดอีกทีกลับมาเห็นทั้งผัง
+   ‼️ ใช้ได้เฉพาะตอนที่ผังถูกย่อให้พอดีกรอบ ผังเล็กที่เห็นขนาดจริงอยู่แล้ว กดแล้วแค่กระโดดขึ้นลง
+      (พี่ปอนด์ทัก 22/09/2026 "กดแล้วมันขยับขึ้นลงคือไร" วัดได้ผังองค์กร 633x296 เท่ากันทั้งสองโหมด ย้ายจากกลางกรอบขึ้นไปชิดบนเฉย ๆ) */
+function updateZoomable() {
+  if ("zoom" in canvas.dataset) return;
+  const shrunk = img.naturalWidth > 0 && (img.clientWidth < img.naturalWidth - 1 || img.clientHeight < img.naturalHeight - 1);
+  if (shrunk && !isPhone()) canvas.dataset.zoomable = ""; else delete canvas.dataset.zoomable;
+}
+img.addEventListener("load", updateZoomable);
+new ResizeObserver(updateZoomable).observe(canvas);
 img.addEventListener("click", () => {
-  if (isPhone()) return;
-  if ("zoom" in canvas.dataset) delete canvas.dataset.zoom; else canvas.dataset.zoom = "";
+  if ("zoom" in canvas.dataset) { delete canvas.dataset.zoom; updateZoomable(); return; }
+  if ("zoomable" in canvas.dataset) canvas.dataset.zoom = "";
 });
-const unzoom = () => { delete canvas.dataset.zoom; };
+const unzoom = () => { delete canvas.dataset.zoom; delete canvas.dataset.zoomable; };
 
 /* ต่อ draw.io ไม่ได้: บอกตรง ๆ ว่าโหลดมาจากไหน กดลองใหม่ได้ และถ้าต่อได้ทีหลังผังขึ้นเองไม่ต้องกด */
 let engineState = "booting";
@@ -434,7 +443,7 @@ function update() {
   live.dataset.busy = "";
   /* ‼️ ห้ามทับข้อความต่อไม่ได้ด้วย "กำลังวาด" (เคยทับจนผู้ใช้ออฟไลน์ไม่รู้ว่าทำไมผังไม่ขึ้น จับได้ใน tests/browser_swpages.py) */
   if (!current && !engineDown() && canvas.dataset.state !== "booting") setCanvas("booting", [tr("กำลังวาดผัง", "Drawing")]);
-  engine.render(mmd, model.nodes.length).then((out) => {
+  engine.render(mmd, model.nodes.length, STRETCH_Y[model.kind] || 1).then((out) => {
     if (out.stale || my !== ver) return;
     lastMmd = mmd;
     show(out.png, out.xml, fileName(model),

@@ -34,6 +34,9 @@ export const visibleLen = (s) => String(s).replace(THAI_MARK, "").length;
 export const ASK_DIAMOND_MAX = 13;
 /** ผังองค์กรที่มีใบเกินเท่านี้ วางซ้ายไปขวา (หลุม H4: 15 กล่องบนลงล่างกว้าง 2,931px อ่านไม่ออก) */
 export const ORG_LEAVES_LR = 8;
+/** ยืดแนวตั้งหลังนำเข้า เฉพาะผังระบบที่ทุกเส้นมีป้าย (พี่ปอนด์ทัก 22/09/2026 ป้ายเส้นเบียดกัน ดู stretchY ใน engine.js)
+ *  ผังขั้นตอนไม่ยืด เพราะสูงเกินสไลด์อยู่แล้ว (หลุม H3) , องค์กรกับไทม์ไลน์ไม่มีป้ายบนเส้น */
+export const STRETCH_Y = { system: 1.45 };
 
 function shapeOf(node, isStartOrEnd) {
   const t = `"${label(node.text)}"`;

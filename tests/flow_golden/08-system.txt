@@ -1,9 +1,0 @@
-ผัง: ระบบ
-ผู้ใช้ <-> FlowKit: พิมพ์และแก้ผัง
-FlowKit -> ตัวแก้ไข draw.io: ส่งข้อความ Mermaid
-ตัวแก้ไข draw.io -> FlowKit: คืนผังเป็น PNG ฝัง XML
-FlowKit -> ที่เก็บของเบราว์เซอร์: ฝากไฟล์ 5 นาที
-ที่เก็บของเบราว์เซอร์ -> FileKit: รับไฟล์แล้วลบทิ้ง
-FileKit -> เครื่องมือ PDF: รวมเล่ม ใส่ลายน้ำ
-Service Worker --> FlowKit: แคชไว้ใช้ออฟไลน์
-Service Worker --> FileKit: แคชไว้ใช้ออฟไลน์

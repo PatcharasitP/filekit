@@ -2,16 +2,12 @@
 <!-- ‼️ เครื่องมือของ FileKit อยู่ในหน้าเดียวใช้ hash route (#/pdf-merge) จึงมีแค่หน้าแรก
      เครื่องมือแต่ละตัวยังไม่มี URL ของตัวเอง — เรื่องนี้พี่ปอนด์เคาะ 08/09 ว่า "ยังไม่ทำตอนนี้"
      ถ้าวันไหนทำหน้าแยก 27 หน้า ต้องกลับมาเติมที่นี่
-     หน้าที่เป็นไฟล์ของตัวเองจริงมีเพิ่มหนึ่งหน้าคือ FlowKit (flow/ 22/09/2026) -->
+     FlowKit เคยอยู่ที่ flow/ ย้ายไปเป็นเว็บของตัวเองแล้ว (22/09/2026) sitemap ของ FlowKit อยู่ที่ /flowkit/sitemap.xml
+     flow/ ที่เหลือเป็นหน้าส่งต่อ (noindex) จึงไม่ใส่ที่นี่ -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://patcharasitp.github.io/filekit/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://patcharasitp.github.io/filekit/flow/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
   </url>
 </urlset>

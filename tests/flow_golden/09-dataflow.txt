@@ -1,7 +1,0 @@
-ผัง: ระบบ
-[แหล่งข้อมูล] ไฟล์ Excel รายวัน -> [เตรียมข้อมูล] Power Query: โหลดทุกเช้า
-[แหล่งข้อมูล] ฐานข้อมูลงานซ่อม -> Power Query: ดึงผ่าน gateway
-Power Query -> [โมเดล] Semantic model: ตารางที่ล้างแล้ว
-Semantic model -> [นำเสนอ] รายงาน Power BI: measure
-รายงาน Power BI -> [นำเสนอ] สไลด์ผู้บริหาร: ภาพส่งออก
-Power Automate --> Semantic model: สั่ง refresh

@@ -504,91 +504,35 @@ ck(middotHits.length + htmlMiddot.length === 0,
   }
 }
 
-/* ── FlowKit (flow/) อยู่ใต้กติกาเดียวกับ FileKit (22/09/2026) ──────────────────────
- * หน้าแยกไฟล์ของตัวเอง จึงหลุดจากทุกข้อข้างบนที่อ่านแค่ index.html กับ src/ ถ้าไม่ตรวจตรงนี้
- * ถ้าผิดจะรู้ได้ยังไง: ใส่ · หรือ — ในข้อความของ flow/ , แก้สคริปต์ตั้งธีมตัวอักษรเดียว ,
- * เปลี่ยนสีตัวแปรในหน้าแรกโดยไม่แก้ flow.css , ลบชื่อแอปจาก MAYBE_IN_APP ของ flow ข้อที่ตรงกันต้องแดง */
+/* ── FlowKit ย้ายบ้าน (22/09/2026 แผนเว็บ FlowKit แยก ข้อ 7) ─────────────────────────────
+ * FlowKit เป็นเว็บของตัวเองแล้วที่ /flowkit/ (repo flowkit) กติกาหน้าเว็บของมันอยู่ที่ FlowKit/tests/accepts.test.mjs
+ * ฝั่ง FileKit เหลือแค่ ① หน้าส่งต่อ flow/ พาไปหน้าวาดใหม่พร้อม ? และ # ② ลิงก์ทุกจุดชี้ /flowkit/ ③ ไม่มีของที่ย้ายไปแล้วค้าง
+ * ‼️ ไฟล์กลาง (src/i18n.js , handoff.js , inapp.js) FlowKit ยังใช้อยู่ คุมด้วย tests/contract.sh (runp.sh contract)
+ * ถ้าผิดจะรู้ได้ยังไง: แก้สคริปต์หน้าส่งต่อตัวเดียวแล้ว hash ไม่ตรง , ลิงก์กลับไปชี้ flow/ , ไฟล์ flow/src กลับมา ข้อที่ตรงกันต้องแดง */
 {
-  const fdir = join(ROOT, "flow");
-  const fhtml = readFileSync(join(fdir, "index.html"), "utf8");
-  const fjs = readdirSync(join(fdir, "src")).filter((n) => n.endsWith(".js"));
-  ck(fjs.length >= 8, `หาโมดูลของ FlowKit เจอ (${fjs.length} ไฟล์ ประชากรต้องไม่เป็นศูนย์)`);
-
-  // ① จุดกลางกับขีดยาวในข้อความที่ผู้ใช้เห็น (สตริงใน JS และข้อความใน HTML)
-  const hits = [];
-  for (const n of fjs) {
-    const txt = readFileSync(join(fdir, "src", n), "utf8"); const lines = txt.split("\n");
-    for (const ln of middotsInStrings(txt, "\u00b7\u2014")) hits.push(`flow/src/${n}:${ln} ${lines[ln - 1].trim().slice(0, 46)}`);
-  }
-  const body = fhtml.slice(fhtml.indexOf("<body")).replace(/<!--[\s\S]*?-->/g, "");
-  for (const m of body.matchAll(/>([^<]*[\u00b7\u2014][^<]*)</g)) hits.push("flow/index.html " + m[1].trim().slice(0, 46));
-  for (const m of fhtml.matchAll(/\b(?:data-en|data-en-al|aria-label|title)="([^"]*[\u00b7\u2014][^"]*)"/g)) hits.push("flow/index.html " + m[1].slice(0, 46));
-  ck(hits.length === 0, `FlowKit ไม่มีจุดกลางหรือขีดยาวในข้อความที่ผู้ใช้เห็น (พบ ${hits.length})` + (hits.length ? "\n      " + hits.slice(0, 5).join("\n      ") : ""));
-  ck(middotsInStrings('const a = "ผ่าน \u2014 ตก"; // \u2014 ในคอมเมนต์ไม่นับ', "\u00b7\u2014").length === 1, "ตัวตรวจจับขีดยาวในสตริงได้ และไม่จับในคอมเมนต์");
-
-  // ② CSP ของหน้า: สคริปต์ฝังทุกก้อนมี sha256 , ฝังได้แค่ draw.io , ไม่มี unsafe-inline
+  const fhtml = readFileSync(join(ROOT, "flow/index.html"), "utf8");
   const fcsp = (fhtml.match(/http-equiv="Content-Security-Policy"[^>]*content="([\s\S]*?)"/) || [])[1] || "";
-  ck(!!fcsp, "หน้า FlowKit ประกาศ CSP ของตัวเอง");
-  const finline = [...fhtml.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  const finline = [...fhtml.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
   const fmiss = finline.map((b) => "sha256-" + createHash("sha256").update(b, "utf8").digest("base64")).filter((h) => !fcsp.includes(h));
-  ck(finline.length === 2 && fmiss.length === 0, `สคริปต์ฝังของ FlowKit ${finline.length} ก้อน มี sha256 ใน CSP ครบ` + (fmiss.length ? "\n      ค่าที่ควรใส่: " + fmiss.join(" ") : ""));
-  const engine = readFileSync(join(fdir, "src/engine.js"), "utf8");
-  const drawio = (engine.match(/export const DRAWIO = "([^"]+)"/) || [])[1] || "";
-  const frame = (fcsp.match(/frame-src ([^;]+);/) || [])[1] || "";
-  ck(!!drawio && frame.trim() === new URL(drawio).origin, `frame-src ของ CSP ตรงกับที่อยู่ draw.io ใน engine.js (${frame.trim()} กับ ${drawio})`);
-  ck(!/unsafe-inline|unsafe-eval/.test(fcsp), "CSP ของ FlowKit ไม่มี unsafe-inline หรือ unsafe-eval");
-
-  // ③ ปีกกาใน flow.css สมดุล
-  {
-    const t = readFileSync(join(fdir, "flow.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/"(?:[^"\\]|\\.)*"/g, '""');
-    let d = 0, bad = 0; for (const ch of t) { if (ch === "{") d++; else if (ch === "}" && --d < 0) bad++; }
-    ck(d === 0 && !bad, `flow/flow.css วงเล็บปีกกาสมดุล (ค้าง ${d})`);
-  }
-
-  // ④ ตัวแปรสีที่ชื่อซ้ำกับหน้าแรกต้องค่าเดียวกัน ทั้งธีมมืด (ค่าตั้งต้น) และธีมสว่าง
-  const block = (txt, sel) => { const i = txt.indexOf(sel); if (i < 0) return {}; const j = txt.indexOf("}", i);
-    return Object.fromEntries([...txt.slice(i + sel.length, j).matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim().replace(/\s+/g, " ")])); };
-  const fcss = readFileSync(join(fdir, "flow.css"), "utf8");
-  for (const sel of [":root{", ':root[data-theme="light"]{']) {
-    const a = block(html, sel), b = block(fcss, sel);
-    const both = Object.keys(b).filter((k) => k in a);
-    const diff = both.filter((k) => a[k] !== b[k]);
-    ck(both.length >= 12 && diff.length === 0, `flow.css ${sel.slice(0, -1)} ใช้สีเดียวกับหน้าแรก (เทียบ ${both.length} ตัว ต่าง ${diff.length})` +
-       (diff.length ? "\n      " + diff.slice(0, 4).map((k) => `--${k} หน้าแรก ${a[k]} , flow ${b[k]}`).join("\n      ") : ""));
-  }
-
-  // ⑤ ข้อความไทยในหน้า HTML ต้องมีคำแปล (data-en) หรือประกาศภาษาเอง (lang)
-  const noEn = [];
-  for (const m of body.matchAll(/<([a-z0-9]+)((?:\s[^>]*)?)>([^<]*[\u0E00-\u0E7F][^<]*)</g)) {
-    if (m[1] === "script" || m[1] === "style") continue;
-    if (!/\bdata-en=|\blang=/.test(m[2])) noEn.push(`<${m[1]}> ${m[3].trim().slice(0, 30)}`);
-  }
-  for (const m of fhtml.matchAll(/<[a-z0-9]+\b([^>]*\baria-label="[^"]*[\u0E00-\u0E7F][^"]*"[^>]*)>/g)) if (!/\bdata-en-al=/.test(m[1])) noEn.push("aria-label " + m[1].slice(0, 40));
-  ck(noEn.length === 0, `ข้อความไทยทุกชิ้นในหน้า FlowKit มีคำแปลอังกฤษ (ขาด ${noEn.length})` + (noEn.length ? "\n      " + noEn.slice(0, 5).join("\n      ") : ""));
-
-  // ⑥ รายชื่อแอปแชทของ FlowKit ต้องตรงกับหน้าแรก (หน้าแรกถูกเทสกับ inapp.js ไว้แล้วข้างบน)
-  const re = (src) => (src.match(/const MAYBE_IN_APP = \/(.+)\/i;/) || [])[1];
-  ck(!!re(readFileSync(join(fdir, "src/app.js"), "utf8")) && re(readFileSync(join(fdir, "src/app.js"), "utf8")) === re(readFileSync(join(ROOT, "src/app.js"), "utf8")),
-     "รายชื่อแอปแชทใน flow/src/app.js ตรงกับ src/app.js");
-
-  // ⑦ ทุกโมดูลของ FlowKit parse เป็น ES module ได้ (เหตุผลเดียวกับข้อ src/ ข้างบน node --check เชื่อไม่ได้)
-  const child = `
-    const { readFileSync } = await import("node:fs");
-    const { SourceTextModule } = await import("node:vm");
-    const bad = [];
-    for (const f of ${JSON.stringify(fjs.map((n) => "flow/src/" + n))}) {
-      try { new SourceTextModule(readFileSync(${JSON.stringify(ROOT)} + "/" + f, "utf8")); } catch (e) { bad.push(f + ": " + e.message); }
-    }
-    console.log(JSON.stringify(bad));`;
-  const r = spawnSync(process.execPath, ["--experimental-vm-modules", "--input-type=module", "-e", child], { encoding: "utf8" });
-  let broken = null; try { broken = JSON.parse((r.stdout || "").trim().split("\n").pop()); } catch { /* ตัวตรวจพัง */ }
-  ck(Array.isArray(broken) && broken.length === 0, `ทุกโมดูลใน flow/src parse ผ่าน` + (Array.isArray(broken) && broken.length ? "\n      " + broken.join("\n      ") : ""));
-
-  // ⑧ service worker รู้จักหน้า flow/ เป็นหน้าของตัวเอง (ไม่งั้นเปิดตอนเน็ตช้าได้หน้าแรกแทน tests/browser_swpages.py)
+  ck(/<title>FlowKit ย้ายบ้านแล้ว<\/title>/.test(fhtml), "flow/index.html เป็นหน้าส่งต่อ (FlowKit ย้ายบ้านแล้ว)");
+  ck(finline.length === 1 && !fmiss.length && !/unsafe-inline|unsafe-eval/.test(fcsp),
+     `หน้าส่งต่อ สคริปต์ ${finline.length} ก้อน มี sha256 ใน CSP ไม่มี unsafe-inline` + (fmiss.length ? "\n      ค่าที่ควรใส่: " + fmiss.join(" ") : ""));
+  ck(/location\.replace\("\/flowkit\/draw\/"\+location\.search\+location\.hash\)/.test(finline[0] || ""), "หน้าส่งต่อพาไป /flowkit/draw/ พร้อม ? และ # ครบ");
+  ck(/<noscript><meta http-equiv="refresh" content="0; url=\/flowkit\/draw\/"><\/noscript>/.test(fhtml), "ปิด JavaScript ก็ยังพาไปได้ (noscript meta refresh)");
+  ck(/navigator\.onLine!==false/.test(finline[0] || ""), "ออฟไลน์ไม่พาไป ให้เห็นข้อความแทนหน้าเน็ตหลุด");
+  const leftovers = readdirSync(join(ROOT, "flow")).filter((n) => n !== "index.html");
+  ck(!leftovers.length, `ไม่มีของที่ย้ายไป FlowKit แล้วค้างใน flow/` + (leftovers.length ? " เจอ " + leftovers.join(", ") : ""));
+  ck(/<li><a href="\/flowkit\/" aria-label="FlowKit"><span>Flow<\/span><b>Kit<\/b><\/a><\/li>/.test(html) && /<a class="door" href="\/flowkit\/">/.test(html),
+     "หน้าแรกชี้ /flowkit/ ทั้งแถบท้ายเว็บ และการ์ดประตูบนมือถือ");
+  ck(!/href="flow\//.test(html), "หน้าแรกไม่มีลิงก์ไป flow/ เหลือ");
   const sw = readFileSync(join(ROOT, "sw.js"), "utf8");
-  ck(/"flow\/":\s*"\.\/flow\/index\.html"/.test(sw) && /"":\s*"\.\/index\.html"/.test(sw), "sw.js มีกุญแจแคชแยกของหน้าแรกกับหน้า flow/");
-  ck(/filekit\/flow\/<\/loc>/.test(readFileSync(join(ROOT, "sitemap.xml"), "utf8")), "sitemap.xml มีหน้า FlowKit");
-  ck(/<a href="flow\/"[^>]*><span>Flow<\/span><b>Kit<\/b><\/a>/.test(html) && /<a class="door" href="flow\/">/.test(html), "หน้าแรกมีทางไป FlowKit ทั้งแถบท้ายเว็บ และการ์ดประตูบนมือถือ");
+  ck(/"flow\/":\s*"\.\/flow\/index\.html"/.test(sw) && /"":\s*"\.\/index\.html"/.test(sw), "sw.js ยังแยกกุญแจแคชหน้าแรกกับหน้าส่งต่อ (tests/browser_swpages.py)");
+  const pre = (sw.match(/const PRECACHE = \[([\s\S]*?)\];/) || [])[1] || "";
+  const preFlow = [...pre.matchAll(/"(\.\/)?flow\/[^"]*"/g)].map((m) => m[0]);
+  ck(preFlow.length === 1 && preFlow[0] === '"./flow/index.html"', `PRECACHE มีแค่หน้าส่งต่อของ flow/ (${preFlow.join(" ") || "ไม่มี"})`);
+  ck(!/filekit\/flow\/<\/loc>/.test(readFileSync(join(ROOT, "sitemap.xml"), "utf8")), "sitemap.xml ไม่มี flow/ แล้ว");
+  const ghost = readdirSync(join(ROOT, "tests")).filter((n) => /^(browser_flow|browser_handoff|flow_)/.test(n));
+  ck(!ghost.length, "เทสที่ย้ายไป FlowKit ไม่ค้างใน tests/ (ของ FileKit ไม่ควรตรวจหน้าที่ไม่ใช่ของตัวเอง)" + (ghost.length ? " เจอ " + ghost.join(", ") : ""));
 }
 
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);

@@ -119,6 +119,14 @@ cd FileKit && python3 -m http.server 8777
 2. Settings → Pages → Source: `main` / root
 3. เปิด URL ที่ได้ — ตรวจว่า service worker ทำงาน (DevTools → Application → Service Workers)
 
+## FlowKit ย้ายไปเป็นเว็บของตัวเอง (22/09/2026)
+
+FlowKit วาดผังจากข้อความ เคยอยู่ที่ `flow/` ตอนนี้อยู่ที่ https://patcharasitp.github.io/flowkit/ (repo [flowkit](https://github.com/PatcharasitP/flowkit))
+`flow/index.html` ที่เหลือเป็นหน้าส่งต่อ พาลิงก์เดิมไปหน้าวาดใหม่พร้อม `?` และ `#` ครบ
+
+‼️ FlowKit ยัง import ไฟล์กลางของเราตรง ๆ (`src/i18n.js` , `src/handoff.js` , `src/inapp.js` , ฟอนต์ Sarabun)
+แก้ไฟล์พวกนี้แล้วต้องรัน `tests/runp.sh contract` ก่อนปล่อยของทุกครั้ง (อยู่ใน `runp.sh all` แล้ว ต้องมีโฟลเดอร์ FlowKit ข้าง ๆ)
+
 ## ทดสอบ
 
 `/tmp/.../e2e.py` อัปโหลดไฟล์จริง กดปุ่มจริง ดาวน์โหลดผลลัพธ์จริง แล้วเปิดไฟล์ตรวจเนื้อใน

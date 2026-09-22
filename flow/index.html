@@ -2,172 +2,23 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<!-- ‼️ CSP ของหน้า FlowKit ต่างจากหน้าแรกของ FileKit ข้อเดียวที่ตั้งใจ: frame-src ให้ฝัง draw.io ได้ (เฟส 0 ข้อ ง พิสูจน์แล้ว)
-     ถ้าเปลี่ยนไปวาง draw.io เอง (W1) ให้แก้เป็น frame-src 'self' คู่กับค่า DRAWIO ใน src/engine.js
-     ‼️ ไม่มี CDN ไม่มี unsafe-inline ทั้งสคริปต์และสไตล์ หน้านี้ไม่ต้องใช้ไลบรารีภายนอกเลย
-     ‼️ connect-src ต้องมี blob: (เหมือนหน้าแรก) ไม่งั้นอ่านไฟล์ผังที่วาดเสร็จกลับมาไม่ได้ (เทสจับได้ตอนอ่าน PNG ของพรีวิว 22/09/2026)
-     ‼️ sha256 สองตัวคือสคริปต์ตั้งธีมกับภาษาก่อนวาดจอ ตัวอักษรต้องตรงกับหน้าแรกทุกตัว (tests/accepts.test.mjs คำนวณแล้วเทียบ) -->
-<meta http-equiv="Content-Security-Policy" content="
-  default-src 'self';
-  script-src 'self' 'sha256-Cc0W0CwhZzN7hIDklSuJ+Qs16/OVIJT4eHeIM2+c1js=' 'sha256-+WV7M4JC5RBwOo7oWvLiLqllHEOz4BRSD1jtfIUdJHE=';
-  style-src 'self';
-  img-src 'self' data: blob:;
-  font-src 'self';
-  connect-src 'self' blob:;
-  frame-src https://embed.diagrams.net;
-  object-src 'none';
-  base-uri 'self';
-  form-action 'none'">
-<title data-en="FlowKit - turn text into diagrams in your browser">FlowKit - วาดผังจากข้อความ ในเบราว์เซอร์</title>
-<meta name="description" content="พิมพ์ขั้นตอนทีละบรรทัด ได้ผังงาน ผังองค์กร ผังระบบ หรือไทม์ไลน์ จัดวางให้เอง ดาวน์โหลดเป็นภาพวางสไลด์ได้ทันที และเปิดแก้ต่อใน draw.io ได้">
-<meta name="theme-color" content="#101216" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f6f5f3" media="(prefers-color-scheme: light)">
-<link rel="canonical" href="https://patcharasitp.github.io/filekit/flow/">
-<link rel="icon" href="../assets/icons/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../vendor/fonts/Sarabun-Regular.woff2">
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../vendor/fonts/Sarabun-SemiBold.woff2">
-<link rel="stylesheet" href="flow.css">
-<script>try{var t=localStorage.getItem("fk-theme");if(t&&t!=="auto")document.documentElement.dataset.theme=t;
-}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- ‼️ หน้าส่งต่อ: FlowKit ย้ายไปเป็นเว็บของตัวเองที่ /flowkit/ แล้ว (แผนเว็บ FlowKit แยก D5 , 22/09/2026)
+     ลิงก์เดิม /filekit/flow/ ที่เคยแชร์หรือบุ๊กมาร์กไว้ ต้องพาไปหน้าวาดผังเดิมพร้อม ? และ # ครบ (พิสูจน์ R2 เฟส 0)
+     ‼️ sha256 ใน CSP คือสคริปต์บรรทัดเดียวข้างล่าง แก้ตัวอักษรใดต้องคำนวณใหม่ (tests/accepts.test.mjs จับ)
+     ‼️ ออฟไลน์ (service worker ส่งหน้านี้จากแคช) ไม่พาไป เพราะ FlowKit ต้องต่อเน็ต ให้เห็นข้อความนี้แทนหน้าเน็ตหลุดของเบราว์เซอร์
+     ปิด JavaScript ก็ยังไปได้ด้วย meta refresh ใน noscript -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-seFhCuQE1GQNZ7O6nY7WurSVyMMyyG5S8evxwGThpNU='; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="color-scheme" content="light dark">
+<title>FlowKit ย้ายบ้านแล้ว</title>
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://patcharasitp.github.io/flowkit/draw/">
+<script>if(navigator.onLine!==false)location.replace("/flowkit/draw/"+location.search+location.hash)</script>
+<noscript><meta http-equiv="refresh" content="0; url=/flowkit/draw/"></noscript>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="../" aria-label="FileKit หน้าหลัก" data-en-al="FileKit home">
-    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12,4 L31,4 L36,9 L36,14 L22,14 L22,20 L31,20 L31,30 L22,30 L22,44 L12,44 Z"/></svg></span>
-    <span>FileKit</span>
-  </a>
-  <span class="room" data-en="FlowKit diagrams">FlowKit วาดผัง</span>
-  <span class="spacer"></span>
-  <div class="langsw" id="lang" role="group" aria-label="เลือกภาษา" data-en-al="Choose language">
-    <button class="langopt" type="button" data-lang="th" lang="th">ไทย</button>
-    <button class="langopt" type="button" data-lang="en" lang="en">EN</button>
-  </div>
-  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" data-en-al="Switch theme"><svg class="btn-ico th-ic th-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/></svg><svg class="btn-ico th-ic th-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/></svg></button>
-</header>
-
-<!-- แบบ A ที่พี่ปอนด์เลือก 22/09/2026: ช่องพิมพ์ซ้าย พรีวิวขวา ปุ่มหลักใต้ผัง (ต้นแบบ .claude/evidence/flowkit-plan-2026-09-21/mockup/)
-     ‼️ ปุ่มหลักอยู่นอกสองแผงใน DOM ตั้งใจ: จอใหญ่ CSS วางไว้ใต้ผัง จอมือถือเกาะขอบล่างตลอดโดยไม่ต้องมีปุ่มซ้ำสองชุด -->
-<main class="flow" id="main" data-pane="write">
-  <!-- จอมือถือ (แผนเฟส 6): สลับดูข้อความกับผังแทนการเลื่อนยาว จอใหญ่เห็นพร้อมกันอยู่แล้ว CSS ซ่อนแถบนี้ -->
-  <div class="mtabs" id="mtabs" role="group" aria-label="สลับดูข้อความหรือผัง" data-en-al="Show the text or the diagram">
-    <button class="mtab" type="button" data-pane="write" aria-pressed="true" data-en="Text">ข้อความ</button>
-    <button class="mtab" type="button" data-pane="see" aria-pressed="false" data-en="Diagram">ผัง</button>
-  </div>
-  <!-- ข่าวสำคัญสำหรับโปรแกรมอ่านหน้าจอ (ต่อตัววาดผังไม่ได้ , วาดเสร็จหลังเลือกเทมเพลตหรือวาง flow) ไม่พูดทุกครั้งที่พิมพ์
-       ‼️ อยู่นอกสองแผง: จอมือถือซ่อนแผงที่ไม่ได้ดู ของใน display:none ไม่ถูกอ่าน -->
-  <p class="sr" id="srstat" role="status"></p>
-  <section class="pane write" aria-labelledby="h1">
-    <h1 id="h1" data-en="Draw a diagram from text">วาดผังจากข้อความ</h1>
-    <p class="sub" data-en="Type one line at a time, the layout is done for you">พิมพ์ทีละบรรทัด ผังจัดวางให้เอง</p>
-    <div class="types" id="types" role="group" aria-label="ชนิดผัง" data-en-al="Diagram type">
-      <button class="type" type="button" data-kind="steps" aria-pressed="true" data-en="Steps">ขั้นตอน</button>
-      <button class="type" type="button" data-kind="org" aria-pressed="false" data-en="Org chart">องค์กร</button>
-      <button class="type" type="button" data-kind="system" aria-pressed="false" data-en="Systems">ระบบ</button>
-      <button class="type" type="button" data-kind="timeline" aria-pressed="false" data-en="Timeline">ไทม์ไลน์</button>
-      <!-- ทางเข้า ② (แผนเฟส 4) ช่องพิมพ์รับ JSON ของ flow แทนข้อความ ที่เหลือใช้ท่อเดียวกันทั้งหมด -->
-      <button class="type" type="button" data-kind="pa" aria-pressed="false">Power Automate</button>
-    </div>
-    <div class="ed" id="ed">
-      <div class="ed-hl" id="hl" aria-hidden="true"></div>
-      <textarea id="src" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="ข้อความของผัง"
-        data-en-al="Diagram text" aria-describedby="hint keys msg"></textarea>
-    </div>
-    <!-- flow ที่มีกรอบ: ดูทั้ง flow , ย่อกรอบละกล่อง , หรือดูข้างในทีละกรอบเป็นผังแยก (แผน SPEC ข้อ 4) -->
-    <p class="paview" id="paview" hidden><label for="pa-sel" data-en="Show">แสดง</label> <select id="pa-sel"></select></p>
-    <p class="hint" id="hint"></p>
-    <!-- ทางเข้าอื่นของต้นแบบ A (แผนเฟส 5) ตัวหนังสือเล็ก จาง ไม่แย่งช่องพิมพ์ -->
-    <p class="alt"><span data-en="Or start from">หรือเริ่มจาก</span>
-      <button class="linkbtn" id="opentpl" type="button" data-en="a template">เทมเพลต</button> ,
-      <button class="linkbtn" id="openai" type="button" data-en="an AI draft">ให้ AI ช่วยร่าง</button> ,
-      <button class="linkbtn" id="openfile" type="button" data-en="a diagram file">ไฟล์ผังเดิม</button>
-      <input type="file" id="filein" accept=".png,.drawio,.xml,.svg,.json,image/png,image/svg+xml,application/json" hidden></p>
-    <p class="sr" id="keys" data-en="Tab indents the line, Shift and Tab moves it back. Press Escape then Tab to leave the box.">กด Tab เพื่อย่อหน้า กด Shift กับ Tab เพื่อถอยออก กด Esc แล้วกด Tab เพื่อออกจากช่องพิมพ์</p>
-    <div class="msg" id="msg" aria-live="polite"></div>
-  </section>
-
-  <section class="pane see" aria-labelledby="see-h">
-    <h2 class="sr" id="see-h" data-en="The diagram">ผังที่ได้</h2>
-    <p class="live" id="live"><b data-en="Live preview">พรีวิวสด</b> <span id="livemsg" data-en="drawn by draw.io inside this browser, your text never leaves your device">วาดด้วย draw.io ในเบราว์เซอร์นี้ ข้อความไม่ออกจากเครื่อง</span></p>
-    <div class="canvas" id="canvas" data-state="booting">
-      <img id="png" alt="" hidden>
-      <div class="cv-msg" id="cvmsg"></div>
-      <div class="cv-note" id="cvnote" hidden></div>
-    </div>
-  </section>
-
-  <div class="act" id="act">
-    <div class="act-row">
-      <button class="cta" id="dl" type="button" disabled data-en="Download diagram image">ดาวน์โหลดภาพผัง</button>
-      <button class="sec" id="edit" type="button" disabled data-en="Edit by hand">ลากแก้ต่อ</button>
-    </div>
-    <p class="note" data-en="You get a .drawio.png file that drops straight into slides and opens in draw.io for more editing">ได้ไฟล์ .drawio.png วางในสไลด์ได้เลย และเปิดแก้ต่อใน draw.io ได้</p>
-    <!-- แผนเฟส 3 ข้อ 1 กับ 5: ส่งออกแบบอื่น และส่งต่อเข้าเครื่องมือของ FileKit โดยไม่ต้องดาวน์โหลดแล้วอัปโหลดซ้ำ (src/handoff.js) -->
-    <p class="more" id="more">
-      <span class="more-g"><span data-en="Also save as">โหลดแบบอื่น</span>
-        <button class="linkbtn" id="dlsvg" type="button" disabled>SVG</button> ,
-        <button class="linkbtn" id="dlxml" type="button" disabled>.drawio</button></span>
-      <span class="more-g"><span data-en="Continue in FileKit">ส่งต่อใน FileKit</span>
-        <button class="linkbtn" type="button" data-send="images-to-pdf" disabled data-en="Make a PDF">รวมเป็น PDF</button> ,
-        <button class="linkbtn" type="button" data-send="image-resize" disabled data-en="Shrink it">ย่อรูป</button> ,
-        <button class="linkbtn" type="button" data-send="image-convert" disabled data-en="Change image type">แปลงชนิดรูป</button></span>
-    </p>
-  </div>
-</main>
-
-<!-- แถบเดียวกับหน้าแรกของ FileKit แต่ FlowKit เป็นตัวที่หนาอยู่ (แผนเฟส 1 ข้อ 3) ลิงก์หมวดฝากหมวดไว้แล้วพากลับหน้าแรก -->
-<nav class="network" aria-label="เว็บและหมวดในเครือ FileKit" data-en-al="FileKit family of sites and tool groups">
-  <ul class="sites">
-    <li><a href="../" data-gocat="" aria-label="FileKit"><span>File</span><b>Kit</b></a></li>
-    <li><a href="../#/freebies"><b data-en="Freebies">ของแจกฟรี</b></a></li>
-    <li><a href="../#/" data-gocat="excel"><b data-en="Excel">Excel</b></a></li>
-    <li><a href="../#/" data-gocat="powerbi" aria-label="Power BI"><span>Power</span><b>BI</b></a></li>
-    <li><a href="../#/" data-gocat="powerquery" aria-label="Power Query"><span>Power</span><b>Query</b></a></li>
-    <li><a href="../#/" data-gocat="powerautomate" aria-label="Power Automate"><span>Power</span><b>Automate</b></a></li>
-    <li><a href="../#/" data-gocat="thai"><b data-en="Thai docs">งานไทย</b></a></li>
-    <li><a class="self" href="./" aria-current="page" aria-label="FlowKit"><span>Flow</span><b>Kit</b></a></li>
-    <li><a href="https://patcharasitp.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio"><span>Port</span><b>folio</b></a></li>
-    <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard"><span>BKK</span><b>Dashboard</b></a></li>
-  </ul>
-</nav>
-
-<!-- เทมเพลต 8 ใบ (แผนเฟส 5) ‼️ ปุ่มปิดเป็นปุ่มธรรมดา ไม่ใช้ form method=dialog เพราะ CSP ตั้ง form-action 'none' -->
-<dialog class="dlg" id="dlg-tpl" aria-labelledby="tpl-h">
-  <button class="dlg-x" type="button" data-close aria-label="ปิด" data-en-al="Close">×</button>
-  <h2 id="tpl-h" data-en="Start from a template">เริ่มจากเทมเพลต</h2>
-  <div class="tpl-list" id="tpl-list"></div>
-  <p class="dlg-note" id="tpl-note" data-en="The text in the box is replaced, press Ctrl+Z in the box to bring it back">ข้อความในช่องพิมพ์จะถูกแทนที่ กด Ctrl+Z ในช่องพิมพ์เพื่อย้อนกลับได้</p>
-</dialog>
-
-<!-- ให้ AI ช่วยร่าง (แผนเฟส 5) เว็บไม่เรียก AI เอง แค่สร้างคำสั่งให้ก๊อปไปวาง -->
-<dialog class="dlg" id="dlg-ai" aria-labelledby="ai-h">
-  <button class="dlg-x" type="button" data-close aria-label="ปิด" data-en-al="Close">×</button>
-  <h2 id="ai-h" data-en="Let an AI draft it">ให้ AI ช่วยร่าง</h2>
-  <label class="dlg-lbl" for="ai-desc" data-en="Describe the work you want as a diagram">เล่างานที่อยากได้เป็นผัง</label>
-  <textarea class="dlg-ta" id="ai-desc" rows="3" data-en-ph="For example: petty cash claims go to the team lead, then accounting, anything over 5,000 needs the manager"
-    placeholder="เช่น เบิกเงินสดย่อยต้องผ่านหัวหน้าแล้วบัญชี ถ้าเกิน 5,000 บาทต้องให้ผู้จัดการเซ็น"></textarea>
-  <p class="dlg-kind" id="ai-kind"></p>
-  <textarea class="dlg-pre" id="ai-prompt" rows="6" readonly aria-label="คำสั่งที่จะคัดลอก" data-en-al="Prompt to copy"></textarea>
-  <button class="dlg-cta" id="ai-copy" type="button" data-en="Copy the prompt">คัดลอกคำสั่ง</button>
-  <p class="dlg-note" id="ai-done" role="status"></p>
-  <p class="dlg-note" data-en="Paste it into any AI chat you trust, then copy the answer back into the FlowKit box. FlowKit sends nothing to any AI itself. For confidential work, use made up names.">วางในแชท AI ตัวไหนก็ได้ที่ไว้ใจ แล้วคัดลอกคำตอบกลับมาวางในช่องพิมพ์ของ FlowKit ตัวเว็บไม่ได้ส่งอะไรให้ AI เอง ถ้าเป็นงานลับให้ใช้ชื่อสมมติ</p>
-</dialog>
-
-<!-- ห้องแก้ไข (แผนเฟส 3) draw.io ตัวเต็มจอ ปุ่มบันทึกกับออกเป็นของ draw.io เอง src/editor.js สร้าง iframe ตอนเปิดครั้งแรก -->
-<div class="editroom" id="room" role="dialog" aria-modal="true" aria-label="ห้องแก้ไขผัง" data-en-al="Diagram editor" hidden>
-  <p class="editroom-msg" data-en="Opening the editor, the first time takes a moment">กำลังเปิดห้องแก้ไข ครั้งแรกใช้เวลาสักครู่</p>
-  <!-- จอมือถือ (แผนเฟส 6): บอกครั้งเดียวตอนเปิด แล้วหายเอง ไม่บังปุ่มของ draw.io -->
-  <button class="editroom-tip" id="roomtip" type="button" hidden data-en="The editor works best on a larger screen, tap to hide">ห้องแก้ไขใช้บนจอใหญ่สะดวกกว่า แตะเพื่อซ่อน</button>
-  <div class="editroom-err"><b data-en="Could not open the editor">เปิดห้องแก้ไขไม่ได้</b><button type="button" data-en="Close">ปิด</button></div>
-</div>
-
-<script>try{if(localStorage.getItem("fk-lang")==="en"){var d=document,r=d.documentElement;r.lang="en";
-d.querySelectorAll("[data-en]").forEach(function(n){n.textContent=n.dataset.en});
-d.querySelectorAll("[data-en-html]").forEach(function(n){n.innerHTML=n.dataset.enHtml});
-d.querySelectorAll("[data-en-ph]").forEach(function(n){n.setAttribute("placeholder",n.dataset.enPh)});
-d.querySelectorAll("[data-en-al]").forEach(function(n){n.setAttribute("aria-label",n.dataset.enAl);
-  if(n.hasAttribute("title"))n.setAttribute("title",n.dataset.enAl)});}}catch(e){}</script>
-<script type="module" src="src/app.js"></script>
+<h1>FlowKit ย้ายบ้านแล้ว</h1>
+<p>FlowKit วาดผังจากข้อความ ย้ายไปอยู่ที่ <a href="/flowkit/draw/">patcharasitp.github.io/flowkit</a> แล้ว ต้องต่ออินเทอร์เน็ตถึงจะวาดผังได้</p>
+<p lang="en">FlowKit has moved to <a href="/flowkit/draw/">patcharasitp.github.io/flowkit</a>. It needs an internet connection to draw.</p>
 </body>
 </html>

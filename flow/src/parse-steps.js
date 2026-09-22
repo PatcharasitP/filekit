@@ -15,7 +15,8 @@ import { tr } from "../../src/i18n.js";
 import { builder, FlowError } from "./model.js";
 import { subtree, splitGroup, splitLabel, closest } from "./parse-common.js";
 
-const END = /^(จบ|จบงาน)$/;
+/* ‼️ คำจบภาษาอังกฤษใช้ stop ไม่ใช่ end: end เป็นคำสงวนของ Mermaid ที่ผู้ใช้อาจตั้งใจเขียนเป็นชื่อกล่องจริง (ผังตัวอย่าง 12-torture) */
+const END = /^(จบ|จบงาน|stop)$/i;
 const LOOP = /^(กลับไป|ไปที่|back to|go to)\s*[:：]\s*(.+)$/i;
 const PARALLEL = /^(พร้อมกัน|ทำพร้อมกัน|parallel)\s*[:：]$/i;
 const isAsk = (t) => /[?？]$/.test(t);
@@ -37,8 +38,9 @@ export function parseSteps(lines, warnings = []) {
   }
   const connect = (tails, id) => { for (const t of tails) b.edge(t.id, id, t.label || ""); };
 
-  /** ขั้นเดียว (ข้อความ + ลูกของมัน) ต่อจากปลายเปิด คืนปลายเปิดใหม่ */
-  function step(text, line, kids, tails) {
+  /** ขั้นเดียว (ข้อความ + ลูกของมัน) ต่อจากปลายเปิด คืนปลายเปิดใหม่
+   *  laneHead = หัวสายของ พร้อมกัน: ที่อยู่บรรทัดแรกของผัง ไม่มีเส้นเข้าโดยตั้งใจ ห้ามเตือน */
+  function step(text, line, kids, tails, laneHead = false) {
     if (END.test(text)) {
       if (kids.length) throw new FlowError(kids[0].no, tr("ใต้คำว่า จบ ต้องไม่มีขั้นต่อ", "Nothing can follow end"),
         tr("ลบบรรทัดที่อยู่ใต้ จบ หรือย้ายไปไว้ก่อนหน้า", "Remove the lines under end, or move them above it"));
@@ -57,10 +59,18 @@ export function parseSteps(lines, warnings = []) {
       return [];                       // หลังอ้างกล่องเดิม กิ่งนั้นจบ (เส้นที่ออกจากกล่องเดิมมีอยู่แล้ว)
     }
     if (PARALLEL.test(text)) return parallel(line, kids, tails);
-    if (!tails.length && b.model.nodes.length) {
+    if (!tails.length && b.model.nodes.length && !laneHead) {
       b.warn(line.no, tr("ขั้นนี้ไม่มีเส้นเข้า เพราะขั้นก่อนหน้าจบหรือวนกลับไปแล้ว", "This step has no way in, the step before it ended or went back"));
     }
     const hit = nodeFrom(text, line.no);
+    /* ‼️ เขียนขั้นเดิมซ้ำต่อจากตัวมันเอง = ทำต่อจากขั้นนั้น ไม่ใช่วนกลับ
+     *    เช่น "ครบ: หัวหน้าอนุมัติ" แล้วบรรทัดชิดซ้ายถัดมาเขียน "หัวหน้าอนุมัติ" อีกที
+     *    เจอจริงจากคำตอบของ AI 22/09/2026 (tests/flow_ai) เดิมได้เส้นวนเข้าตัวเอง และขั้นถัดไปไม่มีเส้นเข้า
+     *    กิ่งอื่นที่ยังเปิดอยู่มาบรรจบที่ขั้นนั้นตามปกติ */
+    if (!hit.created && !kids.length && tails.some((t) => t.id === hit.id)) {
+      connect(tails.filter((t) => t.id !== hit.id), hit.id);
+      return [{ id: hit.id }];
+    }
     connect(tails, hit.id);
     if (!hit.created) {
       /* ข้อความเหมือนกล่องเดิมเป๊ะ = กล่องเดิม (บรรจบหรือวนกลับ) แล้วกิ่งนี้จบ SPEC 3.1 */
@@ -141,7 +151,7 @@ export function parseSteps(lines, warnings = []) {
     const open = [];
     for (let i = 0; i < kids.length;) {
       const sub = subtree(kids, i);
-      let t = step(kids[i].text, kids[i], [], tails);
+      let t = step(kids[i].text, kids[i], [], tails, !tails.length);
       if (sub.length) t = seq(sub, t);
       open.push(...t);
       i += 1 + sub.length;

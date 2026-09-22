@@ -11,6 +11,8 @@ import { toMermaid, STRETCH } from "./to-mermaid.js";
 import { createEngine } from "./engine.js";
 import { createEditor } from "./editor.js";
 import { SAMPLES } from "./samples.js";
+import { TEMPLATES } from "./templates.js";
+import { buildPrompt, cleanAnswer } from "./ai.js";
 
 const $ = (s) => document.querySelector(s);
 const ta = $("#src"), hl = $("#hl"), hint = $("#hint"), msg = $("#msg");
@@ -487,13 +489,68 @@ function update() {
   }).finally(() => { if (my === ver) delete live.dataset.busy; });
 }
 
-/* วาง XML ของ draw.io (เช่นที่ AI เขียนให้ หรือก๊อปจาก draw.io) ลงช่องพิมพ์ = เปิดเป็นผังในห้องแก้ไข ไม่ยัดเป็นข้อความ */
+/* วาง XML ของ draw.io (เช่นที่ AI เขียนให้ หรือก๊อปจาก draw.io) ลงช่องพิมพ์ = เปิดเป็นผังในห้องแก้ไข ไม่ยัดเป็นข้อความ
+   คำตอบของ AI ที่ห่อด้วยกรอบโค้ด ``` ตัดกรอบทิ้งให้เหลือข้อความผังล้วน */
 ta.addEventListener("paste", (e) => {
   const t = (e.clipboardData && e.clipboardData.getData("text/plain")) || "";
-  if (!/^\s*(<\?xml[^>]*>\s*)?<(mxfile|mxGraphModel)\b/.test(t)) return;
-  e.preventDefault();
-  openRoom({ xml: t.trim() }, "FlowKit.drawio.png");
+  if (/^\s*(<\?xml[^>]*>\s*)?<(mxfile|mxGraphModel)\b/.test(t)) {
+    e.preventDefault();
+    openRoom({ xml: t.trim() }, "FlowKit.drawio.png");
+  } else if (/```/.test(t)) {
+    e.preventDefault();
+    insert(cleanAnswer(t));
+  }
 });
+
+/* ── เทมเพลต กับ ให้ AI ช่วยร่าง (แผนเฟส 5) ── */
+const LANG_KEY = IS_EN ? "en" : "th";
+for (const d of document.querySelectorAll(".dlg")) {
+  d.addEventListener("click", (e) => { if (e.target === d || e.target.closest("[data-close]")) d.close(); });   // กดพื้นมืดรอบนอกก็ปิด
+}
+{
+  const dlg = $("#dlg-tpl"), list = $("#tpl-list");
+  for (const t of TEMPLATES) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tpl";
+    const small = document.createElement("small");
+    small.textContent = KIND_NAME[t.kind];
+    b.append(t.title[LANG_KEY], small);
+    b.addEventListener("click", () => {
+      dlg.close();
+      if (edited) { edited = null; savedRecord = null; writeRecord(null); paintEditNote(); }   // เลือกเทมเพลต = เริ่มผังใหม่
+      if (kind !== t.kind) setKind(t.kind);
+      ta.focus(); ta.select();
+      insert(t.text[LANG_KEY]);                   // insertText = กด Ctrl+Z ในช่องพิมพ์แล้วได้ข้อความเดิมคืน
+      update();
+    });
+    list.append(b);
+  }
+  $("#opentpl").addEventListener("click", () => {
+    $("#tpl-note").textContent = edited
+      ? tr("ข้อความในช่องพิมพ์กับผังที่แก้ด้วยมือไว้จะถูกแทนที่ ข้อความย้อนคืนได้ด้วย Ctrl+Z ในช่องพิมพ์ แต่ผังที่แก้ด้วยมือย้อนคืนไม่ได้",
+           "The text and your manual diagram edits are replaced. Ctrl+Z in the box brings the text back, the manual edits cannot be undone")
+      : tr("ข้อความในช่องพิมพ์จะถูกแทนที่ กด Ctrl+Z ในช่องพิมพ์เพื่อย้อนกลับได้", "The text in the box is replaced, press Ctrl+Z in the box to bring it back");
+    dlg.showModal();
+  });
+}
+{
+  const dlg = $("#dlg-ai"), desc = $("#ai-desc"), pre = $("#ai-prompt"), done = $("#ai-done");
+  const refresh = () => { pre.value = buildPrompt(kind, desc.value, LANG_KEY); };
+  desc.addEventListener("input", refresh);
+  $("#openai").addEventListener("click", () => {
+    $("#ai-kind").textContent = tr(`ชนิดผัง: ${KIND_NAME[kind]} (เปลี่ยนได้ที่ปุ่มชนิดผังเหนือช่องพิมพ์)`, `Diagram type: ${KIND_NAME[kind]} (change it with the type buttons above the box)`);
+    done.textContent = "";
+    refresh();
+    dlg.showModal();
+    desc.focus();
+  });
+  $("#ai-copy").addEventListener("click", async () => {
+    refresh();
+    try { await navigator.clipboard.writeText(pre.value); }
+    catch { pre.focus(); pre.select(); document.execCommand("copy"); }
+    done.textContent = tr("คัดลอกแล้ว วางในแชท AI ได้เลย", "Copied, paste it into the AI chat");
+  });
+}
 
 ta.addEventListener("input", () => {
   saveDraft();

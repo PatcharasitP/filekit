@@ -65,7 +65,11 @@
         data-en-al="Diagram text" aria-describedby="hint keys msg"></textarea>
     </div>
     <p class="hint" id="hint"></p>
-    <p class="alt"><button class="linkbtn" id="openfile" type="button" data-en="Open an existing .drawio.png, .drawio or .svg to keep editing">เปิดไฟล์ผังเดิม (.drawio.png , .drawio , .svg) มาแก้ต่อ</button>
+    <!-- ทางเข้าอื่นของต้นแบบ A (แผนเฟส 5) ตัวหนังสือเล็ก จาง ไม่แย่งช่องพิมพ์ -->
+    <p class="alt"><span data-en="Or start from">หรือเริ่มจาก</span>
+      <button class="linkbtn" id="opentpl" type="button" data-en="a template">เทมเพลต</button> ,
+      <button class="linkbtn" id="openai" type="button" data-en="an AI draft">ให้ AI ช่วยร่าง</button> ,
+      <button class="linkbtn" id="openfile" type="button" data-en="a diagram file">ไฟล์ผังเดิม</button>
       <input type="file" id="filein" accept=".png,.drawio,.xml,.svg,image/png,image/svg+xml" hidden></p>
     <p class="sr" id="keys" data-en="Tab indents the line, Shift and Tab moves it back. Press Escape then Tab to leave the box.">กด Tab เพื่อย่อหน้า กด Shift กับ Tab เพื่อถอยออก กด Esc แล้วกด Tab เพื่อออกจากช่องพิมพ์</p>
     <div class="msg" id="msg" aria-live="polite"></div>
@@ -115,6 +119,28 @@
     <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard"><span>BKK</span><b>Dashboard</b></a></li>
   </ul>
 </nav>
+
+<!-- เทมเพลต 8 ใบ (แผนเฟส 5) ‼️ ปุ่มปิดเป็นปุ่มธรรมดา ไม่ใช้ form method=dialog เพราะ CSP ตั้ง form-action 'none' -->
+<dialog class="dlg" id="dlg-tpl" aria-labelledby="tpl-h">
+  <button class="dlg-x" type="button" data-close aria-label="ปิด" data-en-al="Close">×</button>
+  <h2 id="tpl-h" data-en="Start from a template">เริ่มจากเทมเพลต</h2>
+  <div class="tpl-list" id="tpl-list"></div>
+  <p class="dlg-note" id="tpl-note" data-en="The text in the box is replaced, press Ctrl+Z in the box to bring it back">ข้อความในช่องพิมพ์จะถูกแทนที่ กด Ctrl+Z ในช่องพิมพ์เพื่อย้อนกลับได้</p>
+</dialog>
+
+<!-- ให้ AI ช่วยร่าง (แผนเฟส 5) เว็บไม่เรียก AI เอง แค่สร้างคำสั่งให้ก๊อปไปวาง -->
+<dialog class="dlg" id="dlg-ai" aria-labelledby="ai-h">
+  <button class="dlg-x" type="button" data-close aria-label="ปิด" data-en-al="Close">×</button>
+  <h2 id="ai-h" data-en="Let an AI draft it">ให้ AI ช่วยร่าง</h2>
+  <label class="dlg-lbl" for="ai-desc" data-en="Describe the work you want as a diagram">เล่างานที่อยากได้เป็นผัง</label>
+  <textarea class="dlg-ta" id="ai-desc" rows="3" data-en-ph="For example: petty cash claims go to the team lead, then accounting, anything over 5,000 needs the manager"
+    placeholder="เช่น เบิกเงินสดย่อยต้องผ่านหัวหน้าแล้วบัญชี ถ้าเกิน 5,000 บาทต้องให้ผู้จัดการเซ็น"></textarea>
+  <p class="dlg-kind" id="ai-kind"></p>
+  <textarea class="dlg-pre" id="ai-prompt" rows="6" readonly aria-label="คำสั่งที่จะคัดลอก" data-en-al="Prompt to copy"></textarea>
+  <button class="dlg-cta" id="ai-copy" type="button" data-en="Copy the prompt">คัดลอกคำสั่ง</button>
+  <p class="dlg-note" id="ai-done" role="status"></p>
+  <p class="dlg-note" data-en="Paste it into any AI chat you trust, then copy the answer back into the FlowKit box. FlowKit sends nothing to any AI itself. For confidential work, use made up names.">วางในแชท AI ตัวไหนก็ได้ที่ไว้ใจ แล้วคัดลอกคำตอบกลับมาวางในช่องพิมพ์ของ FlowKit ตัวเว็บไม่ได้ส่งอะไรให้ AI เอง ถ้าเป็นงานลับให้ใช้ชื่อสมมติ</p>
+</dialog>
 
 <!-- ห้องแก้ไข (แผนเฟส 3) draw.io ตัวเต็มจอ ปุ่มบันทึกกับออกเป็นของ draw.io เอง src/editor.js สร้าง iframe ตอนเปิดครั้งแรก -->
 <div class="editroom" id="room" role="dialog" aria-modal="true" aria-label="ห้องแก้ไขผัง" data-en-al="Diagram editor" hidden>

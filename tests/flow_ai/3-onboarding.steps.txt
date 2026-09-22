@@ -1,0 +1,8 @@
+title: Employee Onboarding
+parallel:
+  [HR] Prepare contract
+  [IT] Set up laptop and accounts
+Laptop ready?
+  Yes: [Manager] Run first day orientation
+  No: [IT] Lend spare laptop
+    [Manager] Run first day orientation

@@ -224,5 +224,56 @@ console.log("\n━━ ④ ตัวอย่างที่เปิดมาเ
   }
 }
 
+console.log("\n━━ ⑤ เทมเพลต 8 ใบ กับคำสั่งให้ AI ช่วยร่าง (แผนเฟส 5) ━━");
+{
+  const { TEMPLATES } = await imp("flow/src/templates.js");
+  ck(TEMPLATES.length === 8 && new Set(TEMPLATES.map((t) => t.kind)).size === 4, `เทมเพลต 8 ใบ ครบ 4 ชนิดผัง (${TEMPLATES.length} ใบ)`);
+  for (const t of TEMPLATES) for (const lang of ["th", "en"]) {
+    const r = parseText(t.text[lang], t.kind);
+    ck(r.model && !r.error && r.model.warnings.length === 0 && r.model.kind === t.kind && r.model.nodes.length >= 4,
+      `เทมเพลต ${t.id} ${lang} อ่านผ่าน ไม่มีคำเตือน`, r.error ? `บรรทัด ${r.error.line} ${r.error.message}` : JSON.stringify(r.model && r.model.warnings));
+  }
+  const s = g("Start\nOK?\n  No: Tell them\n    stop\n  Yes: Go on\nFinish");
+  ck(!s.nodes.some((n) => /^stop$/i.test(n.text)) && s.nodes.length === 5, "คำว่า stop ปิดกิ่ง (คำจบภาษาอังกฤษ) ไม่กลายเป็นกล่อง");
+  const e = g("เริ่ม\nend\nจบงานนี้");
+  ck(e.nodes.some((n) => n.text === "end"), "end ยังเป็นชื่อกล่องได้ (คำสงวนของ Mermaid ที่ผู้ใช้อาจตั้งใจเขียน)");
+
+  const { buildPrompt, cleanAnswer } = await imp("flow/src/ai.js");
+  const th = buildPrompt("steps", "เบิกเงินสดย่อย", "th"), en = buildPrompt("system", "Repair app", "en");
+  ck(th.includes("กติกา:") && (th.match(/ตัวอย่างที่ \d:/g) || []).length === 2 && th.trim().endsWith("เบิกเงินสดย่อย") && th.includes("จบ"),
+    "คำสั่งภาษาไทย มีกติกา ตัวอย่าง 2 ใบ และงานของผู้ใช้อยู่ท้ายสุด");
+  ck(en.includes("Rules:") && (en.match(/Example \d:/g) || []).length === 2 && en.includes("->") && en.trim().endsWith("Repair app"),
+    "คำสั่งภาษาอังกฤษของผังระบบ มีกติกาลูกศรกับตัวอย่าง 2 ใบ");
+  const exOk = [...th.matchAll(/ตัวอย่างที่ \d:\n([\s\S]*?)\n\n/g)].every((m) => !parseText(m[1], "steps").error);
+  ck(exOk, "ตัวอย่างในคำสั่งทุกใบอ่านผ่านจริง (AI เลียนแบบของที่ถูก)");
+  ck(cleanAnswer("นี่คือผังค่ะ\n```\nเริ่ม\nจบงาน\n```\nหวังว่าจะช่วยได้") === "เริ่ม\nจบงาน", "คำตอบ AI ที่ห่อด้วยกรอบโค้ด ตัดเหลือข้อความผังล้วน");
+}
+
+console.log("\n━━ ⑥ คำตอบจริงของ AI 3 รอบ (แผนเฟส 5: เอาคำสั่งไปถาม AI แล้วเอาคำตอบมาวาง ต้องได้ผังทุกรอบ) ━━");
+{
+  const dir = join(ROOT, "tests/flow_ai");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".txt")).sort();
+  ck(files.length >= 3, `มีคำตอบจริงของ AI ให้ตรวจ ${files.length} ชุด`);
+  for (const f of files) {
+    const kind = f.split(".")[1];
+    const r = parseText(readFileSync(join(dir, f), "utf8"), kind);
+    const m = r.model;
+    const selfLoop = m ? m.edges.filter((e) => e.from === e.to).length : 0;
+    ck(m && !r.error && m.warnings.length === 0 && selfLoop === 0 && m.nodes.length >= 4,
+      `คำตอบ AI ${f} อ่านผ่าน ไม่มีคำเตือน ไม่มีเส้นวนเข้าตัวเอง`, r.error ? `บรรทัด ${r.error.line} ${r.error.message}` : JSON.stringify(m && m.warnings));
+  }
+  const pc = parseText(readFileSync(join(dir, "1-pettycash.steps.txt"), "utf8"), "steps").model;
+  const nm = (id) => pc.nodes.find((n) => n.id === id).text;
+  ck(pc.edges.some((e) => nm(e.from) === "หัวหน้าอนุมัติ" && nm(e.to) === "บัญชีตรวจสอบ"),
+    "‼️ เขียนขั้นเดิมซ้ำต่อจากตัวมันเอง = ทำต่อจากขั้นนั้น (เดิมเส้นวนเข้าตัวเอง แล้วบัญชีตรวจสอบหลุดจากผัง)");
+  const q = g("ตรวจเอกสาร\nครบไหม?\n  ครบ: หัวหน้าอนุมัติ\n  ไม่ครบ: ส่งกลับแก้\n    จบ\nหัวหน้าอนุมัติ\nบัญชีจ่ายเงิน");
+  const qn = (id) => q.nodes.find((n) => n.id === id).text;
+  ck(q.edges.some((e) => qn(e.from) === "หัวหน้าอนุมัติ" && qn(e.to) === "บัญชีจ่ายเงิน") && !q.edges.some((e) => e.from === e.to) && q.warnings.length === 0,
+    "ขั้นซ้ำที่อยู่ในกิ่งที่เปิดอยู่ ต่อได้ทันที กิ่งที่จบไปแล้วไม่ถูกดึงกลับมา");
+  const loop = g("เริ่ม\nตรวจ\nผ่านไหม?\n  ไม่ผ่าน: แก้\n    ตรวจ\n  ผ่าน: ปิดงาน");
+  const ln = (id) => loop.nodes.find((n) => n.id === id).text;
+  ck(loop.edges.some((e) => ln(e.from) === "แก้" && ln(e.to) === "ตรวจ"), "ขั้นซ้ำที่ไม่ได้อยู่ต่อจากตัวเอง ยังเป็นวนกลับเหมือนเดิม");
+}
+
 console.log(`\n${fail.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ, ตก ${fail.length} ข้อ`);
 process.exit(fail.length ? 1 : 0);

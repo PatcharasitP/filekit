@@ -211,5 +211,18 @@ ck(parseText("", "steps").empty === true && parseText("\n  \n// หมายเ�
   ck(e === "ขั้นแรก>ทางขวา,ขั้นแรก>ทางซ้าย,ซ้ายต่อ>รวมกัน,ทางขวา>รวมกัน,ทางซ้าย>ซ้ายต่อ", "งานขนานที่สายหนึ่งมีหลายขั้น แล้วมารวมกัน");
 }
 
+console.log("\n━━ ④ ตัวอย่างที่เปิดมาเจอในช่องพิมพ์ (flow/src/samples.js) ━━");
+{
+  const { SAMPLES } = await imp("flow/src/samples.js");
+  const WANT = { steps: 6, org: 6, system: 4, timeline: 4 };
+  for (const lang of ["th", "en"]) for (const kind of Object.keys(WANT)) {
+    const r = parseText(SAMPLES[lang][kind], kind);
+    const m = r.model;
+    ck(m && !r.error && m.warnings.length === 0 && m.nodes.length === WANT[kind],
+      `ตัวอย่าง ${lang} ${kind} อ่านผ่าน ไม่มีคำเตือน ได้ ${WANT[kind]} กล่อง`,
+      r.error ? `บรรทัด ${r.error.line} ${r.error.message}` : m ? `ได้ ${m.nodes.length} กล่อง คำเตือน ${JSON.stringify(m.warnings)}` : "");
+  }
+}
+
 console.log(`\n${fail.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ, ตก ${fail.length} ข้อ`);
 process.exit(fail.length ? 1 : 0);

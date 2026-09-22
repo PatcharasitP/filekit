@@ -90,13 +90,11 @@ export function toMermaid(m) {
     out.push(e.label ? `  ${e.from} ${a}|"${esc(e.label)}"| ${e.to}` : `  ${e.from} ${a} ${e.to}`);
   }
 
-  /* หน้าตาของเราเอง ห้ามใช้สีม่วงตั้งต้นของ Mermaid (P14 , W3 เคาะแล้ว: ขาวเทา เส้นบาง) */
+  /* หน้าตาของเราเอง ห้ามใช้สีม่วงตั้งต้นของ Mermaid (P14 , W3 เคาะแล้ว: ขาวเทา เส้นบาง ทุกกล่องพื้นขาวรวมคำถาม)
+   * ‼️ ยิงจริง 22/09/2026 (engine_probe5.py): draw.io อ่าน classDef default กับ n1:::ชื่อ ที่เขียนติดกล่อง
+   *    แต่ข้ามคำสั่ง class n1 ชื่อ และ style n1 ... ทั้งบรรทัดโดยไม่เตือน ถ้าจะให้กล่องไหนสีต่าง ต้องใช้ ::: เท่านั้น
+   *    fill ขาวถูกแปลงเป็น fillColor=default ซึ่ง draw.io สลับตามธีมเองตอนเปิดแก้ (PNG ที่ส่งออกยังพื้นขาว) */
   out.push("  classDef default fill:#ffffff,stroke:#8a8f98,stroke-width:1px,color:#14161c");
-  const asks = m.nodes.filter((n) => n.shape === "ask").map((n) => n.id);
-  if (asks.length) {
-    out.push("  classDef q fill:#f4f3f0,stroke:#8a8f98,stroke-width:1px,color:#14161c");
-    out.push(`  class ${asks.join(",")} q`);
-  }
   if (m.edges.length) out.push("  linkStyle default stroke:#8a8f98,stroke-width:1px");
   return out.join("\n") + "\n";
 }

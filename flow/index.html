@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- ‼️ CSP ของหน้า FlowKit ต่างจากหน้าแรกของ FileKit ข้อเดียวที่ตั้งใจ: frame-src ให้ฝัง draw.io ได้ (เฟส 0 ข้อ ง พิสูจน์แล้ว)
+     ถ้าเปลี่ยนไปวาง draw.io เอง (W1) ให้แก้เป็น frame-src 'self' คู่กับค่า DRAWIO ใน src/engine.js
+     ‼️ ไม่มี CDN ไม่มี unsafe-inline ทั้งสคริปต์และสไตล์ หน้านี้ไม่ต้องใช้ไลบรารีภายนอกเลย
+     ‼️ connect-src ต้องมี blob: (เหมือนหน้าแรก) ไม่งั้นอ่านไฟล์ผังที่วาดเสร็จกลับมาไม่ได้ (เทสจับได้ตอนอ่าน PNG ของพรีวิว 22/09/2026)
+     ‼️ sha256 สองตัวคือสคริปต์ตั้งธีมกับภาษาก่อนวาดจอ ตัวอักษรต้องตรงกับหน้าแรกทุกตัว (tests/accepts.test.mjs คำนวณแล้วเทียบ) -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'sha256-Cc0W0CwhZzN7hIDklSuJ+Qs16/OVIJT4eHeIM2+c1js=' 'sha256-+WV7M4JC5RBwOo7oWvLiLqllHEOz4BRSD1jtfIUdJHE=';
+  style-src 'self';
+  img-src 'self' data: blob:;
+  font-src 'self';
+  connect-src 'self' blob:;
+  frame-src https://embed.diagrams.net;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'none'">
+<title data-en="FlowKit - turn text into diagrams in your browser">FlowKit - วาดผังจากข้อความ ในเบราว์เซอร์</title>
+<meta name="description" content="พิมพ์ขั้นตอนทีละบรรทัด ได้ผังงาน ผังองค์กร ผังระบบ หรือไทม์ไลน์ จัดวางให้เอง ดาวน์โหลดเป็นภาพวางสไลด์ได้ทันที และเปิดแก้ต่อใน draw.io ได้">
+<meta name="theme-color" content="#101216" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f5f3" media="(prefers-color-scheme: light)">
+<link rel="canonical" href="https://patcharasitp.github.io/filekit/flow/">
+<link rel="icon" href="../assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../vendor/fonts/Sarabun-Regular.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../vendor/fonts/Sarabun-SemiBold.woff2">
+<link rel="stylesheet" href="flow.css">
+<script>try{var t=localStorage.getItem("fk-theme");if(t&&t!=="auto")document.documentElement.dataset.theme=t;
+}catch(e){}</script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="../" aria-label="FileKit หน้าหลัก" data-en-al="FileKit home">
+    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12,4 L31,4 L36,9 L36,14 L22,14 L22,20 L31,20 L31,30 L22,30 L22,44 L12,44 Z"/></svg></span>
+    <span>FileKit</span>
+  </a>
+  <span class="room" data-en="FlowKit diagrams">FlowKit วาดผัง</span>
+  <span class="spacer"></span>
+  <div class="langsw" id="lang" role="group" aria-label="เลือกภาษา" data-en-al="Choose language">
+    <button class="langopt" type="button" data-lang="th" lang="th">ไทย</button>
+    <button class="langopt" type="button" data-lang="en" lang="en">EN</button>
+  </div>
+  <button class="iconbtn" id="theme" type="button" aria-label="สลับธีม" data-en-al="Switch theme"><svg class="btn-ico th-ic th-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/><path d="M12 2.4v2.6M12 19v2.6M4.2 12H1.6M22.4 12h-2.6M6.5 6.5L4.6 4.6M19.4 19.4l-1.9-1.9M17.5 6.5l1.9-1.9M4.6 19.4l1.9-1.9"/></svg><svg class="btn-ico th-ic th-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.2A8.6 8.6 0 0 1 9.8 3.8a8.6 8.6 0 1 0 10.4 10.4z"/></svg></button>
+</header>
+
+<!-- แบบ A ที่พี่ปอนด์เลือก 22/09/2026: ช่องพิมพ์ซ้าย พรีวิวขวา ปุ่มหลักใต้ผัง (ต้นแบบ .claude/evidence/flowkit-plan-2026-09-21/mockup/)
+     ‼️ ปุ่มหลักอยู่นอกสองแผงใน DOM ตั้งใจ: จอใหญ่ CSS วางไว้ใต้ผัง จอมือถือเกาะขอบล่างตลอดโดยไม่ต้องมีปุ่มซ้ำสองชุด -->
+<main class="flow" id="main">
+  <section class="pane write" aria-labelledby="h1">
+    <h1 id="h1" data-en="Draw a diagram from text">วาดผังจากข้อความ</h1>
+    <p class="sub" data-en="Type one line at a time, the layout is done for you">พิมพ์ทีละบรรทัด ผังจัดวางให้เอง</p>
+    <div class="types" id="types" role="group" aria-label="ชนิดผัง" data-en-al="Diagram type">
+      <button class="type" type="button" data-kind="steps" aria-pressed="true" data-en="Steps">ขั้นตอน</button>
+      <button class="type" type="button" data-kind="org" aria-pressed="false" data-en="Org chart">องค์กร</button>
+      <button class="type" type="button" data-kind="system" aria-pressed="false" data-en="Systems">ระบบ</button>
+      <button class="type" type="button" data-kind="timeline" aria-pressed="false" data-en="Timeline">ไทม์ไลน์</button>
+    </div>
+    <div class="ed" id="ed">
+      <div class="ed-hl" id="hl" aria-hidden="true"></div>
+      <textarea id="src" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="ข้อความของผัง"
+        data-en-al="Diagram text" aria-describedby="hint keys msg"></textarea>
+    </div>
+    <p class="hint" id="hint"></p>
+    <p class="sr" id="keys" data-en="Tab indents the line, Shift and Tab moves it back. Press Escape then Tab to leave the box.">กด Tab เพื่อย่อหน้า กด Shift กับ Tab เพื่อถอยออก กด Esc แล้วกด Tab เพื่อออกจากช่องพิมพ์</p>
+    <div class="msg" id="msg" aria-live="polite"></div>
+  </section>
+
+  <section class="pane see" aria-labelledby="see-h">
+    <h2 class="sr" id="see-h" data-en="The diagram">ผังที่ได้</h2>
+    <p class="live" id="live"><b data-en="Live preview">พรีวิวสด</b> <span id="livemsg" data-en="drawn by draw.io inside this browser, your text never leaves your device">วาดด้วย draw.io ในเบราว์เซอร์นี้ ข้อความไม่ออกจากเครื่อง</span></p>
+    <div class="canvas" id="canvas" data-state="booting">
+      <img id="png" alt="" hidden>
+      <div class="cv-msg" id="cvmsg"></div>
+    </div>
+  </section>
+
+  <div class="act" id="act">
+    <button class="cta" id="dl" type="button" disabled data-en="Download diagram image">ดาวน์โหลดภาพผัง</button>
+    <p class="note" data-en="You get a .drawio.png file that drops straight into slides and opens in draw.io for more editing">ได้ไฟล์ .drawio.png วางในสไลด์ได้เลย และเปิดแก้ต่อใน draw.io ได้</p>
+  </div>
+</main>
+
+<!-- แถบเดียวกับหน้าแรกของ FileKit แต่ FlowKit เป็นตัวที่หนาอยู่ (แผนเฟส 1 ข้อ 3) ลิงก์หมวดฝากหมวดไว้แล้วพากลับหน้าแรก -->
+<nav class="network" aria-label="เว็บและหมวดในเครือ FileKit" data-en-al="FileKit family of sites and tool groups">
+  <ul class="sites">
+    <li><a href="../" data-gocat="" aria-label="FileKit"><span>File</span><b>Kit</b></a></li>
+    <li><a href="../#/freebies"><b data-en="Freebies">ของแจกฟรี</b></a></li>
+    <li><a href="../#/" data-gocat="excel"><b data-en="Excel">Excel</b></a></li>
+    <li><a href="../#/" data-gocat="powerbi" aria-label="Power BI"><span>Power</span><b>BI</b></a></li>
+    <li><a href="../#/" data-gocat="powerquery" aria-label="Power Query"><span>Power</span><b>Query</b></a></li>
+    <li><a href="../#/" data-gocat="powerautomate" aria-label="Power Automate"><span>Power</span><b>Automate</b></a></li>
+    <li><a href="../#/" data-gocat="thai"><b data-en="Thai docs">งานไทย</b></a></li>
+    <li><a class="self" href="./" aria-current="page" aria-label="FlowKit"><span>Flow</span><b>Kit</b></a></li>
+    <li><a href="https://patcharasitp.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio"><span>Port</span><b>folio</b></a></li>
+    <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard"><span>BKK</span><b>Dashboard</b></a></li>
+  </ul>
+</nav>
+
+<script>try{if(localStorage.getItem("fk-lang")==="en"){var d=document,r=d.documentElement;r.lang="en";
+d.querySelectorAll("[data-en]").forEach(function(n){n.textContent=n.dataset.en});
+d.querySelectorAll("[data-en-html]").forEach(function(n){n.innerHTML=n.dataset.enHtml});
+d.querySelectorAll("[data-en-ph]").forEach(function(n){n.setAttribute("placeholder",n.dataset.enPh)});
+d.querySelectorAll("[data-en-al]").forEach(function(n){n.setAttribute("aria-label",n.dataset.enAl);
+  if(n.hasAttribute("title"))n.setAttribute("title",n.dataset.enAl)});}}catch(e){}</script>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

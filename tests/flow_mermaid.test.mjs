@@ -74,8 +74,23 @@ console.log("\n━━ เส้นกับหน้าตา (P14 , W3) ━━"
   ck(/n1 --- n2/.test(mm("ก\n  ข", "org")), "เส้นผังองค์กรไม่มีหัวลูกศร");
   const s = mm("เริ่ม\nผ่านไหม?\n  ผ่าน: ปิด\n  ไม่ผ่าน: แก้");
   ck(s.includes("classDef default fill:#ffffff,stroke:#8a8f98") && s.includes("linkStyle default stroke:#8a8f98"), "‼️ ใช้สีของเราเอง ขาวเทา เส้นบาง (ไม่ใช่สีม่วงตั้งต้นของ Mermaid)");
-  ck(/class n2 q/.test(s), "คำถามได้พื้นจางแยกจากขั้นธรรมดา");
+  ck(!/^\s*(class|style) /m.test(s), "‼️ ไม่มีคำสั่ง class หรือ style แยกบรรทัด (draw.io ข้ามทั้งบรรทัดเงียบ ๆ ต้องใช้ ::: แทน)");
   ck(!/"[^"]*"[^|\]})]*$/m.test(s.split("\n").filter((l) => /n\d+[\[({]/.test(l)).join("\n")), "ข้อความทุกกล่องอยู่ในเครื่องหมายคำพูด");
+}
+
+console.log("\n━━ เปลี่ยนฟอนต์ใน XML ที่ draw.io คืนมา (flow/src/engine.js) ━━");
+{
+  globalThis.location ??= { href: "http://127.0.0.1/flow/" };
+  const { restyleFont, countVertices } = await imp("flow/src/engine.js");
+  const xml = '<mxfile><root><UserObject label="ใช้ fontFamily=Arial ในข้อความ" mermaidBaseStyle="html=1;fontFamily=Trebuchet MS,Verdana;fontSize=16;">'
+    + '<mxCell style="rounded=1;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1" parent="1"/></UserObject>'
+    + '<mxCell style="endArrow=block;" edge="1" parent="1"/><mxCell style="" vertex="1" parent="1"/></root></mxfile>';
+  const out = restyleFont(xml);
+  const styles = [...out.matchAll(/\s(?:style|mermaidBaseStyle)="([^"]*)"/g)].map((m) => m[1]);
+  ck(styles.length === 4 && styles.every((st) => /fontFamily=Sarabun;fontSource=https%3A%2F%2Ffonts\.googleapis\.com/.test(st) && !/Trebuchet/.test(st)),
+    "‼️ ทุกสไตล์เป็น Sarabun รวม mermaidBaseStyle (เคยหลุดเป็น Trebuchet เพราะแก้แค่ style)", styles.join(" | "));
+  ck(out.includes('label="ใช้ fontFamily=Arial ในข้อความ"'), "ข้อความที่ผู้ใช้พิมพ์ว่า fontFamily=... ไม่ถูกแตะ");
+  ck(countVertices(out) === 2, "นับกล่องได้ 2 (เส้นไม่นับ)");
 }
 
 console.log(`\n${fail.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ, ตก ${fail.length} ข้อ`);

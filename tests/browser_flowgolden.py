@@ -60,6 +60,25 @@ def render(pg, want_texts, ms=45000):
     return png, xml
 
 
+def outside_groups(xml):
+    """กล่องที่ล้นกรอบกลุ่มของตัวเอง (พิกัดของกล่องในกลุ่มนับจากมุมกรอบ) ‼️ เคยเกิดจริงตอนยืดผังระบบแล้วจับกรอบไม่เจอ 22/09/2026"""
+    import xml.etree.ElementTree as ET
+    try: root = ET.fromstring(xml)
+    except Exception: return ["อ่าน XML ไม่ได้"]
+    geo, groups, bad = {}, set(), []
+    for uo in root.iter("UserObject"):
+        c = uo.find("mxCell"); g = c.find("mxGeometry") if c is not None else None
+        if g is None or c.get("vertex") != "1": continue
+        f = lambda k: float(g.get(k, 0) or 0)
+        geo[uo.get("id")] = (c.get("parent"), f("x"), f("y"), f("width"), f("height"), uo.get("label", ""))
+        if (uo.get("mermaidId") or "").startswith("n:g"): groups.add(uo.get("id"))
+    for cid, (parent, x, y, w, h, label) in geo.items():
+        if parent in groups:
+            W, H = geo[parent][3], geo[parent][4]
+            if x < -1 or y < -1 or x + w > W + 1 or y + h > H + 1: bad.append(label[:20])
+    return bad
+
+
 def contact_sheet(items, path):
     from PIL import Image, ImageDraw, ImageFont
     font = None
@@ -88,6 +107,10 @@ def main():
         ck("ตัวเทียบขนาดปล่อยผังที่ต่างแค่ 3% ผ่าน", size_drift([400, 1000], [412, 1000]) <= TOLERANCE)
         bad = '<mxfile><diagram><mxGraphModel><root><mxCell id="0"/><UserObject label="ก" id="2"><mxCell vertex="1" parent="1" style=""/></UserObject></root></mxGraphModel></diagram></mxfile>'
         ck("ตัวอ่านข้อความในกล่องเห็นกล่องที่ขาดไป (ได้ 1 ไม่ใช่ 2)", len(cells(bad)) == 1)
+        spill = ('<mxfile><diagram><mxGraphModel><root><UserObject label="กลุ่ม" mermaidId="n:g1" id="2"><mxCell vertex="1" parent="1">'
+                 '<mxGeometry height="100" width="200" x="0" as="geometry"/></mxCell></UserObject><UserObject label="ล้น" mermaidId="n:n1" id="3">'
+                 '<mxCell vertex="1" parent="2"><mxGeometry height="50" width="80" x="150" y="20" as="geometry"/></mxCell></UserObject></root></mxGraphModel></diagram></mxfile>')
+        ck("ตัวตรวจกรอบกลุ่มจับกล่องที่ล้นกรอบได้", outside_groups(spill) == ["ล้น"])
         return finish()
 
     files = sorted(GOLD.glob("*.txt"))
@@ -113,6 +136,9 @@ def main():
                f"ขาด {sorted(set(want) - set(texts))[:4]} เกิน {sorted(set(texts) - set(want))[:4]}")
             # ขนาดพิกเซลจริงของไฟล์ (อ่านจากหัว PNG) ไม่ใช่ naturalWidth ของหน้าจอ ซึ่งเปลี่ยนตามความละเอียดจอ (srcset 2x)
             size = [int.from_bytes(png[16:20], "big"), int.from_bytes(png[20:24], "big")] if png[:8] == b"\x89PNG\r\n\x1a\n" else [0, 0]
+            if exp["groups"]:
+                bad = outside_groups(xml)
+                ck(f"[{name}] ทุกกล่องอยู่ในกรอบกลุ่มของตัวเอง ไม่ล้นกรอบ", not bad, f"ล้น {bad}")
             got_sizes[name] = size
             items.append((name, png, size))
             if name in base and not UPDATE:

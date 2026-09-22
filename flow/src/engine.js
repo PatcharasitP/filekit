@@ -57,18 +57,22 @@ export function restyleGroups(xml) {
     block.replace(/\b(fillColor|strokeColor|fontColor)=[^;"]*/g, (_, k) => `${k}=${GROUP_LOOK[k]}`));
 }
 
-/* ‼️ ยืดผังในแนวตั้งหลังนำเข้า (พี่ปอนด์ทัก 22/09/2026: ผังระบบป้ายเส้นทับกัน)
+/* ‼️ ยืดผังหลังนำเข้า (พี่ปอนด์ทัก 22/09/2026: ผังระบบป้ายเส้นทับกัน)
  *    draw.io ไม่รับค่าระยะห่างของ Mermaid ทั้ง %%{init}%% และ frontmatter (ยิงจริง engine_probe8 ขนาดภาพเท่าเดิมทุกตัว)
- *    ยืด y ของกล่องกับจุดหักเส้นใน XML แทน 1.45 เท่า ป้ายที่เคยเบียดกันแยกออกชัด (engine_probe9 , shots/labels9-sheet.png)
- *    ‼️ กรอบกลุ่มต้องยืดความสูงตามด้วย ไม่งั้นกล่องข้างในล้นกรอบ , ตำแหน่งแบบ relative (ป้ายบนเส้น) ไม่แตะ */
-export function stretchY(xml, k) {
-  if (!k || k === 1) return String(xml);
-  const s = (v) => String(Math.round(parseFloat(v) * k * 10) / 10);
-  const y = (tag) => tag.replace(/(\sy=")(-?[\d.]+)(")/, (_, a, v, b) => a + s(v) + b);
+ *    จึงคูณตำแหน่งของกล่องกับจุดหักเส้นใน XML แทน
+ *    ‼️ ยืดแนวตั้งอย่างเดียวไม่พอ (v149 บนเว็บจริงยังเบียด) เส้นที่ออกจากกล่องเดียวกันไปแถวเดียวกัน ป้ายอยู่กลางเส้นระดับเดียวกันหมด
+ *       ต้องยืดแนวนอนด้วยให้เส้นแยกห่างกัน วัดด้วยฟอนต์ Sarabun จริงแล้ว x 1.35 กับ y 1.45 ป้ายทั้ง 4 แยกกันชัด (engine_probe10 , shots/labels10-sheet.png)
+ *    ‼️ กรอบกลุ่มต้องยืดกว้างกับสูงตามด้วย ไม่งั้นกล่องข้างในล้นกรอบ , ตำแหน่งแบบ relative (ป้ายบนเส้น) ไม่แตะ */
+export function stretchXY(xml, kx = 1, ky = 1) {
+  if (kx === 1 && ky === 1) return String(xml);
+  const s = (v, k) => String(Math.round(parseFloat(v) * k * 10) / 10);
+  const xy = (tag) => tag.replace(/(\sx=")(-?[\d.]+)(")/, (_, a, v, b) => a + s(v, kx) + b).replace(/(\sy=")(-?[\d.]+)(")/, (_, a, v, b) => a + s(v, ky) + b);
+  /* ‼️ draw.io เขียน height ก่อน width และตัด y ที่เป็น 0 ทิ้ง ห้ามเดาลำดับแอตทริบิวต์ แก้ทีละตัว (เคยจับกรอบไม่เจอ กล่องล้นกรอบ) */
+  const size = (geo) => geo.replace(/(\swidth=")([\d.]+)(")/, (_, a, v, b) => a + s(v, kx) + b).replace(/(\sheight=")([\d.]+)(")/, (_, a, v, b) => a + s(v, ky) + b);
   return String(xml)
-    .replace(/(<UserObject\b[^>]*\bmermaidId="n:g\d+"[^>]*>\s*<mxCell\b[^>]*>\s*<mxGeometry\b[^>]*?\sheight=")([\d.]+)(")/g, (_, a, h, b) => a + s(h) + b)
-    .replace(/<mxGeometry\b[^>]*>/g, (tag) => (/\srelative="1"/.test(tag) ? tag : y(tag)))
-    .replace(/<mxPoint\b[^>]*>/g, (tag) => (/\sas="offset"/.test(tag) ? tag : y(tag)));
+    .replace(/(<UserObject\b[^>]*\bmermaidId="n:g\d+"[^>]*>\s*<mxCell\b[^>]*>\s*)(<mxGeometry\b[^>]*>)/g, (_, pre, geo) => pre + size(geo))
+    .replace(/<mxGeometry\b[^>]*>/g, (tag) => (/\srelative="1"/.test(tag) ? tag : xy(tag)))
+    .replace(/<mxPoint\b[^>]*>/g, (tag) => (/\sas="offset"/.test(tag) ? tag : xy(tag)));
 }
 
 /** จำนวนกล่อง (รวมกรอบกลุ่ม) ใน xml ของ draw.io */
@@ -85,7 +89,7 @@ export function pngBlob(uri) {
 
 /**
  * @param {{ onState?: (s: "booting"|"slow"|"ready"|"unreachable"|"offline") => void }} opts
- * @returns {{ render(mermaid: string, expectBoxes?: number, stretch?: number): Promise<{png: Blob, xml: string} | {stale: true}>, retry(): void, boot(): Promise<void> }}
+ * @returns {{ render(mermaid: string, expectBoxes?: number, stretch?: {x?: number, y?: number}): Promise<{png: Blob, xml: string} | {stale: true}>, retry(): void, boot(): Promise<void> }}
  */
 export function createEngine({ onState = () => {} } = {}) {
   let frame = null, boot$ = null, ready = false, seq = 0;
@@ -149,7 +153,7 @@ export function createEngine({ onState = () => {} } = {}) {
     for (const w of [...waiters]) { waiters.delete(w); w.fail(new EngineError("reset")); }
   }
 
-  async function drawOnce(mermaid, expectBoxes, xmlIn, stretch) {
+  async function drawOnce(mermaid, expectBoxes, xmlIn, stretch = {}) {
     await boot();
     if (xmlIn) {                               // ผังที่แก้ด้วยมือแล้ว (กู้คืนหลังโหลดหน้าใหม่) วาดตามที่เป็น ไม่แตะฟอนต์หรือสีของผู้ใช้
       await call({ action: "load", autosave: 0, xml: xmlIn }, "load");
@@ -159,7 +163,7 @@ export function createEngine({ onState = () => {} } = {}) {
     const first = await call({ action: "load", autosave: 0, descriptor: { format: "mermaid", data: mermaid } }, "load");
     const got = countVertices(first.xml);
     if (expectBoxes && got < expectBoxes) throw new EngineError("incomplete", `${got}/${expectBoxes}`);
-    const xml = stretchY(restyleGroups(restyleFont(first.xml)), stretch);
+    const xml = stretchXY(restyleGroups(restyleFont(first.xml)), stretch.x, stretch.y);
     await call({ action: "load", autosave: 0, xml }, "load");
     const out = await call({ action: "export", format: "xmlpng", scale: 2, border: 16, background: "#ffffff" }, "export");
     return { png: pngBlob(out.data), xml: out.xml || xml };
@@ -176,7 +180,7 @@ export function createEngine({ onState = () => {} } = {}) {
   }
 
   return {
-    render(mermaid, expectBoxes = 0, stretch = 1) {
+    render(mermaid, expectBoxes = 0, stretch = {}) {
       return new Promise((resolve, reject) => {
         if (queued) queued.resolve({ stale: true });
         queued = { mermaid, expectBoxes, stretch, resolve, reject };

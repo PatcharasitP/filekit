@@ -114,6 +114,25 @@ def set_text(pg, text):
     return before
 
 
+def label_gap(pg, labels):
+    """ระยะห่างที่น้อยที่สุดระหว่างป้ายเส้น วัดจากผังจริงใน iframe ของ draw.io (ติดลบ = ทับกัน)
+    ‼️ Playwright เข้าไปอ่าน DOM ของ iframe ต่างโดเมนได้ หน้าเว็บของเราเองอ่านไม่ได้ ใช้ได้แค่ในเทส"""
+    fr = next((f for f in pg.frames if "embed.diagrams.net" in f.url), None)
+    if not fr: return None
+    return fr.evaluate("""(labels) => {
+      const rects = {};
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n; (n = w.nextNode());) { const t = n.nodeValue.trim();
+        if (labels.includes(t) && !rects[t]) { const r = document.createRange(); r.selectNodeContents(n); const b = r.getBoundingClientRect(); if (b.width) rects[t] = b; } }
+      const names = Object.keys(rects); let min = Infinity, pair = null;
+      for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
+        const a = rects[names[i]], b = rects[names[j]];
+        const gap = Math.max(b.left - a.right, a.left - b.right, b.top - a.bottom, a.top - b.bottom);
+        if (gap < min) { min = gap; pair = names[i] + " กับ " + names[j]; } }
+      return { found: names.length, min: Math.round(min * 10) / 10, pair };
+    }""", labels)
+
+
 def mark_offset(pg):
     """แถบสีห่างจากกึ่งกลางบรรทัดที่ผิดในช่องพิมพ์กี่ px (คิดจากตำแหน่งบรรทัดจริงของช่องพิมพ์ หลังเลื่อนแล้ว)"""
     return pg.evaluate("""() => {
@@ -160,7 +179,7 @@ def main():
         ck("ภาพบนจอเป็น PNG ที่ฝังผัง draw.io ไว้ข้างใน (เปิดแก้ต่อได้)", bool(xml))
         xml = xml or ""
         got = [t for t, _ in cells(xml)]
-        want = ["ลูกค้าแจ้งเรื่อง", "Call Center รับเรื่อง", "แก้ได้เองไหม?", "ปิดงาน", "ส่งช่างหน้างาน", "ช่างปิดงาน"]
+        want = STEPS_SAMPLE = ["ลูกค้าแจ้งเรื่อง", "Call Center รับเรื่อง", "แก้ได้เองไหม?", "ปิดงาน", "ส่งช่างหน้างาน", "ช่างปิดงาน"]
         ck("ในไฟล์มีกล่องครบ 6 กล่อง ข้อความไทยตรงทุกกล่อง", sorted(got) == sorted(want), f"ได้ {got}")
         ck("ฟอนต์ในไฟล์เป็น Sarabun ทุกกล่อง", fonts(xml) == ["Sarabun"], f"ได้ {fonts(xml)}")
         ck("สีเป็นขาวเทาของเรา ไม่ใช่ม่วงตั้งต้นของ Mermaid (เส้นเทา #8a8f98 ทุกกล่อง)", css_check_colors(xml)
@@ -186,8 +205,16 @@ def main():
             ck(f"[{kind}] กดแล้วได้ตัวอย่างของชนิดนั้น วาดครบ {len(want)} กล่อง ข้อความตรงทุกกล่อง", got == sorted(want), f"ได้ {got}")
             ck(f"[{kind}] ปุ่มชนิดที่เลือกอยู่บอกสถานะให้โปรแกรมอ่านหน้าจอ",
                pg.get_attribute(f"#types [data-kind={kind}]", "aria-pressed") == "true")
+        # ‼️ ผังระบบที่พี่ปอนด์พิมพ์เองแล้วเห็นป้ายเส้นทับกัน (22/09/2026 ภาพ #10) วัดจากผังจริงใน draw.io
+        #    v149 ยืดแนวตั้งอย่างเดียว วัดได้ -3px (ทับ) หลังยืดสองแนว +10px
+        pg.click("#types [data-kind=system]"); pg.wait_for_timeout(300)
+        set_text(pg, "ลูกค้า -> เว็บไซต์: สั่งซื้อ\nเว็บไซต์ -> ระบบชำระเงิน: ตัดบัตร\nระบบชำระเงิน --> เว็บไซต์: ผลการชำระ\n"
+                     "เว็บไซต์ -> คลังสินค้า: แจ้งจัดส่ง\nเว็บไซต์ -> คลังสินค้า: แจ้งจัดส่ง 2")
+        drawn(pg, ["ลูกค้า", "เว็บไซต์", "ระบบชำระเงิน", "คลังสินค้า"]); pg.wait_for_timeout(600)
+        g = label_gap(pg, ["สั่งซื้อ", "ตัดบัตร", "ผลการชำระ", "แจ้งจัดส่ง", "แจ้งจัดส่ง 2"]) or {}
+        ck("‼️ ผังระบบที่มีเส้นไปกลับและเส้นซ้ำ ป้ายเส้นไม่ทับกัน (ห่างกันอย่างน้อย 4px)", g.get("found") == 5 and g.get("min", -1) >= 4, str(g))
         pg.click("#types [data-kind=steps]")
-        drawn(pg, want)
+        drawn(pg, STEPS_SAMPLE)                   # ‼️ เดิมรอ want ที่ค้างจากวงวนไทม์ไลน์ เลยรอเปล่า 60 วินาทีทุกรอบ
         set_text(pg, "เริ่ม\nตรวจเอกสาร\nเสร็จ")
         pg.wait_for_timeout(700)
         pg.click("#types [data-kind=org]"); pg.wait_for_timeout(300)

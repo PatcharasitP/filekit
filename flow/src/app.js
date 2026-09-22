@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { tr, IS_EN, setLang } from "../../src/i18n.js";
 import { parseText } from "./parse.js";
-import { toMermaid, STRETCH_Y } from "./to-mermaid.js";
+import { toMermaid, STRETCH } from "./to-mermaid.js";
 import { createEngine } from "./engine.js";
 import { createEditor } from "./editor.js";
 import { SAMPLES } from "./samples.js";
@@ -443,7 +443,7 @@ function update() {
   live.dataset.busy = "";
   /* ‼️ ห้ามทับข้อความต่อไม่ได้ด้วย "กำลังวาด" (เคยทับจนผู้ใช้ออฟไลน์ไม่รู้ว่าทำไมผังไม่ขึ้น จับได้ใน tests/browser_swpages.py) */
   if (!current && !engineDown() && canvas.dataset.state !== "booting") setCanvas("booting", [tr("กำลังวาดผัง", "Drawing")]);
-  engine.render(mmd, model.nodes.length, STRETCH_Y[model.kind] || 1).then((out) => {
+  engine.render(mmd, model.nodes.length, STRETCH[model.kind] || {}).then((out) => {
     if (out.stale || my !== ver) return;
     lastMmd = mmd;
     show(out.png, out.xml, fileName(model),

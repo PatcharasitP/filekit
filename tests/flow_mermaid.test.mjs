@@ -1,0 +1,82 @@
+/* FlowKit: กติกาการส่งออกเป็น Mermaid ที่ได้จากการยิง draw.io จริง (แผนข้อ 1.3, 3.6, D6)
+ * ทุกข้อในไฟล์นี้คือหลุมที่เคยเจอกับตา ถ้าใครแก้ to-mermaid.js แล้วหลุมเปิดกลับมา ข้อที่ตรงกันต้องแดง
+ * รัน: node tests/flow_mermaid.test.mjs */
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+globalThis.localStorage ??= { getItem: () => null, setItem() {}, removeItem() {} };
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const imp = (p) => import(pathToFileURL(join(ROOT, p)).href);
+const { toMermaid, esc, label, visibleLen, ASK_DIAMOND_MAX, ORG_LEAVES_LR } = await imp("flow/src/to-mermaid.js");
+const { newModel } = await imp("flow/src/model.js");
+const { parseText } = await imp("flow/src/parse.js");
+
+let pass = 0; const fail = [];
+const ck = (ok, msg, detail = "") => {
+  if (ok) { pass++; console.log("  ✅ " + msg); }
+  else { fail.push(msg); console.log("  ❌ " + msg + (detail ? "\n      " + detail : "")); }
+};
+const mm = (text, kind = "steps") => { const r = parseText(text, kind); if (r.error) throw new Error(r.error.message); return toMermaid(r.model); };
+
+console.log("\n━━ escape (แผน 3.6 และหลุม H2) ━━");
+const ALL = `"<>&#[]{}()`;
+ck(esc(ALL) === "#quot;#lt;#gt;#amp;#35;#91;#93;#123;#125;#40;#41;", "แทนอักขระที่ชนไวยากรณ์ครบ 11 ตัว", esc(ALL));
+ck(esc("#91;") === "#35;91;", "# ของข้อความผู้ใช้ถูกแทน ไม่ถูกเข้าใจผิดว่าเป็นรหัส");
+ck(esc("ย้อน\\กลับ") === "ย้อน\\กลับ", "\\ ไม่ถูกแตะ ใส่ตัวเดียวได้ตัวเดียว");
+{
+  const out = mm("เริ่ม [เหลี่ยม] {ปีกกา} (กลม)\nจบงานนี้");
+  ck(!/\[เหลี่ยม\]|\{ปีกกา\}|\(กลม\)/.test(out) && out.includes("#91;เหลี่ยม#93;"), "‼️ วงเล็บในข้อความถูกแทนทุกแบบ (H2 ข้อความถูกตัดกลางกล่อง)");
+}
+ck(label("สมชาย | ผู้จัดการ | ฝ่ายขาย") === "<b>สมชาย</b><br/>ผู้จัดการ<br/>ฝ่ายขาย", "\" | \" ขึ้นบรรทัดใหม่ บรรทัดแรกตัวหนา");
+ck(label("A < B | C & D") === "<b>A #lt; B</b><br/>C #amp; D", "แท็กของเราไม่ถูก escape แต่ข้อความผู้ใช้ทุกชิ้นถูก escape");
+
+console.log("\n━━ รูปทรง (D6) ━━");
+ck(visibleLen("ได้ไหม?") === 6, "นับความยาวที่ตาเห็น สระกับวรรณยุกต์ไม่นับ");
+{
+  const short = mm("เริ่ม\nแก้ได้ไหม?\n  ได้: ปิด\n  ไม่ได้: ส่งต่อ");
+  const long = mm("เริ่ม\nเจ้าของที่ยอมต่อสัญญาในราคาเดิมไหม?\n  ยอม: ร่างสัญญา\n  ไม่ยอม: หาที่ใหม่");
+  ck(/n2\{"แก้ได้ไหม\?"\}/.test(short), `คำถามสั้น (ไม่เกิน ${ASK_DIAMOND_MAX}) เป็นข้าวหลามตัด`);
+  ck(/n2\{\{"เจ้าของที่ยอมต่อสัญญาในราคาเดิมไหม\?"\}\}/.test(long), "‼️ คำถามยาวเป็นหกเหลี่ยม (H3 ข้าวหลามตัดโตจนผังสูงเกินสไลด์)");
+  ck(/n1\(\["เริ่ม"\]\)/.test(short) && /n3\(\["ปิด"\]\)/.test(short), "กล่องแรกกับกล่องปลายทางเป็นแคปซูล");
+}
+{
+  const org = mm("ประธาน\n  รองประธาน", "org");
+  ck(!/\(\[/.test(org), "ผังองค์กรไม่มีแคปซูล (ไม่มีจุดเริ่มกับจุดจบ)");
+}
+
+console.log("\n━━ กลุ่ม (หลุม H1) ━━");
+{
+  const out = mm("[ฝ่ายขาย] รับคำสั่ง\n[คลัง] จัดของ\n[ฝ่ายขาย] แจ้งลูกค้า");
+  const blocks = out.split("subgraph").length - 1;
+  const dirs = (out.match(/direction TB/g) || []).length;
+  ck(blocks === 2 && dirs === 2, "‼️ ทุกกลุ่มมี direction (H1 กลุ่มซ้อนยุบทับกันถ้าไม่มี)", `กลุ่ม ${blocks} direction ${dirs}`);
+  const m = newModel("steps");
+  m.groups.push({ id: "g1", title: "นอก", parent: null }, { id: "g2", title: "ใน", parent: "g1" });
+  m.nodes.push({ id: "n1", text: "ก", shape: "step", group: "g2" }, { id: "n2", text: "ข", shape: "step", group: "g1" });
+  const nest = toMermaid(m);
+  ck(/subgraph g1[\s\S]*subgraph g2[\s\S]*end[\s\S]*end/.test(nest) && (nest.match(/direction TB/g) || []).length === 2, "กลุ่มซ้อนกลุ่ม ประกาศซ้อนกันถูกชั้น และมี direction ทุกชั้น");
+}
+
+console.log("\n━━ ทิศของผัง (D6 หลุม H4 H5) ━━");
+ck(mm("ก\nข").startsWith("flowchart TD"), "ผังขั้นตอนบนลงล่าง");
+ck(mm("ผัง: ระบบ\nA -> B: ส่ง").startsWith("flowchart TD"), "‼️ ผังระบบบนลงล่าง (H5 ซ้ายไปขวาป้ายเส้นทับกัน)");
+{
+  const few = "หัวหน้า\n" + Array.from({ length: ORG_LEAVES_LR }, (_, i) => `  ลูกน้อง ${i + 1}`).join("\n");
+  const many = "หัวหน้า\n" + Array.from({ length: ORG_LEAVES_LR + 1 }, (_, i) => `  ลูกน้อง ${i + 1}`).join("\n");
+  ck(mm(few, "org").startsWith("flowchart TD") && mm(many, "org").startsWith("flowchart LR"), `‼️ ผังองค์กรที่ใบเกิน ${ORG_LEAVES_LR} วางซ้ายไปขวา (H4 กว้างจนอ่านไม่ออก)`);
+}
+ck(mm("ผัง: ไทม์ไลน์\nวันที่ 1: เริ่ม\nวันที่ 2: จบ").startsWith("flowchart LR"), "ไทม์ไลน์เป็นกล่องเรียงซ้ายไปขวา (W3)");
+
+console.log("\n━━ เส้นกับหน้าตา (P14 , W3) ━━");
+{
+  const out = mm("ผัง: ระบบ\nA -> B: ทึบ\nB <-> C: สองทิศ\nC --> D: ประ\nD -> E");
+  ck(/n1 -->\|"ทึบ"\| n2/.test(out) && /n2 <-->\|"สองทิศ"\| n3/.test(out) && /n3 -\.->\|"ประ"\| n4/.test(out) && /n4 --> n5/.test(out), "เส้นทึบ สองทิศ ประ และเส้นไม่มีป้าย เขียนถูกรูป");
+  ck(/n1 --- n2/.test(mm("ก\n  ข", "org")), "เส้นผังองค์กรไม่มีหัวลูกศร");
+  const s = mm("เริ่ม\nผ่านไหม?\n  ผ่าน: ปิด\n  ไม่ผ่าน: แก้");
+  ck(s.includes("classDef default fill:#ffffff,stroke:#8a8f98") && s.includes("linkStyle default stroke:#8a8f98"), "‼️ ใช้สีของเราเอง ขาวเทา เส้นบาง (ไม่ใช่สีม่วงตั้งต้นของ Mermaid)");
+  ck(/class n2 q/.test(s), "คำถามได้พื้นจางแยกจากขั้นธรรมดา");
+  ck(!/"[^"]*"[^|\]})]*$/m.test(s.split("\n").filter((l) => /n\d+[\[({]/.test(l)).join("\n")), "ข้อความทุกกล่องอยู่ในเครื่องหมายคำพูด");
+}
+
+console.log(`\n${fail.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ, ตก ${fail.length} ข้อ`);
+process.exit(fail.length ? 1 : 0);

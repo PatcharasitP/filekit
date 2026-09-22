@@ -57,6 +57,13 @@ function direction(m) {
   return "TD";    // ขั้นตอนกับระบบ บนลงล่างเสมอ (ขั้นตอนซ้ายไปขวาได้ 4,293px , ระบบซ้ายไปขวาป้ายทับกัน H5)
 }
 
+/** ผังองค์กรใช้เส้นหักฉากแบบผังองค์กรทั่วไป (พี่ปอนด์เลือกแบบ ค) มุมมน 22/09/2026 จากภาพเทียบ org-sheet.png)
+ *  "v" = บนลงล่าง ออกกลางก้นกล่อง , "h" = ซ้ายไปขวา ออกกลางขอบขวา , ชนิดอื่นคงเส้นโค้งของ Mermaid (null) ดู elbowEdges ใน engine.js */
+export function edgeElbow(m) {
+  if (m.kind !== "org") return null;
+  return direction(m) === "LR" ? "h" : "v";
+}
+
 const ARROW = { solid: "-->", dashed: "-.->", plain: "---", both: "<-->" };
 
 export function toMermaid(m) {

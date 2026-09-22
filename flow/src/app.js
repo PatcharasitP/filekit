@@ -8,7 +8,7 @@
 import { tr, IS_EN, setLang } from "../../src/i18n.js";
 import { parseText } from "./parse.js";
 import { parsePA, prunePA, viewOptions, applyView } from "./parse-pa.js";
-import { toMermaid, STRETCH } from "./to-mermaid.js";
+import { toMermaid, STRETCH, edgeElbow } from "./to-mermaid.js";
 import { createEngine } from "./engine.js";
 import { createEditor } from "./editor.js";
 import { SAMPLES } from "./samples.js";
@@ -544,7 +544,7 @@ function update() {
   live.dataset.busy = "";
   /* ‼️ ห้ามทับข้อความต่อไม่ได้ด้วย "กำลังวาด" (เคยทับจนผู้ใช้ออฟไลน์ไม่รู้ว่าทำไมผังไม่ขึ้น จับได้ใน tests/browser_swpages.py) */
   if (!current && !engineDown() && canvas.dataset.state !== "booting") setCanvas("booting", [tr("กำลังวาดผัง", "Drawing")]);
-  engine.render(mmd, model.nodes.length, STRETCH[model.kind] || {}).then((out) => {
+  engine.render(mmd, model.nodes.length, STRETCH[model.kind] || {}, edgeElbow(model)).then((out) => {
     if (out.stale || my !== ver) return;
     lastMmd = mmd;
     const alt = tr(`${KIND_NAME[model.kind]} ${model.nodes.length} กล่อง`, `${KIND_NAME[model.kind]} with ${model.nodes.length} boxes`);

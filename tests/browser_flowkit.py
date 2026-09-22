@@ -64,6 +64,29 @@ def cells(xml):
     return out
 
 
+def edges(xml):
+    """เส้นทุกเส้นใน XML: [(style, จุดหัก [(x, y)], id กล่องต้นทาง)] อ่านด้วย parser จริง ไม่ใช่ regex"""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(xml)
+    except Exception:
+        return []
+    out = []
+    for cell in root.iter("mxCell"):
+        if cell.get("edge") != "1": continue
+        geo = cell.find("mxGeometry")
+        pts = [(p.get("x"), p.get("y")) for a in (geo.findall("Array") if geo is not None else []) if a.get("as") == "points" for p in a]
+        out.append((cell.get("style") or "", pts, cell.get("source")))
+    return out
+
+
+def one_bus(es):
+    """เส้นจากหัวหน้าคนเดียวกันใช้จุดหักจุดเดียวกัน (เส้นแนวนอนร่วมเส้นเดียว ไม่เป็นขั้นบันได)"""
+    by = {}
+    for _, pts, src in es: by.setdefault(src, set()).add(tuple(pts))
+    return bool(by) and all(len(v) == 1 and len(next(iter(v))) == 1 for v in by.values())
+
+
 def fonts(xml):
     return sorted(set(re.findall(r"fontFamily=([^;\"]*)", xml)))
 
@@ -205,6 +228,32 @@ def main():
             ck(f"[{kind}] กดแล้วได้ตัวอย่างของชนิดนั้น วาดครบ {len(want)} กล่อง ข้อความตรงทุกกล่อง", got == sorted(want), f"ได้ {got}")
             ck(f"[{kind}] ปุ่มชนิดที่เลือกอยู่บอกสถานะให้โปรแกรมอ่านหน้าจอ",
                pg.get_attribute(f"#types [data-kind={kind}]", "aria-pressed") == "true")
+            es = edges(drawio_xml(preview_png(pg)) or "")
+            if kind == "org":
+                # ‼️ พี่ปอนด์เลือกเส้นหักฉากมุมมน (แบบ ค) 22/09/2026) เส้นโค้งเดิมบางเส้นออกข้างกล่องหัวหน้า
+                ck("[org] ‼️ เส้นผังองค์กรหักฉากมุมมนทุกเส้น ออกกลางก้นกล่องหัวหน้า เข้ากลางหัวกล่องลูกน้อง",
+                   len(es) == 5 and all("edgeStyle=elbowEdgeStyle" in s and "elbow=vertical" in s and "rounded=1" in s and "curved=1" not in s
+                                        and "exitX=0.5;exitY=1;entryX=0.5;entryY=0" in s for s, _, _ in es), str(es[:2]))
+                ck("[org] ‼️ เส้นจากหัวหน้าคนเดียวกันใช้จุดหักร่วมจุดเดียว (ไม่มีจุดหักเก่าของ Mermaid ค้าง)", one_bus(es), str([(p, src) for _, p, src in es]))
+            elif kind == "system":
+                ck("[system] ผังระบบยังเป็นเส้นโค้งเดิม ไม่โดนเส้นหักฉากของผังองค์กร",
+                   len(es) == 4 and not any("elbowEdgeStyle" in s for s, _, _ in es), str(es[:2]))
+        # ผังองค์กรใบเกิน 8 วางซ้ายไปขวา เส้นหักฉากต้องออกขอบขวา เข้าขอบซ้าย
+        pg.click("#types [data-kind=org]"); pg.wait_for_timeout(300)
+        wide = ["ผู้อำนวยการ"] + [f"ทีม {i}" for i in range(1, 10)]
+        set_text(pg, "ผู้อำนวยการ\n" + "\n".join(f"  ทีม {i}" for i in range(1, 10)))
+        drawn(pg, wide)
+        es = edges(drawio_xml(preview_png(pg)) or "")
+        ck("[org] ‼️ ผังองค์กรซ้ายไปขวา (ใบเกิน 8) เส้นหักฉากแนวนอน ออกขอบขวาเข้าขอบซ้าย ใช้เส้นตั้งร่วมเส้นเดียว",
+           len(es) == 9 and all("elbow=horizontal" in s and "exitX=1;exitY=0.5;entryX=0;entryY=0.5" in s for s, _, _ in es) and one_bus(es), str(es[:2]))
+        # ‼️ ลูกน้องกล่องสูงไม่เท่ากัน (ชื่อ | ตำแหน่ง) เส้นแนวนอนเคยแตกเป็นขั้นบันได (ภาพจริง bus-mixed.png 22/09/2026)
+        set_text(pg, "ผู้อำนวยการ\n  สมชาย ใจดี | ผู้จัดการฝ่ายขาย\n  ฝ่ายบัญชี\n  ฝ่ายบุคคล")
+        drawn(pg, ["ผู้อำนวยการ", "สมชาย ใจดี | ผู้จัดการฝ่ายขาย", "ฝ่ายบัญชี", "ฝ่ายบุคคล"])
+        es = edges(drawio_xml(preview_png(pg)) or "")
+        ck("[org] ‼️ ลูกน้องกล่องสูงไม่เท่ากัน เส้นแนวนอนยังเป็นเส้นเดียวระดับเดียว", len(es) == 3 and one_bus(es), str([p for _, p, _ in es]))
+        # คืนข้อความตัวอย่างขององค์กร (ข้อข้างล่างกดกลับมาที่ผังองค์กรแล้วรอผังตัวอย่าง)
+        set_text(pg, "ผู้อำนวยการ\n  ผู้จัดการฝ่ายขาย\n    ทีมขายภาคเหนือ\n    ทีมขายภาคใต้\n  ผู้จัดการฝ่ายบัญชี\n    ทีมบัญชีเจ้าหนี้")
+        drawn(pg, SAMPLE_BOXES["org"])
         # ‼️ ผังระบบที่พี่ปอนด์พิมพ์เองแล้วเห็นป้ายเส้นทับกัน (22/09/2026 ภาพ #10) วัดจากผังจริงใน draw.io
         #    v149 ยืดแนวตั้งอย่างเดียว วัดได้ -3px (ทับ) หลังยืดสองแนว +10px
         pg.click("#types [data-kind=system]"); pg.wait_for_timeout(300)

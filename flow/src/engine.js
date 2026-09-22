@@ -100,6 +100,50 @@ export function fixNestedEdges(xml) {
     : tag));
 }
 
+/* ผังองค์กรเส้นหักฉาก (พี่ปอนด์เลือกแบบ ค) มุมมน 22/09/2026 ภาพเทียบ .claude/evidence/flowkit-drawio-study-2026-09-22/org-sheet.png)
+ *    เส้นโค้งจาก Mermaid ออกจากหลายจุดของกล่องหัวหน้า บางเส้นออกข้างกล่อง , หักฉากออกกลางก้นกล่อง ลงแนวนอนร่วมกัน แล้วลงกลางหัวกล่อง
+ *    เปลี่ยนแค่สไตล์เส้นกับจุดหัก ตำแหน่งกล่องไม่แตะ ขนาดภาพจึงเท่าเดิม
+ *    ‼️ จุดหักเดิมของ Mermaid ต้องล้าง (ถ้าเหลือไว้ เส้นหักฉากจะอ้อมไปตามจุดเก่า) แล้วใส่จุดใหม่จุดเดียวที่ทุกเส้นจากหัวหน้าคนเดียวกันใช้ร่วม
+ *       ไม่งั้นลูกน้องที่กล่องสูงไม่เท่ากัน (ชื่อ | ตำแหน่ง สองบรรทัด) ได้เส้นแนวนอนคนละระดับ ดูเป็นขั้นบันได (เห็นจากภาพจริง bus-mixed.png)
+ *    dir: "v" บนลงล่าง , "h" ซ้ายไปขวา (ดู edgeElbow ใน to-mermaid.js) ค่าอื่นคืน xml เดิม */
+export function elbowEdges(xml, dir) {
+  if (dir !== "v" && dir !== "h") return String(xml);
+  const s = String(xml), v = dir === "v";
+  const port = v ? "exitX=0.5;exitY=1;entryX=0.5;entryY=0" : "exitX=1;exitY=0.5;entryX=0;entryY=0.5";
+  const look = `edgeStyle=elbowEdgeStyle;elbow=${v ? "vertical" : "horizontal"};rounded=1;${port};`;
+  const drop = /(^|;)(?:curved|edgeStyle|elbow|rounded|noEdgeStyle|orthogonal|(?:exit|entry)(?:X|Y|Dx|Dy|Perimeter))=[^;]*/g;
+  const attr = (tag, a) => { const m = tag.match(new RegExp(`\\s${a}="([^"]*)"`)); return m ? m[1] : null; };
+  /* กล่องทุกกล่อง (ผังองค์กรไม่มีกรอบกลุ่ม ตำแหน่งจึงเป็นค่าบนผืนผังจริง , x y ที่เป็น 0 draw.io ไม่เขียน) */
+  const box = new Map();
+  for (const m of s.matchAll(/(?:<UserObject\b([^>]*)>\s*)?<mxCell\b([^>]*)>\s*<mxGeometry\b([^>]*)>/g)) {
+    if (!/\svertex="1"/.test(m[2])) continue;
+    const g = (a) => parseFloat(attr(m[3], a) || "0");
+    box.set(attr(m[1] || m[2], "id"), { x: g("x"), y: g("y"), w: g("width"), h: g("height") });
+  }
+  /* จุดหักร่วมของหัวหน้าแต่ละคน: กึ่งกลางช่องว่างระหว่างขอบหัวหน้ากับลูกน้องที่อยู่ใกล้ที่สุด */
+  const kids = new Map();
+  for (const m of s.matchAll(/<mxCell\b[^>]*\bedge="1"[^>]*>/g)) {
+    const p = box.get(attr(m[0], "source")), c = box.get(attr(m[0], "target"));
+    if (p && c) kids.set(attr(m[0], "source"), [...(kids.get(attr(m[0], "source")) || []), c]);
+  }
+  const bend = (src) => {
+    const p = box.get(src), cs = kids.get(src);
+    if (!p || !cs) return "";
+    const r = (n) => Math.round(n * 10) / 10;
+    const pt = v ? { x: p.x + p.w / 2, y: (p.y + p.h + Math.min(...cs.map((c) => c.y))) / 2 }
+                 : { x: (p.x + p.w + Math.min(...cs.map((c) => c.x))) / 2, y: p.y + p.h / 2 };
+    return `<Array as="points"><mxPoint x="${r(pt.x)}" y="${r(pt.y)}"/></Array>`;
+  };
+  /* ‼️ เส้นแบบปิดในแท็กเดียว (/>) ห้ามกินเลยไปถึง </mxCell> ของกล่องถัดไป จึงเช็คด้วย lookbehind ก่อน */
+  return s.replace(/<mxCell\b[^>]*\bedge="1"[^>]*>(?:(?<=\/>)|[\s\S]*?<\/mxCell>)/g, (cell) => {
+    const pts = bend(attr(cell, "source"));
+    return cell
+      .replace(/(\sstyle=")([^"]*)(")/, (_, a, st, b) => { const rest = st.replace(drop, "").replace(/^;+|;+$/g, ""); return a + (rest ? rest + ";" : "") + look + b; })
+      .replace(/<Array as="points">[\s\S]*?<\/Array>|<Array as="points"\s*\/>/g, "")
+      .replace(/<mxGeometry\b([^>]*?)\s*\/>|<mxGeometry\b[^>]*>/, (tag, a) => (!pts ? tag : a !== undefined ? `<mxGeometry${a}>${pts}</mxGeometry>` : tag + pts));
+  });
+}
+
 /** จำนวนกล่อง (รวมกรอบกลุ่ม) ใน xml ของ draw.io */
 export const countVertices = (xml) => (String(xml).match(/vertex="1"/g) || []).length;
 
@@ -217,6 +261,13 @@ export function createEngine({ onState = () => {} } = {}) {
         /* ‼️ จัดวางใหม่ด้วย mxHierarchicalLayout ของ draw.io ใช้ได้กับผังที่ไม่มีกรอบกลุ่มเท่านั้น
            ผังมีกลุ่มแล้วกล่องกระจายหลุดกรอบ เส้นตัดกันมั่ว (ยิงจริง engine_probe11 ภาพ shots/relayout-sheet.png) app.js เป็นคนกัน */
         await call({ action: "layout", layouts: [{ layout: "mxHierarchicalLayout", config: { orientation: "north", intraCellSpacing: 40, interRankCellSpacing: 60 } }] }, "layout");
+        /* ‼️ ผังองค์กรเส้นหักฉาก: ตัวจัดวางเติม noEdgeStyle=1 กับจุดหักของมันเอง เส้นกลายเป็นเส้นเฉียง (ภาพจริง 22/09/2026
+           .claude/evidence/flowkit-v156-2026-09-22/relayout-sheet.png) จึงเอา xml หลังจัดวางมาใส่เส้นหักฉากใหม่
+           ทิศบนลงล่างเสมอ เพราะตัวจัดวางวางจากบนลงล่าง (orientation north) แม้ผังเดิมจะซ้ายไปขวา */
+        if (/edgeStyle=elbowEdgeStyle/.test(job.xml)) {
+          const laid = await call(PNG_OUT, "export");
+          if (laid.xml) await call({ action: "load", autosave: 0, xml: elbowEdges(laid.xml, "v") }, "load");
+        }
       }
       const o = await call(PNG_OUT, "export");
       return { png: pngBlob(o.data), xml: o.xml || job.xml };
@@ -225,7 +276,7 @@ export function createEngine({ onState = () => {} } = {}) {
     const got = countVertices(first.xml);
     if (job.expectBoxes && got < job.expectBoxes) throw new EngineError("incomplete", `${got}/${job.expectBoxes}`);
     const stretch = job.stretch || {};
-    const xml = stretchXY(fixNestedEdges(restyleGroups(restyleFont(first.xml))), stretch.x, stretch.y);
+    const xml = elbowEdges(stretchXY(fixNestedEdges(restyleGroups(restyleFont(first.xml))), stretch.x, stretch.y), job.elbow);
     await call({ action: "load", autosave: 0, xml }, "load");
     const out = await call(PNG_OUT, "export");
     return { png: pngBlob(out.data), xml: out.xml || xml };
@@ -255,7 +306,8 @@ export function createEngine({ onState = () => {} } = {}) {
   }
 
   return {
-    render(mermaid, expectBoxes = 0, stretch = {}) { return enqueue({ mermaid, expectBoxes, stretch }, true); },
+    /** elbow: "v" | "h" = เส้นหักฉากแบบผังองค์กร (edgeElbow ใน to-mermaid.js) , null = เส้นโค้งของ Mermaid */
+    render(mermaid, expectBoxes = 0, stretch = {}, elbow = null) { return enqueue({ mermaid, expectBoxes, stretch, elbow }, true); },
     /** วาด xml ของ draw.io ที่มีอยู่แล้วเป็น PNG (ผังที่แก้ด้วยมือ กู้คืนหลังโหลดหน้าใหม่) */
     renderXml(xml) { return enqueue({ xml }, true); },
     /** จัดวางกล่องใหม่ทั้งผัง (ผังที่แก้ด้วยมือจนเละ) คืน PNG กับ xml ใหม่ */

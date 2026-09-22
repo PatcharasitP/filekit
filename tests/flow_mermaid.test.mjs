@@ -120,5 +120,56 @@ console.log("\n━━ ยืดผังระบบ กันป้ายเส
     "‼️ ผังระบบยืดทั้งสองแนว (ยืดแนวตั้งอย่างเดียว v149 ป้ายยังเบียด) ผังขั้นตอนไม่ยืด");
 }
 
+console.log("\n━━ ผังองค์กรเส้นหักฉากมุมมน (พี่ปอนด์เลือกแบบ ค) 22/09/2026) ━━");
+{
+  const { elbowEdges } = await imp("flow/src/engine.js");
+  const { edgeElbow } = await imp("flow/src/to-mermaid.js");
+  /* หน้าตาแบบที่ draw.io แปลงจาก Mermaid จริง: เส้นโค้งออกหลายจุด มีจุดหัก และเส้นหนึ่งออกข้างกล่อง (exitX=1) */
+  const xml = '<root><mxCell id="0"/><mxCell id="1" parent="0"/>'
+    + '<UserObject label="หัวหน้า" mermaidId="n:A" id="2"><mxCell style="rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="100" width="120" height="50" as="geometry"/></mxCell></UserObject>'
+    + '<UserObject label="ลูกทีม" mermaidId="n:B" id="3"><mxCell style="rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="120" width="120" height="50" as="geometry"/></mxCell></UserObject>'
+    + '<mxCell id="4" style="curved=1;startArrow=none;endArrow=none;strokeColor=#8a8f98;exitX=0.09;exitY=1;entryX=0.5;entryY=0;fontFamily=Sarabun;" edge="1" parent="1" source="2" target="3"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="200" y="87"/></Array></mxGeometry></mxCell>'
+    + '<mxCell id="5" style="curved=1;endArrow=none;exitX=1;exitY=0.81;entryX=0.5;entryY=0;" edge="1" parent="1" source="2" target="3"><mxGeometry relative="1" as="geometry"><Array as="points" /></mxGeometry></mxCell>'
+    + '<mxCell id="6" style="endArrow=none;" edge="1" parent="1" source="2" target="3"/>'
+    + '<mxCell id="7" value="" style="text;rounded=1;" vertex="1" parent="1"><mxGeometry width="10" height="10" as="geometry"><Array as="points"><mxPoint x="1" y="1"/></Array></mxGeometry></mxCell></root>';
+  const v = elbowEdges(xml, "v");
+  const es = [...v.matchAll(/<mxCell id="([456])" style="([^"]*)"/g)].map((m) => m[2]);
+  ck(es.length === 3 && es.every((s) => s.endsWith("edgeStyle=elbowEdgeStyle;elbow=vertical;rounded=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;")),
+    "‼️ ทุกเส้นเป็นหักฉากแนวตั้งมุมมน ออกกลางก้นกล่อง เข้ากลางหัวกล่อง (รวมเส้นที่เดิมออกข้างกล่อง)", es.join(" | "));
+  ck(!/curved=1|exitX=0\.09|exitX=1;|exitY=0\.81/.test(es.join(";")), "จุดออกเดิมของ Mermaid กับเส้นโค้งถูกล้างหมด ไม่ซ้อนกับของใหม่", es.join(" | "));
+  ck(es[0].startsWith("startArrow=none;endArrow=none;strokeColor=#8a8f98;fontFamily=Sarabun;") && es[2].startsWith("endArrow=none;"),
+    "สไตล์อื่นของเส้นยังอยู่ครบ (สีเส้น ไม่มีหัวลูกศร ฟอนต์)", es[0]);
+  const e45 = v.split('<mxCell id="6"')[0].split('<mxCell id="4"')[1];
+  ck(!/x="200" y="87"/.test(e45) && (e45.match(/<Array as="points"><mxPoint x="160" y="85"\/><\/Array>/g) || []).length === 2,
+    "‼️ จุดหักเก่าของ Mermaid ถูกล้าง เหลือจุดหักร่วมจุดเดียวกึ่งกลางช่องว่างใต้หัวหน้า (ถ้าเหลือจุดเก่า เส้นหักฉากจะอ้อมไปตามจุดเดิม)", e45);
+  /* ‼️ ลูกน้องกล่องสูงไม่เท่ากัน (ชื่อ | ตำแหน่ง สองบรรทัด) Dagre จัดกึ่งกลางแถว หัวกล่องจึงไม่เท่ากัน เส้นแนวนอนเคยแตกเป็นขั้นบันได (bus-mixed.png 22/09/2026) */
+  const box = (id, x, y, w, h) => `<UserObject label="${id}" mermaidId="n:${id}" id="${id}"><mxCell style="rounded=0;" vertex="1" parent="1"><mxGeometry x="${x}" y="${y}" width="${w}" height="${h}" as="geometry"/></mxCell></UserObject>`;
+  const edge = (id, s2, t) => `<mxCell id="${id}" style="curved=1;endArrow=none;" edge="1" parent="1" source="${s2}" target="${t}"><mxGeometry relative="1" as="geometry" /></mxCell>`;
+  const mixed = "<root>" + box("P", 100, 0, 100, 40) + box("C1", 20, 100, 120, 60) + box("C2", 180, 110, 120, 40) + edge("e1", "P", "C1") + edge("e2", "P", "C2") + "</root>";
+  const mv = elbowEdges(mixed, "v");
+  ck((mv.match(/<mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="150" y="70"\/><\/Array><\/mxGeometry>/g) || []).length === 2,
+    "‼️ ลูกน้องกล่องสูงไม่เท่ากัน ทุกเส้นใช้จุดหักเดียวกัน (เส้นแนวนอนระดับเดียว ไม่เป็นขั้นบันได)", mv.match(/<mxPoint[^>]*>/g));
+  const mh = elbowEdges(mixed.replace('x="20" y="100"', 'x="150" y="0"').replace('x="180" y="110"', 'x="170" y="60"').replace('x="100" y="0" width="100"', 'x="0" y="20" width="80"'), "h");
+  ck((mh.match(/<mxPoint x="115" y="40"\/>/g) || []).length === 2, "ผังซ้ายไปขวา ลูกน้องกล่องกว้างไม่เท่ากัน ทุกเส้นใช้เส้นตั้งร่วมเส้นเดียว", mh.match(/<mxPoint[^>]*>/g));
+  ck(v.includes('style="rounded=0;whiteSpace=wrap;"') && v.includes('style="rounded=0;"') && v.includes('<mxCell id="7" value="" style="text;rounded=1;" vertex="1" parent="1"><mxGeometry width="10" height="10" as="geometry"><Array as="points"><mxPoint x="1" y="1"/></Array>'),
+    "‼️ กล่องไม่ถูกแตะเลย รวมกล่องที่อยู่ถัดจากเส้นแบบปิดในแท็กเดียว (กันกินเลยไปถึง </mxCell> ของกล่องถัดไป)");
+  const h = elbowEdges(xml, "h");
+  ck([...h.matchAll(/edgeStyle=elbowEdgeStyle;elbow=horizontal;rounded=1;exitX=1;exitY=0\.5;entryX=0;entryY=0\.5;/g)].length === 3, "ผังซ้ายไปขวา ออกกลางขอบขวา เข้ากลางขอบซ้าย");
+  ck(elbowEdges(xml, null) === xml && elbowEdges(xml, "x") === xml, "ไม่ได้สั่ง (ผังชนิดอื่น) ได้ XML เดิมทุกตัวอักษร");
+  /* ‼️ ตัวจัดวางใหม่ (mxHierarchicalLayout) เติม noEdgeStyle=1;orthogonal=1 ปิดเส้นหักฉากทิ้ง เส้นกลายเป็นเส้นเฉียง (relayout-sheet.png 22/09/2026) */
+  const laid = elbowEdges(xml.replace('style="endArrow=none;"', 'style="edgeStyle=elbowEdgeStyle;elbow=vertical;noEdgeStyle=1;orthogonal=1;endArrow=none;"'), "v");
+  ck(!/noEdgeStyle|orthogonal=/.test(laid) && /<mxCell id="6" style="endArrow=none;edgeStyle=elbowEdgeStyle;elbow=vertical;rounded=1;/.test(laid),
+    "‼️ ใส่เส้นหักฉากซ้ำหลังจัดวางใหม่ ล้าง noEdgeStyle ที่ตัวจัดวางเติมไว้ด้วย", laid.match(/<mxCell id="6"[^>]*>/)[0]);
+  const org = (lines) => parseText(lines.join("\n"), "org").model;
+  const small = org(["ผู้อำนวยการ", "  ฝ่ายขาย", "    ทีมเหนือ", "  ฝ่ายบัญชี"]);
+  const wide = org(["ผู้อำนวยการ", ...Array.from({ length: 9 }, (_, i) => `  ทีม ${i + 1}`)]);
+  const right = parseText("ทิศ: ซ้ายไปขวา\nผู้อำนวยการ\n  ฝ่ายขาย", "org").model;
+  ck(edgeElbow(small) === "v" && toMermaid(small).startsWith("flowchart TD") && edgeElbow(wide) === "h" && toMermaid(wide).startsWith("flowchart LR"),
+    "ผังองค์กรบนลงล่างได้ v , ใบเกิน 8 (วางซ้ายไปขวา) ได้ h ตรงกับทิศของผังจริง");
+  ck(right && toMermaid(right).startsWith("flowchart LR") && edgeElbow(right) === "h", "สั่ง ทิศ: ซ้ายไปขวา เองทั้งที่ใบน้อย เส้นหักตามทิศที่สั่ง", right && toMermaid(right).split("\n")[0]);
+  ck(["steps", "system", "timeline"].every((k) => edgeElbow(parseText("ก -> ข: ส่ง\nค", k).model || { kind: k }) === null),
+    "ผังขั้นตอน ระบบ ไทม์ไลน์ ไม่โดนเส้นหักฉาก (คงเส้นโค้งเดิม)");
+}
+
 console.log(`\n${fail.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ, ตก ${fail.length} ข้อ`);
 process.exit(fail.length ? 1 : 0);

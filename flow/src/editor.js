@@ -11,7 +11,10 @@ import { tr, IS_EN } from "../../src/i18n.js";
 import { DRAWIO, EngineError, pngBlob } from "./engine.js";
 
 const ORIGIN = new URL(DRAWIO, location.href).origin;
-const PARAMS = `?embed=1&proto=json&spin=1&noSaveBtn=1&lang=${IS_EN ? "en" : "th"}`;
+/* ‼️ lockdown=1 (ยิงจริง 22/09/2026 , PROVEN.md หัวข้อ 🔐 ส่งออก PDF): เมนู ไฟล์ → ส่งออกเป็น → PDF ของ draw.io ส่งผังทั้งผังไป convert.diagrams.net
+   ใส่แล้วไม่มีคำขอออกนอกเครื่องเลย ห้องยังเปิดผัง โหลด Sarabun และบันทึกได้ PNG เท่าเดิมทุกไบต์
+   ‼️ ต้องอยู่ในที่อยู่เท่านั้น ส่ง { lockdown: true } ทาง configure ไม่มีผลกับตัวฝัง (โค้ดเขาอ่านจาก urlParams ที่เดียว) */
+const PARAMS = `?embed=1&proto=json&spin=1&noSaveBtn=1&lockdown=1&lang=${IS_EN ? "en" : "th"}`;
 const STEP_MAX_MS = 15000;
 
 /**

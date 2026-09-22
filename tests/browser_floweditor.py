@@ -12,7 +12,7 @@ import sys, os, hashlib, pathlib, tempfile, shutil, traceback, base64
 from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from browser_flowkit import drawio_xml, cells, preview_png, set_text, state   # ตัวอ่านไฟล์ผลตัวเดียวกัน
+from browser_flowkit import drawio_xml, cells, preview_png, set_text, state, edges, one_bus   # ตัวอ่านไฟล์ผลตัวเดียวกัน
 
 BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899").rstrip("/")
 URL = BASE + "/flow/"
@@ -74,6 +74,36 @@ def press_room_button(pg, th_text, discard=False):
     pg.wait_for_function("() => document.querySelector('#room').hidden", timeout=20000)
     pg.wait_for_timeout(600)
     return asked
+
+
+def pdf_export_leaks(pg, ctx):
+    """กดส่งออก PDF จากเมนูของ draw.io ในห้องแก้ไขแบบผู้ใช้ แล้วดักทุกคำขอที่ออกนอกเครื่อง
+    ‼️ draw.io สร้าง PDF ที่เซิร์ฟเวอร์ของเขา (POST convert.diagrams.net/node/export พร้อมผังทั้งผัง) ห้องของเราปิดด้วย lockdown=1
+    คืน (ขั้นที่กดได้จริง, คำขอที่ออกนอกเครื่อง) ฟอนต์จาก Google ไม่นับ (GET ไฟล์ฟอนต์ ไม่มีข้อมูลผัง)"""
+    import urllib.parse
+    ok_hosts = ("127.0.0.1", "localhost", "embed.diagrams.net", "fonts.googleapis.com", "fonts.gstatic.com", "patcharasitp.github.io")
+    leaks, steps = [], []
+    def on_req(r):
+        host = urllib.parse.urlparse(r.url).hostname or ""
+        if host and host not in ok_hosts: leaks.append(f"{r.method} {r.url[:80]} body={len(r.post_data or '')}")
+    open_room(pg)
+    ctx.on("request", on_req)
+    f = editor_frame(pg)
+    try:
+        f.get_by_text("ไฟล์", exact=True).first.click(); steps.append("ไฟล์"); pg.wait_for_timeout(600)
+        f.get_by_text("ส่งออกเป็น", exact=True).first.hover(); steps.append("ส่งออกเป็น"); pg.wait_for_timeout(700)
+        f.get_by_text("PDF...", exact=True).first.click(); steps.append("PDF"); pg.wait_for_timeout(1200)
+        f.get_by_role("button", name="ส่งออก", exact=True).last.click(); steps.append("ส่งออก"); pg.wait_for_timeout(1500)
+        save = f.get_by_role("button", name="บันทึก", exact=True)
+        if save.count() and save.last.is_visible():            # ไม่ล็อกจะมีหน้าตั้งชื่อไฟล์ก่อนยิงเซิร์ฟเวอร์
+            save.last.click(); steps.append("บันทึก")
+        pg.wait_for_timeout(6000)
+    except Exception as e:
+        steps.append("หยุดที่: " + str(e).split("\n")[0][:120])
+    ctx.remove_listener("request", on_req)
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
+    press_room_button(pg, "ออก", discard=True)
+    return steps, leaks
 
 
 def main():
@@ -215,6 +245,30 @@ def main():
             open_room(pg); press_room_button(pg, "บันทึก และ ออก")
             ck("ผังที่มีกรอบกลุ่มไม่มีปุ่มจัดวางใหม่ (จัดแล้วกล่องหลุดกรอบ)", pg.locator("#cvnote button", has_text="จัดวางใหม่").count() == 0
                and not pg.evaluate("() => document.querySelector('#cvnote').hidden"))
+            # ‼️ ผังองค์กรที่แก้ด้วยมือแล้วกดจัดวางใหม่ เส้นต้องยังหักฉาก (ตัวจัดวางเติม noEdgeStyle=1 เส้นเคยกลายเป็นเส้นเฉียง 22/09/2026)
+            if not pg.evaluate("() => document.querySelector('#cvnote').hidden"):
+                pg.click("#cvnote button:has-text('วาดใหม่จากข้อความ')")
+            org_want = sorted(["ผู้อำนวยการ", "ผู้จัดการฝ่ายขาย", "ทีมขายภาคเหนือ", "ทีมขายภาคใต้", "ผู้จัดการฝ่ายบัญชี", "ทีมบัญชีเจ้าหนี้"])
+            pg.click("#types [data-kind=org]")
+            for _ in range(60):
+                pg.wait_for_timeout(500)
+                if state(pg) == "ready" and boxes(pg) == org_want: break
+            open_room(pg); press_room_button(pg, "บันทึก และ ออก")
+            lay = pg.locator("#cvnote button", has_text="จัดวางใหม่"); es = []
+            if lay.count():
+                src0 = pg.evaluate("() => document.querySelector('#png').currentSrc")
+                lay.click()
+                try:
+                    pg.wait_for_function("(p) => document.querySelector('#png').currentSrc !== p && document.querySelector('#canvas').dataset.state === 'ready'", arg=src0, timeout=30000)
+                except Exception:
+                    pass
+                es = edges(drawio_xml(preview_png(pg)) or "")
+            ck("‼️ ผังองค์กรที่แก้ด้วยมือ กดจัดวางใหม่แล้วเส้นยังหักฉาก ใช้จุดหักร่วม (ตัวจัดวางเคยทำให้เป็นเส้นเฉียง)",
+               boxes(pg) == org_want and len(es) == 5 and all("edgeStyle=elbowEdgeStyle" in st and "noEdgeStyle" not in st for st, _, _ in es) and one_bus(es),
+               str([(st[-60:], p) for st, p, _ in es[:2]]))
+            pdf_steps, leaks = pdf_export_leaks(pg, ctx)
+            ck("ตัวตรวจไปถึงขั้นกดส่งออก PDF ในห้องแก้ไขจริง (เมนู ไฟล์ → ส่งออกเป็น → PDF → ส่งออก)", "ส่งออก" in pdf_steps, str(pdf_steps))
+            ck("‼️ กดส่งออก PDF ในห้องแก้ไข ผังไม่ถูกส่งออกนอกเครื่อง (เดิมส่งไป convert.diagrams.net ทั้งผัง จับได้ 22/09/2026)", not leaks, str(leaks[:3]))
             ck("ไม่มี error บนหน้า", not errs, str(errs[:3]))
             b.close()
     finally:

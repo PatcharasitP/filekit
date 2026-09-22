@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { tr, pl } from "../../src/i18n.js";
 import { FlowError, newModel, sameKey } from "./model.js";
+import { visibleLen } from "./to-mermaid.js";
 
 const isObj = (v) => v != null && typeof v === "object" && !Array.isArray(v);
 const entries = (o) => (isObj(o) ? Object.entries(o).filter(([, v]) => isObj(v)) : []);
@@ -30,12 +31,36 @@ export function readableName(name) {
   return sameKey(s);
 }
 
-/** ข้อความในกล่อง: บรรทัดแรกของ description (โน้ตของแอ็กชัน) ถ้ามี ไม่งั้นชื่อแอ็กชัน */
-function textOf(name, def) {
-  const note = str(def.description).split(/\r?\n/)[0].trim();
-  const t = sameKey(note || readableName(name) || str(def.type) || "?");
-  return t.length > 80 ? t.slice(0, 79).trimEnd() + "…" : t;
+/* ‼️ ป้ายกล่องจากโน้ต (description) ดูจาก flow จริงของพี่ปอนด์ 3 ตัว (W6 22/09/2026 evidence/flowkit-w6-2026-09-22):
+ *    ชื่อแอ็กชันแบบ PascalCase อ่านรู้เรื่องอยู่แล้ว ส่วนโน้ตเป็น "บันทึกวิธีแก้" ยาว 90 ถึง 130 ตัว ไม่ใช่ชื่อขั้น
+ *    เอาโน้ตทั้งบรรทัดเป็นป้าย กล่องกว้างเกือบ 1,000px และถูกตัดกลางคำ ("วันนี้เ…")
+ *    โน้ตสั้น = ตั้งใจให้เป็นชื่อขั้น ใช้ตามเดิม , โน้ตยาว = ชื่อแอ็กชัน (ตัวหนา) กับวลีแรกของโน้ตที่ย่อตรงรอยต่อคำ */
+const NOTE_MAX = 40;
+/** วลีแรกของโน้ต: ตัดที่ " (" , " — " , " – " , " · " , " → " , " | " ตัวแรก (ส่วนหลังมักเป็นรายละเอียดวิธีแก้) */
+function firstClause(s) {
+  const at = s.search(/\s[(—–·→|]/);
+  return at > 0 ? s.slice(0, at).trim() : s;
 }
+/** ย่อให้ไม่เกิน max ตัวที่ตาเห็น ตัดตรงรอยต่อคำไทย (Intl.Segmenter) ไม่ตัดกลางคำ */
+function shorten(s, max) {
+  if (visibleLen(s) <= max) return s;
+  const seg = typeof Intl !== "undefined" && Intl.Segmenter
+    ? [...new Intl.Segmenter("th", { granularity: "word" }).segment(s)].map((x) => x.segment) : s.split(/(\s+)/);
+  let out = "";
+  for (const p of seg) { if (visibleLen(out + p) > max) break; out += p; }
+  return (out.replace(/[\s,+:;(\-–—·→]+$/, "") || s.slice(0, max)) + "…";
+}
+/** ข้อความในกล่อง */
+function textOf(name, def) {
+  const note = sameKey(str(def.description).split(/\r?\n/)[0]);
+  const nm = readableName(name);
+  if (!note) return nm || str(def.type) || "?";
+  if (visibleLen(note) <= NOTE_MAX) return note;
+  const clause = shorten(firstClause(note), NOTE_MAX);
+  return nm ? `${nm} | ${clause}` : clause;
+}
+/** ตัวเริ่ม flow: ปุ่มกดเริ่มเอง key เป็น "manual" ห้วน ๆ ใช้ชื่อที่คนเห็นใน Power Automate แทน */
+const triggerText = (name, def) => (!str(def.description) && name === "manual" ? tr("กดเริ่มเอง", "Manually trigger a flow") : textOf(name, def));
 
 /** ชื่อกรอบของกล่องที่มีลูก , Apply to each กับ Do until เติมคำบอกว่าวน (แผน SPEC ข้อ 4) */
 function groupTitle(type, text) {
@@ -203,7 +228,7 @@ function build(root, src) {
   }
 
   if (root.kind === "flow") {
-    const starts = entries(root.def.triggers).map(([tn, t]) => node(textOf(tn, t), "start", null));
+    const starts = entries(root.def.triggers).map(([tn, t]) => node(triggerText(tn, t), "start", null));
     const w = container(root.def.actions, null);
     for (const s of starts) for (const i of w.in) edge(s, i);
     m.title = root.title;
@@ -213,7 +238,7 @@ function build(root, src) {
       "This is a single action, so the diagram has one box. Copy a container action instead, like a Scope around the whole flow"));
   } else {
     action(root.name, root.def, null);
-    m.title = textOf(root.name, root.def);
+    m.title = textOf(root.name, root.def).split(" | ")[0];    // ชื่อไฟล์ใช้บรรทัดแรก (ชื่อแอ็กชันเมื่อโน้ตยาว)
   }
   if (m.nodes.length > PA_BIG) {
     warn(0, m.groups.length
@@ -228,7 +253,7 @@ function build(root, src) {
 
 const parentOf = (m, gid) => (m.groups.find((g) => g.id === gid) || {}).parent || null;
 function under(m, gid, anc) { for (let g = gid; g; g = parentOf(m, g)) if (g === anc) return true; return false; }
-const pathOf = (m, gid) => { const t = []; for (let g = gid; g; g = parentOf(m, g)) t.unshift(m.groups.find((x) => x.id === g).title); return t.join(" › "); };
+const pathOf = (m, gid) => { const t = []; for (let g = gid; g; g = parentOf(m, g)) t.unshift(m.groups.find((x) => x.id === g).title.split(" | ")[0]); return t.join(" › "); };
 
 /** กลุ่มที่ย่อได้เมื่อกด "ย่อกลุ่ม": ชั้นบนสุด แต่ถ้าทั้ง flow อยู่ในกรอบเดียว (ก้อนที่คัดลอกจาก Scope) ย่อชั้นถัดเข้าไปแทน */
 function topGroups(m) {

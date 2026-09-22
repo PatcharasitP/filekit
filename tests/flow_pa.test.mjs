@@ -16,7 +16,7 @@ globalThis.location ??= { href: "http://127.0.0.1/flow/" };
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const imp = (p) => import(pathToFileURL(join(ROOT, p)).href);
 const { parsePA, prunePA, readableName, viewOptions, applyView, PA_BIG } = await imp("flow/src/parse-pa.js");
-const { toMermaid } = await imp("flow/src/to-mermaid.js");
+const { toMermaid, visibleLen } = await imp("flow/src/to-mermaid.js");
 const { SAMPLES } = await imp("flow/src/samples.js");
 const { fixNestedEdges } = await imp("flow/src/engine.js");
 const SELFTEST = process.argv.includes("--selftest");
@@ -132,9 +132,28 @@ console.log("\n━━ ② โครงแบบต่าง ๆ ของ Power 
   const twins = model(JSON.stringify({ definition: { actions: {
     A: { type: "Compose", description: "ส่งเมล", runAfter: {} }, B: { type: "Compose", description: "ส่งเมล", runAfter: { A: ["Succeeded"] } } } } }));
   ck(twins.nodes.length === 2 && twins.edges.length === 1, "‼️ แอ็กชันคนละตัวที่โน้ตเหมือนกันเป็นคนละกล่อง (ผังที่พิมพ์รวมข้อความซ้ำเป็นกล่องเดียว แต่ flow ไม่ใช่)");
-  const note = model(JSON.stringify({ definition: { actions: { A: { type: "Compose", description: "บรรทัดแรก\nรายละเอียดยาว ๆ", runAfter: {} },
-    B: { type: "Compose", description: "ก".repeat(120), runAfter: {} } } } }));
-  ck(note.nodes[0].text === "บรรทัดแรก" && note.nodes[1].text.length === 80 && note.nodes[1].text.endsWith("…"), "โน้ตหลายบรรทัดใช้บรรทัดแรก โน้ตยาวเกิน 80 ตัวตัดท้าย");
+  /* ‼️ โน้ตแบบ "บันทึกวิธีแก้" ยาว ๆ ของ flow จริง (W6 22/09/2026) เป็นป้ายทั้งบรรทัดแล้วกล่องกว้างเกือบ 1,000px ถูกตัดกลางคำ
+        ข้อความในเทสนี้เขียนเลียนแบบลีลาเท่านั้น ไม่ใช่โน้ตจริงของบริษัท (repo สาธารณะ) */
+  const note = model(JSON.stringify({ definition: { actions: {
+    A: { type: "Compose", description: "บรรทัดแรก\nรายละเอียดยาว ๆ", runAfter: {} },
+    GetData: { type: "OpenApiConnection", description: "ดึงข้อมูลจากรายงาน + คำนวณวันคงเหลือ (วันสิ้นสุดสัญญา − วันนี้) — แก้ช่วงปีได้ที่ตัวแปรหัวคำสั่ง", runAfter: {} },
+    SendEmail: { type: "OpenApiConnection", description: "ส่งอีเมล — ผู้รับ หัวเรื่อง และเนื้อเมล แก้ได้ตรงในก้อนนี้เลยไม่ต้องไปแก้ที่อื่น", runAfter: {} },
+    ReadFile: { type: "OpenApiConnection", description: "อ่านไฟล์รายงานประจำวันกลับมาเป็นข้อมูลสำหรับแนบอีเมลให้ผู้รับผิดชอบทุกคน", runAfter: {} },
+    Short: { type: "Compose", description: "ส่งเมลแจ้งผู้ดูแล", runAfter: {} } } } }));
+  const t = Object.fromEntries(note.nodes.map((n) => [n.text.split(" | ")[0], n.text]));
+  ck(t["บรรทัดแรก"] === "บรรทัดแรก" && t["ส่งเมลแจ้งผู้ดูแล"] === "ส่งเมลแจ้งผู้ดูแล", "โน้ตสั้นใช้เป็นป้ายตามเดิม , โน้ตหลายบรรทัดใช้บรรทัดแรก");
+  ck(t["Get Data"] === "Get Data | ดึงข้อมูลจากรายงาน + คำนวณวันคงเหลือ" && t["Send Email"] === "Send Email | ส่งอีเมล",
+    "‼️ โน้ตยาว = ชื่อแอ็กชันตัวหนา กับวลีแรกของโน้ต (ตัดที่ \" (\" หรือ \" — \" ส่วนหลังเป็นวิธีแก้)", JSON.stringify([t["Get Data"], t["Send Email"]]));
+  const cut = t["Read File"] || "";
+  const words = [...new Intl.Segmenter("th", { granularity: "word" }).segment("อ่านไฟล์รายงานประจำวันกลับมาเป็นข้อมูลสำหรับแนบอีเมลให้ผู้รับผิดชอบทุกคน")].map((x) => x.segment);
+  const kept = cut.replace(/^Read File \| /, "").replace(/…$/, "");
+  const ends = words.reduce((a, w) => [...a, (a.at(-1) || "") + w], []);
+  ck(cut.endsWith("…") && ends.includes(kept) && visibleLen(kept) <= 40, "‼️ โน้ตยาวที่ไม่มีจุดตัด ย่อไม่เกิน 40 ตัวที่ตาเห็น ตรงรอยต่อคำไทย ไม่ตัดกลางคำ", cut);
+  const trig = model(JSON.stringify({ definition: { triggers: { manual: { type: "Request" } }, actions: { A: { type: "Compose", runAfter: {} } } } }));
+  ck(trig.nodes[0].text === "กดเริ่มเอง" && trig.nodes[0].shape === "start", "ปุ่มกดเริ่ม flow (key manual) เป็น กดเริ่มเอง ไม่ใช่คำว่า manual ห้วน ๆ");
+  const longRoot = model(JSON.stringify({ nodeId: "Main_scope", serializedValue: { type: "Scope", description: "งานหลักของ flow (รวมทุกขั้นตั้งแต่ดึงข้อมูลจนส่งเมล) — แก้ลำดับได้ที่นี่เลยนะ", runAfter: {},
+    actions: { A: { type: "Compose", runAfter: {} } } } }));
+  ck(longRoot.title === "Main scope" && longRoot.groups[0].title === "Main scope | งานหลักของ flow", "ก้อนที่โน้ตยาว ชื่อไฟล์ใช้ชื่อแอ็กชัน กรอบได้สองบรรทัด", `${longRoot.title} , ${longRoot.groups[0].title}`);
 }
 ck(readableName("Send_an_email_(V2)") === "Send an email (V2)" && readableName("BuildEmailTable") === "Build Email Table"
   && readableName("GetPBIData") === "Get PBI Data" && readableName("ส่งเมล_รายวัน") === "ส่งเมล รายวัน" && readableName("Compose_2") === "Compose 2",

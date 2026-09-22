@@ -56,7 +56,7 @@ def main():
         if SELFTEST:
             print("\n━━ selftest ━━")
             flow_ready(pg)
-            pg.evaluate("""async () => { const h = await import('/src/handoff.js');
+            pg.evaluate("""async () => { const h = await import('../src/handoff.js');
               await h.send([new File(['ไม่ใช่ภาพผัง'], 'ผิดใบ.txt')], 'images-to-pdf'); }""")
             ck("ตัวตรวจเห็นของที่ฝากค้างใน IndexedDB", pg.evaluate(PENDING) == "images-to-pdf")
             png = preview_png(pg)
@@ -76,11 +76,17 @@ def main():
             sha = hashlib.sha256(preview_png(pg)).hexdigest()
             with pg.expect_navigation():
                 pg.click(f"[data-send={tool}]")
-            try:
-                pg.wait_for_function("async () => { const m = await import('./src/ui.js'); return !!(m.carryFiles() || [])[0]; }", timeout=20000)
-            except Exception:
-                pass
-            got = pg.evaluate(CARRIED)
+            # ‼️ รอแบบวนถามเอง ไม่ใช้ wait_for_function กับฟังก์ชัน async: บนเว็บจริงหน้าเปลี่ยนระหว่างรอ
+            #    ข้อผิดพลาดถูกกลืนแล้วไปอ่านก่อนเครื่องมือโหลดเสร็จ ได้ None ทั้งที่ไฟล์ไปถึงจริง (จับได้ 22/09/2026)
+            pg.wait_for_load_state("load")
+            got = None
+            for _ in range(40):
+                try:
+                    got = pg.evaluate(CARRIED)
+                except Exception:
+                    got = None
+                if got: break
+                pg.wait_for_timeout(500)
             ck(f"[{tool}] กดแล้วไปที่เครื่องมือนั้น แท็บเดิม", pg.url.endswith("#/" + tool), pg.url)
             ck(f"[{tool}] ไฟล์ไปถึงกล่องรับของเครื่องมือเลย ไม่ต้องเลือกไฟล์ใหม่ ตรงกับภาพบนจอทุกไบต์",
                bool(got) and got["sha"] == sha and got["name"].endswith(".drawio.png"), str(got and got["name"]))
@@ -89,7 +95,7 @@ def main():
 
         print("\n━━ ของค้างเกิน 5 นาที ━━")
         flow_ready(pg)
-        pg.evaluate("""async () => { const h = await import('/src/handoff.js');
+        pg.evaluate("""async () => { const h = await import('../src/handoff.js');
           await h.send([new File([new Uint8Array([137, 80, 78, 71])], 'เก่า.png', { type: 'image/png' })], 'image-resize');
           const q = indexedDB.open('fk-handoff', 1);
           await new Promise((r) => { q.onsuccess = () => { const s = q.result.transaction('box', 'readwrite').objectStore('box');

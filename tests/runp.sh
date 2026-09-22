@@ -40,9 +40,10 @@ echo "▶ พอร์ต $PORT เสิร์ฟ $got  ขนานครั�
 # ‼️ "all" ต้องรวมเทสฝั่ง node (tests/*.test.mjs) ด้วย (22/09/2026)
 #    เดิมตัวรันนี้รู้จักแค่เทสเบราว์เซอร์ เทส node 22 ไฟล์จึงตกค้างอยู่ 3 ไฟล์โดยไม่มีใครเห็น
 #    (พหูพจน์อังกฤษ, แถวผลลัพธ์ไม่บอกขนาด, ลำดับผลค้นหา)
+# ‼️ contract = เทสของ FlowKit กับ FileKit ชุดนี้ (tests/contract.sh) อยู่ใน all ด้วย ปล่อย FileKit ทุกครั้งต้องผ่าน (แผนเว็บ FlowKit แยก 6.3)
 if [ "${1:-}" = "all" ]; then
   set -- $(ls tests/browser_*.py tests/css_contract.py | sed 's#tests/##; s#\.py$##') \
-         $(ls tests/*.test.mjs | sed 's#tests/##')
+         $(ls tests/*.test.mjs | sed 's#tests/##') contract
 fi
 rm -rf "$OUT"; mkdir -p "$OUT"
 
@@ -51,6 +52,7 @@ run_one() {
   base="http://127.0.0.1:$PORT"
   [ "$t" = "browser_perf" ] && base="http://127.0.0.1:$GZPORT"
   case "$t" in
+    contract) timeout "${TMO:-900}" bash tests/contract.sh >"$OUT/$t.log" 2>&1 ;;
     *.mjs) timeout "${TMO:-600}" node "tests/$t" >"$OUT/$t.log" 2>&1 ;;
     *)     FK_BASE="$base" timeout "${TMO:-600}" "$PY" "tests/$t.py" >"$OUT/$t.log" 2>&1 ;;
   esac

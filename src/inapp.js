@@ -1,3 +1,5 @@
+// ‼️ สัญญาไฟล์กลาง: FlowKit (repo flowkit อีกเว็บในโดเมนเดียวกัน) import ไฟล์นี้ตรง ๆ ผ่าน ../FlowKit/src/shared.js
+//    export ที่ FlowKit ใช้ห้ามเปลี่ยนความหมายหรือตัดทิ้ง (เพิ่มได้ , จะตัดต้องให้ FlowKit ย้ายก่อน) แก้แล้วรัน tests/runp.sh contract
 import { el } from "./dom.js";
 import { tr } from "./i18n.js";
 

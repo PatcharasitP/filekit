@@ -4,7 +4,7 @@
 // ท่อหนึ่งรอบ (ยิงจริง 22/09/2026 หลักฐาน .claude/evidence/flowkit-build-2026-09-22/engine_probe*.py)
 //   1. load Mermaid → event load ส่ง xml กลับมาด้วยเลย และแปลงเสร็จแล้วจริง
 //      (ส่งออกทันทีกับรอ 2.2 วินาทีได้กล่อง เส้น และขนาดภาพเท่ากันทุกตัวเลข)
-//   2. เปลี่ยนฟอนต์ใน xml เป็น Sarabun แล้ว load กลับ (เฟส 0 ข้อ จ: configure ไม่มีผลกับผังจาก Mermaid)
+//   2. เปลี่ยนฟอนต์ใน xml เป็น Sarabun กับสีกรอบกลุ่มเป็นขาวเทา แล้ว load กลับ (เฟส 0 ข้อ จ: configure ไม่มีผลกับผังจาก Mermaid)
 //   3. export xmlpng = PNG ที่ฝัง XML ไว้ ไฟล์เดียววางสไลด์ได้ และเปิดแก้ต่อใน draw.io ได้ (D4)
 //   ใช้ iframe เดิมซ้ำได้ ผังเก่าหายหมด · เปิดครั้งแรก ~2 วินาที รอบถัดไป 65 ถึง 150 ms
 //
@@ -45,6 +45,16 @@ export function restyleFont(xml) {
   const font = `fontFamily=Sarabun;fontSource=${FONT_SOURCE}`;
   return String(xml).replace(/(\s(?:style|mermaidBaseStyle))="([^"]*)"/g, (_, attr, s) =>
     `${attr}="${/fontFamily=/.test(s) ? s.replace(/fontFamily=[^;]*/g, font) : `${s}${s && !s.endsWith(";") ? ";" : ""}${font};`}"`);
+}
+
+/* ‼️ กรอบกลุ่ม (subgraph) ได้สีเหลืองตั้งต้นของ Mermaid มาเสมอ (#ffffde ขอบ #aaaa33 เห็นจาก contact sheet 22/09/2026)
+ *    สั่งสีผ่าน Mermaid ไม่ได้ เพราะ draw.io ข้ามคำสั่ง style กับ class (engine_probe5) จึงแก้ใน xml แทน
+ *    ใช้สีขาวเทาชุดเดียวกับหน้าเว็บ (W3) และคงรูป light-dark() ไว้ให้ draw.io สลับเองตอนเปิดแก้ในธีมมืด
+ *    ‼️ จำกลุ่มได้จาก mermaidId="n:g<เลข>" ซึ่งเป็น id ของเราเอง (กล่องเป็น n<เลข> กลุ่มเป็น g<เลข> ใน to-mermaid.js) */
+const GROUP_LOOK = { fillColor: "light-dark(#f6f5f3,#1b1d22)", strokeColor: "light-dark(#cfccc5,#4a505c)", fontColor: "light-dark(#585d68,#a8adb8)" };
+export function restyleGroups(xml) {
+  return String(xml).replace(/<UserObject\b[^>]*\bmermaidId="n:g\d+"[^>]*>\s*<mxCell\b[^>]*>/g, (block) =>
+    block.replace(/\b(fillColor|strokeColor|fontColor)=[^;"]*/g, (_, k) => `${k}=${GROUP_LOOK[k]}`));
 }
 
 /** จำนวนกล่อง (รวมกรอบกลุ่ม) ใน xml ของ draw.io */
@@ -130,7 +140,7 @@ export function createEngine({ onState = () => {} } = {}) {
     const first = await call({ action: "load", autosave: 0, descriptor: { format: "mermaid", data: mermaid } }, "load");
     const got = countVertices(first.xml);
     if (expectBoxes && got < expectBoxes) throw new EngineError("incomplete", `${got}/${expectBoxes}`);
-    const xml = restyleFont(first.xml);
+    const xml = restyleGroups(restyleFont(first.xml));
     await call({ action: "load", autosave: 0, xml }, "load");
     const out = await call({ action: "export", format: "xmlpng", scale: 2, border: 16, background: "#ffffff" }, "export");
     return { png: pngBlob(out.data), xml: out.xml || xml };

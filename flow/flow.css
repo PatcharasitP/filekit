@@ -135,11 +135,13 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
 
 /* ‼️ ผังคือกระดาษสีขาวเสมอแม้ธีมมืด เพราะภาพที่ได้ไปวางสไลด์ก็พื้นขาว เห็นแบบไหนได้ไฟล์แบบนั้น */
 .canvas{flex:1; min-height:0; position:relative; border-radius:14px; background:#fff; border:1px solid var(--line-soft); overflow:hidden}
-.canvas img{position:absolute; inset:20px; width:calc(100% - 40px); height:calc(100% - 40px); object-fit:scale-down; cursor:zoom-in;
+/* ‼️ วางกลางด้วย inset:0 + margin:auto แล้วให้ขนาดมาจากตัวภาพเอง (srcset 2x = ขนาดจริงของผัง) โดยมี max จำกัดไม่ให้ล้นกรอบ
+   ห้ามใช้ object-fit:scale-down: วัดแล้ว Chrome คิดจากพิกเซลดิบ ไม่สนความหนาแน่นของ srcset ผังเล็กจึงยังถูกขยาย 1.7 เท่า (22/09/2026) */
+.canvas img{position:absolute; inset:0; margin:auto; width:auto; height:auto; max-width:calc(100% - 40px); max-height:calc(100% - 40px); cursor:zoom-in;
   transition:opacity var(--t-micro) var(--ease)}
 /* กดที่ผังเพื่อดูขนาดจริงแล้วเลื่อนดู กดอีกทีกลับมาเห็นทั้งผัง */
 .canvas[data-zoom]{overflow:auto}
-.canvas[data-zoom] img{position:static; display:block; margin:20px auto; width:auto; height:auto; max-width:none; cursor:zoom-out}
+.canvas[data-zoom] img{position:static; display:block; margin:20px auto; width:auto; height:auto; max-width:none; max-height:none; cursor:zoom-out}
 .canvas[data-state="error"] img,.canvas[data-state="stale"] img{opacity:.35}
 .cv-msg:empty{display:none}
 .cv-msg{position:absolute; inset:0; display:grid; place-content:center; gap:12px; padding:24px; text-align:center;
@@ -190,7 +192,7 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
   .write{border-right:0; border-bottom:1px solid var(--line-soft)}
   .ed{flex:none; height:240px; min-height:0}
   .canvas{flex:none; height:auto; min-height:220px}
-  .canvas img{position:static; display:block; width:auto; max-width:100%; height:auto; margin:0 auto; padding:14px; cursor:default}
+  .canvas img{position:static; display:block; width:auto; max-width:100%; height:auto; max-height:none; margin:0 auto; padding:14px; cursor:default}
   .act{position:sticky; bottom:0; z-index:3; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--card);
     border-top:1px solid var(--line-soft); gap:6px}
   .cta{height:56px; font-size:17px}

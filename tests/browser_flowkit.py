@@ -14,7 +14,7 @@ BASE = os.environ.get("FK_BASE", "http://127.0.0.1:8899").rstrip("/")
 URL = BASE + "/flow/"
 SELFTEST = "--selftest" in sys.argv
 MARK = "ลับเฉพาะFK7731"        # ข้อความที่เทสพิมพ์ลงผัง ต้องไม่โผล่ในคำขอใด ๆ ที่ออกจากหน้า
-TMP = pathlib.Path(tempfile.mkdtemp(prefix="fk_flow_"))
+TMP = None                      # สร้างตอนรันจริงเท่านั้น (browser_flowgolden.py import ตัวช่วยจากไฟล์นี้ ต้องไม่ทิ้งโฟลเดอร์ว่างไว้)
 READY_MS = 60000
 
 P, F = 0, []
@@ -80,11 +80,11 @@ def state(pg): return pg.evaluate("() => document.querySelector('#canvas').datas
 def wait_ready(pg, before_src=None, ms=READY_MS):
     """รอผังรอบใหม่วาดเสร็จ (ถ้าให้ before_src มา ต้องเป็นภาพคนละใบกับเดิม)"""
     pg.wait_for_function("""(prev) => { const c = document.querySelector('#canvas'), i = document.querySelector('#png');
-        return c.dataset.state === 'ready' && !i.hidden && i.naturalWidth > 0 && i.src !== prev
+        return c.dataset.state === 'ready' && !i.hidden && i.naturalWidth > 0 && i.currentSrc !== prev
           && !document.querySelector('#live').hasAttribute('data-busy'); }""", arg=before_src or "", timeout=ms)
 
 
-def img_src(pg): return pg.evaluate("() => document.querySelector('#png').src")
+def img_src(pg): return pg.evaluate("() => document.querySelector('#png').currentSrc")
 
 
 def drawn(pg, want, ms=READY_MS):
@@ -100,7 +100,7 @@ def drawn(pg, want, ms=READY_MS):
 
 
 def preview_png(pg) -> bytes:
-    b64 = pg.evaluate("""async () => { const b = await (await fetch(document.querySelector('#png').src)).arrayBuffer();
+    b64 = pg.evaluate("""async () => { const b = await (await fetch(document.querySelector('#png').currentSrc)).arrayBuffer();
         let s = ''; const u = new Uint8Array(b); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
         return btoa(s); }""")
     return base64.b64decode(b64)
@@ -127,6 +127,8 @@ def mark_offset(pg):
 
 
 def main():
+    global TMP
+    TMP = pathlib.Path(tempfile.mkdtemp(prefix="fk_flow_"))
     with sync_playwright() as pw:
         b = pw.chromium.launch()
 
@@ -422,4 +424,4 @@ if __name__ == "__main__":
         traceback.print_exc()
         sys.exit(1)
     finally:
-        shutil.rmtree(TMP, ignore_errors=True)
+        if TMP: shutil.rmtree(TMP, ignore_errors=True)

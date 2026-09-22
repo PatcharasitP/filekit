@@ -91,6 +91,12 @@ console.log("\n━━ เปลี่ยนฟอนต์ใน XML ที่ d
     "‼️ ทุกสไตล์เป็น Sarabun รวม mermaidBaseStyle (เคยหลุดเป็น Trebuchet เพราะแก้แค่ style)", styles.join(" | "));
   ck(out.includes('label="ใช้ fontFamily=Arial ในข้อความ"'), "ข้อความที่ผู้ใช้พิมพ์ว่า fontFamily=... ไม่ถูกแตะ");
   ck(countVertices(out) === 2, "นับกล่องได้ 2 (เส้นไม่นับ)");
+  const { restyleGroups } = await imp("flow/src/engine.js");
+  const g = '<UserObject label="ฝ่ายขาย" mermaidId="n:g1" mermaidBaseStyle="x"><mxCell style="verticalAlign=top;fillColor=light-dark(#ffffde,#1f2020);strokeColor=light-dark(#aaaa33,#cccccc);fontColor=light-dark(#333333,#cccccc);" vertex="1"/></UserObject>'
+    + '<UserObject label="กล่องธรรมดา" mermaidId="n:n1"><mxCell style="fillColor=default;strokeColor=#8a8f98;" vertex="1"/></UserObject>';
+  const gg = restyleGroups(g);
+  ck(!/ffffde|aaaa33/.test(gg) && /fillColor=light-dark\(#f6f5f3,#1b1d22\)/.test(gg), "‼️ กรอบกลุ่มเลิกเป็นสีเหลืองของ Mermaid เปลี่ยนเป็นขาวเทาที่ยังสลับธีมได้");
+  ck(gg.includes('mermaidId="n:n1"><mxCell style="fillColor=default;strokeColor=#8a8f98;"'), "กล่องธรรมดาไม่ถูกแตะ");
 }
 
 console.log(`\n${fail.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ, ตก ${fail.length} ข้อ`);

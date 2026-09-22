@@ -308,9 +308,11 @@ function update() {
     lastMmd = mmd;
     unzoom();
     /* ‼️ ภาพส่งออกที่ 2 เท่า บอกเบราว์เซอร์ด้วย srcset 2x ขนาดจริงของภาพจึงเท่าผังจริง
-       คู่กับ object-fit:scale-down ผังเล็กไม่ถูกขยายจนตัวหนังสือโตเกินจริง (เห็นเองกับตาบนผังระบบ 4 กล่อง 22/09/2026) */
+       ผังเล็กจึงแสดงเท่าขนาดจริง ไม่ถูกขยายจนตัวหนังสือโตเกินจริง (เห็นเองกับตาบนผังระบบ 4 กล่อง 22/09/2026 ดู flow.css)
+       ‼️ ห้ามใส่ src คู่กัน: src นับเป็นตัวเลือก 1x จอความละเอียดปกติจึงเลือก src แล้วผังโตสองเท่า
+          (วัดจริง naturalWidth 626 บนจอ 1x กับ 313 บนจอ 2x ภาพเดียวกัน) */
+    img.removeAttribute("src");
     img.srcset = `${current.url} 2x`;
-    img.src = current.url;
     img.alt = tr(`${KIND_NAME[model.kind]} ${model.nodes.length} กล่อง`, `${KIND_NAME[model.kind]} with ${model.nodes.length} boxes`);
     img.hidden = false;
     setCanvas("ready");

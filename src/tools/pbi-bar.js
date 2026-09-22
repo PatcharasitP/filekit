@@ -38,6 +38,11 @@ const PBI_COLORS = ["#118DFF", "#12239E", "#E66C37", "#6B007B", "#E044A7", "#744
 
 const SPEC_URL = "samples/powerbi/bar.vl.json";
 const DATASETS_URL = "samples/powerbi/bar-datasets.json";
+/* ‼️ ไฟล์ Excel ตัวอย่างสร้างจาก bar-datasets.json ตัวเดียวกับที่หน้านี้อ่าน (23/09/2026)
+   ถ้าแก้ตัวเลขในชุดตัวอย่าง ต้องสร้างไฟล์ใหม่ด้วย ไม่งั้นสองที่ไม่ตรงกันเงียบ ๆ
+   เทส tests/browser_powerbi.py เทียบค่าในไฟล์กับ JSON ทุกแถว ไม่ตรง = แดง */
+const XLSX_SAMPLE_URL = "samples/powerbi/pbi-bar-samples.xlsx";
+const XLSX_SAMPLE_NAME = "pbi-bar-samples.xlsx";
 
 // ‼️ ฝัง <style> ในโมดูลนี้ตรง ๆ ห้ามแก้ assets/css/tool.css
 const STYLE = `
@@ -215,6 +220,8 @@ export function mount(tool) {
   const dlBtn = button(tr("ดาวน์โหลด .json", "Download .json"), { icon: "download", ghost: true, onclick: onDownload });
   const dlCsvBtn = button(tr("ดาวน์โหลดข้อมูลชุดนี้ .csv", "Download this data as .csv"),
     { icon: "download", ghost: true, onclick: onDownloadCsv });
+  const dlXlsxBtn = button(tr("ดาวน์โหลด .xlsx ตัวอย่าง", "Download sample .xlsx"),
+    { icon: "download", ghost: true, onclick: onDownloadSample });
   const shareBtn = button(tr("คัดลอกลิงก์ค่านี้", "Copy a link to these settings"), { icon: "copy", ghost: true, onclick: onShare });
   const resetBtn = button(tr("คืนค่าเริ่มต้น", "Reset to defaults"), { icon: "undo", ghost: true, onclick: onReset });
 
@@ -228,7 +235,7 @@ export function mount(tool) {
       empty: tr("กำลังเตรียมกราฟ…", "Preparing the chart…"),
     },
     right: { title: tr("ปรับแต่ง", "Customize"), node: rightBody },
-    footer: [copyBtn, dlBtn, dlCsvBtn, shareBtn, resetBtn, st.node],
+    footer: [copyBtn, dlBtn, dlCsvBtn, dlXlsxBtn, shareBtn, resetBtn, st.node],
     note: tr(
       "ใน Deneb ลาก field เข้า well แล้ว Rename เป็น Category, Value, Target จากนั้นวางสเปกทับของเดิม",
       "In Deneb drag fields into the wells, rename them Category, Value, Target, then paste the spec over the old one"
@@ -973,6 +980,18 @@ export function mount(tool) {
 
   /* ‼️ ไฟล์ .csv ต้องมี BOM ไม่งั้น Excel บนวินโดวส์อ่านภาษาไทยเป็นตัวประหลาด
      (เจอซ้ำหลายรอบจนเป็นกฎประจำโปรเจกต์) */
+  /** โหลดไฟล์ Excel ตัวอย่างทั้งชุด (ทุกชุดข้อมูลเป็นชีตละชุด) ไว้เปิดใน Power BI ต่อ */
+  async function onDownloadSample() {
+    try {
+      const res = await fetch(XLSX_SAMPLE_URL);
+      if (!res.ok) throw new Error(`${XLSX_SAMPLE_URL}: HTTP ${res.status}`);
+      download(await res.blob(), XLSX_SAMPLE_NAME);
+      st.ok(tr("ดาวน์โหลดไฟล์ตัวอย่างแล้ว", "Sample file downloaded"));
+    } catch (e) {
+      st.err(tr("โหลดไฟล์ตัวอย่างไม่สำเร็จ: ", "Could not download the sample: ") + e.message);
+    }
+  }
+
   function onDownloadCsv() {
     const info = datasets?.[currentKey];
     if (!info) return;

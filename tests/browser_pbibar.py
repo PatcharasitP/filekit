@@ -7,7 +7,7 @@
 
 รัน: python3 -m http.server 8899 &  แล้ว python3 tests/browser_pbibar.py
 """
-import json, sys, re
+import json, sys, re, pathlib, zipfile
 from playwright.sync_api import sync_playwright
 
 BASE = __import__("os").environ.get("FK_BASE", "http://localhost:8899")
@@ -57,7 +57,8 @@ def pick_dataset(pg, idx):
 def main():
     with sync_playwright() as P:
         b = P.chromium.launch()
-        pg = b.new_page(viewport={"width": 1440, "height": 950})
+        _ctx0 = b.new_context(viewport={"width": 1440, "height": 950}, accept_downloads=True)
+        pg = _ctx0.new_page()
         errs = []
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" else None)
         data = json.loads(open("samples/powerbi/bar-datasets.json", encoding="utf-8").read())
@@ -171,6 +172,50 @@ def main():
                 not any(any("\u0e00" <= c <= "\u0e7f" for c in n) for n in names_en), str(names_en))
 
         ctx.close()
+
+        # ── ไฟล์ Excel ตัวอย่าง: ต้องโหลดได้จริง และค่าทุกแถวต้องตรงกับชุดข้อมูลที่หน้านี้ใช้ ──
+        # ‼️ เทียบกับ bar-datasets.json ตัวเดียวกับที่เว็บอ่าน ไม่ใช่กับตัวเลขที่พิมพ์ไว้ในเทส
+        #    ถ้าแก้ชุดข้อมูลแล้วลืมสร้างไฟล์ใหม่ ข้อนี้แดงทันที
+        open_tool(pg)
+        with pg.expect_download(timeout=60000) as dl:
+            pg.locator("button", has_text="ดาวน์โหลด .xlsx ตัวอย่าง").first.click()
+        # ‼️ ไฟล์ที่ Playwright เก็บไว้ไม่มีนามสกุล openpyxl จึงปฏิเสธตั้งแต่ชื่อไฟล์ ต้องคัดลอกเป็น .xlsx ก่อน
+        raw = pathlib.Path(dl.value.path())
+        xlsx = raw.with_suffix(".xlsx")
+        xlsx.write_bytes(raw.read_bytes())
+        ck("ชื่อไฟล์ที่ผู้ใช้ได้", dl.value.suggested_filename, "pbi-bar-samples.xlsx")
+        ck_true("ไฟล์ Excel ตัวอย่างโหลดได้และเป็นไฟล์ xlsx จริง",
+                zipfile.is_zipfile(xlsx) and xlsx.stat().st_size > 3000, f"{xlsx.stat().st_size} ไบต์")
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(xlsx)
+            src = json.loads(pathlib.Path("samples/powerbi/bar-datasets.json").read_text(encoding="utf-8"))
+            want_sheets = ["".join(w.capitalize() for w in k.split("_"))[:31] for k in src]
+            ck("ชีตครบทุกชุดข้อมูล", wb.sheetnames, want_sheets)
+            wrong = []
+            for k, sheet in zip(src, want_sheets):
+                ws = wb[sheet]
+                head = [c.value for c in ws[1]]
+                got = [dict(zip(head, [c.value for c in row])) for row in ws.iter_rows(min_row=2)]
+                if len(got) != len(src[k]["rows"]):
+                    wrong.append((sheet, "จำนวนแถว", len(src[k]["rows"]), len(got)))
+                for a, bb in zip(src[k]["rows"], got):
+                    for col in head:
+                        if a.get(col) != bb.get(col):
+                            wrong.append((sheet, col, a.get(col), bb.get(col)))
+            ck("ค่าทุกแถวในไฟล์ตรงกับชุดข้อมูลของหน้าเว็บ", wrong[:4], [])
+        except ImportError:
+            ck_true("อ่านไฟล์ xlsx ได้ (ต้องมี openpyxl)", False, "ไม่มี openpyxl ในสภาพแวดล้อมนี้")
+
+        # ‼️ ปิดวง: เอาไฟล์ที่เพิ่งโหลดมาใส่กลับเข้าช่อง "ใช้ข้อมูลของคุณเอง" ของเครื่องมือเอง
+        #    ถ้าไฟล์ตัวอย่างมีคอลัมน์ผิดหรือโครงพัง กราฟจะไม่ขึ้น ข้อนี้จับได้ทันที
+        pg.locator(".pbib-own input[type=file]").set_input_files(str(xlsx))
+        pg.wait_for_selector(".pbib-own-pick:not([hidden])", timeout=20000)
+        pg.wait_for_timeout(900)
+        sheets = pg.locator(".pbib-own-pick select").first.locator("option").all_text_contents()
+        ck("ใส่ไฟล์ตัวอย่างกลับเข้าเครื่องมือ เห็นชีตครบ", sheets, want_sheets)
+        bars_own = pg.evaluate(READ_BARS)
+        ck_true("กราฟวาดจากไฟล์ตัวอย่างได้จริง (ไม่ใช่จอว่าง)", len(bars_own) > 0, f"ได้ {len(bars_own)} แท่ง")
 
         real_errs = [e for e in errs if "favicon" not in e.lower()]
         ck("ไม่มี error ใน console", real_errs, [])

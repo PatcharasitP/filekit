@@ -250,7 +250,20 @@ html.in-room body{overflow:hidden}
 .sites a:focus-visible{outline:2px solid #fff; outline-offset:2px}
 
 /* ── มือถือ: พิมพ์ข้างบน ผังข้างล่าง ปุ่มหลักเกาะขอบล่างตลอด ── */
+/* จอมือถือ: แถบสลับดูข้อความกับผัง (แผนเฟส 6) จอใหญ่เห็นพร้อมกันอยู่แล้ว ไม่ต้องมี
+   ปุ่มที่เลือกเป็นพื้นอ่อนขอบบาง ไม่ใช่ปุ่มทึบ (ปุ่มชนิดผังข้างล่างทึบอยู่แล้ว ทึบสองแถวซ้อนกันหนักตา) */
+.mtabs{display:none}
+/* ห้องแก้ไขบนจอเล็ก: ป้ายเตือนครั้งเดียวตอนเปิด แตะแล้วหาย ไม่บังแถบเครื่องมือด้านบนของ draw.io */
+.editroom-tip{position:absolute; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:2;
+  width:max-content; max-width:calc(100% - 32px); padding:9px 16px; border-radius:999px; border:1px solid #e2e0da; background:#fff; color:#14161c;
+  font:500 13.5px/1.5 var(--font); box-shadow:0 2px 10px rgba(20,26,60,.12); cursor:pointer}
+.editroom-tip[hidden]{display:none}
 @media (max-width:760px){
+  .mtabs{position:sticky; top:0; z-index:4; display:flex; gap:4px; padding:8px 16px; background:var(--card); border-bottom:1px solid var(--line-soft)}
+  .mtab{flex:1; height:36px; border:1px solid transparent; border-radius:999px; background:transparent; color:var(--text-dim);
+    font:500 14.5px/1 var(--font); cursor:pointer}
+  .mtab[aria-pressed="true"]{background:var(--bg-soft); border-color:var(--line); color:var(--text); font-weight:600}
+  .flow[data-pane="see"] .write,.flow[data-pane="write"] .see,.flow[data-pane="write"] .note,.flow[data-pane="write"] .more{display:none}
   .top{padding:0 14px}
   .room{display:none}
   .flow{display:block; height:auto; min-height:0}

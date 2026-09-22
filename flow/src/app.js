@@ -73,6 +73,22 @@ if (MAYBE_IN_APP.test(navigator.userAgent)) {
   }).catch(() => {});
 }
 
+/* ── จอมือถือ: สลับดูข้อความกับผัง (แผนเฟส 6) แทนการเลื่อนยาวผ่านช่องพิมพ์กับคำอธิบาย ──
+ * จอใหญ่ CSS ซ่อนแถบนี้และโชว์สองแผงพร้อมกัน ค่านี้จึงไม่มีผลบนจอใหญ่ */
+const mainEl = $("#main");
+function setPane(p) {
+  mainEl.dataset.pane = p;
+  for (const b of document.querySelectorAll("#mtabs .mtab")) b.setAttribute("aria-pressed", String(b.dataset.pane === p));
+}
+for (const b of document.querySelectorAll("#mtabs .mtab")) b.addEventListener("click", () => { setPane(b.dataset.pane); scrollTo(0, 0); });
+/** หลังผู้ใช้สั่งให้ได้ผังใหม่ทั้งใบ (เทมเพลต , วาง flow , เปิดไฟล์) จอมือถือพาไปดูผังเลย */
+const showDiagramOnPhone = () => { if (isPhone()) { setPane("see"); scrollTo(0, 0); } };
+
+/* ── ข่าวสำหรับโปรแกรมอ่านหน้าจอ: เฉพาะเรื่องที่ผู้ใช้ต้องรู้ ไม่พูดทุกครั้งที่พิมพ์ ── */
+const srstat = $("#srstat");
+let announceNext = false;                         // ผังรอบถัดไปวาดเสร็จแล้วให้บอก (หลังเทมเพลต , วาง flow , เปลี่ยนมุมมอง)
+function announce(t) { srstat.textContent = ""; setTimeout(() => { srstat.textContent = t; }, 60); }
+
 /* ── ข้อความของแต่ละชนิดผัง: กดสลับชนิดแล้วของที่พิมพ์ไว้ไม่หาย กลับมาก็ยังอยู่ ── */
 const HINTS = {
   steps: tr("หนึ่งบรรทัดคือหนึ่งกล่อง , ลงท้ายด้วย ? คือจุดตัดสินใจ , ย่อหน้าใต้คำถามแล้วเขียน คำตอบ: ขั้นถัดไป",
@@ -246,16 +262,28 @@ function setCanvas(state, text = "", withRetry = false) {
    ‼️ ใช้ได้เฉพาะตอนที่ผังถูกย่อให้พอดีกรอบ ผังเล็กที่เห็นขนาดจริงอยู่แล้ว กดแล้วแค่กระโดดขึ้นลง
       (พี่ปอนด์ทัก 22/09/2026 "กดแล้วมันขยับขึ้นลงคือไร" วัดได้ผังองค์กร 633x296 เท่ากันทั้งสองโหมด ย้ายจากกลางกรอบขึ้นไปชิดบนเฉย ๆ) */
 function updateZoomable() {
-  if ("zoom" in canvas.dataset) return;
+  if ("zoom" in canvas.dataset) return zoomA11y();
   const shrunk = img.naturalWidth > 0 && (img.clientWidth < img.naturalWidth - 1 || img.clientHeight < img.naturalHeight - 1);
   if (shrunk && !isPhone()) canvas.dataset.zoomable = ""; else delete canvas.dataset.zoomable;
+  zoomA11y();
+}
+/* ‼️ คนใช้คีย์บอร์ดต้องซูมได้ด้วย (แผนเฟส 6): ตอนซูมได้ ภาพเป็นปุ่มที่กด Tab ไปถึง กด Enter หรือ Space สลับ
+   ตอนซูมไม่ได้ต้องไม่อยู่ในลำดับ Tab (ปุ่มที่กดแล้วไม่มีอะไรเกิดขึ้นทำให้งง) */
+function zoomA11y() {
+  const on = "zoom" in canvas.dataset;
+  if (!on && !("zoomable" in canvas.dataset)) { img.removeAttribute("tabindex"); img.removeAttribute("role"); img.removeAttribute("aria-label"); return; }
+  img.tabIndex = 0;
+  img.setAttribute("role", "button");
+  img.setAttribute("aria-label", `${img.alt} , ${on ? tr("กดเพื่อกลับไปดูทั้งผัง", "press to fit the whole diagram") : tr("กดเพื่อดูขนาดจริง", "press to view at full size")}`);
 }
 img.addEventListener("load", updateZoomable);
 new ResizeObserver(updateZoomable).observe(canvas);
-img.addEventListener("click", () => {
+function toggleZoom() {
   if ("zoom" in canvas.dataset) { delete canvas.dataset.zoom; updateZoomable(); return; }
-  if ("zoomable" in canvas.dataset) canvas.dataset.zoom = "";
-});
+  if ("zoomable" in canvas.dataset) { canvas.dataset.zoom = ""; zoomA11y(); }
+}
+img.addEventListener("click", toggleZoom);
+img.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && img.hasAttribute("role")) { e.preventDefault(); toggleZoom(); } });
 const unzoom = () => { delete canvas.dataset.zoom; delete canvas.dataset.zoomable; };
 
 /* ต่อ draw.io ไม่ได้: บอกตรง ๆ ว่าโหลดมาจากไหน กดลองใหม่ได้ และถ้าต่อได้ทีหลังผังขึ้นเองไม่ต้องกด */
@@ -269,11 +297,13 @@ const engine = createEngine({
       setCanvas("booting", [tr("กำลังเตรียมตัววาดผัง", "Getting the diagram engine ready"),
         tr("ครั้งแรกต้องโหลดตัววาดผังของ draw.io ก่อน เน็ตช้าอาจใช้เวลาสักครู่", "The first visit loads draw.io, it can take a moment on a slow connection")]);
     } else if (s === "unreachable") {
+      announce(tr("ยังต่อตัววาดผังไม่ได้ ผังจะขึ้นเองเมื่อต่อได้", "Cannot reach the diagram engine yet, the diagram appears once it connects"));
       setCanvas("error", [tr("ยังต่อตัววาดผังไม่ได้", "Cannot reach the diagram engine yet"),
         tr("ตัววาดผังโหลดมาจาก diagrams.net ถ้าเน็ตช้ารอสักครู่ ผังจะขึ้นเอง ถ้าเครือข่ายบล็อกเว็บนี้จะวาดไม่ได้",
            "It loads from diagrams.net. On a slow connection just wait, the diagram appears by itself. A network that blocks that site cannot draw")], true);
       setReady(false);
     } else if (s === "offline") {
+      announce(tr("ไม่ได้ต่ออินเทอร์เน็ต ตัววาดผังต้องใช้เน็ต", "You are offline, the diagram engine needs the internet"));
       setCanvas("error", [tr("ไม่ได้ต่ออินเทอร์เน็ต", "You are offline"),
         tr("ตัววาดผังต้องโหลดจาก diagrams.net ต่อเน็ตแล้วผังจะขึ้นเอง", "The diagram engine loads from diagrams.net, it draws as soon as you are back online")], true);
       setReady(false);
@@ -366,14 +396,22 @@ const editor = createEditor({
     paintEditNote();
   },
   onClose() {
+    roomTip.hidden = true;
     const r = readRecord();
     if (r && (!savedRecord || r.xml !== savedRecord.xml)) writeRecord(savedRecord);   // ออกโดยไม่บันทึก = ทิ้งที่แก้รอบนี้
     editBtn.focus();
   },
 });
+/* จอมือถือ: ห้องแก้ไขของ draw.io ใช้ได้แต่ปุ่มเล็ก บอกครั้งเดียวตอนเปิดแล้วหายเอง (แผนเฟส 6) */
+const roomTip = $("#roomtip");
+let roomTipTimer = 0;
+roomTip.addEventListener("click", () => { roomTip.hidden = true; });
 function openRoom(src, name) {
   editBase = edited ? { ...edited } : { text: ta.value, kind };
   editName = name;
+  clearTimeout(roomTipTimer);
+  roomTip.hidden = !isPhone();
+  if (!roomTip.hidden) roomTipTimer = setTimeout(() => { roomTip.hidden = true; }, 7000);
   editor.open(src).catch(() => {
     const m = room.querySelector(".editroom-err b");
     if (m) m.textContent = tr("เปิดห้องแก้ไขไม่ได้ ห้องแก้ไขโหลดมาจาก diagrams.net ตรวจอินเทอร์เน็ตแล้วลองใหม่",
@@ -468,7 +506,7 @@ function fillView(m) {
   }
   paSel.value = view;
 }
-paSel.addEventListener("change", () => { view = paSel.value; update(); });
+paSel.addEventListener("change", () => { view = paSel.value; announceNext = true; update(); });
 
 let lastMmd = "", current = null, ver = 0, timer = 0;
 function update() {
@@ -481,10 +519,11 @@ function update() {
   if (edited) { paintEditNote(); return; }        // ผังที่แก้ด้วยมือ ข้อความไม่วาดทับเอง (ผู้ใช้เลือกผ่านป้าย)
   if (r.empty) {
     current = null; lastMmd = ""; img.hidden = true; setReady(false); editBtn.disabled = true;
+    /* จอมือถือช่องพิมพ์อยู่อีกแผง (ปุ่ม ข้อความ ด้านบน) ไม่ใช่ข้างบนหรือทางซ้าย */
     setCanvas("empty", [kind === "pa"
-      ? (isPhone() ? tr("วาง flow ของ Power Automate ข้างบน ผังจะขึ้นตรงนี้", "Paste a Power Automate flow above and the diagram shows up here")
+      ? (isPhone() ? tr("กดปุ่ม ข้อความ ด้านบน แล้ววาง flow ของ Power Automate", "Tap Text above and paste a Power Automate flow")
                    : tr("วาง flow ของ Power Automate ทางซ้าย ผังจะขึ้นตรงนี้", "Paste a Power Automate flow on the left and the diagram shows up here"))
-      : (isPhone() ? tr("พิมพ์ข้อความข้างบน ผังจะขึ้นตรงนี้", "Type above and the diagram shows up here")
+      : (isPhone() ? tr("กดปุ่ม ข้อความ ด้านบนเพื่อพิมพ์ ผังจะขึ้นตรงนี้", "Tap Text above to type, the diagram shows up here")
                    : tr("พิมพ์ข้อความทางซ้าย ผังจะขึ้นตรงนี้", "Type on the left and the diagram shows up here"))]);
     return;
   }
@@ -508,8 +547,9 @@ function update() {
   engine.render(mmd, model.nodes.length, STRETCH[model.kind] || {}).then((out) => {
     if (out.stale || my !== ver) return;
     lastMmd = mmd;
-    show(out.png, out.xml, fileName(model),
-      tr(`${KIND_NAME[model.kind]} ${model.nodes.length} กล่อง`, `${KIND_NAME[model.kind]} with ${model.nodes.length} boxes`));
+    const alt = tr(`${KIND_NAME[model.kind]} ${model.nodes.length} กล่อง`, `${KIND_NAME[model.kind]} with ${model.nodes.length} boxes`);
+    show(out.png, out.xml, fileName(model), alt);
+    if (announceNext) { announceNext = false; announce(tr(`วาดเสร็จแล้ว ${alt}`, `Done, ${alt}`)); }
   }, (e) => {
     if (my !== ver || (e && e.kind === "reset")) return;   // reset = ผู้ใช้กดลองใหม่ งานนี้ถูกแทนด้วยรอบใหม่แล้ว
     console.warn("FlowKit", e);
@@ -528,7 +568,9 @@ function putFlow(pruned) {
   view = "all";
   ta.focus(); ta.select();
   insert(pruned);
+  announceNext = true;
   update();
+  showDiagramOnPhone();
 }
 
 /* วาง XML ของ draw.io (เช่นที่ AI เขียนให้ หรือก๊อปจาก draw.io) ลงช่องพิมพ์ = เปิดเป็นผังในห้องแก้ไข ไม่ยัดเป็นข้อความ
@@ -568,7 +610,9 @@ for (const d of document.querySelectorAll(".dlg")) {
       if (kind !== t.kind) setKind(t.kind);
       ta.focus(); ta.select();
       insert(t.text[LANG_KEY]);                   // insertText = กด Ctrl+Z ในช่องพิมพ์แล้วได้ข้อความเดิมคืน
+      announceNext = true;
       update();
+      showDiagramOnPhone();
     });
     list.append(b);
   }

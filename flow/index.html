@@ -49,7 +49,15 @@
 
 <!-- แบบ A ที่พี่ปอนด์เลือก 22/09/2026: ช่องพิมพ์ซ้าย พรีวิวขวา ปุ่มหลักใต้ผัง (ต้นแบบ .claude/evidence/flowkit-plan-2026-09-21/mockup/)
      ‼️ ปุ่มหลักอยู่นอกสองแผงใน DOM ตั้งใจ: จอใหญ่ CSS วางไว้ใต้ผัง จอมือถือเกาะขอบล่างตลอดโดยไม่ต้องมีปุ่มซ้ำสองชุด -->
-<main class="flow" id="main">
+<main class="flow" id="main" data-pane="write">
+  <!-- จอมือถือ (แผนเฟส 6): สลับดูข้อความกับผังแทนการเลื่อนยาว จอใหญ่เห็นพร้อมกันอยู่แล้ว CSS ซ่อนแถบนี้ -->
+  <div class="mtabs" id="mtabs" role="group" aria-label="สลับดูข้อความหรือผัง" data-en-al="Show the text or the diagram">
+    <button class="mtab" type="button" data-pane="write" aria-pressed="true" data-en="Text">ข้อความ</button>
+    <button class="mtab" type="button" data-pane="see" aria-pressed="false" data-en="Diagram">ผัง</button>
+  </div>
+  <!-- ข่าวสำคัญสำหรับโปรแกรมอ่านหน้าจอ (ต่อตัววาดผังไม่ได้ , วาดเสร็จหลังเลือกเทมเพลตหรือวาง flow) ไม่พูดทุกครั้งที่พิมพ์
+       ‼️ อยู่นอกสองแผง: จอมือถือซ่อนแผงที่ไม่ได้ดู ของใน display:none ไม่ถูกอ่าน -->
+  <p class="sr" id="srstat" role="status"></p>
   <section class="pane write" aria-labelledby="h1">
     <h1 id="h1" data-en="Draw a diagram from text">วาดผังจากข้อความ</h1>
     <p class="sub" data-en="Type one line at a time, the layout is done for you">พิมพ์ทีละบรรทัด ผังจัดวางให้เอง</p>
@@ -149,6 +157,8 @@
 <!-- ห้องแก้ไข (แผนเฟส 3) draw.io ตัวเต็มจอ ปุ่มบันทึกกับออกเป็นของ draw.io เอง src/editor.js สร้าง iframe ตอนเปิดครั้งแรก -->
 <div class="editroom" id="room" role="dialog" aria-modal="true" aria-label="ห้องแก้ไขผัง" data-en-al="Diagram editor" hidden>
   <p class="editroom-msg" data-en="Opening the editor, the first time takes a moment">กำลังเปิดห้องแก้ไข ครั้งแรกใช้เวลาสักครู่</p>
+  <!-- จอมือถือ (แผนเฟส 6): บอกครั้งเดียวตอนเปิด แล้วหายเอง ไม่บังปุ่มของ draw.io -->
+  <button class="editroom-tip" id="roomtip" type="button" hidden data-en="The editor works best on a larger screen, tap to hide">ห้องแก้ไขใช้บนจอใหญ่สะดวกกว่า แตะเพื่อซ่อน</button>
   <div class="editroom-err"><b data-en="Could not open the editor">เปิดห้องแก้ไขไม่ได้</b><button type="button" data-en="Close">ปิด</button></div>
 </div>
 

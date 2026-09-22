@@ -129,6 +129,18 @@ export function createEngine({ onState = () => {} } = {}) {
   let frame = null, boot$ = null, ready = false, seq = 0;
   let running = false;                        // วาดทีละใบ (ดูคิวข้างล่าง)
   const waiters = new Set();
+  /* ‼️ draw.io ดึงโฟกัสเข้าตัวเองทุกครั้งที่โหลดผัง (จับค่าจริง 22/09/2026: หลังวาดเสร็จ activeElement กลายเป็น iframe ตัววาด
+     พิมพ์ต่อแล้วตัวอักษรหายหมด , เลือกเทมเพลตด้วยคีย์บอร์ดแล้วโฟกัสหาย) f.inert กันไม่อยู่เพราะเขาเรียก focus เองจากข้างใน
+     ตัววาดตัวนี้ไม่มีวันให้ผู้ใช้โฟกัส จึงเด้งโฟกัสกลับไปที่เดิมทันทีที่มันได้โฟกัส ก่อนปุ่มถัดไปที่ผู้ใช้กดจะไปถึง
+     ‼️ ฟังที่ blur ของหน้า ไม่ใช่ focus ของ iframe: โฟกัสที่เข้า iframe ต่างโดเมนจากข้างใน ไม่ยิง focus ที่ตัว iframe เลย
+        (จับ event จริง: ได้แค่ focusout ของช่องพิมพ์ที่ relatedTarget เป็น null ตามด้วย blur ของหน้า) */
+  let lastFocus = null;
+  document.addEventListener("focusin", (e) => { if (e.target !== frame) lastFocus = e.target; });
+  window.addEventListener("blur", () => setTimeout(() => {
+    if (!frame || document.activeElement !== frame) return;   // สลับไปแอปอื่น หรือเข้าห้องแก้ไข (คนละ iframe) ไม่เกี่ยว
+    if (lastFocus && lastFocus.isConnected && lastFocus !== document.body) lastFocus.focus({ preventScroll: true });
+    else frame.blur();
+  }, 0));
 
   window.addEventListener("message", (ev) => {
     if (!frame || ev.source !== frame.contentWindow || ev.origin !== ORIGIN || typeof ev.data !== "string") return;

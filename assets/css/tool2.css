@@ -66,11 +66,15 @@ body.tool{overflow:hidden}
 .s2-search-ico{width:14px; height:14px; flex:none}
 .s2-search span{overflow:hidden; text-overflow:ellipsis}
 
-/* เมนูรวมเครื่องมือ การ์ดลอย ไม่ดันเนื้อหา (ถอดจาก iLovePDF) */
+/* เมนูรวมเครื่องมือ การ์ดลอย ไม่ดันเนื้อหา (ถอดจาก iLovePDF)
+   ‼️ 23/09/2026 บั๊กจริงที่เพิ่งจับได้ด้วยภาพ: เมนูนี้ "ใส" มองทะลุเห็นเนื้อหาหน้าอยู่ข้างหลัง
+      เพราะ --surf-1 ถูกประกาศไว้ใน .s2 (ตัวหน้าเครื่องมือ) แต่กล่องเมนูอยู่ในแถบหัวของเว็บ
+      ซึ่งอยู่ "นอก" .s2 ตัวแปรจึงไม่มีค่า → background ทั้งบรรทัดใช้ไม่ได้ กลายเป็นโปร่งใส
+      กฎที่ได้: ของที่อยู่นอกบล็อกที่ประกาศตัวแปร ต้องมีค่าสำรองเสมอ var(--x, ของจริง) */
 .s2-menu{
   position:absolute; inset-block-start:calc(100% - 4px);
   inset-inline-start:clamp(14px,4vw,32px); inset-inline-end:clamp(14px,4vw,32px);
-  background:var(--surf-1); border:1px solid var(--line); border-radius:12px;
+  background:var(--surf-1,var(--card)); border:1px solid var(--line); border-radius:12px;
   box-shadow:0 18px 50px rgba(0,0,0,.18); padding:18px 20px; z-index:30;
   display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:4px 14px;
   max-height:calc(100dvh - var(--top-h,60px) - 24px); overflow:auto;

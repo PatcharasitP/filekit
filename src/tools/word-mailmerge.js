@@ -350,6 +350,30 @@ export function mount(tool) {
             download(await zip.generateAsync({ type: "blob" }), tr(`${base}-รวม ${made.length} ไฟล์.zip`, `${base}-combined ${pl(made.length, "file", "files")}.zip`));
             st.ok(tr("ดาวน์โหลด ZIP แล้ว", "ZIP downloaded"));
           } }),
+          /* ‼️ ปุ่มไฟล์เดียว (พี่ปอนด์สั่ง 18/09/2026 "อยากทำ แต่เก็บไว้ก่อน" ทำจริง 23/09/2026)
+             เหตุผล: คนทำจดหมายเวียนส่วนใหญ่ต้องการสั่งพิมพ์รวดเดียว ได้ ZIP ต้องแตกไฟล์แล้วเปิดทีละใบ
+             50 ฉบับคือเปิด 50 ครั้ง ไฟล์เดียวเปิดครั้งเดียว กด Ctrl+P ครั้งเดียวจบ ตรวจทานก็เลื่อนดูรวดเดียว
+             ‼️ ใช้ตัวต่อไฟล์ตัวเดียวกับเครื่องมือรวมไฟล์ Word (src/docxjoin.js) ซึ่งขึ้นหน้าใหม่ให้ทุกฉบับ
+                ฉบับแรกเป็นคนกำหนดฟอนต์และหน้ากระดาษ ซึ่งตรงกับกรณีนี้พอดีเพราะทุกฉบับมาจากแม่แบบเดียวกัน */
+          button(tr("รวมเป็นไฟล์ Word เดียว", "Combine into one Word file"), { icon: "docx", onclick: async () => {
+            st.info(tr("กำลังรวมเป็นไฟล์เดียว…", "Combining into one file…"));
+            try {
+              const { joinDocx } = await import("../docxjoin.js");
+              const parts = made.map((m) => new File([m.blob], m.name,
+                { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }));
+              const { blob } = await joinDocx(parts, {
+                pageBreak: true,
+                onProgress: ({ done, total }) => st.progress((done / total) * 100, `(${done}/${total})`),
+              });
+              st.progress(null);
+              download(blob, tr(`${base}-รวม ${made.length} ฉบับ.docx`, `${base}-combined ${pl(made.length, "letter", "letters")}.docx`));
+              st.ok(tr(`รวมเป็นไฟล์เดียวแล้ว ${made.length} ฉบับ ขึ้นหน้าใหม่ทุกฉบับ (${fmtBytes(blob.size)})`,
+                `Combined ${pl(made.length, "letter", "letters")} into one file, each starting on a new page (${fmtBytes(blob.size)})`));
+            } catch (e) {
+              st.progress(null);
+              st.err(tr("รวมเป็นไฟล์เดียวไม่สำเร็จ: ", "Could not combine into one file: ") + e.message);
+            }
+          } }),
         ]));
       }
       made.slice(0, 50).forEach((m) => results.appendChild(el("div", { class: "result" }, [

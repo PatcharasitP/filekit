@@ -32,6 +32,24 @@ import { enToThai, highlightRange } from "./search.js";
 const stripTone = (s) => s.replace(/[็-๎]/g, "");
 const norm = (s) => stripTone(String(s || "").toLowerCase().replace(/\s+/g, " ").trim());
 
+/* ── แผงแบบแบน: หัวข้อกับช่องเป็นพี่น้องกัน ไม่มีกล่องห่อกลุ่ม ──────────────
+ * โครงหน้าเครื่องมือ v1 (workspace.js) ห่อกลุ่มให้เองด้วยปุ่มพับ (.ws-fold-btn) จึงใช้กล่องนั้นเป็นกลุ่มได้เลย
+ * แต่โครง v2 ไม่มีกลุ่มพับ แผงเป็น h3 แล้วตามด้วยช่องไปเรื่อย ๆ จนเจอ h3 ตัวถัดไป
+ * ตัวช่วยนี้แปลงโครงแบนให้ configSearch ใช้ได้ โดยนับ "ทุกพี่น้องระหว่างหัวข้อ" เป็นหนึ่งหน่วย
+ *   หน่วย = ทั้งแถวหรือทั้งบล็อก ไม่ใช่เฉพาะ input ข้างใน เพื่อให้ซ่อนแล้วไม่มีกรอบเปล่าค้าง
+ * ใช้: configSearch({ scope: panel, ...flatGroups("h3") }) */
+export function flatGroups(headSel) {
+  return {
+    groupSel: headSel,
+    groupText: (h) => h.textContent || "",
+    fieldsOf: (h) => {
+      const out = [];
+      for (let n = h.nextElementSibling; n && !n.matches(headSel); n = n.nextElementSibling) out.push(n);
+      return out;
+    },
+  };
+}
+
 export function configSearch(cfg) {
   /* ‼️ ช่องอาจถูกห่อด้วย .dm-field (กล่องที่ติดป้ายว่าคุมพารามิเตอร์ไหน) อีกชั้น
      ต้องเลือกกล่องห่อเป็นหน่วยของการซ่อน ไม่งั้นซ่อนช่องแล้วปุ่มคืนค่ายังลอยค้างอยู่ */

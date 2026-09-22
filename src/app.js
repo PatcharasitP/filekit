@@ -2,7 +2,7 @@
 // ไฟล์นี้คือ JavaScript ก้อนเดียวที่หน้าแรกโหลด (ไม่กี่ KB) โค้ดของเครื่องมือ
 // และไลบรารีหนัก ๆ จะถูกดึงก็ต่อเมื่อผู้ใช้แสดงเจตนาจะใช้จริงเท่านั้น
 
-import { TOOLS, GROUPS, byId , chipOf } from "./registry.js";
+import { TOOLS, GROUPS, byId , chipOf, subsOf } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
 import { searchTools, highlightRange } from "./search.js";
 import { el, $, $$, showVeil, filesFromClipboard, useV2 } from "./dom.js";
@@ -99,6 +99,18 @@ function renderHome(q = "") {
        แต่เปิดดูด้วยตาแล้วอ่านไม่รู้เรื่อง หัวข้อไปเกาะท้ายแถวของหมวดก่อนหน้า
        คนอ่านนึกว่าเป็นป้ายของกลุ่มซ้ายมือ ถอนออก 11/09/2026 อย่าลองซ้ำ
        ความสูงไปคุมที่เกณฑ์ความหนาแน่นต่อเครื่องมือใน tests/browser_ux.py แทน */
+    /* ‼️ หมวดที่มีกลุ่มย่อย (PDF) ใช้หัวกลุ่มย่อยแทนหัวหมวด และโชว์เสมอแม้กรองหมวดเดียว
+       เหตุผลที่ต้องมีหัวคือ "26 ป้ายเรียงรวดหาไม่เจอ" ป้ายกลุ่มย่อยยืนได้เอง ไม่ต้องซ้อนหัวหมวด */
+    const subs = subsOf(g.id);
+    if (subs) {
+      for (const s of subs) {
+        const list = s.tools.filter((t) => items.includes(t));
+        if (!list.length) continue;
+        box.appendChild(el("div", { class: "pill-group" }, [s.label, el("s", {})]));
+        list.forEach((t) => box.appendChild(pillOf(t)));
+      }
+      continue;
+    }
     if (showHeads) box.appendChild(el("div", { class: "pill-group" }, [g.label, el("s", {})]));
     items.forEach((t) => box.appendChild(pillOf(t)));
   }

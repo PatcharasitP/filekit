@@ -28,132 +28,132 @@ export const GROUPS = [
 ];
 
 export const TOOLS = [
-  { id:"pdf-pages",   group:"pdf", icon:"📑", title:"จัดการหน้า PDF",
+  { id:"pdf-pages",   group:"pdf", sub:"organize", icon:"📑", title:"จัดการหน้า PDF",
     desc:"หลายไฟล์มารวมกระดานเดียว เก็บ ลบ สลับลำดับ และหมุนหน้า",
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์", next:["pdf-edit","pdf-merge","pdf-compress"] },
 
-  { id:"pdf-edit",    group:"pdf", icon:"✏️", title:"แก้ไขและเซ็นบน PDF",
+  { id:"pdf-edit",    group:"pdf", sub:"stamp", icon:"✏️", title:"แก้ไขและเซ็นบน PDF",
     desc:"ปิดทับข้อความเดิม พิมพ์ใหม่ ไฮไลต์ เซ็นชื่อ และวางรูป ครบในรอบเดียว บันทึกครั้งเดียว ภาษาไทยได้",
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"edit แก้ไข ข้อความ ลบข้อความ ปิดทับ วันที่ พิมพ์ทับ redact ไฮไลต์ highlight เน้นข้อความ เซ็น ลายเซ็น sign วางรูป โลโก้ ตราประทับ stamp", next:["pdf-pages","pdf-watermark"] },
 
-  { id:"pdf-merge",   group:"pdf", icon:"🔗", title:"รวมไฟล์ PDF",
+  { id:"pdf-merge",   group:"pdf", sub:"organize", icon:"🔗", title:"รวมไฟล์ PDF",
     desc:"รวมหลายไฟล์เป็นเล่มเดียว ลากสลับลำดับได้",
     accepts:["pdf"],
     libs:["pdflib"], keys:"merge combine รวม ต่อ เล่ม", next:["pdf-compress","pdf-watermark","pdf-sign"] },
 
-  { id:"pdf-split",   group:"pdf", icon:"✂", title:"แยกไฟล์ PDF",
+  { id:"pdf-split",   group:"pdf", sub:"organize", icon:"✂", title:"แยกไฟล์ PDF",
     desc:"แยกตามช่วงหน้า ทุก N หน้า หรือแยกทีละหน้า",
     accepts:["pdf"],
     libs:["pdflib","jszip"], keys:"split แยก ตัด ช่วงหน้า", next:["pdf-merge","pdf-pages"] },
 
-  { id:"pdf-compress",group:"pdf", icon:"🗜", title:"บีบอัดไฟล์ PDF",
+  { id:"pdf-compress",group:"pdf", sub:"organize", icon:"🗜", title:"บีบอัดไฟล์ PDF",
     desc:"ลดขนาดไฟล์สแกนหรือไฟล์ที่มีรูปเยอะ เทียบขนาดก่อนกับหลังให้เห็น",
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"compress บีบอัด ลดขนาด เล็กลง", next:["pdf-merge","pdf-to-images"] },
 
-  { id:"pdf-sign",group:"pdf", icon:"🖊", title:"เซ็นชื่อบน PDF",
+  { id:"pdf-sign",group:"pdf", sub:"stamp", icon:"🖊", title:"เซ็นชื่อบน PDF",
     desc:"วาดลายเซ็นหรืออัปโหลดรูป แล้วลากไปวางบนเอกสาร เก็บลายเซ็นไว้ใช้ซ้ำได้ ถ้าต้องแก้ข้อความด้วยให้ใช้ตัวแก้ไขและเซ็น",
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"sign signature เซ็น ลายเซ็น เซ็นชื่อ สัญญา ใบลา อนุมัติ", next:["pdf-edit","pdf-compress","pdf-watermark"] },
 
-  { id:"pdf-protect", group:"pdf", icon:"🔒", title:"ใส่รหัสผ่าน PDF",
+  { id:"pdf-protect", group:"pdf", sub:"secure", icon:"🔒", title:"ใส่รหัสผ่าน PDF",
     desc:"ตั้งรหัสให้ต้องใส่ก่อนเปิดไฟล์ และเลือกได้ว่าให้พิมพ์หรือคัดลอกได้ไหม ทำในเครื่องล้วน ไฟล์ไม่ถูกอัปโหลด",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"protect encrypt password lock ใส่รหัส ตั้งรหัส รหัสผ่าน ล็อก ล็อค เข้ารหัส ป้องกัน ความลับ ห้ามพิมพ์ ห้ามคัดลอก", next:["pdf-unlock","pdf-watermark"] },
 
-  { id:"pdf-compare", group:"pdf", icon:"⇄", title:"เทียบ PDF สองฉบับ",
+  { id:"pdf-compare", group:"pdf", sub:"stamp", icon:"⇄", title:"เทียบ PDF สองฉบับ",
     desc:"หาว่าฉบับใหม่แก้ตรงไหนบ้าง ชี้ถึงระดับคำ รองรับภาษาไทย และไฟล์ไม่ถูกอัปโหลดไปไหน",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdfjs"], keys:"compare diff เทียบ เปรียบเทียบ สองฉบับ แก้ตรงไหน ฉบับแก้ไข สัญญา ร่าง ต่างกัน", next:["pdf-clean","pdf-protect"] },
 
-  { id:"pdf-crop", group:"pdf", icon:"⬚", title:"ครอบตัดขอบ PDF",
+  { id:"pdf-crop", group:"pdf", sub:"organize", icon:"⬚", title:"ครอบตัดขอบ PDF",
     desc:"ลากคลุมส่วนที่อยากเก็บ ตัดขอบดำจากไฟล์สแกนหรือขอบขาวเยอะเกินไปของสไลด์ ใช้กับทุกหน้าหรือเฉพาะหน้าคี่คู่ได้",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdfjs","pdflib"], keys:"crop trim ครอบตัด ตัดขอบ ขอบดำ สแกน ขอบขาว ย่อกรอบ", next:["pdf-resize","pdf-nup"] },
 
-  { id:"pdf-resize", group:"pdf", icon:"📐", title:"เปลี่ยนขนาดกระดาษ PDF",
+  { id:"pdf-resize", group:"pdf", sub:"organize", icon:"📐", title:"เปลี่ยนขนาดกระดาษ PDF",
     desc:"เปลี่ยนเป็น A4, A5, Letter หรือขนาดอื่น เลือกได้ว่าจะย่อให้เห็นครบหรือขยายเต็มกระดาษ ข้อความยังค้นหาได้",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"resize paper size ขนาดกระดาษ a4 a5 letter legal เปลี่ยนขนาด ย่อขยาย แนวตั้ง แนวนอน", next:["pdf-nup","pdf-crop"] },
 
-  { id:"pdf-nup", group:"pdf", icon:"▦", title:"หลายหน้าต่อแผ่น และหนังสือเล่มเล็ก",
+  { id:"pdf-nup", group:"pdf", sub:"organize", icon:"▦", title:"หลายหน้าต่อแผ่น และหนังสือเล่มเล็ก",
     desc:"ประหยัดกระดาษด้วย 2, 4, 6 หรือ 9 หน้าต่อแผ่น หรือจัดเป็นเล่มพับครึ่งเย็บกลางที่เรียงหน้าถูกต้อง",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"nup booklet หลายหน้าต่อแผ่น ประหยัดกระดาษ พับครึ่ง เย็บกลาง เล่มเล็ก สูจิบัตร คู่มือ 2in1 4in1", next:["pdf-resize","pdf-merge"] },
 
-  { id:"pdf-clean", group:"pdf", icon:"🧼", title:"ตรวจ PDF ก่อนส่ง",
+  { id:"pdf-clean", group:"pdf", sub:"secure", icon:"🧼", title:"ตรวจ PDF ก่อนส่ง",
     desc:"ดูว่าไฟล์พกอะไรติดมาบ้าง ชื่อผู้เขียน คอมเมนต์ ช่องฟอร์ม ไฟล์แนบ สคริปต์ แล้วล้างให้ในคลิกเดียว",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"clean metadata sanitize ตรวจก่อนส่ง ล้างข้อมูล ชื่อผู้เขียน คอมเมนต์ ฟอร์ม ไฟล์แนบ สคริปต์ ข้อมูลแฝง", next:["pdf-redact","pdf-protect"] },
 
-  { id:"pdf-redact", group:"pdf", icon:"⬛", title:"ลบข้อมูลลับออกจาก PDF",
+  { id:"pdf-redact", group:"pdf", sub:"secure", icon:"⬛", title:"ลบข้อมูลลับออกจาก PDF",
     desc:"ลากคลุมส่วนที่ต้องการลบ แล้วข้อความใต้กล่องหายจากไฟล์จริง ไม่ใช่แค่วางสี่เหลี่ยมทับที่ลากคัดลอกออกมาได้",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdfjs","pdflib"], keys:"redact censor ลบข้อมูล ปิดทับ ข้อมูลลับ เซ็นเซอร์ ปกปิด ดำ ลบชื่อ ลบเลขบัตร ลบข้อความจริง", next:["pdf-protect","pdf-clean"] },
 
-  { id:"pdf-unlock", group:"pdf", icon:"🔓", title:"ปลดรหัสผ่าน PDF",
+  { id:"pdf-unlock", group:"pdf", sub:"secure", icon:"🔓", title:"ปลดรหัสผ่าน PDF",
     desc:"เอารหัสออกจากไฟล์ที่ต้องพิมพ์รหัสทุกครั้ง หรือปลดข้อห้ามคัดลอกและสั่งพิมพ์ ต้องรู้รหัสก่อน ไม่ใช่เครื่องมือเจาะรหัส",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdflib"], keys:"unlock decrypt remove password ปลดรหัส ถอดรหัส เอารหัสออก ปลดล็อก ปลดล็อค เปิดไฟล์ล็อก คัดลอกไม่ได้ พิมพ์ไม่ได้", next:["pdf-protect","pdf-merge"] },
 
-  { id:"pdf-watermark",group:"pdf", icon:"💧", title:"ใส่ลายน้ำ PDF",
+  { id:"pdf-watermark",group:"pdf", sub:"stamp", icon:"💧", title:"ใส่ลายน้ำ PDF",
     desc:"ประทับข้อความไทย-อังกฤษลงทุกหน้า เลือกตำแหน่ง สี และความเข้มได้",
     accepts:["pdf"],
     libs:["pdflib"], keys:"watermark ลายน้ำ ประทับ ลับ confidential ตราประทับ", next:["pdf-compress","pdf-sign"] },
 
-  { id:"pdf-unstamp", group:"pdf", icon:"🧽", title:"ลบชั้นที่ทับบนหน้า PDF",
+  { id:"pdf-unstamp", group:"pdf", sub:"stamp", icon:"🧽", title:"ลบชั้นที่ทับบนหน้า PDF",
     desc:"เอาลายน้ำหรือตราที่ถูกวางทับออก เห็นผลทันทีก่อนบันทึก และไม่มีทางลบเนื้อหาจริงพลาด",
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"remove watermark stamp layer ลบลายน้ำ เอาลายน้ำออก ลบตรา ลบชั้น ลบโลโก้ทับ overlay", next:["pdf-watermark","pdf-compress"] },
 
-  { id:"pdf-page-numbers", group:"pdf", icon:"🔢", title:"ใส่เลขหน้า PDF",
+  { id:"pdf-page-numbers", group:"pdf", sub:"stamp", icon:"🔢", title:"ใส่เลขหน้า PDF",
     desc:"ใส่เลขหน้า เลขรัน Bates สำหรับงานคดี หรือข้อความของคุณเองลงหัวท้ายกระดาษ เลือกตำแหน่ง รูปแบบ และใช้เลขไทยได้ ข้ามหน้าปกได้",
     accepts:["pdf"],
     libs:["pdflib"], keys:"page number เลขหน้า เลขไทย หน้า numbering ปกสารบัญ รายงาน bates เลขรัน เลขลำดับเอกสาร หัวกระดาษ ท้ายกระดาษ header footer ประทับข้อความ คดี ตรวจสอบ", next:["pdf-merge","pdf-compress"] },
 
-  { id:"pdf-remove-blank", group:"pdf", icon:"🧹", title:"ลบหน้าว่างจากไฟล์สแกน",
+  { id:"pdf-remove-blank", group:"pdf", sub:"organize", icon:"🧹", title:"ลบหน้าว่างจากไฟล์สแกน",
     desc:"สแกนสองหน้าแล้วได้หน้าเปล่าคั่นทุกใบ ตรวจให้เองทีละหน้า กดสลับเก็บหรือลบเองได้",
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], keys:"blank ว่าง เปล่า สแกน scan ลบหน้า สองหน้า duplex หน้าคู่", next:["pdf-compress","pdf-ocr"] },
 
-  { id:"pdf-ocr",     group:"pdf", icon:"🔍", title:"OCR อ่านข้อความจากสแกน",
+  { id:"pdf-ocr",     group:"pdf", sub:"stamp", icon:"🔍", title:"OCR อ่านข้อความจากสแกน",
     desc:"อ่านตัวอักษรไทย-อังกฤษจาก PDF สแกน ได้เป็นข้อความหรือ PDF ที่ค้นหาได้",
     accepts:["pdf","image"],
     libs:["pdfjs","tesseract"], keys:"ocr สแกน อ่านข้อความ ตัวอักษร ตัวหนังสือ รูปภาพ ภาพถ่าย recognize", next:["pdf-to-text","pdf-to-word"] },
 
-  { id:"pdf-extract-images", group:"pdf", icon:"🖼", title:"ดึงรูปออกจาก PDF",
+  { id:"pdf-extract-images", group:"pdf", sub:"convert", icon:"🖼", title:"ดึงรูปออกจาก PDF",
     desc:"ได้รูปที่ฝังอยู่ในไฟล์ตามความละเอียดจริง ไม่ใช่ภาพหน้าจอ เลือกข้ามไอคอนเล็ก ๆ ได้",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdfjs","jszip"], keys:"extract images ดึงรูป เอารูปออก รูปภาพใน pdf แกะรูป โบรชัวร์ ภาพประกอบ", next:["image-resize","pdf-to-images"] },
 
-  { id:"pdf-to-powerpoint", group:"pdf", icon:"📽", title:"PDF เป็น PowerPoint",
+  { id:"pdf-to-powerpoint", group:"pdf", sub:"convert", icon:"📽", title:"PDF เป็น PowerPoint",
     desc:"หนึ่งหน้าเป็นหนึ่งสไลด์ เอาไปฉายหรือแทรกในเด็คอื่นได้ บอกตรง ๆ ว่าสไลด์เป็นภาพ แก้ข้อความข้างในไม่ได้",
     accepts:["pdf"], since:"2026-09-21",
     libs:["pdfjs","pptxgen"], keys:"powerpoint pptx สไลด์ นำเสนอ ฉาย ประชุม เด็ค ppt แปลงเป็นสไลด์", next:["powerpoint-to-pdf","pdf-to-images"] },
 
-  { id:"pdf-to-images",group:"pdf", icon:"🖼", title:"PDF เป็น Images",
+  { id:"pdf-to-images",group:"pdf", sub:"convert", icon:"🖼", title:"PDF เป็น Images",
     desc:"แปลงทุกหน้าเป็น PNG หรือ JPG เลือกความละเอียดได้",
     accepts:["pdf"],
     libs:["pdfjs","jszip"], keys:"image png jpg รูป ภาพ export", next:["image-resize","images-to-pdf"] },
 
-  { id:"pdf-to-longimage", group:"pdf", icon:"📜", title:"PDF เป็นภาพยาวแผ่นเดียว",
+  { id:"pdf-to-longimage", group:"pdf", sub:"convert", icon:"📜", title:"PDF เป็นภาพยาวแผ่นเดียว",
     desc:"ต่อทุกหน้าเป็นภาพเดียวยาว ๆ ส่งในไลน์แล้วเลื่อนอ่านรวดเดียวจบ ไม่ต้องกดโหลด",
     accepts:["pdf"],
     libs:["pdfjs"], keys:"long image ภาพยาว ต่อภาพ ไลน์ line แชท ส่งรูป สกรีนช็อต pdf เป็นรูป", next:["image-resize","images-to-pdf"] },
 
-  { id:"pdf-to-text", group:"pdf", icon:"📄", title:"PDF เป็นข้อความ",
+  { id:"pdf-to-text", group:"pdf", sub:"convert", icon:"📄", title:"PDF เป็นข้อความ",
     desc:"ดึงข้อความออกมาเป็นไฟล์ TXT พร้อมคัดลอกได้ทันที",
     accepts:["pdf"],
     libs:["pdfjs"], keys:"text txt ข้อความ ดึง copy", next:["pdf-to-word","pdf-ocr"] },
 
-  { id:"pdf-to-word", group:"pdf", icon:"📝", title:"PDF เป็น Word",
+  { id:"pdf-to-word", group:"pdf", sub:"convert", icon:"📝", title:"PDF เป็น Word",
     desc:"แปลงเนื้อหาเป็นเอกสาร DOCX ที่แก้ไขต่อได้",
     accepts:["pdf"],
     libs:["pdfjs","docx"], keys:"word docx เอกสาร แก้ไข", next:["word-clean","word-to-pdf"] },
 
-  { id:"pdf-to-excel",group:"pdf", icon:"📊", title:"PDF เป็น Excel",
+  { id:"pdf-to-excel",group:"pdf", sub:"convert", icon:"📊", title:"PDF เป็น Excel",
     desc:"จับตารางในไฟล์ PDF ออกมาเป็น XLSX",
     accepts:["pdf"],
     libs:["pdfjs","xlsx"], keys:"excel xlsx ตาราง table sheet", next:["excel-csv","thai-date"] },
@@ -368,6 +368,27 @@ export const TOOLS = [
 
 export const byId = (id) => TOOLS.find((t) => t.id === id);
 
+/* ── กลุ่มย่อยในหมวดใหญ่ ──────────────────────────────────────────────────
+   PDF โต 16 → 26 ตัว รายการเดียวยาวเกินกวาดตา จึงหั่น 4 กลุ่มตาม "สิ่งที่ผู้ใช้ตั้งใจทำ"
+   ‼️ ที่มาของกลุ่มอยู่ในทะเบียน (ช่อง sub) ลืมใส่ = tests/browser_menu.py จับ ไม่ใช่หายเงียบ */
+export const SUBS = {
+  pdf: [
+    { id: "organize", label: "จัดหน้า PDF" },
+    { id: "stamp",    label: "แก้ไขและประทับตรา" },
+    { id: "secure",   label: "ความปลอดภัย PDF" },
+    { id: "convert",  label: "แปลงจาก PDF" },
+  ],
+};
+const EN_SUBS = { organize: "Organize PDF", stamp: "Edit & stamp", secure: "PDF security", convert: "Convert from PDF" };
+
+/** กลุ่มย่อยพร้อมเครื่องมือในกลุ่ม (ไม่มี = null) */
+export const subsOf = (groupId) => {
+  const s = SUBS[groupId];
+  if (!s) return null;
+  return s.map((x) => ({ ...x, tools: TOOLS.filter((t) => t.group === groupId && t.sub === x.id) }))
+          .filter((x) => x.tools.length);
+};
+
 /* ─────────────────────────────────────────────────────────────────────────
    คำแปลอังกฤษ — เก็บรวมไว้ก้อนเดียวเพื่อให้ทะเบียนไทยข้างบนอ่านง่ายเหมือนเดิม
    ‼️ ทับค่าลงบนอ็อบเจกต์เดิมตอนโหลดโมดูล ไม่ใช่ห่อด้วยฟังก์ชันแปล
@@ -463,6 +484,9 @@ if (LANG === "en") {
   for (const t of TOOLS) {
     const e = EN_TOOLS[t.id];
     if (e) { t.title = e[0]; t.desc = e[1]; }
+  }
+  for (const list of Object.values(SUBS)) {
+    for (const s of list) if (EN_SUBS[s.id]) s.label = EN_SUBS[s.id];
   }
 }
 

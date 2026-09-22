@@ -30,9 +30,10 @@
 //   ไม่มีอะไรให้กดเลือกไฟล์เลย · ย้ายน้อยที่สุด = พังน้อยที่สุด
 // ─────────────────────────────────────────────────────────────────────────────
 import { el } from "./dom.js";
+import { configSearch, CFGSEARCH_CSS, flatGroups } from "./cfgsearch.js";
 import { toolIcon, uiIcon } from "./icons.js";
 import { tr, pl } from "./i18n.js";
-import { GROUPS, TOOLS } from "./registry.js";
+import { GROUPS, TOOLS, subsOf } from "./registry.js";
 import {
   fileState, treeFiles, watchFiles, setInputFiles, setResultFiles,
   toolMeta, toolExample, toolFaq, nextSteps, railCopyMd, fmtBytes, download,
@@ -50,23 +51,20 @@ const accentOf = (t) => `var(${GROUP_ACCENT[t.group] || "--brand"})`;
  * ถอดจาก iLovePDF: ชี้แล้วการ์ดขาวลอยลงมา **ไม่ดันเนื้อหา** 7 คอลัมน์ แถวละ 36px
  * ของเขามี 33 เครื่องมือใน 7 คอลัมน์ ของเรามี 53 จึงแบ่งคอลัมน์ตามจำนวนจริง
  * ‼️ อ่านจากทะเบียนเสมอ ห้ามฝังรายชื่อไว้ในนี้ (เทสที่ก็อปตรรกะไปเขียนซ้ำจะตกยุคทุกครั้ง)
- * ‼️ หมวด pdf มี 16 ตัวซึ่งยาวเกินหนึ่งคอลัมน์บนจอ 768px จึงหั่นเป็นสองคอลัมน์
- *   โดยแยกตรงที่ "จัดการ" จบและ "แปลงจาก" เริ่ม ซึ่งเป็นความต่างที่ผู้ใช้เข้าใจอยู่แล้ว
- *   id หมวดยังเป็น pdf เหมือนเดิม นี่เป็นเรื่องการแสดงผลล้วน ๆ */
-const MENU_SPLIT = { pdf: [10, tr("จัดการ PDF", "Organize PDF"), tr("แปลงจาก PDF", "Convert from PDF")] };
+ * ‼️ หมวด pdf โตเป็น 26 ตัว คอลัมน์เดียวยาวเลยจอ จึงแยกเป็นคอลัมน์ละกลุ่มย่อย
+ *   (จัดหน้า, แก้ไขและประทับตรา, ความปลอดภัย, แปลงจาก PDF) ตามช่อง sub ในทะเบียน
+ *   id หมวดยังเป็น pdf เหมือนเดิม นี่เป็นเรื่องการแสดงผลล้วน ๆ
+ *   ‼️ 23/09/2026 เลิกหั่นด้วยเลขดัชนีตายตัว (MENU_SPLIT เดิม) เพราะพอเพิ่มเครื่องมือกลางหมวด
+ *      เส้นแบ่งจะเลื่อนไปคนละที่โดยไม่มีใครรู้ ตอนนี้กลุ่มมาจากทะเบียน เพิ่มตัวใหม่แล้วเข้ากลุ่มถูกเอง */
 
 function menuColumns() {
   const cols = [];
   for (const g of GROUPS) {
     const list = TOOLS.filter((t) => t.group === g.id);
     if (!list.length) continue;
-    const sp = MENU_SPLIT[g.id];
-    if (sp && list.length > sp[0]) {
-      cols.push({ head: sp[1], accent: g.accent, tools: list.slice(0, sp[0]) });
-      cols.push({ head: sp[2], accent: g.accent, tools: list.slice(sp[0]) });
-    } else {
-      cols.push({ head: g.label, accent: g.accent, tools: list });
-    }
+    const subs = subsOf(g.id);
+    if (subs) cols.push(...subs.map((s) => ({ head: s.label, accent: g.accent, tools: s.tools })));
+    else cols.push({ head: g.label, accent: g.accent, tools: list });
   }
   return cols;
 }
@@ -246,6 +244,33 @@ function resultBlock(tool, files, onAgain, onBack) {
  *             ไม่ส่ง cfg มาเลย = โหมด panel ของเก่า ทุกอย่างลงผืนงาน
  * @returns { wrap, body, grid, canvas, side, setBusy, showCanvas }  (เข้ากันได้กับของเดิม)
  */
+/* ── ช่องค้นหาในแผงตั้งค่าของโครง v2 ──────────────────────────────────────
+ * เหตุผลที่ต้องมี (วัดจริง 11/09/2026): แผงของเครื่องมือหนักยาวเกินหนึ่งจอ ต้องเลื่อนหา 2 ถึง 3 เท่าของจอ
+ * ‼️ โครง v1 (workspace.js) ต่อช่องค้นหาให้เองอยู่แล้วโดยใช้กลุ่มพับเป็นกลุ่ม
+ *    ส่วน v2 ไม่มีกลุ่มพับ เดิมจึงไม่มีช่องค้นหาเลยทั้งที่เป็นโครงที่ผู้ใช้เห็นจริง
+ *    (บทเรียน 23/09/2026: ตอนแรกไปต่อทีละเครื่องมือ 5 ตัว ผลคือไปบังของที่ v1 ต่อให้อยู่แล้ว
+ *     เทส browser_foldpanes แดงทันที ที่ถูกคือต่อที่โครงกลาง ให้แต่ละโครงมีตัวของตัวเอง)
+ * ‼️ ต่อเฉพาะแผงที่ของเยอะจริง (ช่องตั้งแต่ 12 และหัวข้อตั้งแต่ 2) แผงเล็กมีช่องค้นหา = รกเปล่า ๆ
+ * ‼️ หลายเครื่องมือแผงโตหลังใส่ไฟล์ จึงเฝ้าดูแล้วต่อให้ทีหลังได้ แต่ต่อครั้งเดียวตลอดอายุแผง */
+const FIND_MIN_FIELDS = 12;
+function attachSideSearch(panel) {
+  let attached = false;
+  const tryAttach = () => {
+    if (attached || panel.querySelector(".cfs-wrap")) return;      // เครื่องมือต่อเองไว้แล้ว = ไม่ยุ่ง
+    if (panel.querySelectorAll("input, select, textarea").length < FIND_MIN_FIELDS) return;
+    if (panel.querySelectorAll("h3").length < 2) return;           // ไม่มีหัวข้อ = ไม่มีกลุ่มให้ยุบ
+    attached = true;
+    if (!document.getElementById("cfs-css")) {
+      document.head.append(el("style", { id: "cfs-css" }, CFGSEARCH_CSS));
+    }
+    const cs = configSearch({ scope: panel, ...flatGroups("h3") });
+    panel.prepend(cs.node);
+    panel.s2Search = cs;
+  };
+  tryAttach();
+  new MutationObserver(tryAttach).observe(panel, { childList: true, subtree: true });
+}
+
 export function toolShell2(tool, cfg = {}) {
   const menu = wireToolMenu(tool);
   const panelMode = !cfg.center && !cfg.right && !cfg.left;
@@ -300,6 +325,7 @@ export function toolShell2(tool, cfg = {}) {
     ]),
     sideBody, resultHost, sideFoot,
   ]);
+  attachSideSearch(sideBody);
 
   const grid = el("div", { class: "s2-work" }, [canvas, side]);
   if (panelMode) grid.classList.add("panel-mode");

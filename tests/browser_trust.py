@@ -52,7 +52,12 @@ def ck(label, cond, detail=""):
 
 
 def main():
-    real_tests = len(list((ROOT / "tests").glob("browser_*.py")))
+    # ‼️ 23/09/2026 ต้องนับให้ตรงกับ "ด่านจริงก่อนปล่อยของ" คือ tests/runp.sh all
+    #    ซึ่ง = browser_*.py + css_contract.py + *.test.mjs + contract (เทสร่วมกับ FlowKit)
+    #    เดิมนับแค่ browser_*.py จึงได้ 101 ทั้งที่ด่านจริงมี 126 ชุด = ตัวเลขบนหน้าเว็บต่ำกว่าความจริง
+    #    (tests/readme.test.mjs ใช้สูตรเดียวกันนี้ แก้ที่ไหนต้องแก้ให้ตรงกันทั้งสองที่)
+    real_tests = (len(list((ROOT / "tests").glob("browser_*.py")))
+                  + len(list((ROOT / "tests").glob("*.test.mjs"))) + 2)
 
     with sync_playwright() as p:
         b = p.chromium.launch()

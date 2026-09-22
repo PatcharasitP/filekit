@@ -97,10 +97,14 @@ def edit_registry_marker(site_dir, marker):
     # ‼️ ยึดจาก id ของหมวด ไม่ใช่ข้อความบนป้าย เพราะป้ายเปลี่ยนได้ทุกครั้งที่จัดหมวดใหม่
     #    (19/09/2026 ยุบสามหมวด PDF เหลือหมวดเดียว ป้ายเปลี่ยนจาก "จัดการไฟล์ PDF" เป็น "PDF")
     import re as _re
-    m = _re.search(r'\{ id: "pdf",\s*label: "([^"]+)"', text)
-    assert m, "หา label ของหมวด pdf ในทะเบียนไม่เจอ"
+    # ‼️ 23/09/2026 หมวด PDF แตกเป็นกลุ่มย่อยแล้ว หัวข้อแรกบนหน้าแรก = ป้ายกลุ่มย่อยตัวแรก ไม่ใช่ป้ายหมวด
+    #    ต้องแก้ตัวที่หน้าจอแสดงจริง ไม่งั้นแก้ไฟล์แล้วหน้าไม่เปลี่ยน เทสจะเข้าใจผิดว่า service worker ไม่อัปเดต
+    m = _re.search(r'export const SUBS = \{[\s\S]{0,200}?\{ id: "\w+", label: "([^"]+)" \}', text)
+    if not m:
+        m = _re.search(r'\{ id: "pdf",\s*label: "([^"]+)"', text)
+    assert m, "หา label หัวข้อแรกของหน้าแรกในทะเบียนไม่เจอ"
     old = f'label: "{m.group(1)}"'
-    assert text.count(old) == 1, f"label กลุ่ม pdf ไม่ยูนีก ({text.count(old)} ครั้ง)"
+    assert text.count(old) == 1, f"label หัวข้อแรกไม่ยูนีก ({text.count(old)} ครั้ง)"
     rp.write_text(text.replace(old, f'label: "{marker}"'), encoding="utf-8")
 
 

@@ -60,7 +60,7 @@ export function restyleGroups(xml) {
 /** จำนวนกล่อง (รวมกรอบกลุ่ม) ใน xml ของ draw.io */
 export const countVertices = (xml) => (String(xml).match(/vertex="1"/g) || []).length;
 
-function pngBlob(uri) {
+export function pngBlob(uri) {
   const head = "data:image/png;base64,";
   if (typeof uri !== "string" || !uri.startsWith(head)) throw new EngineError("bad-png");
   const bin = atob(uri.slice(head.length));
@@ -135,8 +135,13 @@ export function createEngine({ onState = () => {} } = {}) {
     for (const w of [...waiters]) { waiters.delete(w); w.fail(new EngineError("reset")); }
   }
 
-  async function drawOnce(mermaid, expectBoxes) {
+  async function drawOnce(mermaid, expectBoxes, xmlIn) {
     await boot();
+    if (xmlIn) {                               // ผังที่แก้ด้วยมือแล้ว (กู้คืนหลังโหลดหน้าใหม่) วาดตามที่เป็น ไม่แตะฟอนต์หรือสีของผู้ใช้
+      await call({ action: "load", autosave: 0, xml: xmlIn }, "load");
+      const o = await call({ action: "export", format: "xmlpng", scale: 2, border: 16, background: "#ffffff" }, "export");
+      return { png: pngBlob(o.data), xml: o.xml || xmlIn };
+    }
     const first = await call({ action: "load", autosave: 0, descriptor: { format: "mermaid", data: mermaid } }, "load");
     const got = countVertices(first.xml);
     if (expectBoxes && got < expectBoxes) throw new EngineError("incomplete", `${got}/${expectBoxes}`);
@@ -150,7 +155,7 @@ export function createEngine({ onState = () => {} } = {}) {
     while (queued) {
       const job = queued; queued = null;
       running = true;
-      try { job.resolve(await drawOnce(job.mermaid, job.expectBoxes)); }
+      try { job.resolve(await drawOnce(job.mermaid, job.expectBoxes, job.xml)); }
       catch (e) { if (e && e.kind === "timeout") reset(); job.reject(e); }
       finally { running = false; }
     }
@@ -161,6 +166,14 @@ export function createEngine({ onState = () => {} } = {}) {
       return new Promise((resolve, reject) => {
         if (queued) queued.resolve({ stale: true });
         queued = { mermaid, expectBoxes, resolve, reject };
+        if (!running) pump();
+      });
+    },
+    /** วาด xml ของ draw.io ที่มีอยู่แล้วเป็น PNG (ผังที่แก้ด้วยมือ) เข้าคิวเดียวกับ render */
+    renderXml(xml) {
+      return new Promise((resolve, reject) => {
+        if (queued) queued.resolve({ stale: true });
+        queued = { xml, resolve, reject };
         if (!running) pump();
       });
     },

@@ -65,6 +65,8 @@
         data-en-al="Diagram text" aria-describedby="hint keys msg"></textarea>
     </div>
     <p class="hint" id="hint"></p>
+    <p class="alt"><button class="linkbtn" id="openfile" type="button" data-en="Open an existing .drawio.png to keep editing">เปิดไฟล์ .drawio.png เดิมมาแก้ต่อ</button>
+      <input type="file" id="filein" accept=".png,.drawio,.xml,image/png" hidden></p>
     <p class="sr" id="keys" data-en="Tab indents the line, Shift and Tab moves it back. Press Escape then Tab to leave the box.">กด Tab เพื่อย่อหน้า กด Shift กับ Tab เพื่อถอยออก กด Esc แล้วกด Tab เพื่อออกจากช่องพิมพ์</p>
     <div class="msg" id="msg" aria-live="polite"></div>
   </section>
@@ -75,11 +77,15 @@
     <div class="canvas" id="canvas" data-state="booting">
       <img id="png" alt="" hidden>
       <div class="cv-msg" id="cvmsg"></div>
+      <div class="cv-note" id="cvnote" hidden></div>
     </div>
   </section>
 
   <div class="act" id="act">
-    <button class="cta" id="dl" type="button" disabled data-en="Download diagram image">ดาวน์โหลดภาพผัง</button>
+    <div class="act-row">
+      <button class="cta" id="dl" type="button" disabled data-en="Download diagram image">ดาวน์โหลดภาพผัง</button>
+      <button class="sec" id="edit" type="button" disabled data-en="Edit by hand">ลากแก้ต่อ</button>
+    </div>
     <p class="note" data-en="You get a .drawio.png file that drops straight into slides and opens in draw.io for more editing">ได้ไฟล์ .drawio.png วางในสไลด์ได้เลย และเปิดแก้ต่อใน draw.io ได้</p>
   </div>
 </main>
@@ -99,6 +105,12 @@
     <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard"><span>BKK</span><b>Dashboard</b></a></li>
   </ul>
 </nav>
+
+<!-- ห้องแก้ไข (แผนเฟส 3) draw.io ตัวเต็มจอ ปุ่มบันทึกกับออกเป็นของ draw.io เอง src/editor.js สร้าง iframe ตอนเปิดครั้งแรก -->
+<div class="editroom" id="room" role="dialog" aria-modal="true" aria-label="ห้องแก้ไขผัง" data-en-al="Diagram editor" hidden>
+  <p class="editroom-msg" data-en="Opening the editor, the first time takes a moment">กำลังเปิดห้องแก้ไข ครั้งแรกใช้เวลาสักครู่</p>
+  <div class="editroom-err"><b data-en="Could not open the editor">เปิดห้องแก้ไขไม่ได้</b><button type="button" data-en="Close">ปิด</button></div>
+</div>
 
 <script>try{if(localStorage.getItem("fk-lang")==="en"){var d=document,r=d.documentElement;r.lang="en";
 d.querySelectorAll("[data-en]").forEach(function(n){n.textContent=n.dataset.en});

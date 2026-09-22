@@ -143,6 +143,13 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
 .canvas[data-zoom]{overflow:auto}
 .canvas[data-zoom] img{position:static; display:block; margin:20px auto; width:auto; height:auto; max-width:none; max-height:none; cursor:zoom-out}
 .canvas[data-state="error"] img,.canvas[data-state="stale"] img{opacity:.35}
+/* ป้ายผังที่แก้ด้วยมือ: ข้อความกับผังแยกทางกันแล้ว ให้ผู้ใช้เลือกวาดใหม่เอง (แผนเฟส 3 ข้อ 4) ป้ายเล็กด้านบนแบบเดียวกับป้ายผังเก่า */
+.cv-note{position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:1; width:max-content; max-width:calc(100% - 28px);
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 10px; padding:5px 6px 5px 14px; border-radius:999px;
+  background:#fff; border:1px solid #e2e0da; box-shadow:0 2px 8px rgba(20,26,60,.08); color:#14161c; font-size:13.5px; line-height:1.5}
+.cv-note b{font-weight:600}
+.cv-note button{height:32px; padding:0 13px; border-radius:999px; border:1px solid #c9c6bf; background:#fff; color:#14161c; font:600 13px/1 var(--font); cursor:pointer}
+.canvas[data-drop]{outline:2px dashed var(--brand-text); outline-offset:-8px}
 .cv-msg:empty{display:none}
 .cv-msg{position:absolute; inset:0; display:grid; place-content:center; gap:12px; padding:24px; text-align:center;
   color:#585d68; font-size:14.5px; line-height:1.7}
@@ -156,9 +163,17 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
   font:600 14px/1 var(--font); cursor:pointer}
 
 .act{display:flex; flex-direction:column; gap:8px}
-.cta{height:64px; width:100%; border:0; border-radius:12px; background:var(--cta); color:var(--cta-fg); font:600 20px/1 var(--font);
+.act-row{display:flex; gap:10px}
+.cta{height:64px; flex:1; min-width:0; border:0; border-radius:12px; background:var(--cta); color:var(--cta-fg); font:600 20px/1 var(--font);
   cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.14)}
 .cta:disabled{opacity:.45; cursor:not-allowed; box-shadow:none}
+/* ปุ่มรอง "ลากแก้ต่อ" ตามต้นแบบ A: พื้นการ์ด ขอบบาง ไม่แย่งสายตาจากปุ่มหลัก */
+.sec{height:64px; flex:none; padding:0 22px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--text);
+  font:500 15px/1 var(--font); cursor:pointer; white-space:nowrap}
+.sec:hover{border-color:var(--text-mute)}
+.sec:disabled{opacity:.45; cursor:not-allowed}
+.alt{margin:8px 2px 0; font-size:13px; line-height:1.6}
+.linkbtn{padding:0; border:0; background:none; color:var(--brand-text); font:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
 .note{margin:0; text-align:center; color:var(--text-mute); font-size:13px; line-height:1.6}
 
 /* draw.io ตัววาดที่ซ่อนอยู่ (src/engine.js) ‼️ ห้าม display:none หรือวางนอกจอ ให้โปร่งใสอยู่ในจอแทน
@@ -173,6 +188,20 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
 .ia-bar .ia-go{flex:none; padding:7px 13px; border-radius:999px; min-height:40px; display:inline-flex; align-items:center;
   background:var(--text); color:var(--bg); text-decoration:none; font-weight:600; font-size:13px}
 .ia-bar .ia-how{flex:none; color:var(--text-dim); font-weight:600}
+
+/* ห้องแก้ไข draw.io เต็มจอ ‼️ ชื่อคลาสต้องไม่ชนกับป้ายชื่อห้องบนแถบบน (เคยใช้ชื่อเดียวกันแล้วป้ายกลายเป็นแผ่นใสทับทั้งจอ 22/09/2026)
+   ‼️ ตอนกำลังโหลดใช้ opacity:0 ไม่ใช่ visibility:hidden (Chrome หน่วง iframe ต่างโดเมนที่ถูกซ่อน) */
+.editroom{position:fixed; inset:0; z-index:50; background:var(--bg)}
+.editroom-frame{position:absolute; inset:0; width:100%; height:100%; border:0}
+.editroom[data-state="loading"] .editroom-frame,.editroom[data-state="error"] .editroom-frame{opacity:0; pointer-events:none}
+.editroom-msg,.editroom-err{position:absolute; inset:0; margin:0; display:grid; place-content:center; gap:14px; padding:24px; text-align:center;
+  color:var(--text-dim); font-size:15px; line-height:1.7}
+.editroom:not([data-state="loading"]) .editroom-msg{display:none}
+.editroom:not([data-state="error"]) .editroom-err{display:none}
+.editroom-err b{color:var(--text); font-weight:600}
+.editroom-err button{justify-self:center; height:40px; padding:0 18px; border-radius:999px; border:1px solid var(--line); background:var(--card);
+  color:var(--text); font:600 14px/1 var(--font); cursor:pointer}
+html.in-room body{overflow:hidden}
 
 /* ── แถบโลโก้ท้ายเว็บ (ลอกจากหน้าแรก) ── */
 .network{background:linear-gradient(152deg,var(--stage),var(--stage-2)); border-top:3px solid var(--stage-line); padding:20px 16px 14px}
@@ -196,6 +225,7 @@ h1{margin:0; font-size:24px; font-weight:700; line-height:1.35}
   .act{position:sticky; bottom:0; z-index:3; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--card);
     border-top:1px solid var(--line-soft); gap:6px}
   .cta{height:56px; font-size:17px}
+  .sec{height:56px; padding:0 16px; font-size:14px}
   .note{font-size:12px}
   .network{display:none}
 }

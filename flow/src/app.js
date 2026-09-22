@@ -9,11 +9,13 @@ import { tr, IS_EN, setLang } from "../../src/i18n.js";
 import { parseText } from "./parse.js";
 import { toMermaid } from "./to-mermaid.js";
 import { createEngine } from "./engine.js";
+import { createEditor } from "./editor.js";
 import { SAMPLES } from "./samples.js";
 
 const $ = (s) => document.querySelector(s);
 const ta = $("#src"), hl = $("#hl"), hint = $("#hint"), msg = $("#msg");
-const canvas = $("#canvas"), img = $("#png"), cvmsg = $("#cvmsg"), live = $("#live"), dl = $("#dl");
+const canvas = $("#canvas"), img = $("#png"), cvmsg = $("#cvmsg"), cvnote = $("#cvnote"), live = $("#live"), dl = $("#dl");
+const editBtn = $("#edit"), room = $("#room"), fileIn = $("#filein");
 const KINDS = ["steps", "org", "system", "timeline"];
 const SAMPLE = SAMPLES[IS_EN ? "en" : "th"];
 const DEBOUNCE_MS = 400;                          // แผนเฟส 2 ข้อ 5
@@ -272,14 +274,145 @@ function fileName(model) {
 const KIND_NAME = { steps: tr("ผังขั้นตอน", "Process diagram"), org: tr("ผังองค์กร", "Org chart"),
   system: tr("ผังระบบ", "Systems diagram"), timeline: tr("ไทม์ไลน์", "Timeline") };
 
+/** เอาภาพผัง (PNG ฝัง XML) ขึ้นจอ และเป็นไฟล์ที่ปุ่มดาวน์โหลดจะให้ */
+function show(png, xml, name, alt) {
+  if (current) URL.revokeObjectURL(current.url);
+  current = { blob: png, url: URL.createObjectURL(png), name, xml };
+  unzoom();
+  /* ‼️ ภาพส่งออกที่ 2 เท่า บอกเบราว์เซอร์ด้วย srcset 2x ขนาดจริงของภาพจึงเท่าผังจริง
+     ผังเล็กจึงแสดงเท่าขนาดจริง ไม่ถูกขยายจนตัวหนังสือโตเกินจริง (เห็นเองกับตาบนผังระบบ 4 กล่อง 22/09/2026 ดู flow.css)
+     ‼️ ห้ามใส่ src คู่กัน: src นับเป็นตัวเลือก 1x จอความละเอียดปกติจึงเลือก src แล้วผังโตสองเท่า
+        (วัดจริง naturalWidth 626 บนจอ 1x กับ 313 บนจอ 2x ภาพเดียวกัน) */
+  img.removeAttribute("src");
+  img.srcset = `${current.url} 2x`;
+  img.alt = alt;
+  img.hidden = false;
+  setCanvas("ready");
+  dl.disabled = false;
+  editBtn.disabled = false;
+}
+
+/* ── ผังที่แก้ด้วยมือในห้องแก้ไข (แผนเฟส 3 ข้อ 4) ────────────────────────────
+ * ‼️ ข้อความกับผังแยกทางกันได้ ไม่พยายามซิงก์สองทาง: แก้ด้วยมือแล้ว พิมพ์ต่อจะไม่วาดทับเอง
+ *    ป้ายบนผังบอกว่าข้อความเปลี่ยนแล้ว และให้ผู้ใช้เลือกกด "วาดใหม่จากข้อความ" เอง (ที่แก้ไว้จะหาย)
+ * เก็บผังที่แก้ใน sessionStorage (autosave ของ draw.io) โหลดหน้าใหม่หรือสลับภาษาแล้วยังอยู่ ปิดแท็บแล้วหาย */
+const EDIT_KEY = "fk-flow-edit";
+let edited = null;        // { text, kind } ข้อความตอนเริ่มแก้ด้วยมือ
+let editBase = null, editName = "";
+let savedRecord = null;   // ผังที่กดบันทึกแล้วล่าสุด ใช้คืนค่าถ้าผู้ใช้ออกจากห้องโดยไม่บันทึก
+const readRecord = () => { try { return JSON.parse(sessionStorage.getItem(EDIT_KEY) || "null"); } catch { return null; } };
+const writeRecord = (r) => { try { r ? sessionStorage.setItem(EDIT_KEY, JSON.stringify(r)) : sessionStorage.removeItem(EDIT_KEY); } catch { /* โหมดส่วนตัว */ } };
+
+function paintEditNote() {
+  cvnote.replaceChildren();
+  cvnote.hidden = !edited;
+  if (!edited) return;
+  const diverged = ta.value !== edited.text || kind !== edited.kind;
+  const b = document.createElement("b");
+  b.textContent = diverged ? tr("ข้อความเปลี่ยนแล้ว แต่ผังยังเป็นแบบที่แก้ด้วยมือ", "The text changed, the diagram still has your manual edits")
+                           : tr("ผังนี้แก้ด้วยมือแล้ว", "This diagram has manual edits");
+  const go = document.createElement("button");
+  go.type = "button";
+  go.textContent = tr("วาดใหม่จากข้อความ", "Redraw from the text");
+  go.title = "";
+  go.setAttribute("aria-label", tr("วาดใหม่จากข้อความ ส่วนที่แก้ด้วยมือจะหาย", "Redraw from the text, manual edits will be lost"));
+  go.addEventListener("click", () => { edited = null; savedRecord = null; writeRecord(null); lastMmd = ""; paintEditNote(); update(); });
+  cvnote.append(b, go);
+}
+
+const editor = createEditor({
+  onAutosave(xml) { writeRecord({ xml, name: editName, text: editBase.text, kind: editBase.kind }); },
+  onSave({ png, xml }) {
+    edited = { ...editBase };
+    savedRecord = { xml, name: editName, text: edited.text, kind: edited.kind };
+    writeRecord(savedRecord);
+    show(png, xml, editName, tr("ผังที่แก้ด้วยมือ", "Diagram with manual edits"));
+    paintEditNote();
+  },
+  onClose() {
+    const r = readRecord();
+    if (r && (!savedRecord || r.xml !== savedRecord.xml)) writeRecord(savedRecord);   // ออกโดยไม่บันทึก = ทิ้งที่แก้รอบนี้
+    editBtn.focus();
+  },
+});
+function openRoom(src, name) {
+  editBase = edited ? { ...edited } : { text: ta.value, kind };
+  editName = name;
+  editor.open(src).catch(() => {
+    const m = room.querySelector(".editroom-err b");
+    if (m) m.textContent = tr("เปิดห้องแก้ไขไม่ได้ ห้องแก้ไขโหลดมาจาก diagrams.net ตรวจอินเทอร์เน็ตแล้วลองใหม่",
+                              "Could not open the editor, it loads from diagrams.net, check your connection and try again");
+  });
+}
+editBtn.addEventListener("click", () => { if (current && current.xml) openRoom({ xml: current.xml }, current.name); });
+room.querySelector(".editroom-err button").addEventListener("click", () => editor.close());
+
+/* ── เปิดไฟล์ผังเดิม: .drawio.png ที่ FlowKit หรือ draw.io ทำไว้ , .drawio , .xml (ลากมาวาง หรือกดเลือก) ── */
+function hasDiagram(bytes) {
+  if (bytes[0] !== 0x89 || bytes[1] !== 0x50) return false;
+  for (let i = 8; i + 8 <= bytes.length;) {
+    const n = (bytes[i] << 24 | bytes[i + 1] << 16 | bytes[i + 2] << 8 | bytes[i + 3]) >>> 0;
+    const t = String.fromCharCode(bytes[i + 4], bytes[i + 5], bytes[i + 6], bytes[i + 7]);
+    if (t === "tEXt" || t === "zTXt" || t === "iTXt") {
+      const key = String.fromCharCode(...bytes.subarray(i + 8, Math.min(i + 8 + 12, i + 8 + n)));
+      if (key.startsWith("mxfile") || key.startsWith("mxGraphModel")) return true;
+    }
+    if (t === "IEND") break;
+    i += 12 + n;
+  }
+  return false;
+}
+function fileProblem(text) {
+  msg.replaceChildren();
+  const box = document.createElement("div");
+  box.className = "err";
+  box.textContent = text;
+  msg.append(box);
+}
+async function openFile(file) {
+  if (!file) return;
+  const name = (file.name.replace(/\.(drawio\.png|drawio\.xml|png|drawio|xml)$/i, "").trim() || "FlowKit") + ".drawio.png";
+  try {
+    if (/\.png$/i.test(file.name) || file.type === "image/png") {
+      if (!hasDiagram(new Uint8Array(await file.arrayBuffer()))) {
+        return fileProblem(tr(`${file.name} เป็นภาพธรรมดา ไม่มีผัง draw.io ฝังอยู่ เปิดแก้ได้เฉพาะไฟล์ .drawio.png`,
+                              `${file.name} is a plain image with no draw.io diagram inside, only .drawio.png files can be opened`));
+      }
+      const uri = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+      openRoom({ xmlpng: uri }, name);
+    } else {
+      const text = await file.text();
+      if (!/<mxfile|<mxGraphModel/.test(text)) {
+        return fileProblem(tr(`${file.name} ไม่ใช่ไฟล์ผังของ draw.io`, `${file.name} is not a draw.io diagram file`));
+      }
+      openRoom({ xml: text }, name);
+    }
+  } catch {
+    fileProblem(tr(`อ่านไฟล์ ${file.name} ไม่ได้`, `Could not read ${file.name}`));
+  }
+}
+$("#openfile").addEventListener("click", () => fileIn.click());
+fileIn.addEventListener("change", () => { openFile(fileIn.files[0]); fileIn.value = ""; });
+addEventListener("dragover", (e) => {
+  if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+  e.preventDefault(); canvas.dataset.drop = "";
+});
+addEventListener("dragleave", (e) => { if (!e.relatedTarget) delete canvas.dataset.drop; });
+addEventListener("drop", (e) => {
+  if (!e.dataTransfer?.files?.length) return;
+  e.preventDefault(); delete canvas.dataset.drop;
+  openFile(e.dataTransfer.files[0]);
+});
+
 let lastMmd = "", current = null, ver = 0, timer = 0;
 function update() {
   clearTimeout(timer);
   const r = parseText(ta.value, kind);
   paintHighlight(r.error ? r.error.line : 0);
   showMessages(r);
+  if (edited) { paintEditNote(); return; }        // ผังที่แก้ด้วยมือ ข้อความไม่วาดทับเอง (ผู้ใช้เลือกผ่านป้าย)
   if (r.empty) {
-    current = null; lastMmd = ""; img.hidden = true; dl.disabled = true;
+    current = null; lastMmd = ""; img.hidden = true; dl.disabled = true; editBtn.disabled = true;
     setCanvas("empty", [isPhone() ? tr("พิมพ์ข้อความข้างบน ผังจะขึ้นตรงนี้", "Type above and the diagram shows up here")
                                   : tr("พิมพ์ข้อความทางซ้าย ผังจะขึ้นตรงนี้", "Type on the left and the diagram shows up here")]);
     return;
@@ -303,20 +436,9 @@ function update() {
   if (!current && !engineDown() && canvas.dataset.state !== "booting") setCanvas("booting", [tr("กำลังวาดผัง", "Drawing")]);
   engine.render(mmd, model.nodes.length).then((out) => {
     if (out.stale || my !== ver) return;
-    if (current) URL.revokeObjectURL(current.url);
-    current = { blob: out.png, url: URL.createObjectURL(out.png), name: fileName(model) };
     lastMmd = mmd;
-    unzoom();
-    /* ‼️ ภาพส่งออกที่ 2 เท่า บอกเบราว์เซอร์ด้วย srcset 2x ขนาดจริงของภาพจึงเท่าผังจริง
-       ผังเล็กจึงแสดงเท่าขนาดจริง ไม่ถูกขยายจนตัวหนังสือโตเกินจริง (เห็นเองกับตาบนผังระบบ 4 กล่อง 22/09/2026 ดู flow.css)
-       ‼️ ห้ามใส่ src คู่กัน: src นับเป็นตัวเลือก 1x จอความละเอียดปกติจึงเลือก src แล้วผังโตสองเท่า
-          (วัดจริง naturalWidth 626 บนจอ 1x กับ 313 บนจอ 2x ภาพเดียวกัน) */
-    img.removeAttribute("src");
-    img.srcset = `${current.url} 2x`;
-    img.alt = tr(`${KIND_NAME[model.kind]} ${model.nodes.length} กล่อง`, `${KIND_NAME[model.kind]} with ${model.nodes.length} boxes`);
-    img.hidden = false;
-    setCanvas("ready");
-    dl.disabled = false;
+    show(out.png, out.xml, fileName(model),
+      tr(`${KIND_NAME[model.kind]} ${model.nodes.length} กล่อง`, `${KIND_NAME[model.kind]} with ${model.nodes.length} boxes`));
   }, (e) => {
     if (my !== ver || (e && e.kind === "reset")) return;   // reset = ผู้ใช้กดลองใหม่ งานนี้ถูกแทนด้วยรอบใหม่แล้ว
     console.warn("FlowKit", e);
@@ -356,4 +478,16 @@ addEventListener("online", () => { if (canvas.dataset.state === "error") retry()
 setKind(kind, true);
 setCanvas("booting", [tr("กำลังเตรียมตัววาดผัง", "Getting the diagram engine ready")]);
 engine.boot();                                    // ออฟไลน์ตั้งแต่เปิด onState บอกผู้ใช้ทันที ไม่ต้องรอ
-update();
+{
+  /* ผังที่แก้ด้วยมือค้างอยู่จากรอบก่อน (โหลดหน้าใหม่ สลับภาษา) วาดกลับจาก xml ของมันเอง ไม่วาดจากข้อความทับ */
+  const rec = readRecord();
+  if (rec && rec.xml) {
+    edited = { text: rec.text, kind: rec.kind }; savedRecord = rec; editName = rec.name || "FlowKit.drawio.png";
+    showMessages(parseText(ta.value, kind));
+    engine.renderXml(rec.xml).then((out) => {
+      if (out.stale || !edited) return;
+      show(out.png, out.xml, editName, tr("ผังที่แก้ด้วยมือ", "Diagram with manual edits"));
+      paintEditNote();
+    }, () => { edited = null; writeRecord(null); update(); });
+  } else update();
+}

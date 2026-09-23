@@ -19,7 +19,7 @@ long-task-ตอนสกอลล์/เวลาเปิด 3 เครื่
 รัน (จากโฟลเดอร์ FileKit/):
     python3 -m http.server 8930 &
     ../.venv/bin/python tests/browser_perfbudget.py
-    FK_BASE=https://patcharasitp.github.io/filekit ../.venv/bin/python tests/browser_perfbudget.py
+    FK_BASE=https://patcharasitp.github.io/filekit/ ../.venv/bin/python tests/browser_perfbudget.py
 
 หมายเหตุความถูกต้อง: python http.server ไม่ทำ gzip/brotli ตัวเลข transferSize ที่วัดได้ตรงนี้
 จึงเป็น "ขนาดไฟล์ดิบ" ไม่ใช่ขนาดที่ส่งจริงตอนขึ้น GitHub Pages (ซึ่งบีบอัดให้เล็กลงอีก) — ใช้

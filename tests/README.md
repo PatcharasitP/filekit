@@ -74,7 +74,7 @@ node tests/thai_parsers.test.mjs               # ตัวแยกชื่อ�
 ../.venv/bin/python tests/browser_datatools.py  # เครื่องมือใหม่ 3 ตัว แยก/รวม Excel และใส่เลขหน้า PDF
 
 # ③ ยิงใส่เว็บจริง (ประตู 2 — ต้องทำก่อนปิดงานทุกครั้ง)
-FK_BASE=https://patcharasitp.github.io/filekit ../.venv/bin/python tests/browser_ux.py
+FK_BASE=https://patcharasitp.github.io/filekit/ ../.venv/bin/python tests/browser_ux.py
 ```
 
 ## ‼️ กับดักที่ทำให้เทส "เขียวหลอก" มาแล้ว (อ่านก่อนเขียนเทสใหม่)

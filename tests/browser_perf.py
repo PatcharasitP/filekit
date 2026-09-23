@@ -51,6 +51,11 @@ def assert_compressed(page):
     แล้วคนอ่านผลจะไปไล่หา "ของที่โตขึ้น" ทั้งที่ไม่มีอะไรโตเลย (เสียเวลาไปแล้วจริงเมื่อ 13/09)
     จึงต้องหยุดทันทีพร้อมบอกวิธีแก้ ไม่ใช่รายงานตัวเลขที่เชื่อไม่ได้
     """
+    # ‼️ 24/09: FK_BASE ไม่มี / ท้าย เว็บจริงตอบ 301 ก่อน ใต้เน็ตจำลองบวกเพิ่มราว 160ms (FCP 560 แทน 400) ตกหลอก
+    if page.evaluate("performance.getEntriesByType('navigation')[0].redirectCount"):
+        print(f"\n  ‼️ หน้าแรกโดนเด้งไปที่ {page.url} ก่อนโหลด ตัวเลขเวลาจะบวกค่าเด้งเข้าไปด้วย")
+        print(f"     ให้รันใหม่ด้วย  FK_BASE={page.url} ...")
+        sys.exit(2)
     ratio = page.evaluate("""() => { var n = performance.getEntriesByType('navigation')[0];
         return n.decodedBodySize ? n.transferSize / n.decodedBodySize : 1; }""")
     if ratio > 0.9:

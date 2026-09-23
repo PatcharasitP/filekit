@@ -21,7 +21,7 @@
 รันปกติ:   FK_BASE=http://127.0.0.1:8899 ../.venv/bin/python tests/browser_picker.py
 รันเร็ว:   FK_BASE=... ../.venv/bin/python tests/browser_picker.py --quick   (8 เครื่องมือตัวแทน)
 รันพิสูจน์: FK_BASE=... ../.venv/bin/python tests/browser_picker.py --selftest
-รันกับเว็บจริง: FK_BASE=https://patcharasitp.github.io/filekit ../.venv/bin/python tests/browser_picker.py
+รันกับเว็บจริง: FK_BASE=https://patcharasitp.github.io/filekit/ ../.venv/bin/python tests/browser_picker.py
 """
 import os
 import sys

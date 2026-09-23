@@ -1,11 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-<!-- ‼️ พื้นน้ำเงินเต็มใบ ตัว F ขาว (พี่ปอนด์ 23/09/2026 ไอคอนแท็บซ้ำกับ FlowKit จนแยกไม่ออก)
-     FileKit = สี่เหลี่ยมน้ำเงิน , FlowKit = สี่เหลี่ยมม่วง (flowkit/assets/icons/favicon.svg) -->
+<!-- ‼️ พื้นน้ำเงินเต็มใบ แผ่นเอกสารพับมุมสีขาว (พี่ปอนด์ 23/09/2026 "ไอคอนไม่เอาตัว F แล้ว")
+     FileKit = สี่เหลี่ยมน้ำเงินแผ่นเอกสาร , FlowKit = สี่เหลี่ยมม่วงกล่องสองกล่อง , LearnKit = แอปเปิ้ล
+     เขียนที่ผืน 16 หน่วยโดยตรง ขอบไม่คร่อมพิกเซลตอนเป็นไอคอนแท็บ -->
 <style>
 .bg{fill:#2f3ea3}
 @media (prefers-color-scheme: dark){ .bg{fill:#4c60d6} }
 </style>
 <rect class="bg" x="0" y="0" width="16" height="16" rx="3"/>
-<path fill="#ffffff" d="M4,3 L10,3 L12,5 L12,6 L7,6 L7,8 L11,8 L11,10 L7,10 L7,13 L4,13 Z"/>
-<path fill="#ffffff" fill-opacity=".62" d="M10,3 L12,3 L12,5 Z"/>
+<path fill="#ffffff" d="M4.5 2.5h4.8L12 5.2V12.5a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z"/>
+<path fill="#2f3ea3" fill-opacity=".35" d="M9.3 2.5v2a.7.7 0 0 0 .7.7h2z"/>
 </svg>

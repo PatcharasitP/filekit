@@ -875,6 +875,12 @@ body.tool #home{display:none}
 .sites a:hover::after,.sites a:focus-visible::after{opacity:1; visibility:visible}
 :root[lang="en"] .sites a::after{content:attr(data-tip-en)}
 @media (prefers-reduced-motion: reduce){ .sites a::after{transition:none} }
+/* แถบเว็บในเครือ 3 เว็บ (23/09/2026): ไอคอนสีประจำเว็บเต็มสีเสมอ ตัวหนังสือจางยกเว้นหน้าที่อยู่ , มือถือแสดงด้วย (เหลือ 3 ลิงก์พอดีจอ) */
+.sites a{opacity:1; color:rgba(255,255,255,.64)}
+.sites a.self,.sites a:hover,.sites a:focus-visible{color:#fff}
+.sites .ico-file{color:#8fa0ff} .sites .ico-flow{color:#b59dff} .sites .ico-learn{color:#ff8a7c}
+@media (max-width:640px){ .network{display:block} .sites a{padding-inline:12px} .sites a::after{display:none} }
+
 </style>
 </head>
 <body>
@@ -882,7 +888,7 @@ body.tool #home{display:none}
 
 <header class="top">
   <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก" data-en-al="Back to home">
-    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12,4 L31,4 L36,9 L36,14 L22,14 L22,20 L31,20 L31,30 L22,30 L22,44 L12,44 Z"/></svg></span>
+    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 5h16l9 9v26a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/><path fill="#2f3ea3" fill-opacity=".35" d="M29 5v6a3 3 0 0 0 3 3h6z"/></svg></span>
     <span>FileKit</span>
   </button>
   <!-- ‼️ ปุ่มเมนูรวมเครื่องมือกับช่องค้นหาของหน้าเครื่องมือ (โครง v2)
@@ -995,18 +1001,13 @@ body.tool #home{display:none}
      ของเราไม่มีไฟล์โลโก้ จึงใช้ wordmark ตัวอักษร คำแรกบาง คำหลังหนา แบบ "DAX Guide" ของเขา
      ‼️ จางแค่ 0.62 ไม่ใช่ 0.3 เพราะของเราเป็นตัวหนังสือ ต้องอ่านออก 4.5:1 (ของเขาเป็นภาพ)
      ‼️ มือถือซ่อนทั้งแถบตามของเขา (ลองให้ตกบรรทัดแล้วหางหน้ายาว ปุ่มลงมือทำหลุดจอ ดูคอมเมนต์ใน CSS) -->
-<nav class="network" aria-label="เว็บและหมวดในเครือ FileKit" data-en-al="FileKit family of sites and tool groups">
+<!-- แถบเว็บในเครือ (พี่ปอนด์สั่ง 23/09/2026): เหลือ 3 เว็บ FileKit FlowKit LearnKit ตำแหน่งเดียวกันทุกเว็บ เปิดในแท็บเดิม
+     หน้าที่อยู่ = ตัวหนังสือขาวเต็ม , ไอคอนสีประจำเว็บเสมอ (น้ำเงิน ม่วง แอปเปิ้ลแดง) ‼️ แก้ที่หนึ่ง แก้ให้ครบ 4 หน้า FlowKit/tests/accepts.test.mjs เทียบ -->
+<nav class="network" aria-label="เว็บในเครือ" data-en-al="Sister sites">
   <ul class="sites">
-    <li><a class="self" href="#/" data-gocat="" aria-label="FileKit" data-tip="เครื่องมือจัดการไฟล์ 64 ตัว" data-tip-en="64 file tools"><svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M12,4 L31,4 L36,9 L36,14 L22,14 L22,20 L31,20 L31,30 L22,30 L22,44 L12,44 Z"/></svg><span>File</span><b>Kit</b></a></li>
-    <li><a href="#/freebies" data-tip="ไฟล์แจกฟรี ใช้ได้เลย" data-tip-en="Free files to use"><b data-en="Freebies">ของแจกฟรี</b></a></li>
-    <li><a href="#/" data-gocat="excel" data-tip="เครื่องมือสาย Excel" data-tip-en="Excel tools"><b data-en="Excel">Excel</b></a></li>
-    <li><a href="#/" data-gocat="powerbi" aria-label="Power BI" data-tip="เครื่องมือสาย Power BI" data-tip-en="Power BI tools"><span>Power</span><b>BI</b></a></li>
-    <li><a href="#/" data-gocat="powerquery" aria-label="Power Query" data-tip="เครื่องมือสาย Power Query" data-tip-en="Power Query tools"><span>Power</span><b>Query</b></a></li>
-    <li><a href="#/" data-gocat="powerautomate" aria-label="Power Automate" data-tip="เครื่องมือสาย Power Automate" data-tip-en="Power Automate tools"><span>Power</span><b>Automate</b></a></li>
-    <li><a href="#/" data-gocat="thai" data-tip="เครื่องมือเอกสารไทย" data-tip-en="Thai document tools"><b data-en="Thai docs">งานไทย</b></a></li>
-    <li><a href="/flowkit/" aria-label="FlowKit" data-tip="วาดผังจากข้อความ" data-tip-en="Diagrams from text"><svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="7" width="15" height="12" rx="3.2" fill="currentColor"/><path d="M14.5 19v7.5a3.5 3.5 0 0 0 3.5 3.5h7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><rect x="26" y="24" width="15" height="12" rx="3.2" fill="currentColor"/></svg><span>Flow</span><b>Kit</b></a></li>
-    <li><a href="https://patcharasitp.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio" data-tip="ผลงานและโปรเจกต์" data-tip-en="Work and projects"><span>Port</span><b>folio</b></a></li>
-    <li><a href="https://patcharasitp.github.io/portfolio/dashboard/" target="_blank" rel="noopener" aria-label="BKK Dashboard" data-tip="แดชบอร์ดข้อมูลกรุงเทพ" data-tip-en="Bangkok data dashboard"><span>BKK</span><b>Dashboard</b></a></li>
+    <li><a class="self" aria-current="page" data-gocat="" href="#/" aria-label="FileKit" data-tip="เครื่องมือจัดการไฟล์ 64 ตัว" data-tip-en="64 file tools"><svg class="ico ico-file" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 5h16l9 9v26a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/><path fill="#ffffff" fill-opacity=".5" d="M29 5v6a3 3 0 0 0 3 3h6z"/></svg><span>File</span><b>Kit</b></a></li>
+    <li><a href="/flowkit/" aria-label="FlowKit" data-tip="วาดผังจากข้อความ" data-tip-en="Diagrams from text"><svg class="ico ico-flow" viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="7" width="15" height="12" rx="3.2" fill="currentColor"/><path d="M14.5 19v7.5a3.5 3.5 0 0 0 3.5 3.5h7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><rect x="26" y="24" width="15" height="12" rx="3.2" fill="currentColor"/></svg><span>Flow</span><b>Kit</b></a></li>
+    <li><a href="/learnkit/" aria-label="LearnKit" data-tip="สมุดจดบทเรียนเห็นภาพ" data-tip-en="Visual lesson notebook"><svg class="ico ico-learn" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M24 16c-5-5-17-3.5-17 9.5 0 12 8.5 21 17 17.5 8.5 3.5 17-5.5 17-17.5 0-13-12-14.5-17-9.5z"/><path fill="#7fd49a" d="M25.5 12.5c4-5 10.5-5.5 12-4-2.5 4.5-7.5 6.5-12 4z"/></svg><span>Learn</span><b>Kit</b></a></li>
   </ul>
 </nav>
 

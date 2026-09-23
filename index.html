@@ -252,7 +252,7 @@ body.tool .skip{display:none}
    ตอนนี้ FileKit = น้ำเงิน , FlowKit = ม่วง (FlowKit/home.css กับ draw/draw.css ใช้ #6c4fd1) */
 .brand .mark{
   width:34px;height:34px;border-radius:10px; display:grid;place-items:center; flex:none;
-  background:#2f3ea3; color:#fff;
+  background:#4c60d6; color:#fff;   /* อ่อนลงจาก #2f3ea3 (พี่ปอนด์ 23/09/2026 "สีอ่อนกว่านี้ดีกว่าไหม") น้ำหนักเท่าโลโก้ม่วงของ FlowKit */
   box-shadow:none;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .brand .mark{background:#4c60d6} }
@@ -868,18 +868,13 @@ body.tool #home{display:none}
    ระยะข้างลดจาก 20 เป็น 16 พิกเซล เพราะไอคอนทำให้แถบยาวขึ้น 42 พิกเซล แล้ว BKK Dashboard ตกบรรทัด (วัดจริงที่จอ 1280) */
 .sites a{position:relative; padding-inline:16px}
 .sites a .ico{width:17px; height:17px; flex:none; align-self:center; display:block}
-.sites a::after{content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 7px); transform:translateX(-50%);
-  background:#14161c; color:#eef1ff; border:1px solid rgba(255,255,255,.15); border-radius:7px; padding:5px 10px;
-  font-size:12.5px; font-weight:400; line-height:1.5; white-space:nowrap; letter-spacing:0; box-shadow:0 10px 24px -10px rgba(0,0,0,.7);
-  opacity:0; visibility:hidden; transition:opacity .12s ease}
-.sites a:hover::after,.sites a:focus-visible::after{opacity:1; visibility:visible}
-:root[lang="en"] .sites a::after{content:attr(data-tip-en)}
-@media (prefers-reduced-motion: reduce){ .sites a::after{transition:none} }
 /* แถบเว็บในเครือ 3 เว็บ (23/09/2026): ไอคอนสีประจำเว็บเต็มสีเสมอ ตัวหนังสือจางยกเว้นหน้าที่อยู่ , มือถือแสดงด้วย (เหลือ 3 ลิงก์พอดีจอ) */
 .sites a{opacity:1; color:rgba(255,255,255,.64)}
 .sites a.self,.sites a:hover,.sites a:focus-visible{color:#fff}
 .sites .ico-file{color:#8fa0ff} .sites .ico-flow{color:#b59dff} .sites .ico-learn{color:#ff8a7c}
-@media (max-width:640px){ .network{display:block} .sites a{padding-inline:12px} .sites a::after{display:none} }
+.sites a span+b{margin-left:-.28em}   /* ชื่อติดกัน FileKit (พี่ปอนด์ 23/09/2026) ตัวบางกับตัวหนายังแยกน้ำหนัก */
+
+@media (max-width:640px){ .network{display:block} .sites a{padding-inline:12px} }
 
 </style>
 </head>
@@ -888,7 +883,7 @@ body.tool #home{display:none}
 
 <header class="top">
   <button class="brand" id="brand" type="button" aria-label="กลับหน้าหลัก" data-en-al="Back to home">
-    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 5h16l9 9v26a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/><path fill="#2f3ea3" fill-opacity=".35" d="M29 5v6a3 3 0 0 0 3 3h6z"/></svg></span>
+    <span class="mark"><svg class="mark-svg" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 5h16l9 9v26a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/><path fill="#4c60d6" fill-opacity=".45" d="M29 5v6a3 3 0 0 0 3 3h6z"/></svg></span>
     <span>FileKit</span>
   </button>
   <!-- ‼️ ปุ่มเมนูรวมเครื่องมือกับช่องค้นหาของหน้าเครื่องมือ (โครง v2)
@@ -1002,12 +997,12 @@ body.tool #home{display:none}
      ‼️ จางแค่ 0.62 ไม่ใช่ 0.3 เพราะของเราเป็นตัวหนังสือ ต้องอ่านออก 4.5:1 (ของเขาเป็นภาพ)
      ‼️ มือถือซ่อนทั้งแถบตามของเขา (ลองให้ตกบรรทัดแล้วหางหน้ายาว ปุ่มลงมือทำหลุดจอ ดูคอมเมนต์ใน CSS) -->
 <!-- แถบเว็บในเครือ (พี่ปอนด์สั่ง 23/09/2026): เหลือ 3 เว็บ FileKit FlowKit LearnKit ตำแหน่งเดียวกันทุกเว็บ เปิดในแท็บเดิม
-     หน้าที่อยู่ = ตัวหนังสือขาวเต็ม , ไอคอนสีประจำเว็บเสมอ (น้ำเงิน ม่วง แอปเปิ้ลแดง) ‼️ แก้ที่หนึ่ง แก้ให้ครบ 4 หน้า FlowKit/tests/accepts.test.mjs เทียบ -->
+     หน้าที่อยู่ = ตัวหนังสือขาวเต็ม , ไอคอนสีประจำเว็บเสมอ (น้ำเงิน ม่วง แอปเปิ้ลแดง) , ชื่อติดกัน FileKit ไม่มีป้ายตอนชี้ (พี่ปอนด์: ไม่ต้องบรรยาย) ‼️ แก้ที่หนึ่ง แก้ให้ครบ 4 หน้า FlowKit/tests/accepts.test.mjs เทียบ -->
 <nav class="network" aria-label="เว็บในเครือ" data-en-al="Sister sites">
   <ul class="sites">
-    <li><a class="self" aria-current="page" data-gocat="" href="#/" aria-label="FileKit" data-tip="เครื่องมือจัดการไฟล์ 64 ตัว" data-tip-en="64 file tools"><svg class="ico ico-file" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 5h16l9 9v26a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/><path fill="#ffffff" fill-opacity=".5" d="M29 5v6a3 3 0 0 0 3 3h6z"/></svg><span>File</span><b>Kit</b></a></li>
-    <li><a href="/flowkit/" aria-label="FlowKit" data-tip="วาดผังจากข้อความ" data-tip-en="Diagrams from text"><svg class="ico ico-flow" viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="7" width="15" height="12" rx="3.2" fill="currentColor"/><path d="M14.5 19v7.5a3.5 3.5 0 0 0 3.5 3.5h7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><rect x="26" y="24" width="15" height="12" rx="3.2" fill="currentColor"/></svg><span>Flow</span><b>Kit</b></a></li>
-    <li><a href="/learnkit/" aria-label="LearnKit" data-tip="สมุดจดบทเรียนเห็นภาพ" data-tip-en="Visual lesson notebook"><svg class="ico ico-learn" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M24 16c-5-5-17-3.5-17 9.5 0 12 8.5 21 17 17.5 8.5 3.5 17-5.5 17-17.5 0-13-12-14.5-17-9.5z"/><path fill="#7fd49a" d="M25.5 12.5c4-5 10.5-5.5 12-4-2.5 4.5-7.5 6.5-12 4z"/></svg><span>Learn</span><b>Kit</b></a></li>
+    <li><a class="self" aria-current="page" data-gocat="" href="#/" aria-label="FileKit"><svg class="ico ico-file" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M13 5h16l9 9v26a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z"/><path fill="#ffffff" fill-opacity=".5" d="M29 5v6a3 3 0 0 0 3 3h6z"/></svg><span>File</span><b>Kit</b></a></li>
+    <li><a href="/flowkit/" aria-label="FlowKit"><svg class="ico ico-flow" viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="7" width="15" height="12" rx="3.2" fill="currentColor"/><path d="M14.5 19v7.5a3.5 3.5 0 0 0 3.5 3.5h7.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><rect x="26" y="24" width="15" height="12" rx="3.2" fill="currentColor"/></svg><span>Flow</span><b>Kit</b></a></li>
+    <li><a href="/learnkit/" aria-label="LearnKit"><svg class="ico ico-learn" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M24 16c-5-5-17-3.5-17 9.5 0 12 8.5 21 17 17.5 8.5 3.5 17-5.5 17-17.5 0-13-12-14.5-17-9.5z"/><path fill="#7fd49a" d="M25.5 12.5c4-5 10.5-5.5 12-4-2.5 4.5-7.5 6.5-12 4z"/></svg><span>Learn</span><b>Kit</b></a></li>
   </ul>
 </nav>
 

@@ -1,24 +1,7 @@
-// ลิงก์ย่อของพี่ปอนด์ อยู่ใต้ FileKit (24/09/2026) เปิดด้วย https://patcharasitp.github.io/filekit/go/?ชื่อ
-// ชื่อลิงก์ผ่าน PBKDF2 ได้ทั้งชื่อไฟล์ข้อมูลและกุญแจถอดรหัส ในรีโปจึงไม่มีทั้งชื่อลิงก์และปลายทางแบบอ่านออก
-// ค่าคงที่สามตัวข้างล่างต้องตรงกับ tools/golink.mjs ทุกตัว ไม่งั้นลิงก์ที่สร้างไว้เปิดไม่ได้ทั้งหมด
-// ทุก path เป็นแบบสัมพัทธ์ หน้าเดียวกันใช้ได้ทั้งบนเว็บจริง (/filekit/go/) และตอนเทสในเครื่อง (/go/)
-const SALT = 'pond-go-v1';
-const ITER = 60000;
-const VALID = /^[a-z0-9][a-z0-9-]{0,31}$/;
+// หน้าพาไปของลิงก์ย่อ (24/09/2026) เปิดด้วย https://patcharasitp.github.io/filekit/go/?ชื่อ หรือ #ชื่อ
+// อ่านไฟล์ข้อมูลที่เข้ารหัสจากรีโป golinks ผ่าน raw.githubusercontent.com ลิงก์ที่สร้างใหม่จึงใช้ได้ทันทีโดยไม่ต้องรอ FileKit ขึ้นเว็บใหม่
+import { VALID, DATA, derive, open, checkUrl, trusted } from './core.js';
 
-const enc = new TextEncoder();
-const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-const hex = (u) => Array.from(u, (b) => b.toString(16).padStart(2, '0')).join('');
-
-async function derive(slug) {
-  const base = await crypto.subtle.importKey('raw', enc.encode(slug), 'PBKDF2', false, ['deriveBits']);
-  const bits = new Uint8Array(await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: enc.encode(SALT), iterations: ITER, hash: 'SHA-256' }, base, 44 * 8));
-  const key = await crypto.subtle.importKey('raw', bits.slice(12, 44), 'AES-GCM', false, ['decrypt']);
-  return { id: hex(bits.slice(0, 12)), key };
-}
-
-// รับสองแบบ ?ชื่อ กับ #ชื่อ (FileKit ไม่มีหน้า 404 ของตัวเอง จึงไม่รับแบบ /go/ชื่อ)
 function slugFromLocation() {
   const q = location.search.slice(1).split('&')[0];
   const h = location.hash.slice(1);
@@ -38,13 +21,17 @@ async function go() {
   if (!VALID.test(slug)) return show('notfound', slug);
   show('wait', slug);
   try {
-    const { id, key } = await derive(slug);
-    const r = await fetch('l/' + id + '.json', { cache: 'no-store' });
-    if (!r.ok) return show('notfound', slug);
-    const e = await r.json();
-    const url = new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(e.i) }, key, b64(e.c)));
-    if (!/^https:\/\//i.test(url)) return show('error', slug);
-    location.replace(url);
+    const { id } = await derive(slug, 'decrypt');
+    const r = await fetch(DATA + id + '.json', { cache: 'no-store', credentials: 'omit' });
+    if (r.status === 404) return show('notfound', slug);
+    if (!r.ok) return show('error', slug);
+    const url = checkUrl(await open(slug, await r.json()));
+    if (!url) return show('error', slug);
+    if (await trusted(url)) return location.replace(url.href);
+    // โดเมนนอกรายการ โชว์ชื่อโดเมนก่อน ให้คนกดเอง (กันลิงก์ phishing ถ้า token ของหน้าสร้างลิงก์รั่ว)
+    document.getElementById('host').textContent = url.hostname;
+    document.getElementById('goOn').href = url.href;
+    show('confirm', slug);
   } catch (err) {
     show('error', slug);
   }

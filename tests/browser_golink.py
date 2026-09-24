@@ -178,6 +178,8 @@ with sync_playwright() as p:
     st = view(pg) if "/go/" in pg.url else pg.url   # ถ้าหลุดไปเว็บปลายทางแล้ว ไม่มีช่องให้อ่าน ต้องไม่ค้างรอจนหมดเวลา
     ok("โฮสต์นอกรายการ ไม่พาไปเอง โชว์ชื่อโดเมน", st == "confirm" and pg.inner_text("#host") == "evil.example" and not evil_navs, f"{st} {evil_navs}")
     ok("ปุ่ม ไปต่อ ชี้ปลายทางเต็ม", st == "confirm" and pg.get_attribute("#goOn", "href") == "https://evil.example/login")
+    gap = pg.evaluate("(() => { const a = document.getElementById('goOn').getBoundingClientRect(); const t = document.querySelector('[data-view=confirm] p').getBoundingClientRect(); return Math.round(a.top - t.bottom); })()") if st == "confirm" else -1
+    ok("ปุ่ม ไปต่อ เว้นห่างจากข้อความเตือนอย่างน้อย 8px (เคยชิดจนแทบติดบนมือถือ 24/09/2026)", gap >= 8, f"{gap}px")
     pg2, _ = open_link(ctx, "?zz-lookalike")
     st = view(pg2) if "/go/" in pg2.url else pg2.url
     ok("ชื่อที่หน้าตาคล้าย example.com.evil.example ไม่นับว่าอยู่ในรายการ", st == "confirm" and pg2.inner_text("#host") == "example.com.evil.example" and not evil_navs, f"{st} {evil_navs}")

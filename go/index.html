@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>ลิงก์ย่อ</title>
+<style>
+:root{--bg:#fafaf8;--ink:#23221f;--muted:#6d6a63;--line:#e4e2dc;--field:#ffffff;--btn:#2f2d29;--btn-ink:#fafaf8;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--ink:#ecebe6;--muted:#a5a19a;--line:#34322e;--field:#1f1e1b;--btn:#ecebe6;--btn-ink:#161614;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);
+  font:400 16px/1.6 "Leelawadee UI","Sarabun",system-ui,sans-serif;padding:24px 16px}
+main{width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:22px;font-weight:600;margin:0;text-wrap:balance;word-break:break-word}
+p{margin:0;color:var(--muted)}
+form{display:flex;gap:8px}
+body[data-state="wait"] form{display:none}
+input{flex:1;min-width:0;font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink)}
+button{font:inherit;padding:9px 18px;border:0;border-radius:10px;background:var(--btn);color:var(--btn-ink);cursor:pointer}
+input:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+</style>
+</head>
+<body data-state="wait">
+<main>
+  <section data-view="wait"><p>กำลังพาไปที่ลิงก์ <b data-slug></b></p></section>
+  <section data-view="home" hidden><h1>ลิงก์ย่อ</h1><p>พิมพ์ชื่อลิงก์ที่ได้รับมา แล้วกด ไป</p></section>
+  <section data-view="notfound" hidden><h1>ไม่พบลิงก์ <span data-slug></span></h1><p>ตรวจตัวสะกดอีกครั้ง หรือถามคนที่ส่งลิงก์มา</p></section>
+  <section data-view="error" hidden><h1>เปิดลิงก์ <span data-slug></span> ไม่ได้</h1><p>ข้อมูลของลิงก์นี้อ่านไม่ได้ ลองใหม่อีกครั้ง หรือแจ้งเจ้าของลิงก์</p></section>
+  <form autocomplete="off"><input id="name" name="name" placeholder="ชื่อลิงก์" aria-label="ชื่อลิงก์" autocapitalize="none" spellcheck="false"><button type="submit">ไป</button></form>
+  <noscript><p>หน้านี้ต้องเปิด JavaScript ถึงจะพาไปที่ลิงก์ได้</p></noscript>
+</main>
+<script src="go.js"></script>
+</body>
+</html>

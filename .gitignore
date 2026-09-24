@@ -6,3 +6,6 @@ Thumbs.db
 # หลักฐาน screenshot ตอนเทส — เก็บนอก repo ที่ ../.claude/evidence/ ไม่ต้องขึ้นเว็บ
 .claude/
 tests/__pycache__/
+
+# ลิงก์ย่อ: รายการชื่อกับปลายทางแบบอ่านออก เก็บในเครื่องเท่านั้น (ขึ้นรีโปแค่ไฟล์ที่เข้ารหัสใน go/l/)
+go/links.local.json

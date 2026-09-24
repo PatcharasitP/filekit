@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v163";
+const VERSION = "filekit-v164";
 const SHELL = `${VERSION}-shell`;
 /* เพดานเวลารอเครือข่ายตอนเปิดหน้าเว็บ ครบเวลาแล้วใช้แคชทันที */
 const NAV_NET_TIMEOUT_MS = 1200;
@@ -98,6 +98,8 @@ self.addEventListener("fetch", (e) => {
 
   const url = new URL(request.url);
   const sameOrigin = url.origin === self.location.origin;
+  // ลิงก์ย่อ go/ ถามเครือข่ายทุกครั้ง ไม่แตะแคช (24/09/2026) ไม่งั้นแก้ปลายทางแล้วคนที่เคยเปิดยังถูกพาไปที่เก่า
+  if (sameOrigin && url.pathname.startsWith(new URL("go/", self.registration.scope).pathname)) return;
   const isLib = sameOrigin && (url.pathname.includes("/vendor/"));
 
   if (isLib) {

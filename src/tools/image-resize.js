@@ -4,6 +4,7 @@ import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
 import { decodeImage } from "../imgdecode.js";
+import { optimisePng } from "../pngopt.js";
 
 // สไตล์เฉพาะของแผงลอยเครื่องมือนี้ — ฝังในโมดูลเพราะห้ามแก้ assets/css/tool.css
 // (โมดูลนี้ import ครั้งเดียวต่อเซสชัน จึง <style> ไม่มีทางถูกแทรกซ้ำ)
@@ -204,6 +205,7 @@ export function mount(tool) {
     bmp.close?.();
     let blob = await new Promise((r) => canvas.toBlob(r, mime, +quality.value / 100));
     canvas.width = canvas.height = 0;
+    if (mime === "image/png") blob = await optimisePng(blob);   // PNG เล็กลงโดยพิกเซลเท่าเดิม (OxiPNG)
     let ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
     // ภาพกราฟิกสีเรียบมักโตขึ้นเมื่อแปลงเป็น JPG — ถ้าไม่ได้ย่อขนาดและผลลัพธ์
     // ใหญ่กว่าเดิม ให้คืนไฟล์ต้นฉบับไปเลย ดีกว่าส่งไฟล์ที่แย่ลงให้ผู้ใช้

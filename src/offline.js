@@ -25,6 +25,7 @@ const assetList = () => [
   "src/pdftext.js", "src/pptx.js", "src/thaifont.js", "assets/css/tool.css",
   "src/thai.js", "src/sheetpick.js", "src/xlsxutil.js", "src/pqm.js", "src/pqtypes.js", "src/tabledata.js", "src/search.js", "src/icons.js", "src/workspace.js", "src/docxmerge.js", "src/docxjoin.js",
   "src/docxreplace.js", "src/docxclean.js", "src/signpad.js", "src/colorkit.js", "src/jumpto.js", "src/presets.js", "src/statekit.js",
+  "src/pngopt.js", "src/pngopt-worker.js", "vendor/oxipng/squoosh_oxipng.js", "vendor/oxipng/squoosh_oxipng_bg.wasm",   // ตัวบีบ PNG (โหลดใน worker ไม่ผ่าน loader)
 ];
 
 export const isReady = () => {

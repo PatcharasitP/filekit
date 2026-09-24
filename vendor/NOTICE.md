@@ -25,6 +25,7 @@ FileKit เก็บไลบรารีทุกตัวไว้ในเค
 | `easy-template-x.esm.js` | easy-template-x | MIT | https://github.com/alonrbar/easy-template-x |
 | **`libheif.js` , `libheif.wasm`** | **libheif-js** (libheif คอมไพล์เป็น WebAssembly) | **‼️ LGPL-3.0** | https://github.com/catdad-experiments/libheif-js · ตัวไลบรารีจริง https://github.com/strukturag/libheif |
 | `fonts/Sarabun-*.woff2` | Sarabun | SIL Open Font License 1.1 | https://github.com/cadsondemak/Sarabun |
+| `oxipng/squoosh_oxipng.js` , `oxipng/squoosh_oxipng_bg.wasm` | OxiPNG (บีบ PNG ไม่เสียคุณภาพ) ผ่าน @jsquash/oxipng 2.3.0 ตัวบีบชุดเดียวกับ Squoosh | MIT (OxiPNG) กับ Apache-2.0 (jSquash) ข้อความเต็มอยู่ที่ `oxipng/LICENSE.codec.md` และ `oxipng/LICENSE` | https://github.com/oxipng/oxipng , https://github.com/jamsinclair/jSquash |
 
 ## ‼️ libheif ใช้ LGPL-3.0 ซึ่งต่างจากตัวอื่นทั้งหมด
 

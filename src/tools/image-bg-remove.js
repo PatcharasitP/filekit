@@ -3,6 +3,7 @@ import { el, dropzone, statusBar, button, field, select, segmented, download,
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
 import { decodeImage } from "../imgdecode.js";
+import { optimisePng } from "../pngopt.js";
 
 /* ── ลบพื้นหลังรูปภาพ ───────────────────────────────────────────────────────
  * ‼️ ทำไมไม่ใช้โมเดล AI (ตัดสินจากงานวิจัย 19/09/2026 + วัดผลจริงเอง)
@@ -406,6 +407,7 @@ export function mount(tool) {
     }
     bmp.close?.();
     c.width = c.height = 0;
+    outBlob = await optimisePng(outBlob);   // PNG เล็กลงโดยพิกเซลเท่าเดิม (OxiPNG)
     return { name: `${stripExt(file.name)}.png`, blob: outBlob, from: file.size };
   }
 

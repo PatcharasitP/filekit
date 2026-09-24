@@ -84,7 +84,9 @@ compose("logo", 600, 600, (255, 255, 255), logo, dark=0.0, blur=0.4)  # วั�
 compose("product", 700, 520, (232, 232, 234), product, blur=0.6)   # มีส่วนสว่างเท่าพื้นหลัง
 
 def score(alpha_png, truth_png):
-    a = np.asarray(Image.open(alpha_png).getchannel("A"), float)
+    # ‼️ แปลงเป็น RGBA ก่อนอ่านความใส (24/09/2026): OxiPNG เก็บรูปที่มีไม่เกิน 256 สีเป็น PNG แบบจานสี + tRNS (โหมด P)
+    #    ไม่เสียอะไรเลย แต่โหมด P ไม่มีช่อง A ให้ getchannel ตรง ๆ เทสเคยระเบิด "The image has no channel A"
+    a = np.asarray(Image.open(alpha_png).convert("RGBA").getchannel("A"), float)
     t = np.asarray(Image.open(truth_png), float)
     return a[t < 20].mean(), (255 - a[t > 200]).mean(), ((a > 128) == (t > 128)).mean() * 100
 

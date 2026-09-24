@@ -2,6 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser, eachFileConcurrent, failedBox } from "../ui.js";
 import { tr, pl } from "../i18n.js";
 import { decodeImage } from "../imgdecode.js";
+import { optimisePng } from "../pngopt.js";
 
 const TYPES = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp", ico: "image/png" };
 
@@ -114,7 +115,7 @@ export function mount(tool) {
           const b = await new Promise((r) => canvas.toBlob(r, mime, q));
           if (!b) throw new Error(tr(`เบราว์เซอร์นี้ยังบันทึกเป็น ${typeSel.value.toUpperCase()} ไม่ได้`,
             `This browser cannot save as ${typeSel.value.toUpperCase()} yet`));
-          return b;
+          return mime === "image/png" ? await optimisePng(b) : b;   // PNG เล็กลงโดยพิกเซลเท่าเดิม (OxiPNG)
         };
         let blob;
         if (typeSel.value === "ico") {

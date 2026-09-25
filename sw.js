@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v168";
+const VERSION = "filekit-v169";
 const SHELL = `${VERSION}-shell`;
 /* เพดานเวลารอเครือข่ายตอนเปิดหน้าเว็บ ครบเวลาแล้วใช้แคชทันที */
 const NAV_NET_TIMEOUT_MS = 1200;
@@ -68,6 +68,7 @@ const PRECACHE = [
   "src/pdfimpose.js", /* pdf-nup, pdf-resize */
   "src/textdiff.js",  /* pdf-compare */
   "src/sqlgen.js",       /* pq-group-concat, pq-pick-date, pq-to-date */
+  "src/pqcombine.js",    /* pq-combine */
   "src/subsetsum.js",    /* excel-match-sum */
   "./vendor/fonts/Sarabun-Regular.woff2", "./vendor/fonts/Sarabun-SemiBold.woff2", "./vendor/fonts/Sarabun-Bold.woff2",
 ];

@@ -27,6 +27,12 @@ FileKit เก็บไลบรารีทุกตัวไว้ในเค
 | `fonts/Sarabun-*.woff2` | Sarabun | SIL Open Font License 1.1 | https://github.com/cadsondemak/Sarabun |
 | `oxipng/squoosh_oxipng.js` , `oxipng/squoosh_oxipng_bg.wasm` | OxiPNG (บีบ PNG ไม่เสียคุณภาพ) ผ่าน @jsquash/oxipng 2.3.0 ตัวบีบชุดเดียวกับ Squoosh | MIT (OxiPNG) กับ Apache-2.0 (jSquash) ข้อความเต็มอยู่ที่ `oxipng/LICENSE.codec.md` และ `oxipng/LICENSE` | https://github.com/oxipng/oxipng , https://github.com/jamsinclair/jSquash |
 
+## ใช้เฉพาะในเทส (ไม่ได้ส่งให้ผู้ใช้)
+
+| ไฟล์ | ไลบรารี | สัญญาอนุญาต | ต้นทาง |
+|---|---|---|---|
+| `tests/lib/powerquery-parser.min.cjs` | @microsoft/powerquery-parser 2.0.0 รวมเป็นไฟล์เดียวด้วย esbuild ใช้ตรวจไวยากรณ์โค้ด M ที่เครื่องมือหมวด Power Query สร้าง | MIT ข้อความเต็มอยู่ที่ `tests/lib/powerquery-parser.LICENSE.txt` | https://github.com/microsoft/powerquery-parser |
+
 ## ‼️ libheif ใช้ LGPL-3.0 ซึ่งต่างจากตัวอื่นทั้งหมด
 
 ตัวอื่นในตารางเป็น permissive license (MIT , Apache , BSD) ที่แค่ให้เครดิตก็พอ

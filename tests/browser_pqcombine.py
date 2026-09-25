@@ -82,6 +82,8 @@ def main():
         ck("ข้อความ SQL ของแต่ละแหล่งแยกกัน (ใช้ #(lf))", c.count('[Query = "SELECT Code, Amount, SaleDate#(lf)FROM dbo.Sales"]') == 2)
         ck("ส่วน parameter ซ่อนอยู่ตอนไม่ได้เปิด", pg.is_hidden(".pqc-code >> nth=1"))
         ck("มีโน้ตเรื่อง privacy เพราะสอง server", "privacy level" in pg.inner_text(".pqc-note:not(.warn)"))
+        ck("ค่าเริ่มต้นที่ถูกทุกอย่างไม่มีกล่องเตือน", pg.is_hidden(".pqc-note.warn"),
+           pg.inner_text(".pqc-note.warn") if pg.is_visible(".pqc-note.warn") else "")
         shot(pg, "build_default.png")
 
         pg.locator(".pqc-switch input").first.check(force=True)
@@ -150,7 +152,10 @@ def main():
         notes = pg.inner_text(".pqc-note:not(.warn)")
         ck("บอกว่าลบ sales_th sales_vn ได้", "sales_th, sales_vn" in notes, notes)
         ck("บอกเรื่อง Enable load", "Enable load" in notes)
-        ck("เตือน privacy เพราะ query หลักดึงสองแหล่ง", "privacy level" in pg.inner_text(".pqc-note.warn"))
+        ck("privacy เป็นข้อควรรู้ใต้โค้ด เหมือนแท็บสร้างใหม่", "privacy level" in notes, notes)
+        # กล่องเตือนมีไว้บอกว่าตอนนี้มีอะไรผิดเท่านั้น ตัวอย่างที่ถูกทุกอย่างต้องไม่มีกล่องเตือน
+        ck("ตัวอย่างที่ถูกทุกอย่างไม่มีกล่องเตือน", pg.is_hidden(".pqc-note.warn"),
+           pg.inner_text(".pqc-note.warn") if pg.is_visible(".pqc-note.warn") else "")
         shot(pg, "merge_example.png")
 
         pg.locator("input[type=radio][value='keep']").check(force=True)

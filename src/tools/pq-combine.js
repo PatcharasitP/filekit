@@ -465,9 +465,10 @@ export function mount(tool) {
     if (pairs) {
       notes.push(// ‼️ จับค่าจริง 26/09 (Excel engine): ยังไม่ตั้ง privacy level จะถูกขอก่อน refresh ไม่ใช่ Formula.Firewall
       // Formula.Firewall เกิดเมื่อตั้งแล้วแต่เข้ากันไม่ได้ เช่น Private (ตามเอกสาร Microsoft)
+      // เขียนแบบมีเงื่อนไข เพราะ privacy level ตั้งต่อแหล่ง แหล่งที่เคยตั้งไว้แล้วจะไม่ถูกถามอีก
       tr(
-        `ดึง ${pairs.n} แหล่งในตัวเดียว ต้องตั้ง privacy level ทุกแหล่ง แนะนำ Organizational ทั้งหมด`,
-        `Reads ${pairs.n} sources at once. Every source needs a privacy level, Organizational for all is the safe choice`));
+        `ดึง ${pairs.n} แหล่งในตัวเดียว ถ้า Power BI ถาม privacy level ให้ตั้ง Organizational ทุกแหล่ง`,
+        `Reads ${pairs.n} sources at once. If Power BI asks for privacy levels, set every source to Organizational`));
       notes.push(tr(
         `refresh บน Service ต้องเพิ่ม data source ใน gateway ครบ ${pairs.n} คู่ ชื่อตรงตามโค้ด`,
         `On the Service, add all ${pairs.n} server and database pairs to the gateway, spelled as in the code`));
@@ -522,16 +523,17 @@ export function mount(tool) {
       notes.push(tr(`ยังลบไม่ได้: ${r.mustKeep.join(", ")} มีตัวอื่นอ้างอยู่ ปิด Enable load ไว้แทน`,
         `Keep these for now: ${r.mustKeep.join(", ")}, other queries still use them, turn off Enable load instead`));
     }
+    // privacy เป็นข้อควรรู้ ไม่ใช่ของผิด จึงอยู่ใต้โค้ดเหมือนแท็บสร้างใหม่ กล่องเตือนเก็บไว้บอกว่าตอนนี้มีอะไรผิดเท่านั้น
+    if (r.sourceCount >= 2) {
+      notes.push(tr(
+        `query หลักดึง ${r.sourceCount} แหล่งในตัวเดียว ถ้า Power BI ถาม privacy level ให้ตั้ง Organizational ทุกแหล่ง`,
+        `The main query reads ${r.sourceCount} sources at once. If Power BI asks for privacy levels, set every source to Organizational`));
+    }
     notes.push(tr(
       "รวมแล้วไม่ได้ดึงข้อมูลน้อยลง ถ้าอยากให้ไฟล์เล็กลงจริง ให้ปิด Enable load ของ query พักแทน",
       "Merging does not read the sources fewer times. To really shrink the file, turn off Enable load on the staging queries"));
     setNotes(noteEl, notes);
     const warns = [];
-    if (r.sourceCount >= 2) {
-      warns.push(tr(
-        `query หลักดึง ${r.sourceCount} แหล่งในตัวเดียว ต้องตั้ง privacy level ทุกแหล่ง แนะนำ Organizational ทั้งหมด`,
-        `The main query reads ${r.sourceCount} sources at once. Every source needs a privacy level, Organizational for all is the safe choice`));
-    }
     if (r.unused.length) {
       warns.push(tr(`query หลักไม่ได้ใช้ ${r.unused.join(", ")} เลยไม่ได้ยุบเข้าไป`, `The main query does not use ${r.unused.join(", ")}, so it was not folded in`));
     }

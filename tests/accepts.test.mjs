@@ -234,12 +234,16 @@ function middotsInStrings(txt, banned = "\u00b7") {
   }
   return hits;
 }
+/* ‼️ 26/09/2026 พี่ปอนด์ย้ำ "ตอนทำเว็บพี่แค่ไม่ชอบ ขีดยาว กับ จุดตรงกลาง" (CLAUDE.md ห้ามทั้งคู่ตั้งแต่ 09/09)
+   รุ่นเดิมจับแค่จุดกลาง ขีดยาวที่คนเห็นหลุดอยู่ 3 จุด (ตัวเลือก ไม่ใช้ ของแผนที่, ช่องว่างในตาราง, ป้ายเลขหน้า)
+   ขีดสั้นก็ห้าม เพราะฟอนต์ตัวพิมพ์ดีดวาดเต็มช่อง ตาเห็นเป็นขีดยาว (บทเรียน Portfolio) */
+const BANNED = "\u00b7\u2014\u2013";
 const middotHits = [];
 for (const f of [...toolFiles.map((n) => join("src/tools", n)),
                  ...readdirSync(join(ROOT, "src")).filter((n) => n.endsWith(".js")).map((n) => join("src", n))]) {
   const txt = readFileSync(join(ROOT, f), "utf8");
   const lines = txt.split("\n");
-  for (const ln of middotsInStrings(txt)) middotHits.push(`${f}:${ln} ${lines[ln - 1].trim().slice(0, 46)}`);
+  for (const ln of middotsInStrings(txt, BANNED)) middotHits.push(`${f}:${ln} ${lines[ln - 1].trim().slice(0, 46)}`);
 }
 /* พิสูจน์ว่าเครื่องตรวจจับของจริงได้ ไม่ใช่ผ่านเพราะมองไม่เห็น (ประชากรต้อง > 0) */
 {
@@ -257,9 +261,31 @@ for (const f of [...toolFiles.map((n) => join("src/tools", n)),
   ck(hit.length === 1 && hit[0] === 2, "เครื่องตรวจยังจับจุดกลางในสตริงที่อยู่หลัง regex ที่มีเครื่องหมายคำพูดได้");
 }
 const htmlBody = html.slice(html.indexOf("<body"));
-const htmlMiddot = (htmlBody.match(/>[^<]*\u00b7[^<]*</g) || []).map((x) => "index.html " + x.slice(0, 46));
+const htmlMiddot = (htmlBody.match(/>[^<]*[\u00b7\u2014\u2013][^<]*</g) || []).map((x) => "index.html " + x.slice(0, 46));
+{
+  const bait = 'const s = "ก \u2014 ข";  // \u2014 ในคอมเมนต์ต้องไม่โดนจับ\nconst t = `ช่วง 1 \u2013 3`;';
+  ck(middotsInStrings(bait, BANNED).length === 2, "เครื่องตรวจจับขีดยาวและขีดสั้นในสตริงได้ และไม่จับในคอมเมนต์");
+}
+/* ‼️ 26/09/2026 ตัวที่ CSS วาดเอง (content ของ ::before ::after) ไม่อยู่ในสตริงข้อความหรือเนื้อ body
+   Portfolio มีขีดสั้นตรงนี้บนเว็บจริง 10 จุดโดยเทสที่อ่านข้อความผ่านมาตลอด จึงสแกน content ใน CSS ทุกที่
+   ทั้งตัวอักษรตรง ๆ และแบบ escape (\\2014 \\2013 \\b7) ส่วน \\2212 (เครื่องหมายลบคู่กับบวก) ใช้ได้ */
+const CSS_BAD = /content\s*:\s*(["'])(?:(?!\1)[^\n])*?(?:[\u00b7\u2014\u2013]|\\0*(?:b7|2014|2013)(?![0-9a-f]))(?:(?!\1)[^\n])*\1/gi;
+const cssHits = (name, txt) => [...txt.matchAll(CSS_BAD)].map((m) => `${name}:${txt.slice(0, m.index).split("\n").length} ${m[0].slice(0, 46)}`);
+const cssSources = [
+  ...readdirSync(join(ROOT, "assets/css")).filter((n) => n.endsWith(".css")).map((n) => [join("assets/css", n), readFileSync(join(ROOT, "assets/css", n), "utf8")]),
+  ["index.html", html],
+  ...[...toolFiles.map((n) => join("src/tools", n)), ...readdirSync(join(ROOT, "src")).filter((n) => n.endsWith(".js")).map((n) => join("src", n))]
+     .map((f) => [f, readFileSync(join(ROOT, f), "utf8")]),
+];
+ck(cssSources.length > 2, `หาไฟล์ CSS และสคริปต์ที่ฝังสไตล์เจอ (${cssSources.length} ไฟล์, ประชากรต้องไม่เป็นศูนย์)`);
+{
+  const bait = '.a::before{content:"\u2014"} .b::after{content:"\\2014"} .c::before{content:"\\2212"} .d::before{content:""}';
+  ck(cssHits("bait", bait).length === 2, "เครื่องตรวจ content ของ CSS จับขีดยาวทั้งตัวตรงและแบบ escape และปล่อยเครื่องหมายลบ");
+}
+const cssBad = cssSources.flatMap(([name, txt]) => cssHits(name, txt));
+ck(cssBad.length === 0, `ห้ามมีจุดกลางหรือขีดในตัวที่ CSS วาด (content) (พบ ${cssBad.length})` + (cssBad.length ? "\n      " + cssBad.slice(0, 6).join("\n      ") : ""));
 ck(middotHits.length + htmlMiddot.length === 0,
-   `ห้ามมีจุดกลาง (·) ในข้อความที่ผู้ใช้เห็น (พบ ${middotHits.length + htmlMiddot.length})` +
+   `ห้ามมีจุดกลาง ขีดยาว หรือขีดสั้น ในข้อความที่ผู้ใช้เห็น (พบ ${middotHits.length + htmlMiddot.length})` +
    (middotHits.length + htmlMiddot.length ? "\n      " + [...middotHits, ...htmlMiddot].slice(0, 6).join("\n      ") : ""));
 
 /* ‼️ กำแพงความปลอดภัย 2 ชั้นที่ "พังเงียบ" ได้ง่ายมากถ้าไม่มีเครื่องจับ

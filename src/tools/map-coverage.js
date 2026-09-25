@@ -225,7 +225,7 @@ export function mount(tool) {
     sels.forEach((sel, i) => {
       const keep = sel.value;
       sel.innerHTML = "";
-      sel.append(el("option", { value: "" }, tr("— ไม่ใช้ —", "— none —")));
+      sel.append(el("option", { value: "" }, tr("ไม่ใช้", "None")));
       header.forEach((h, j) => sel.append(el("option", { value: String(j) }, h || `#${j + 1}`)));
       const g = guesses[i];
       sel.value = keep && header[+keep] !== undefined ? keep : (g >= 0 ? String(g) : "");
@@ -451,8 +451,8 @@ export function mount(tool) {
         el("td", {}, String(r.count)),
         el("td", {}, String(r.byKind.old || 0)),
         el("td", {}, String(r.byKind.new || 0)),
-        el("td", {}, near ? points[near.index].id : "—"),
-        el("td", {}, near ? Math.round(near.km * 1000).toLocaleString() : "—"),
+        el("td", {}, near ? points[near.index].id : ""),
+        el("td", {}, near ? Math.round(near.km * 1000).toLocaleString() : ""),
       ]));
     }
     t.append(tb);

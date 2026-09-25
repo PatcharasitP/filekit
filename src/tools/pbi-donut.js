@@ -89,7 +89,7 @@ const STYLE = `
 .pbid-switch input:checked + .pbid-switch-track{background:var(--g-powerbi,var(--brand))}
 .pbid-switch input:checked + .pbid-switch-track::after{transform:translateX(18px)}
 .pbid-switch input:focus-visible + .pbid-switch-track{outline:2px solid var(--brand);outline-offset:2px}
-/* ‼️ สวิตช์สูง 24px เตี้ยกว่าเกณฑ์นิ้วแตะ 36px — ยืดกรอบที่กดได้เป็น 36 แต่คงรางสูง 24 เท่าเดิม
+/* ‼️ สวิตช์สูง 24px เตี้ยกว่าเกณฑ์นิ้วแตะ 36px, ยืดกรอบที่กดได้เป็น 36 แต่คงรางสูง 24 เท่าเดิม
    โดยดันขอบบนล่างเข้ามา 6px (ทับ inset:0 ของราง) หน้าตาจึงไม่เปลี่ยน แค่กดโดนง่ายขึ้น */
 @media (pointer:coarse){
   .pbid-switch{height:36px}

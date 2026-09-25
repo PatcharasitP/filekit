@@ -106,7 +106,7 @@ export function mount(tool) {
   const st = statusBar();
   const view = el("canvas", {});
   const stage = el("div", { class: "us-stage" }, [view]);
-  const pageLabel = el("b", {}, "—");
+  const pageLabel = el("b", {}, "");
   const prevBtn = button("", { icon: "undo", ghost: true, label: tr("หน้าก่อนหน้า", "Previous page"),
     onclick: () => { if (pageNo > 1) { pageNo--; renderPreview(); } } });
   const nextBtn = button("", { icon: "undo", ghost: true, label: tr("หน้าถัดไป", "Next page"),

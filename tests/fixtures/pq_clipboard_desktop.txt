@@ -1,0 +1,72 @@
+﻿// A_blocks
+let
+    #"Src A1" =
+        let
+            Source = Sql.Database("spike-a1.example", "DbA1", [Query = "SELECT 1 AS X"])
+        in
+            Source,
+    #"Src A2" =
+        let
+            Source = Sql.Database("spike-a2.example", "DbA2", [Query = "SELECT 2 AS X"])
+        in
+            Source,
+    Combined = Table.Combine({#"Src A1", #"Src A2"})
+in
+    Combined
+
+// B_function
+let
+    LoadSql = (server as text, database as text, sql as text) as table =>
+        let
+            Source = Sql.Database(server, database, [Query = sql])
+        in
+            Source,
+    #"Src B1" = LoadSql("spike-b1.example", "DbB1", "SELECT 1 AS X"),
+    #"Src B2" = LoadSql("spike-b2.example", "DbB2", "SELECT 2 AS X"),
+    Combined = Table.Combine({#"Src B1", #"Src B2"})
+in
+    Combined
+
+// C_table
+let
+    LoadSql = (server as text, database as text, sql as text) as table =>
+        let
+            Source = Sql.Database(server, database, [Query = sql])
+        in
+            Source,
+    Sources = #table({"Server", "Database", "Sql"}, {
+        {"spike-c1.example", "DbC1", "SELECT 1 AS X"},
+        {"spike-c2.example", "DbC2", "SELECT 2 AS X"}
+    }),
+    Loaded = Table.AddColumn(Sources, "Data", each LoadSql([Server], [Database], [Sql])),
+    Combined = Table.Combine(Loaded[Data])
+in
+    Combined
+
+// Server_P1
+"spike-p1.example" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+
+// Database_P1
+"DbP1" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+
+// P_params
+let
+    #"Src P1" =
+        let
+            Source = Sql.Database(Server_P1, Database_P1, [Query = "SELECT 1 AS X"])
+        in
+            Source,
+    #"Src P2" =
+        let
+            Source = Sql.Database(Server_P2, Database_P2, [Query = "SELECT 2 AS X"])
+        in
+            Source,
+    Combined = Table.Combine({#"Src P1", #"Src P2"})
+in
+    Combined
+
+// Server_P2
+"spike-p2.example" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+
+// Database_P2
+"DbP2" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]

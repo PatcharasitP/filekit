@@ -96,6 +96,7 @@ def main():
         pg.wait_for_timeout(200)
         c = code(pg)
         ck("แบบฟังก์ชันมี LoadSql และเรียกบรรทัดละแหล่ง", "LoadSql = (server as text" in c and c.count("= LoadSql(") == 2, c[:400])
+        ck("แบบฟังก์ชันมีคำเตือนว่า refresh บน Service ไม่ได้", "Service" in pg.inner_text(".pqc-note.warn"))
         pg.locator("input[type=radio][value='blocks']").check(force=True)
 
         pg.get_by_role("button", name=re.compile("เพิ่มแหล่ง")).click()

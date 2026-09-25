@@ -10,6 +10,7 @@
  * ตัวอย่างทั้งหมดเป็นชื่อสมมติ ห้ามใส่ชื่อ server หรือข้อมูลบริษัทจริงลงไฟล์นี้
  */
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -153,6 +154,18 @@ const p3 = parseQueries(`section Section1;\n\nshared a = let x = "a;b" in x;\n\n
 ck("แบบ section อ่านชื่อและโค้ดถูก (; ในสตริงไม่ตัด)", p3.queries, [{ name: "a", code: 'let x = "a;b" in x' }, { name: "b c", code: "2" }]);
 const p4 = parseQueries("let a = 1 in a");
 ck("query เดียวไม่มีหัว", [p4.format, p4.queries.length, p4.queries[0].name], ["single", 1, ""]);
+
+// ข้อความจริงจากการคัดลอก 8 query ใน Power Query Editor ของ Desktop 2.157 (26/09/2026 ชื่อ server สมมติ)
+// ไฟล์นี้เขียนด้วย PowerShell จึงมี BOM นำหน้า ถ้าตัวอ่านไม่ตัด BOM query แรกจะไม่มีชื่อ (บั๊กที่เจอจริง)
+const clip = readFileSync(join(ROOT, "tests/fixtures/pq_clipboard_desktop.txt"), "utf8");
+ck("ไฟล์คลิปบอร์ดจริงขึ้นต้นด้วย BOM (ของทดสอบยังเป็นของจริง)", clip.charCodeAt(0), 0xfeff);
+const pc = parseQueries(clip);
+ck("คลิปบอร์ดจริงจาก Desktop อ่านได้ 8 query ชื่อตรงทุกตัว", pc.queries.map((q) => q.name),
+   ["A_blocks", "B_function", "C_table", "Server_P1", "Database_P1", "P_params", "Server_P2", "Database_P2"]);
+ck("ตัด BOM ออกแล้วอ่านได้เหมือนกัน", parseQueries(clip.slice(1)).queries.map((q) => q.name), pc.queries.map((q) => q.name));
+ck("P_params อ้าง parameter ครบ 4 ตัว", [...findRefs(pc.queries.find((q) => q.name === "P_params").code, pc.queries.map((q) => q.name))].sort(),
+   ["Database_P1", "Database_P2", "Server_P1", "Server_P2"]);
+for (const q of pc.queries) ck(`คลิปบอร์ดจริง ${q.name} ผ่านตัวตรวจไวยากรณ์`, await parses(q.code), true);
 
 console.log("\n━━ ⑤ ยุบ 3 เหลือ 1 แบบคัดลอกบล็อกให้ตัวที่อ้างอยู่ (ค่าเริ่มต้น) ━━");
 const r = mergeQueries(Q, { main: "sales_all", inline: ["sales_th", "sales_vn"], dependents: "copy" });

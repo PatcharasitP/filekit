@@ -262,7 +262,8 @@ export function detectSources(code) {
  *   ③ query เดียวไม่มีชื่อ
  * ‼️ บรรทัด // ที่อยู่ข้างใน let (ยังไม่ปิดด้วย in) ไม่ใช่หัว query แค่เป็นคอมเมนต์ธรรมดา */
 export function parseQueries(text) {
-  const src = String(text ?? "").replace(/\r\n?/g, "\n");
+  // ‼️ ตัด BOM หน้าสุด ไฟล์ที่ PowerShell หรือ Notepad เขียนมีตัวนี้ แล้วหัว // บรรทัดแรกหลุด (เจอกับคลิปบอร์ดจริง 26/09)
+  const src = String(text ?? "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
   const segs = scanM(src);
   const codeOnly = maskOf(src, segs);
   // ‼️ ตอนอ่าน section ต้องเก็บชื่อ #"..." ไว้ ถ้าปิดเป็นช่องว่าง regex shared\s+ จะกลืนชื่อทิ้ง (เทสจับได้ 26/09)

@@ -165,8 +165,8 @@ export function mount(tool) {
   const parsedEl = el("p", { class: "pqc-hint" });
   const mergeLeft = el("div", {}, [
     el("p", { class: "pqc-hint", style: "margin:0 0 10px" }, tr(
-      "วางโค้ดจาก Advanced Editor ทีละ query บรรทัดแรกของแต่ละก้อนพิมพ์ // ตามด้วยชื่อ query",
-      "Paste each query from its Advanced Editor, starting each one with a line of // and its name")),
+      "ใน Power Query Editor คลิก query แรก กด Shift คลิกตัวท้าย แล้ว Ctrl+C มาวางที่นี่ได้เลย",
+      "In Power Query Editor click the first query, Shift click the last, press Ctrl+C and paste here")),
     pasteEl,
     el("div", { class: "pqc-row" }, [sampleBtn, clearBtn]),
     parsedEl,
@@ -295,8 +295,8 @@ export function mount(tool) {
     const patHint = el("p", { class: "pqc-hint", style: "margin:6px 0 12px" });
     const paintPat = () => {
       patHint.textContent = options.pattern === "function"
-        ? tr("บรรทัดละแหล่ง แก้ต่อด้วยมือง่ายสุด ยังไม่ได้ลอง refresh บน Service ลองกับไฟล์ทดสอบก่อน",
-             "One line per source, easiest to extend by hand. Not yet tried with refresh on the Service, test a copy first")
+        ? tr("แก้ต่อด้วยมือง่ายสุด แต่ Power BI มองไม่เห็นแหล่ง จึง refresh บน Service ไม่ได้",
+             "Easiest to extend by hand, but Power BI cannot see the sources (dynamic) so it will not refresh on the Service")
         : tr("บล็อกละแหล่ง ต่อ SQL แบบเดียวกับ query ปกติ ใช้ได้ทั้งใน Desktop และบน Service",
              "One block per source, the same SQL connection a normal query uses, fine in Desktop and on the Service");
     };
@@ -449,6 +449,12 @@ export function mount(tool) {
       if (w.code === "noServer") warns.push(tr(`แหล่งที่ ${n} ยังไม่ได้ใส่ server`, `Source ${n} has no server yet`));
       if (w.code === "noDatabase") warns.push(tr(`แหล่งที่ ${n} ยังไม่ได้ใส่ฐานข้อมูล`, `Source ${n} has no database yet`));
       if (w.code === "noSql") warns.push(tr(`แหล่งที่ ${n} ยังไม่มีคำสั่ง SQL`, `Source ${n} has no SQL yet`));
+    }
+    // ‼️ พิสูจน์ใน Desktop 2.157 (26/09/2026): Sql.Database ที่ห่อในฟังก์ชันที่เขียนเอง ไม่โผล่ใน Data source settings
+    //    และขึ้น Some data sources may not be listed because of hand-authored queries = dynamic data source
+    if (options.pattern === "function") {
+      warns.push(tr("แบบฟังก์ชัน refresh บน Service ไม่ได้ ถ้าจะตั้ง refresh บน Service ให้ใช้แบบบล็อก",
+        "The function style will not refresh on the Service, use Blocks if you need that"));
     }
     setNotes(warnEl, warns);
     const pairs = buildWarnings(sources).find((w) => w.code === "privacy");

@@ -66,7 +66,13 @@ def which(pg):
 
 def ready_sw(pg, base):
     pg.goto(base + "/filekit/")
-    pg.wait_for_function("async () => !!(await navigator.serviceWorker.getRegistration())?.active", timeout=20000)
+    # ‼️ 27/09/2026 เดิมรอด้วย wait_for_function ที่ส่งฟังก์ชัน async ซึ่งไม่รอเลย ฟังก์ชัน async คืน Promise ที่นับเป็นค่าจริง
+    #    จึงผ่านทันทีแม้ service worker ยังไม่พร้อม (ยิงจริงคืนใน 22 ถึง 29 ms) ต้องการค่าจาก await จึงวน evaluate เอง (evaluate รอ Promise)
+    #    นับเวลาจริง ไม่นับรอบ (นับ 200 รอบ รอบละ 100 ms วัดจริงได้ 26.65 วินาที เพราะ evaluate เองก็กินเวลา)
+    deadline = time.time() + 20
+    while not pg.evaluate("async () => !!(await navigator.serviceWorker.getRegistration())?.active"):
+        if time.time() > deadline: raise AssertionError("service worker ไม่ active ภายใน 20 วินาที")
+        pg.wait_for_timeout(100)
     pg.reload(); pg.wait_for_function("() => !!navigator.serviceWorker.controller", timeout=15000)
 
 

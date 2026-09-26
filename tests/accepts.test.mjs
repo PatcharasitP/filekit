@@ -411,14 +411,18 @@ ck(middotHits.length + htmlMiddot.length === 0,
    กันไว้ด้วยเครื่องตรวจ เพราะกฎที่ต้องจำจะลืมตอนเขียนเทสใหม่แน่นอน */
 {
   const pyFiles = readdirSync(join(ROOT, "tests")).filter((n) => n.endsWith(".py"));
-  const bare = [];
+  const bare = [], asyncs = [];
   for (const f of pyFiles) {
     const txt = readFileSync(join(ROOT, "tests", f), "utf8");
     // จับอาร์กิวเมนต์ตัวแรกที่เป็นสตริง หลัง wait_for_function( (รองรับขึ้นบรรทัดใหม่และ f-string)
     // ‼️ รองรับสตริงสามอัญประกาศ (""" หรือ ''') ด้วย ไม่งั้นช่องว่างระหว่างอัญประกาศถูกอ่านเป็นนิพจน์เปล่า (22/09/2026)
     for (const m of txt.matchAll(/wait_for_function\(\s*(?:#[^\n]*\n\s*)*f?(?:"""|'''|["'])([^"']{0,40})/g)) {
-      // ‼️ async () => ก็เป็นฟังก์ชันลูกศร Playwright เรียกเป็นฟังก์ชัน ไม่ใช้ eval (รันจริงบนหน้าที่ CSP เข้มผ่าน 22/09/2026)
-      const head = m[1].trimStart().replace(/^async\s+/, "");
+      // ‼️ async () => ไม่ใช้ eval ก็จริง (22/09/2026 รันบนหน้า CSP เข้มแล้วไม่มี EvalError) แต่ wait_for_function ไม่รอค่าใน Promise
+      //    ฟังก์ชัน async คืน Promise ซึ่งนับเป็นค่าจริง จึงผ่านทันทีแม้เงื่อนไขเป็นเท็จ ไม่มี error ใด ๆ (ยิงจริง 27/09/2026 คืนใน 22 ถึง 29 ms
+      //    สถานะในหน้ายังไม่เปลี่ยน async () => false ก็ผ่าน) 22/09 ดูแค่ว่าไม่ error ไม่ได้ดูว่ารอจริง ต้องรอค่าจาก await ให้วน pg.evaluate เอง
+      //    หลักฐาน .claude/evidence/2026-09-27-kaizen-1-codetrigger/ (recheck_async.txt) ของโปรเจกต์หลัก
+      const head = m[1].trimStart();
+      if (/^async\b/.test(head)) { asyncs.push(`${f}: ${m[1].slice(0, 30)}`); continue; }
       if (!head.startsWith("() =>") && !head.startsWith("()=>") && !/^\([\w\s,]*\)\s*=>/.test(head))
         bare.push(`${f}: ${m[1].slice(0, 30)}`);
     }
@@ -427,6 +431,9 @@ ck(middotHits.length + htmlMiddot.length === 0,
   ck(bare.length === 0,
      `wait_for_function ทุกจุดต้องส่งฟังก์ชันลูกศร ไม่ใช่นิพจน์เปล่า (CSP บล็อก eval) พบผิด ${bare.length}` +
      (bare.length ? "\n      " + bare.slice(0, 5).join("\n      ") : ""));
+  ck(asyncs.length === 0,
+     `wait_for_function ห้ามส่งฟังก์ชัน async (Promise นับเป็นค่าจริง ผ่านทันทีไม่รอ) ต้องวน pg.evaluate เอง พบ ${asyncs.length}` +
+     (asyncs.length ? "\n      " + asyncs.slice(0, 5).join("\n      ") : ""));
 }
 
 /* ‼️ [hidden] ของเบราว์เซอร์เป็นกฎระดับ user-agent ซึ่งแพ้ display ที่เราเขียนเองเสมอ

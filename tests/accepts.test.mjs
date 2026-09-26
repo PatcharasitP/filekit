@@ -5,7 +5,7 @@
  * หน้าแรกจะเสนอเครื่องมือผิด (หรือไม่เสนอทั้งที่ใช้ได้) แบบเงียบ ๆ ไม่มีอะไรฟ้อง
  *
  * ตรวจแบบอ่านไฟล์ตรง ๆ ไม่ import — ทะเบียนพึ่ง localStorage ของเบราว์เซอร์อยู่ */
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
@@ -349,6 +349,19 @@ ck(middotHits.length + htmlMiddot.length === 0,
      `เครื่องมือทุกตัวต้องมีคำแปลอังกฤษในทะเบียน (ขาด ${noEn.length})` +
      (noEn.length ? "\n      " + noEn.join(", ") : ""));
   void enBlock;
+}
+
+/* ‼️ FlowKit (เว็บในเครือ repo แยก วางข้างกันในเครื่องนี้) เขียนจำนวนเครื่องมือ FileKit ไว้ที่ประตูหน้าแรก
+   เพิ่มเครื่องมือแล้วลืมแก้ที่นั่น = FlowKit อ้างเลขผิดบนเว็บจริง (พลาดจริง 26/09/2026 เขียน 64 ตอนมี 65
+   เทสของ FlowKit จับได้ แต่รันเฉพาะตอนแก้ FlowKit) ไม่มีโฟลเดอร์ FlowKit อยู่ข้าง ๆ = ข้ามข้อนี้ */
+{
+  const flow = join(ROOT, "..", "FlowKit", "index.html");
+  if (existsSync(flow)) {
+    const html = readFileSync(flow, "utf8");
+    const claims = [...html.matchAll(/(\d+) ตัว ในเครื่องคุณ|data-en="(\d+) file tools/g)].map((m) => Number(m[1] || m[2]));
+    ck(claims.length === 2 && claims.every((n) => n === toolCount),
+       `FlowKit อ้างจำนวนเครื่องมือ FileKit ตรงของจริง (อ้าง ${claims.join(", ") || "ไม่เจอ"} มีจริง ${toolCount})`);
+  }
 }
 
 /* ‼️ Safari รู้จัก backdrop-filter แบบไม่มี prefix ตั้งแต่รุ่น 18 เท่านั้น (ปลายปี 2024)

@@ -18,6 +18,17 @@ SAMPLES = ROOT / "samples"
 REG_IDS = re.findall(r'id:"([\w-]+)"', (ROOT / "src/registry.js").read_text(encoding="utf-8"))
 
 P, F = 0, []
+
+# ‼️ 26/09/2026 เทสทั้งเว็บตอนเครื่องไม่ว่าง (Power BI Desktop เปิดอยู่ รันขนาน 3 ชุด) ได้ pbi-donut h1=0 หัวข้อว่าง []
+#    รันชุดนี้เดี่ยวผ่าน แปลว่าอ่านหัวข้อตอนหน้ายังไม่พร้อม เปลี่ยนแค่ hash หน้าเดิมยังมี .s2 ของเครื่องมือก่อนหน้า
+#    รอ ".s2, .tool-head" ทั้งหน้าจึงผ่านได้ทันที จึงรอให้ชื่อหน้าเปลี่ยน ตัวหมุนหาย และมีรากเครื่องมืออยู่ใน #tool ก่อนอ่าน
+def open_tool_page(pg, tid):
+    prev = pg.title()
+    pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle")
+    pg.wait_for_function(
+        "(prev) => document.title !== prev && !document.querySelector('#tool .loading')"
+        " && !!document.querySelector('#tool .s2, #tool .tool-head')", arg=prev, timeout=30000)
+
 def ck(n, got, want, contains=False):
     global P
     ok = (str(want) in str(got)) if contains else (got == want)
@@ -234,8 +245,7 @@ with sync_playwright() as p:
     print("  -- สแกนทุกหน้าเครื่องมือ (ตอนยังไม่มีไฟล์) หา icon-only button ที่ไม่มีชื่อเลย --")
     no_name_found = []
     for tid in REG_IDS:
-        pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle")
-        pg.wait_for_selector(".s2, .tool-head", timeout=8000)
+        open_tool_page(pg, tid)
         pg.wait_for_timeout(100)
         for e in pg.evaluate(SCAN_ICON_BTNS):
             if not e["accName"]:
@@ -292,8 +302,7 @@ with sync_playwright() as p:
 
     bad_pages = []
     for tid in REG_IDS:
-        pg.goto(f"{BASE}/#/{tid}", wait_until="networkidle")
-        pg.wait_for_selector(".s2, .tool-head", timeout=8000)
+        open_tool_page(pg, tid)
         pg.wait_for_timeout(80)
         heads = pg.evaluate("""() => [...document.querySelectorAll('#tool h1,#tool h2,#tool h3,#tool h4,#tool h5,#tool h6')]
             .map(h => ({lvl: parseInt(h.tagName[1]), text: h.textContent.trim().slice(0,30)}))""")

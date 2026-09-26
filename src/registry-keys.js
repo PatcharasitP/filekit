@@ -35,7 +35,7 @@ export const KEYS = {
   "image-convert": "png jpg webp แปลง รูป convert ico favicon ไอคอน ไอคอนเว็บ",
   "image-resize": "resize compress ย่อ ลดขนาด บีบอัด รูป",
   "image-bg-remove": "background remove transparent โปร่งใส ลบพื้นหลัง ตัดพื้นหลัง ลายเซ็น ตราประทับ โลโก้ png ฉากหลัง",
-  "images-to-pdf": "image jpg png รูป รวม pdf",
+  "images-to-pdf": "image jpg png รูป รวมรูป pdf",
   "word-join": "merge join รวม ต่อ เอกสาร word docx เล่ม รายงาน",
   "word-replace": "find replace ค้นหา แทนที่ หลายไฟล์ batch แก้ทั้งชุด word",
   "word-clean": "clean metadata comment track changes ตรวจ ล้าง คอมเมนต์ ประวัติ ผู้เขียน ความลับ ส่งออก",

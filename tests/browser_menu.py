@@ -14,6 +14,7 @@
    ③ หน้าแรกกดชิป PDF แล้วเห็นหัวกลุ่มย่อย 4 อัน และทุกป้ายอยู่ใต้หัวใดหัวหนึ่ง
    ④ โหมดอังกฤษ หัวกลุ่มต้องเป็นอังกฤษ (ไม่ใช่ไทยค้าง)
    ⑤ คลิกจากเมนูแล้วเปิดเครื่องมือนั้นจริง
+   ⑥ ปุ่มเมนูกับไฮไลต์ถูกทุกครั้ง รวมตอนกลับมาเครื่องมือที่เคยเปิดแล้ว (ผ่านเมนู, กลับหน้าแรกด้วยโลโก้หรือ Esc แล้วเปิดซ้ำ)
 
 --selftest: ถอด sub ของเครื่องมือหนึ่งตัวออกกลางอากาศ แล้วเทสต้องจับได้ว่าเมนูขาดตัวนั้น
 รัน: FK_BASE=http://127.0.0.1:8899 ../.venv/bin/python tests/browser_menu.py
@@ -152,6 +153,47 @@ def main():
         pg.wait_for_timeout(700)
         ck(f"คลิกจากเมนูแล้วเปิดเครื่องมือนั้นจริง ({first_convert})",
            pg.evaluate("() => location.hash") == f"#/{first_convert}", pg.evaluate("() => location.hash"))
+
+        # ── ⑥ ปุ่มเมนูกับไฮไลต์ ต้องถูกทุกครั้งที่อยู่บนหน้าเครื่องมือ รวมตอนกลับมาเครื่องมือที่เคยเปิดแล้ว ──
+        # ‼️ ที่มา 26/09/2026 พี่ปอนด์ทักว่าปุ่ม เครื่องมือทั้งหมด มา ๆ หาย ๆ จับค่าจริงแล้ว: หน้าแรกซ่อนปุ่ม
+        #    แต่เครื่องมือที่เคยเปิดแล้วถูกหยิบจากแคช ไม่ได้สั่งโชว์ปุ่มซ้ำ เปิดตัวเดิมซ้ำหลังกลับหน้าแรกปุ่มจึงหาย
+        #    และสลับกลับไปตัวที่เคยเปิดผ่านเมนู ไฮไลต์ในเมนูยังชี้ตัวก่อนหน้า (เปิดใหม่ทุกตัวจากลิงก์ตรงปุ่มขึ้นครบ 65/65)
+        def menu_now():
+            return pg.evaluate("""() => { const b = document.getElementById('toolmenu');
+              return { visible: !!b && !b.hidden && b.offsetParent !== null,
+                       here: [...document.querySelectorAll('#toolmenupanel .s2-mi.here')].map(a => a.dataset.id) }; }""")
+
+        def wait_js(expr, timeout=20000):
+            # ‼️ ห้ามใช้ wait_for_function แบบสตริง: ตอนต้องวนรอ Playwright ประเมินสตริงในหน้า ซึ่ง CSP ของเว็บบล็อก eval
+            for _ in range(timeout // 100):
+                if pg.evaluate("() => (" + expr + ")"):
+                    return True
+                pg.wait_for_timeout(100)
+            return False
+
+        def wait_tool(tid):
+            wait_js(f"location.hash === '#/{tid}' && document.body.classList.contains('tool') "
+                    "&& !document.querySelector('#tool .loading')")
+            pg.wait_for_timeout(500)
+
+        open_menu(pg)
+        pg.click('#toolmenupanel [data-id="pdf-pages"]')
+        wait_tool("pdf-pages")
+        st = menu_now()
+        ck("กลับไปเครื่องมือที่เคยเปิดผ่านเมนู ปุ่มเมนูยังอยู่", st["visible"], str(st))
+        ck("กลับไปเครื่องมือที่เคยเปิดผ่านเมนู ไฮไลต์ในเมนูชี้ตัวที่เปิดอยู่ (pdf-pages)", st["here"] == ["pdf-pages"], str(st))
+        for how in ("โลโก้", "Esc"):
+            if how == "โลโก้":
+                pg.click("#brand")
+            else:
+                pg.keyboard.press("Escape")
+            wait_js("!document.body.classList.contains('tool')", 10000)
+            ck(f"กลับหน้าแรกด้วย{how} ปุ่มเมนูซ่อน", not menu_now()["visible"], str(menu_now()))
+            pg.click('#tools button.pill[data-id="pdf-pages"]')
+            wait_tool("pdf-pages")
+            st = menu_now()
+            ck(f"กลับหน้าแรกด้วย{how}แล้วเปิดเครื่องมือเดิมซ้ำ ปุ่มเมนูกลับมา", st["visible"], str(st))
+            ck(f"กลับหน้าแรกด้วย{how}แล้วเปิดเครื่องมือเดิมซ้ำ ไฮไลต์ชี้ pdf-pages", st["here"] == ["pdf-pages"], str(st))
 
         # ── หน้าแรก: กดชิป PDF แล้วต้องเห็นหัวกลุ่มย่อย ──
         pg.goto(BASE + "/#/")

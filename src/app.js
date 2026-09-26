@@ -369,6 +369,10 @@ async function go(id, push = true) {
       //    และเป็นการรื้อ DOM ทั้งเครื่องมือทิ้งเปล่า ๆ ทุกครั้งที่เปลี่ยนหน้า
       if (!placed(cached)) { sleepCurrent(); toolBox.replaceChildren(cached); }
       import("./ui.js").then((m) => m.wakeTree(cached)).catch(() => {});   // วาดภาพย่อกลับมา
+      /* ‼️ ปุ่มเมนูรวมถูกสั่งโชว์ตอน mount ครั้งแรกเท่านั้น แต่หน้าแรกซ่อนมันทุกครั้ง
+         เครื่องมือที่หยิบจากแคชจึงต้องสั่งโชว์และย้ายไฮไลต์เองทุกครั้ง (พี่ปอนด์ทักว่ามา ๆ หาย ๆ 26/09/2026)
+         เก็บตัวต่อเมนูไว้บนตัวฟังก์ชัน installShell2 ไม่ใช่ let ข้างนอก กัน TDZ แบบเดียวกับ loadToolCss.p */
+      if (installShell2.wire && (cached.matches(".s2") || cached.querySelector(".s2"))) installShell2.wire(tool);
       return;
     }
     sleepCurrent();
@@ -635,7 +639,7 @@ let shell2Job = null;
 function installShell2() {
   if (shell2Job) return shell2Job;
   shell2Job = Promise.all([import("./shell2.js"), import("./ui.js"), import("./workspace.js")])
-    .then(([s2, ui, ws]) => { ui.setShell2(s2.toolShell2); ws.setShell2(s2.toolShell2); })
+    .then(([s2, ui, ws]) => { ui.setShell2(s2.toolShell2); ws.setShell2(s2.toolShell2); installShell2.wire = s2.wireToolMenu; })
     .catch((e) => { console.error("shell2 โหลดไม่ได้ ใช้โครงเดิมแทน", e); });
   return shell2Job;
 }

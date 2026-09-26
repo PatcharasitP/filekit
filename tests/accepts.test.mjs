@@ -349,6 +349,18 @@ ck(middotHits.length + htmlMiddot.length === 0,
      `เครื่องมือทุกตัวต้องมีคำแปลอังกฤษในทะเบียน (ขาด ${noEn.length})` +
      (noEn.length ? "\n      " + noEn.join(", ") : ""));
   void enBlock;
+
+  /* ‼️ คำค้นสำรองย้ายไป src/registry-keys.js 26/09/2026 (หน้าเว็บดึงตอนแตะช่องค้นหา หน้าแรกเบาลง)
+     เพิ่มเครื่องมือแล้วลืมใส่คำค้น = ค้นด้วยคำที่ไม่อยู่ในชื่อแล้วไม่เจอ เช่น "บัตรประชาชน" ต้องเจอตัวตรวจเลขบัตร
+     เผลอใส่ keys ใน registry.js = ค่านั้นถูกทับเป็นค่าว่างเงียบ ๆ ตอนโหลดคำค้น แถมกินงบ JS หน้าแรกฟรี */
+  const regKeys = readFileSync(join(ROOT, "src/registry-keys.js"), "utf8");
+  const keyed = [...regKeys.matchAll(/^ {2}"([\w-]+)":\s+"[^"]+",$/gm)].map((m) => m[1]);
+  const noKeys = ids.filter((i) => !keyed.includes(i));
+  const orphan = keyed.filter((i, n) => !ids.includes(i) || keyed.indexOf(i) !== n);
+  ck(keyed.length > 0 && !noKeys.length && !orphan.length,
+     `เครื่องมือทุกตัวมีคำค้นใน registry-keys.js ตัวละชุด (มี ${keyed.length} ขาด ${noKeys.length} เกินหรือซ้ำ ${orphan.length})` +
+     (noKeys.length || orphan.length ? "\n      " + [...noKeys, ...orphan].join(", ") : ""));
+  ck(!/\bkeys:\s*"/.test(reg), "registry.js ไม่มีช่อง keys ค้าง (คำค้นอยู่ registry-keys.js ซึ่งหน้าแรกไม่โหลด)");
 }
 
 /* ‼️ FlowKit (เว็บในเครือ repo แยก วางข้างกันในเครื่องนี้) เขียนจำนวนเครื่องมือ FileKit ไว้ที่ประตูหน้าแรก

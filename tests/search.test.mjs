@@ -1,5 +1,7 @@
 import { scoreTool, searchTools, enToThai, highlightRange } from "../src/search.js";
 import { TOOLS } from "../src/registry.js";
+// คำค้นสำรองแยกไฟล์ตั้งแต่ 26/09/2026 (หน้าเว็บดึงตอนแตะช่องค้นหา) import แล้วถูกใส่ลง t.keys ให้เอง
+import "../src/registry-keys.js";
 
 let pass = 0; const F = [];
 const ck = (name, got, want) => {

@@ -4,7 +4,6 @@
 
 import { TOOLS, GROUPS, byId , chipOf, subsOf } from "./registry.js";
 import { warmLibs, loadLibs } from "./loader.js";
-import { searchTools, highlightRange } from "./search.js";
 import { el, $, $$, showVeil, filesFromClipboard, useV2 } from "./dom.js";
 import { toolIcon, uiIcon } from "./icons.js";
 import { LANG, IS_EN, tr, setLang, applyStatic, pl } from "./i18n.js";
@@ -12,6 +11,18 @@ import { LANG, IS_EN, tr, setLang, applyStatic, pl } from "./i18n.js";
 const toolBox = $("#tool"), grids = $("#tools");
 const search = $("#q"), searchBox = $("#searchbox"), hits = $("#hits"), cats = $("#cats");
 const accentOf = (gid) => `var(${(GROUPS.find((g) => g.id === gid) || {}).accent || "--brand"})`;
+
+/* ── ตัวค้นหา (search.js + คำค้นสำรอง registry-keys.js) ดึงตอนชี้หรือโฟกัสช่องค้นหา ไม่มากับหน้าแรก
+ *    ย้ายออก 26/09/2026 ตอนงบ JS หน้าแรกเต็ม tests/browser_perfbudget.py กันไม่ให้หลุดกลับมา */
+let finder = null, finderJob = null;
+function loadFinder() {
+  finderJob = finderJob || Promise.all([import("./search.js"), import("./registry-keys.js")])
+    .then(([m]) => (finder = m))
+    .catch(() => { finderJob = null; });   // โหลดไม่ได้ ลองใหม่ตอนพิมพ์ครั้งถัดไป
+  return finderJob;
+}
+searchBox.addEventListener("pointerenter", loadFinder);
+search.addEventListener("focus", loadFinder);
 
 /* ── ความจำเล็ก ๆ ในเครื่อง (ธีม / มุมมอง / เพิ่งใช้) ── */
 const store = {
@@ -27,7 +38,7 @@ function pushRecent(id) {
 
 /* ── ป้ายเครื่องมือ (มุมมองหลัก) ── */
 function pillOf(t, q = "", onPick = null) {
-  const r = q ? highlightRange(t.title, q) : null;
+  const r = q && finder ? finder.highlightRange(t.title, q) : null;
   const label = r
     ? [t.title.slice(0, r[0]), el("mark", {}, t.title.slice(r[0], r[1])), t.title.slice(r[1])]
     : [t.title];
@@ -51,7 +62,12 @@ let activeCat = "";                     // "" = ทุกหมวด
    แถว "เพิ่งใช้ล่าสุด" ที่ขึ้นให้เองอยู่แล้วด้านล่าง จึงเหลือการจัดกลุ่มตามหมวดอย่างเดียว
    อย่าใส่กลับ ถ้าจะใส่ต้องมีหลักฐานว่าคนใช้จริง ไม่ใช่เพราะเว็บอื่นมี */
 function renderHome(q = "") {
-  const found = searchTools(TOOLS, q);
+  // มีคำค้นแต่ตัวค้นหายังมาไม่ถึง (เปิดด้วย ?q= หรือพิมพ์เร็วกว่าเน็ต) = คงจอเดิมไว้ แล้ววาดผลทีเดียวตอนมาถึง
+  if (q.trim() && !finder) {
+    loadFinder().then(() => { if (finder && search.value.trim()) renderHome(search.value); });
+    return;
+  }
+  const found = q.trim() ? finder.searchTools(TOOLS, q) : [];
   const stageH = $("#stageh");
   grids.innerHTML = "";
 

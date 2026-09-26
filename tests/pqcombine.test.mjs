@@ -251,6 +251,48 @@ ck("เตือนแหล่งที่ยังไม่ครบ", buildWa
 ck("เตือน privacy เมื่อมีหลาย server", buildWarnings(SRC).some((w) => w.code === "privacy"), true);
 ck("แหล่งเดียวไม่เตือน privacy", buildWarnings([SRC[0]]).some((w) => w.code === "privacy"), false);
 
+console.log("\n━━ ⑩ แบบขั้นเดียว บล็อกอยู่ในขั้นที่อ้างมัน (พี่ปอนด์คาดว่าจะเหลือสูตรเดียว 26/09/2026) ━━");
+// ชื่อขั้นในชั้นนอกสุด (บรรทัดเยื้อง 4 ช่องที่มี ชื่อ =) บล็อกข้างในเยื้องลึกกว่านี้จึงไม่ถูกนับ
+const topSteps = (code) => [...code.matchAll(/^ {4}(#"(?:[^"]|"")*"|[\p{L}_][\p{L}\p{N}_.]*) =/gmu)].map((m) => m[1]);
+const o = mergeQueries(Q, { main: "sales_all", inline: ["sales_th", "sales_vn"], dependents: "copy", oneStep: true });
+ck("ขอขั้นเดียวแล้วได้ขั้นเดียวจริง", o.oneStep, true);
+ck("query หลักแบบขั้นเดียวผ่านตัวตรวจไวยากรณ์", await parses(o.main.code), true);
+ck("ขั้นนอกสุดเท่าก่อนยุบ ไม่มีขั้นชื่อ query ที่ยุบเพิ่มมา", topSteps(o.main.code), topSteps(SALES_ALL));
+ck("บล็อก sales_th อยู่ข้างในตรงต้นฉบับทุกตัวอักษร (เยื้องแบบไม่แตะสตริง)", o.main.code.includes(indentM(SALES_TH, "        ")), true);
+ck("บล็อก sales_vn อยู่ข้างในตรงต้นฉบับทุกตัวอักษร", o.main.code.includes(indentM(SALES_VN, "        ")), true);
+ck("ข้อความ SQL ทุกก้อนยังอยู่ครบ", strs(SALES_TH).concat(strs(SALES_VN)).every((x) => o.main.code.includes(x)), true);
+ck("query หลักไม่อ้าง sales_th sales_vn ภายนอกแล้ว", [...findRefs(o.main.code, NAMES)].sort(), ["flags"]);
+ck("ขั้นอื่นของ query หลักเหมือนเดิมทุกบรรทัด", o.main.code.endsWith(SALES_ALL.slice(SALES_ALL.indexOf("    #\"Filtered Rows\""))), true);
+const od = o.changed.find((c) => c.name === "dim_store");
+ck("dim_store (Source = sales_th) ได้บล็อกแทนที่ค่าของขั้นเดิม ผ่านตัวตรวจ", od && od.oneStep && await parses(od.code), true);
+ck("dim_store ขั้นนอกสุดเท่าเดิม", od && topSteps(od.code), topSteps(DIM_STORE));
+ck("ไม่ขอขั้นเดียว ได้แบบแยกขั้นเหมือนเดิม", mergeQueries(Q, { main: "sales_all", inline: ["sales_th", "sales_vn"] }).oneStep, false);
+const twice = mergeQueries([{ name: "a", code: FLAGS }, { name: "m", code: "let\n    x = Table.Combine({a, a})\nin\n    x" }],
+  { main: "m", inline: ["a"], oneStep: true });
+ck("อ้างสองที่ = ไม่ทำขั้นเดียว กลับไปแยกขั้นพร้อมบอกเหตุผล", [twice.oneStep, twice.oneStepWhy && twice.oneStepWhy.code], [false, "multi"]);
+ck("ที่กลับไปแยกขั้นยังผ่านตัวตรวจ", await parses(twice.main.code), true);
+const nest = mergeQueries([{ name: "a", code: FLAGS }, { name: "b", code: "let\n    s = a\nin\n    s" },
+  { name: "m", code: "let\n    x = Table.Combine({a, b})\nin\n    x" }], { main: "m", inline: ["a", "b"], oneStep: true });
+ck("บล็อกอ้างกันเอง = ไม่ทำขั้นเดียว", [nest.oneStep, nest.oneStepWhy && nest.oneStepWhy.code], [false, "nested"]);
+const mid = mergeQueries([{ name: "a", code: FLAGS }, { name: "m", code: "let\n    t = if true then a else #table({}, {})\nin\n    t" }],
+  { main: "m", inline: ["a"], oneStep: true });
+ck("อ้างกลางนิพจน์ (หลัง then) ครอบวงเล็บ ผ่านตัวตรวจ", mid.oneStep && mid.main.code.includes("then (\n") && await parses(mid.main.code), true);
+const last = mergeQueries([{ name: "a", code: FLAGS }, { name: "m", code: "let\n    t = a\nin\n    t" }],
+  { main: "m", inline: ["a"], oneStep: true });
+// ‼️ ตัวบล็อกเองมีวงเล็บ (#table(...)) จึงเช็คเฉพาะวงเล็บที่ครอบบล็อก ไม่ใช่วงเล็บทุกตัว (เคยเช็คผิดแบบนั้นแล้วแดงทั้งที่ผลถูก)
+ck("ขั้นสุดท้ายก่อน in ที่เป็นชื่อเดี่ยว วางบล็อกได้ตรง ๆ ไม่ครอบวงเล็บ ผ่านตัวตรวจ", last.oneStep && last.main.code.includes("    t =\n        // from query a\n") && !last.main.code.includes("= (\n") && await parses(last.main.code), true);
+let combos1 = 0;
+for (const labelColumn of ["Source", ""]) for (const params of [false, true]) for (const keyColumns of [[], ["Code"]]) {
+  const out = buildFromSources({ sources: SRC, pattern: "blocks", labelColumn, params, keyColumns, oneStep: true });
+  combos1++;
+  if (!(await parses(out.code))) ck(`สร้างใหม่ขั้นเดียว label=${!!labelColumn} params=${params} keys=${keyColumns.length} ผ่านตัวตรวจ`, false, true);
+  else pass++;
+}
+console.log(`  ✅ สร้างใหม่แบบขั้นเดียว ${combos1} ชุดตัวเลือกผ่านตัวตรวจไวยากรณ์`);
+ck("สร้างใหม่แบบขั้นเดียว ขั้นนอกสุดเหลือ Combined ขั้นเดียว", topSteps(buildFromSources({ sources: SRC, oneStep: true }).code), ["Combined"]);
+ck("สร้างใหม่แบบขั้นเดียวมีคีย์ ขั้นนอกสุดเป็น Combined กับ Cleaned", topSteps(buildFromSources({ sources: SRC, oneStep: true, keyColumns: ["Code"] }).code), ["Combined", "Cleaned"]);
+ck("แบบฟังก์ชันไม่สนขั้นเดียว (ยังมี LoadSql)", buildFromSources({ sources: SRC, pattern: "function", oneStep: true }).code.includes("LoadSql ="), true);
+
 console.log("\n━━ ⑨ ตัวช่วยเขียน M ต้องตรงกับตัวที่เว็บใช้อยู่แล้ว (src/pqm.js) ไม่ให้แยกทางกัน ━━");
 for (const s of ['ธรรมดา', 'มี "คำพูด"', "ขึ้น\nบรรทัด", "win\r\nline", "tab\tx", "#(lf) จริง", '#("x")']) {
   ck(`mText ตรง escapeMText: ${JSON.stringify(s)}`, mText(s), `"${pqm.escapeMText(s)}"`);

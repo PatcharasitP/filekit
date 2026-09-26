@@ -178,6 +178,7 @@ function analyze(src) {
   const toks = tokenize(src);
   const stack = [];
   const used = [];
+  const usedToks = [];
   const bound = new Set();
   let firstLet = -1;
   let firstCodeTok = null;
@@ -213,8 +214,9 @@ function analyze(src) {
     const fieldAccess = prev && prev.k === "p" && prev.v === "[" && next && next.k === "p" && next.v === "]";
     if (fieldAccess) continue; // [ชื่อ] คืออ่านฟิลด์ของแถว ไม่ใช่อ้าง query
     used.push(tk.v);
+    usedToks.push(tk);
   }
-  return { toks, used, bound, firstLet, firstCodeTok };
+  return { toks, used, usedToks, bound, firstLet, firstCodeTok };
 }
 
 /** ชื่อ query (จาก names) ที่โค้ดนี้อ้างจริง ไม่นับที่อยู่ในสตริง คอมเมนต์ ชื่อฟิลด์ หรือถูกบังด้วยชื่อขั้นของตัวเอง */
@@ -380,13 +382,58 @@ export function insertBlocks(code, blocks, opts = {}) {
 }
 
 /**
+ * แบบขั้นเดียว: วางบล็อกไว้ตรงจุดที่ query อ้างชื่อมัน แทนการเพิ่มเป็นขั้นแยก
+ * ‼️ ที่มา 26/09/2026 พี่ปอนด์เปิดไฟล์ที่ยุบแล้วเห็น Applied Steps มีขั้นชื่อ query เดิมเพิ่มมา
+ *    ทั้งที่คาดว่าจะเหลือสูตรเดียว (Source = Table.Combine({...}) ขั้นเดียวแบบก่อนยุบ)
+ * ทำได้เมื่อแต่ละชื่อถูกอ้างครั้งเดียวพอดี และบล็อกไม่อ้างกันเอง
+ * (อ้างสองที่ = ต้องคัดลอกโค้ดซ้ำและดึงแหล่งซ้ำ จึงไม่ทำ) ทำไม่ได้คืน { code:null, why }
+ * บล็อกในรายการหรืออาร์กิวเมนต์วางได้ตรง ๆ ที่อื่นครอบวงเล็บ กัน let กลืนตัวดำเนินการที่ตามมา
+ * เยื้องด้วย indentM เหมือนแบบแยกขั้น บรรทัดที่เริ่มกลางสตริง (SQL หลายบรรทัด) จึงไม่ถูกแตะ */
+export function inlineRefs(code, blocks, opts = {}) {
+  const src = String(code ?? "");
+  if (!blocks.length) return { code: src };
+  const note = opts.note || ((name) => `// from query ${name}`);
+  const names = blocks.map((b) => b.name);
+  for (const b of blocks) {
+    if (findRefs(b.code, names.filter((n) => n !== b.name)).size) return { code: null, why: "nested", name: b.name };
+  }
+  const a = analyze(src);
+  const hits = new Map(names.map((n) => [n, []]));
+  for (const tk of a.usedToks) if (hits.has(tk.v) && !a.bound.has(tk.v)) hits.get(tk.v).push(tk);
+  for (const [n, h] of hits) if (h.length !== 1) return { code: null, why: h.length ? "multi" : "none", name: n };
+
+  const byName = new Map(blocks.map((b) => [b.name, b]));
+  const order = [...hits.entries()].map(([n, h]) => ({ n, tk: h[0] })).sort((x, y) => y.tk.start - x.tk.start);
+  let out = src;
+  const prevChar = (s, i) => { let j = i - 1; while (j >= 0 && /\s/.test(s[j])) j--; return [j, s[j]]; };
+  const nextChar = (s, i) => { let j = i; while (j < s.length && /\s/.test(s[j])) j++; return [j, s[j]]; };
+  for (const { n, tk } of order) {
+    const lineStart = out.lastIndexOf("\n", tk.start - 1) + 1;
+    const indent = /^[ \t]*/.exec(out.slice(lineStart))[0];
+    const body = indentM(`${note(n)}\n${byName.get(n).code}`, indent + PAD);
+    const [pi, pc] = prevChar(out, tk.start);
+    const [ni, nc] = nextChar(out, tk.end);
+    const nextIsIn = out.slice(ni, ni + 2) === "in" && !/[\p{L}\p{N}_.]/u.test(out[ni + 2] || "");
+    const item = "{,(".includes(pc) && ",})".includes(nc);
+    const step = pc === "=" && !"<>=".includes(out[pi - 1]) && (nc === "," || nextIsIn);
+    if (item || step) {
+      const tail = (item && "})".includes(nc)) ? `\n${indent}` : "";
+      out = out.slice(0, pi + 1) + `\n${body}` + tail + out.slice(tail ? ni : tk.end);
+    } else {
+      out = out.slice(0, tk.start) + `(\n${body}\n${indent})` + out.slice(tk.end);
+    }
+  }
+  return { code: out };
+}
+
+/**
  * queries: [{ name, code }] · main: ชื่อ query หลัก · inline: ชื่อที่จะยุบเข้าไป
  * dependents: "copy" = query อื่นที่อ้างตัวที่ถูกยุบ ได้บล็อกคัดลอกเข้าไปในตัวเอง (ผลเท่าเดิม)
  *             "keep" = ไม่แตะ แต่ query ที่มันอ้างต้องเก็บไว้ (ลบไม่ได้)
  * คืน { main, changed:[{name, code, why}], deletable, mustKeep, notes, error }
  */
 export function mergeQueries(queries, opts) {
-  const { main, inline = [], dependents = "copy", note } = opts || {};
+  const { main, inline = [], dependents = "copy", note, oneStep = false } = opts || {};
   const byName = new Map(queries.map((q) => [q.name, q]));
   const names = queries.map((q) => q.name);
   if (!byName.has(main)) return { error: "main" };
@@ -422,7 +469,17 @@ export function mergeQueries(queries, opts) {
   const mainRoots = pick.filter((n) => refs.get(main).has(n));
   const mainNeed = need(mainRoots);
   const unused = pick.filter((n) => !mainNeed.includes(n));
-  const mainCode = insertBlocks(byName.get(main).code, mainNeed.map(block), { note });
+  // แบบขั้นเดียวทำไม่ได้ (อ้างหลายที่ หรือบล็อกอ้างกันเอง) กลับไปแบบแยกขั้นพร้อมบอกเหตุผล
+  const place = (code, list) => {
+    if (oneStep) {
+      const r = inlineRefs(code, list, { note });
+      if (r.code != null) return { code: r.code, one: true };
+      return { code: insertBlocks(code, list, { note }), one: false, why: r.why, whyName: r.name };
+    }
+    return { code: insertBlocks(code, list, { note }), one: false };
+  };
+  const mainPlaced = place(byName.get(main).code, mainNeed.map(block));
+  const mainCode = mainPlaced.code;
 
   const changed = [];
   const stillUsed = new Set();
@@ -431,7 +488,8 @@ export function mergeQueries(queries, opts) {
     const hits = pick.filter((n) => refs.get(q.name).has(n));
     if (!hits.length) continue;
     if (dependents === "copy") {
-      changed.push({ name: q.name, code: insertBlocks(q.code, need(hits).map(block), { note }), uses: hits });
+      const pl = place(q.code, need(hits).map(block));
+      changed.push({ name: q.name, code: pl.code, uses: hits, oneStep: pl.one });
     } else {
       hits.forEach((n) => stillUsed.add(n));
       need(hits).forEach((n) => stillUsed.add(n));
@@ -443,6 +501,8 @@ export function mergeQueries(queries, opts) {
   return {
     main: { name: main, code: mainCode },
     moved: mainNeed,
+    oneStep: mainPlaced.one,
+    oneStepWhy: mainPlaced.why ? { code: mainPlaced.why, name: mainPlaced.whyName } : null,
     changed,
     deletable,
     mustKeep,
@@ -469,11 +529,12 @@ export function joinQueries(list) {
  * pattern "blocks"   = let ซ้อนหนึ่งบล็อกต่อแหล่ง ใส่ server กับ database ตรง ๆ แบบ query ปกติ (ค่าเริ่มต้น)
  * pattern "function" = ฟังก์ชันดึงหนึ่งแหล่งอยู่ในตัว query แล้วเรียกบรรทัดละแหล่ง แก้ต่อด้วยมือง่ายสุด
  * params = server กับ database เป็น parameter แก้ค่าได้ทั้งใน Desktop และบน Service โดยไม่แตะโค้ด
+ * oneStep = แบบบล็อกที่ทุกแหล่งอยู่ในรายการของ Table.Combine ขั้นเดียว (แบบฟังก์ชันไม่สนค่านี้)
  */
 export function buildFromSources(cfg) {
   const {
     sources = [], pattern = "blocks", labelColumn = "Source", params = false,
-    keyColumns = [], text = {},
+    keyColumns = [], text = {}, oneStep = false,
   } = cfg || {};
   const t = {
     source: (i, label) => `// source ${i}: ${label}`,
@@ -509,7 +570,7 @@ export function buildFromSources(cfg) {
       steps.push(`${PAD}${mId(labels[i])} = LoadSql(${sv}, ${db}, ${mText(s.sql)}, ${mText(labels[i])}),`);
     });
     lines.push(...steps, "");
-  } else {
+  } else if (!oneStep) {
     sources.forEach((s, i) => {
       const [sv, db] = serverArg(s, i);
       lines.push(`${PAD}${t.source(i + 1, labels[i])}`);
@@ -525,7 +586,23 @@ export function buildFromSources(cfg) {
 
   const keys = keyColumns.map((k) => String(k).trim()).filter(Boolean);
   lines.push(`${PAD}${t.combine}`);
-  lines.push(`${PAD}Combined = Table.Combine({${labels.map(mId).join(", ")}})${keys.length ? "," : ""}`);
+  if (pattern !== "function" && oneStep) {
+    // ขั้นเดียว: บล็อกของทุกแหล่งอยู่ในรายการของ Table.Combine (Applied Steps เห็นขั้นเดียว)
+    lines.push(`${PAD}Combined = Table.Combine({`);
+    sources.forEach((s, i) => {
+      const [sv, db] = serverArg(s, i);
+      const P2 = PAD + PAD, P3 = P2 + PAD;
+      lines.push(`${P2}${t.source(i + 1, labels[i])}`);
+      lines.push(`${P2}let`);
+      lines.push(`${P3}Source = Sql.Database(${sv}, ${db}, [Query = ${mText(s.sql)}])${lc ? "," : ""}`);
+      if (lc) lines.push(`${P3}Labeled = Table.AddColumn(Source, ${mText(lc)}, each ${mText(labels[i])}, type text)`);
+      lines.push(`${P2}in`);
+      lines.push(`${P3}${lc ? "Labeled" : "Source"}${i < sources.length - 1 ? "," : ""}`);
+    });
+    lines.push(`${PAD}})${keys.length ? "," : ""}`);
+  } else {
+    lines.push(`${PAD}Combined = Table.Combine({${labels.map(mId).join(", ")}})${keys.length ? "," : ""}`);
+  }
   let last = "Combined";
   if (keys.length) {
     const ops = keys.map((k) => `{${mText(k)}, each if _ = null then null else Text.Upper(Text.Trim(Text.From(_))), type nullable text}`);

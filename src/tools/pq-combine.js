@@ -89,6 +89,8 @@ export function mount(tool) {
   const DEF = {
     mode: "build", pattern: "blocks", params: false,
     labelColumn: "Source", keys: "", dependents: "copy",
+    // ‼️ ค่าเริ่มต้นขั้นเดียว (26/09/2026) พี่ปอนด์เปิดไฟล์ที่ยุบแล้วคาดว่าจะเหลือสูตรเดียว ไม่ใช่ขั้นชื่อ query เดิมเพิ่มมา
+    shape: "one", mergeShape: "one",
   };
   const SEED = () => [
     { label: tr("ขายไทย", "Sales TH"), server: "server-a", database: "SalesDB",
@@ -230,6 +232,20 @@ export function mount(tool) {
       hint ? el("p", { class: "pqc-hint", style: "margin:-4px 0 10px" }, hint) : null,
     ]);
   }
+  function shapePicker(key, hints) {
+    const sel = segmented([
+      ["one", tr("ขั้นเดียว", "One step")],
+      ["steps", tr("แยกเป็นขั้น", "Separate steps")],
+    ], options[key]);
+    const hint = el("p", { class: "pqc-hint", style: "margin:6px 0 12px" });
+    const paint = () => { hint.textContent = options[key] === "one" ? hints.one : hints.steps; };
+    paint();
+    sel.onchange = () => { options[key] = sel.value; paint(); presets.clearActive(); render(); };
+    return el("div", { class: "pqc-shape" }, [
+      el("h3", { class: "pqc-group-title", style: "margin:14px 0 8px" }, tr("ขั้นใน Applied Steps", "Steps in Applied Steps")),
+      sel, hint,
+    ]);
+  }
   function miniBtn(text, label, onclick, danger) {
     return el("button", { class: "pqc-mini" + (danger ? " danger" : ""), type: "button", title: label, "aria-label": label, onclick }, text);
   }
@@ -301,12 +317,21 @@ export function mount(tool) {
              "One block per source, the same SQL connection a normal query uses, fine in Desktop and on the Service");
     };
     paintPat();
-    pat.onchange = () => { options.pattern = pat.value; paintPat(); presets.clearActive(); render(); };
+    // แบบฟังก์ชันมีขั้นฟังก์ชันกับขั้นเรียกเสมอ ตัวเลือกจำนวนขั้นใช้กับแบบบล็อกเท่านั้น
+    const shapeBox = shapePicker("shape", {
+      one: tr("ทุกแหล่งอยู่ในขั้นเดียว Applied Steps สั้นเหมือนเขียนสูตรเดียว", "Every source sits in one step, so Applied Steps stays short"),
+      steps: tr("แหล่งละขั้น กดดูผลของแต่ละแหล่งใน Applied Steps ได้", "One step per source, so you can click each source's result in Applied Steps"),
+    });
+    shapeBox.hidden = options.pattern === "function";
+    pat.onchange = () => {
+      options.pattern = pat.value; paintPat(); shapeBox.hidden = options.pattern === "function";
+      presets.clearActive(); render();
+    };
 
     buildRight.append(
       presets.node,
       el("h3", { class: "pqc-group-title" }, tr("รูปแบบโค้ด", "Code style")),
-      pat, patHint,
+      pat, patHint, shapeBox,
       sw(tr("ใช้ parameter แทนชื่อ server", "Use parameters for the servers"), () => options.params, (v) => { options.params = v; },
         tr("สลับ server หรือฐานได้โดยไม่แก้โค้ด ทั้งใน Desktop และบน Service",
            "Switch servers or databases without editing code, in Desktop and on the Service")),
@@ -356,6 +381,10 @@ export function mount(tool) {
       field(tr("query หลัก (ตัวที่จะเหลือ)", "Main query (the one that stays)"), mainSel),
       el("h3", { class: "pqc-group-title", style: "margin:14px 0 8px" }, tr("ยุบตัวไหนเข้าไปบ้าง", "Which ones to fold in")),
       checks,
+      shapePicker("mergeShape", {
+        one: tr("บล็อกไปอยู่ในขั้นที่อ้างมัน ขั้นใน Applied Steps เท่าเดิม", "Blocks go inside the step that uses them, Applied Steps keeps its steps"),
+        steps: tr("บล็อกละขั้น กดดูผลของแต่ละ query ใน Applied Steps ได้", "One step per block, so you can click each query's result in Applied Steps"),
+      }),
       el("h3", { class: "pqc-group-title", style: "margin:16px 0 8px" }, tr("query อื่นที่อ้างตัวที่ถูกยุบ", "Other queries that use the folded ones")),
       dep,
       el("p", { class: "pqc-hint" }, tr(
@@ -429,7 +458,7 @@ export function mount(tool) {
     const keys = String(options.keys || "").split(",").map((k) => k.trim()).filter(Boolean);
     const out = buildFromSources({
       sources, pattern: options.pattern, params: options.params,
-      labelColumn: options.labelColumn, keyColumns: keys,
+      labelColumn: options.labelColumn, keyColumns: keys, oneStep: options.shape === "one",
       text: {
         source: (i, label) => tr(`// แหล่งที่ ${i}: ${label}`, `// source ${i}: ${label}`),
         fn: tr("// ฟังก์ชันดึงหนึ่งแหล่ง เพิ่มแหล่งใหม่ = เพิ่มหนึ่งบรรทัดข้างล่าง", "// one source per call, adding a source means adding one line below"),
@@ -489,7 +518,7 @@ export function mount(tool) {
       return;
     }
     const r = mergeQueries(qs, {
-      main: mainName, inline: [...chosen], dependents: options.dependents,
+      main: mainName, inline: [...chosen], dependents: options.dependents, oneStep: options.mergeShape === "one",
       note: (name) => tr(`// ย้ายมาจาก query ${name} คัดลอกตรงตัว`, `// moved in from query ${name}, verbatim`),
     });
     if (r.error) {
@@ -507,9 +536,18 @@ export function mount(tool) {
     const outList = [r.main, ...r.changed];
     const text = joinQueries(outList);
     codeEl.innerHTML = paintCode(text, "m");
-    const notes = [tr(
+    const notes = [r.oneStep ? tr(
+      `query ${r.main.name} มีบล็อก ${r.moved.length} ก้อนอยู่ในขั้นที่อ้างมัน (${r.moved.join(", ")}) คัดลอกตรงตัว SQL เหมือนเดิมทุกตัวอักษร`,
+      `${r.main.name} holds ${r.moved.length} block${r.moved.length === 1 ? "" : "s"} inside the step that uses ${r.moved.length === 1 ? "it" : "them"} (${r.moved.join(", ")}), copied verbatim with every SQL text unchanged`) : tr(
       `query ${r.main.name} ตอนนี้มีบล็อกข้างใน ${r.moved.length} ก้อน (${r.moved.join(", ")}) คัดลอกตรงตัว ข้อความ SQL เหมือนเดิมทุกตัวอักษร`,
       `${r.main.name} now holds ${r.moved.length} block${r.moved.length === 1 ? "" : "s"} (${r.moved.join(", ")}), copied verbatim with every SQL text unchanged`)];
+    // ขอขั้นเดียวแต่ทำไม่ได้ ผลยังถูก (แยกเป็นขั้นแทน) จึงเป็นข้อควรรู้ใต้โค้ด ไม่ใช่กล่องเตือน
+    if (options.mergeShape === "one" && !r.oneStep && r.oneStepWhy) {
+      const who = r.oneStepWhy.name;
+      notes.push(r.oneStepWhy.code === "multi"
+        ? tr(`ทำขั้นเดียวไม่ได้ เพราะ ${who} ถูกใช้มากกว่าหนึ่งที่ จึงแยกเป็นขั้นแทน`, `One step isn't possible, ${who} is used in more than one place, so it went in as separate steps`)
+        : tr(`ทำขั้นเดียวไม่ได้ เพราะ ${who} อ้าง query ที่ยุบเข้าไปด้วยกัน จึงแยกเป็นขั้นแทน`, `One step isn't possible, ${who} uses another folded query, so it went in as separate steps`));
+    }
     if (r.changed.length) {
       notes.push(tr(
         `แก้ query ที่อ้างตัวที่ถูกยุบ ${r.changed.length} ตัว: ${r.changed.map((c) => c.name).join(", ")} ได้บล็อกคัดลอกเข้าไปในตัวเอง ผลเท่าเดิม`,

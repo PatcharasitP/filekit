@@ -80,6 +80,8 @@ def main():
         c = code(pg)
         ck("ค่าเริ่มต้นต่อ 2 แหล่งด้วย Table.Combine", "Table.Combine({" in c and c.count("Sql.Database(") == 2, c[:300])
         ck("ข้อความ SQL ของแต่ละแหล่งแยกกัน (ใช้ #(lf))", c.count('[Query = "SELECT Code, Amount, SaleDate#(lf)FROM dbo.Sales"]') == 2)
+        # ‼️ 26/09/2026 ค่าเริ่มต้นเป็นขั้นเดียว บล็อกของทุกแหล่งอยู่ในรายการของ Table.Combine
+        ck("ค่าเริ่มต้นแท็บสร้างใหม่เป็นขั้นเดียว (บล็อกอยู่ใน Table.Combine)", "Combined = Table.Combine({\n" in c, c[:300])
         ck("ส่วน parameter ซ่อนอยู่ตอนไม่ได้เปิด", pg.is_hidden(".pqc-code >> nth=1"))
         ck("มีโน้ตเรื่อง privacy เพราะสอง server", "privacy level" in pg.inner_text(".pqc-note:not(.warn)"))
         ck("ค่าเริ่มต้นที่ถูกทุกอย่างไม่มีกล่องเตือน", pg.is_hidden(".pqc-note.warn"),
@@ -99,6 +101,7 @@ def main():
         c = code(pg)
         ck("แบบฟังก์ชันมี LoadSql และเรียกบรรทัดละแหล่ง", "LoadSql = (server as text" in c and c.count("= LoadSql(") == 2, c[:400])
         ck("แบบฟังก์ชันมีคำเตือนว่า refresh บน Service ไม่ได้", "Service" in pg.inner_text(".pqc-note.warn"))
+        ck("แบบฟังก์ชันซ่อนตัวเลือกจำนวนขั้น (ใช้กับแบบบล็อกเท่านั้น)", pg.locator(".pqc-shape").first.is_hidden())
         pg.locator("input[type=radio][value='blocks']").check(force=True)
 
         pg.get_by_role("button", name=re.compile("เพิ่มแหล่ง")).click()
@@ -146,7 +149,17 @@ def main():
         ck("อ่านตัวอย่างได้ 5 query", "อ่านได้ 5 query" in pg.inner_text(".pqc-paste + .pqc-row + .pqc-hint"))
         c = code(pg)
         ck("query หลักเดาเป็น sales_all", c.startswith("// sales_all\nlet\n"), c[:200])
-        ck("ยุบ sales_th sales_vn เข้าไป", "    sales_th =\n" in c and "    sales_vn =\n" in c)
+        # ‼️ 26/09/2026 ค่าเริ่มต้นเป็นขั้นเดียว (พี่ปอนด์เปิดไฟล์ที่ยุบแล้วคาดว่าจะเหลือสูตรเดียว)
+        ck("ค่าเริ่มต้นขั้นเดียว: บล็อกอยู่ใน Table.Combine ไม่มีขั้นชื่อ sales_th sales_vn",
+           "Table.Combine({\n        // ย้ายมาจาก query sales_th" in c and "    sales_th =\n" not in c and "    sales_vn =\n" not in c, c[:400])
+        ck("โน้ตบอกว่าบล็อกอยู่ในขั้นที่อ้างมัน", "อยู่ในขั้นที่อ้างมัน" in pg.inner_text(".pqc-note:not(.warn)"))
+        pg.locator(".pqc-shape:visible input[type=radio][value='steps']").check(force=True)
+        pg.wait_for_timeout(200)
+        c3 = code(pg)
+        ck("เลือกแยกเป็นขั้น ได้ขั้นชื่อ sales_th sales_vn แบบเดิม", "    sales_th =\n" in c3 and "    sales_vn =\n" in c3, c3[:300])
+        pg.locator(".pqc-shape:visible input[type=radio][value='one']").check(force=True)
+        pg.wait_for_timeout(200)
+        ck("กลับเป็นขั้นเดียวได้", code(pg) == c)
         ck("dim_store ได้บล็อกคัดลอก (ไม่ได้ชี้ไป sales_all)", "// dim_store\nlet\n" in c and c.count('Sql.Database("server-a"') == 2, c[-500:])
         ck("last_sale ไม่อยู่ในผล (ไม่ได้ถูกแก้)", "// last_sale" not in c)
         notes = pg.inner_text(".pqc-note:not(.warn)")
@@ -196,7 +209,8 @@ def main():
         panel = pg.inner_text(".ws-body") if pg.locator(".ws-body").count() else pg.inner_text("main")
         leftover = sorted(set(m for m in THAI.findall(panel)))
         ck("โหมดอังกฤษไม่มีตัวอักษรไทยค้างในหน้าเครื่องมือ", not leftover, "".join(leftover)[:80])
-        ck("ค่าเริ่มต้นภาษาอังกฤษ", '#"Sales TH"' in code(pg))
+        # ‼️ แบบขั้นเดียว (ค่าเริ่มต้นใหม่ 26/09/2026) ไม่มีขั้นชื่อ #"Sales TH" แล้ว เช็คจากค่าป้ายที่มีทั้งสองแบบ
+        ck("ค่าเริ่มต้นภาษาอังกฤษ", 'each "Sales TH"' in code(pg), code(pg)[:300])
         shot(pg, "build_en.png")
 
         m = b.new_context(viewport={"width": 390, "height": 844}, color_scheme="dark")

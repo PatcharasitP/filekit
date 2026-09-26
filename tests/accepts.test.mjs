@@ -329,7 +329,9 @@ ck(middotHits.length + htmlMiddot.length === 0,
   const reg = readFileSync(join(ROOT, "src/registry.js"), "utf8");
   const ids = [...reg.matchAll(/\{ id:"([\w-]+)"/g)].map((m) => m[1]);
   const enBlock = reg.slice(reg.indexOf("TOOL_EN") >= 0 ? reg.indexOf("TOOL_EN") : 0);
-  const translated = new Set([...reg.matchAll(/^ {2}"([\w-]+)":\s+\[/gm)].map((m) => m[1]));
+  // คำแปลย้ายไป src/registry-en.js 26/09/2026 (โหลดเฉพาะโหมดอังกฤษ หน้าแรกโหมดไทยเบาลง)
+  const regEn = readFileSync(join(ROOT, "src/registry-en.js"), "utf8");
+  const translated = new Set([...regEn.matchAll(/^ {2}"([\w-]+)":\s+\[/gm)].map((m) => m[1]));
   ck(ids.length === toolCount,
      `ทะเบียนมีเครื่องมือครบเท่าไฟล์จริง (ทะเบียน ${ids.length} · ไฟล์ ${toolCount})`);
   /* ‼️ ไอคอนก็เหมือนคำแปล — เพิ่มเครื่องมือแล้วลืมวาดไอคอน ระบบจะตกกลับไปใช้อีโมจิใน

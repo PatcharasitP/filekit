@@ -37,6 +37,7 @@ JS_BYTES_BUDGET = 60_000          # JS ที่โหลดจริงตอ�
 # ‼️ 26/09/2026 เพิ่มเครื่องมือตัวที่ 65 (pq-combine) แล้วเกินงบ 99 ไบต์ ตัดช่องว่างจัดแถวใน registry.js จนเหลือ 59,986
 #    งบนี้มาจาก brief ของพี่ปอนด์ ขยับเองไม่ได้ ฟ้าจึงย้ายคำแปลอังกฤษของทะเบียนไป src/registry-en.js
 #    ที่โหลดเฉพาะโหมดอังกฤษ (v172) หน้าแรกโหมดไทยเบาลง 4,615 ไบต์ ข้อ ④ ด้านล่างกันไฟล์นั้นหลุดกลับมาหน้าแรก
+#    ‼️ วัดแบบเว็บจริงแล้ว v172 ใช้ 59,834 จาก 60,000 (เหลือ 166 ไบต์) ก่อน v172 เกินงบบนเว็บจริงอยู่แล้ว ดูหมายเหตุตรงสูตรวัด
 REQUEST_COUNT_BUDGET = 15         # จำนวน request ของหน้าแรก ≤ 15
 FCP_NORMAL_BUDGET_MS = 1200       # FCP บนเน็ตปกติ ≤ 1.2 วินาที
 CLS_BUDGET = 0.05                 # CLS ≤ 0.05
@@ -266,12 +267,16 @@ with sync_playwright() as p:
         js_wire = js_bytes
         wire_note = "เสิร์ฟแบบบีบมาแล้ว ใช้ตัวเลขที่วัดได้ตรง ๆ"
     else:
+        # ‼️ 26/09/2026 เทียบกับเว็บจริง v172 แล้ว สูตรเดิม (gzip ระดับ 6 เฉพาะเนื้อไฟล์) ได้ 55,509 แต่เว็บจริงวัดได้ 59,834
+        #    แยกด้วย curl: GitHub Pages บีบเนื้อไฟล์เท่ากับ gzip ระดับ 5 ของ python (app.js registry.js ตรงทุกไบต์ รวมต่าง 66 ไบต์)
+        #    และ transferSize ของ Chrome นับหัว response ไฟล์ละ 300 ไบต์ (57,434 + 8 x 300 = 59,834 พอดี)
+        #    สูตรเดิมต่ำกว่าจริงราว 4.3 KB เลยเขียวทั้งที่เว็บจริงเกินงบมาตั้งแต่ก่อน v172 จึงวัดแบบเดียวกับเว็บจริง
         js_wire = 0
         for u in js_urls:
             rel = urlparse(u).path.lstrip("/")
             f = ROOT / rel.split("filekit/")[-1] if "filekit/" in rel else ROOT / rel
-            js_wire += len(gzip.compress(f.read_bytes(), 6)) if f.is_file() else 0
-        wire_note = f"เซิร์ฟเวอร์ทดสอบไม่บีบ gzip จึงบีบเองจากไฟล์บนดิสก์ (ดิบ {js_bytes:,} B)"
+            js_wire += len(gzip.compress(f.read_bytes(), 5)) + 300 if f.is_file() else 0
+        wire_note = f"เซิร์ฟเวอร์ทดสอบไม่บีบ gzip จึงบีบเองแบบ GitHub Pages บวกหัว response ไฟล์ละ 300 (ดิบ {js_bytes:,} B)"
     print(f"\n  JS ที่วิ่งผ่านเน็ตจริง: {js_wire:,} B  ({wire_note})")
 
     print("\n  ── ตารางขนาดแยกประเภท (รอบล่าสุด, ยึดเป็นตัวแทน) ──")

@@ -18,6 +18,7 @@ FileKit เก็บไลบรารีทุกตัวไว้ในเค
 | `jspdf.umd.min.js` | jsPDF | MIT | https://github.com/parallax/jsPDF |
 | `jspdf.plugin.autotable.min.js` | jsPDF-AutoTable | MIT | https://github.com/simonbengtsson/jsPDF-AutoTable |
 | `tesseract.min.js` | Tesseract.js | Apache-2.0 | https://github.com/naptha/tesseract.js |
+| `qrcode.js` | QR Code Generator (qrcode-generator 2.0.4) | MIT | https://github.com/kazuhikoarase/qrcode-generator |
 | `vega.min.js` | Vega | BSD-3-Clause | https://github.com/vega/vega |
 | `vega-lite.min.js` | Vega-Lite | BSD-3-Clause | https://github.com/vega/vega-lite |
 | `vega-embed.min.js` | vega-embed | BSD-3-Clause | https://github.com/vega/vega-embed |

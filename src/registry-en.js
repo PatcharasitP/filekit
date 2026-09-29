@@ -55,6 +55,7 @@ export const EN_TOOLS = {
   "word-to-pdf": ["Word to PDF", "Convert DOCX to PDF with full Thai support, several files at a time"],
   "text-to-pdf": ["Text to PDF", "Paste text or drop a .txt file and get a PDF with a Thai font already embedded, wrapped without breaking words"],
   "excel-to-pdf": ["Excel to PDF", "Lay every sheet out as a table in a PDF"],
+  "qr-code": ["QR code maker", "Turn a link or Thai text into a QR code with no link shortener, so it never expires, as PNG or SVG"],
   "images-to-pdf": ["Images to PDF", "Combine many images into one PDF, page size fitted automatically"],
   "image-convert": ["Convert image format", "Move between PNG, JPG, WEBP and set the quality, or build a .ico file to use as your site favicon"],
   "image-bg-remove": ["Remove image background", "Make the background transparent. Works on signatures photographed on paper, stamps, logos and objects on a plain backdrop"],

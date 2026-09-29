@@ -184,6 +184,11 @@ export const TOOLS = [
     accepts:["image"],
     libs:["pdflib"], next:["pdf-compress","pdf-watermark"] },
 
+  { id:"qr-code", group:"image", icon:"▣", since:"2026-09-29", title:"สร้าง QR",
+    desc:"ทำ QR จากลิงก์หรือข้อความไทย ไม่ผ่านบริการย่อลิงก์ จึงไม่หมดอายุ โหลดเป็น PNG หรือ SVG",
+    accepts:["txt"], startsEmpty:true,
+    libs:["qrcode"], next:["images-to-pdf","image-resize"] },
+
   { id:"word-join",group:"doc", icon:"🔗", title:"รวมไฟล์ Word",
     desc:"ต่อเอกสารหลายไฟล์เป็นเล่มเดียว พร้อมรูปภาพครบ ลากจัดลำดับได้",
     accepts:["docx"],

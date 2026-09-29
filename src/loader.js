@@ -94,6 +94,13 @@ const REG = {
     extra: ["vendor/vega-interpreter.esm.js", "vendor/vega-util-shim.js"],
     cdn: "https://cdnjs.cloudflare.com/ajax/libs/vega/6.4.0/vega.min.js",
   },
+  qrcode: {
+    /* MIT · qrcode-generator 2.0.4 ไฟล์บน jsdelivr ตรงกับแพ็กเกจ npm ทุกไบต์ (เทียบ 29/09/2026) ขนาด 55 KB
+       ‼️ ค่าเริ่มต้นของไลบรารีตัดตัวอักษรเหลือไบต์เดียว ข้อความไทยจึงเพี้ยน ต้องตั้ง UTF-8 เอง (src/qr.js) */
+    global: "qrcode",
+    local: "vendor/qrcode.js",
+    cdn: "https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js",
+  },
   vegaLite: {
     global: "vegaLite",
     needs: ["vega"],
@@ -151,6 +158,8 @@ const SRI = {
     "sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F",
   "https://cdn.jsdelivr.net/npm/libheif-js@1.18.2/libheif-wasm/libheif.js":
     "sha384-nnDO7i14Thh8zH4u0th9k9WfU/79T55wFDGPTs/MG+dOlNJ05QYkoRT73F3qfsDB",
+  "https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js":
+    "sha384-e9EFD6BGC90bkW9aDV5xbbBfzwN7G8YImHao2lfLVKV/hPB0E0go+H3I64h7oHtA",
   "https://cdnjs.cloudflare.com/ajax/libs/vega/6.4.0/vega.min.js":
     "sha384-VKdcJr3ZaBIJMbVcopTAI/JEuUkSY6qnwVu9iLuw0DnQ9gQ1JjsfZJhXFQAgNi43",
   "https://cdnjs.cloudflare.com/ajax/libs/vega-lite/6.4.3/vega-lite.min.js":

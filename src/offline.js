@@ -22,7 +22,7 @@ const assetList = () => [
   ...TOOLS.map((t) => `src/tools/${t.id}.js`),
   "src/i18n.js", "src/preview.js", "src/offline.js", "src/ui.js", "src/filetype.js",
   "vendor/easy-template-x.esm.js", "src/pdfopen.js", "src/ocr.js",
-  "src/pdftext.js", "src/pdfmd.js", "src/pptx.js", "src/thaifont.js", "assets/css/tool.css",
+  "src/pdftext.js", "src/pdfmd.js", "src/qr.js", "src/pptx.js", "src/thaifont.js", "assets/css/tool.css",
   "src/thai.js", "src/thaiwords.js", "src/sheetpick.js", "src/xlsxutil.js", "src/pqm.js", "src/pqtypes.js", "src/tabledata.js", "src/search.js", "src/icons.js", "src/workspace.js", "src/docxmerge.js", "src/docxjoin.js",
   "src/docxreplace.js", "src/docxclean.js", "src/signpad.js", "src/colorkit.js", "src/jumpto.js", "src/presets.js", "src/statekit.js",
   "src/pngopt.js", "src/pngopt-worker.js", "vendor/oxipng/squoosh_oxipng.js", "vendor/oxipng/squoosh_oxipng_bg.wasm",   // ตัวบีบ PNG (โหลดใน worker ไม่ผ่าน loader)

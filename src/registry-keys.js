@@ -36,6 +36,7 @@ export const KEYS = {
   "image-convert": "png jpg webp heic heif iphone ไอโฟน แปลง รูป convert ico favicon ไอคอน ไอคอนเว็บ",
   "image-resize": "resize compress heic ย่อ ลดขนาด บีบอัด รูป",
   "image-bg-remove": "background remove transparent โปร่งใส ลบพื้นหลัง ตัดพื้นหลัง ลายเซ็น ตราประทับ โลโก้ png ฉากหลัง",
+  "qr-code": "qr qrcode คิวอาร์ คิวอาร์โค้ด บาร์โค้ด barcode สแกน scan ลิงก์ link url โปสเตอร์ สไลด์ wifi",
   "images-to-pdf": "image jpg png heic รูป รวมรูป pdf",
   "word-join": "merge join รวม ต่อ เอกสาร word docx เล่ม รายงาน",
   "word-replace": "find replace ค้นหา แทนที่ หลายไฟล์ batch แก้ทั้งชุด word",

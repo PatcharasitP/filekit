@@ -56,6 +56,7 @@ export const KEYS = {
   "thai-name": "ชื่อ นามสกุล คำนำหน้า นาย นาง นางสาว แยกชื่อ split name title prefix hr รายชื่อ",
   "thai-address": "ที่อยู่ จังหวัด อำเภอ ตำบล เขต แขวง รหัสไปรษณีย์ address province district subdistrict postcode แยกที่อยู่",
   "thai-number": "บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค",
+  "thai-wordcount": "นับคำ จำนวนคำ word count counter wordcount ตัดคำ นับตัวอักษร ตัวอักษร จำกัดคำ บทความ แคปชัน len",
   "pbi-donut": "deneb donut vega โดนัท วงกลม power bi custom visual กราฟ pie พาย",
   "pbi-bar": "deneb bar vega แท่ง แนวนอน power bi custom visual กราฟ ranking จัดอันดับ target เป้าหมาย",
   "freebies": "แจก ฟรี ของแถม สำเร็จรูป template deneb spec m code power query ดาวน์โหลด ก๊อปไปใช้ freebies gift",

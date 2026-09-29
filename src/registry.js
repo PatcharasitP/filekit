@@ -279,6 +279,11 @@ export const TOOLS = [
     accepts:["xlsx","csv"],
     libs:["xlsx"], next:["word-mailmerge","thai-date"] },
 
+  { id:"thai-wordcount", group:"thai", icon:"🔤", since:"2026-09-29", title:"นับคำภาษาไทย",
+    desc:"นับคำไทยได้จริง ไม่นับทั้งประโยคเป็นคำเดียว พร้อมจำนวนตัวอักษร บรรทัด และเส้นแบ่งคำให้ตรวจเอง",
+    accepts:["txt"], startsEmpty:true,
+    libs:[], next:["text-to-pdf","thai-number"] },
+
   { id:"pbi-donut", group:"powerbi", icon:"🍩", since:"2026-09-11", title:"กราฟโดนัท Deneb",
     desc:"ปรับหน้าตากราฟโดนัทสด ๆ เห็นผลทันที แล้วคัดลอกสเปกไปวางใน Deneb ได้เลย",
     libs:["vega","vegaLite","vegaEmbed"],

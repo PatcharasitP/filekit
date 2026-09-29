@@ -95,7 +95,7 @@ with sync_playwright() as p:
     pg.goto(BASE, wait_until="networkidle")
     ck("จำนวนเครื่องมือทั้งหมด", pg.locator("button.pill, button.card").count(), N_TOOLS)
     ck("มีหมวด 'งานเอกสารไทย'", pg.get_by_text("งานเอกสารไทย", exact=True).count() >= 1, True)
-    for tid in ["thai-encoding","thai-date","thai-id","thai-number"]:
+    for tid in ["thai-encoding","thai-date","thai-id","thai-number","thai-wordcount"]:
         ck(f"มีเครื่องมือ {tid}", pg.locator(f'button.pill[data-id="{tid}"], button.card[data-id="{tid}"]').count(), 1)
     # หน้าแรกต้องไม่ดึงไลบรารีหนักมาก่อน (หลักการ lazy-first ของโปรเจกต์)
     reqs = []
@@ -189,6 +189,22 @@ with sync_playwright() as p:
     pg.locator(".s2-side-bd select, .panel select").nth(2).select_option("toThai")
     pg.wait_for_timeout(300)
     ck("โหมดเลขไทย 38000 → ๓๘๐๐๐", tb.locator("tr").nth(0).locator("td").nth(3).inner_text(), "๓๘๐๐๐")
+
+    # ── ⑥ นับคำภาษาไทย (29/09/2026) ─────────────────────────
+    # ‼️ ที่มา wordcounter.net นับประโยคไทยทั้งประโยคเป็น 1 คำ ค่าที่คาดลอกจากผลจริงของ src/thaiwords.js
+    print("\n━━ ⑥ นับคำภาษาไทย ━━")
+    open_tool("thai-wordcount")
+    ck("เปิดมาเห็นช่องพิมพ์ทันทีโดยไม่ต้องมีไฟล์", pg.locator(".tw-ta").is_visible(), True)
+    pg.locator(".tw-ta").fill("ทีมดาต้าทำแดชบอร์ดพาวเวอร์บีไอและอัปเดตเมเชอร์ใหม่ในโมเดล")
+    pg.wait_for_timeout(500)
+    ck("นับได้ 16 คำ (ไม่ใช่ 1 แบบตัวนับทั่วไป และไม่ใช่ 19 ที่มีเศษ)", pg.locator(".tw-stats dd.big").inner_text().strip(), "16")
+    segs = pg.locator(".tw-seg .tw-w").all_inner_texts()
+    ck("เส้นแบ่งคำโชว์ครบ 16 ชิ้น", len(segs), 16)
+    ck("คำทับศัพท์ไม่เหลือเศษ (แดช, พาว, เชอร์)", all(w in segs for w in ["แดช", "พาว", "เชอร์"]), True)
+    pg.locator(".tw-ta").fill("สวัสดีครับ\nวันนี้ประชุม 3 โมง\n\nขอบคุณ Power BI")
+    pg.wait_for_timeout(500)
+    ck("ข้อความผสม ผลนับครบทุกช่อง",
+       [d.strip() for d in pg.locator(".tw-stats dd").all_inner_texts()], ["10", "7", "3", "31", "46", "4", "2"])
 
     real = [e for e in errs if "favicon" not in e.lower()]
     print(f"\n━━ console error: {len(real)} ━━")

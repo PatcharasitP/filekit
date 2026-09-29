@@ -78,6 +78,7 @@ export const EN_TOOLS = {
   "thai-name": ["Split Thai name into columns", "Break a full name into title, first name and surname, ready to sort or mail-merge"],
   "thai-address": ["Split a Thai address", "Pull subdistrict, district, province and postcode out of an address crammed into one cell"],
   "thai-number": ["Numbers to Thai baht text", "128,400 to หนึ่งแสนสองหมื่นแปดพันสี่ร้อยบาทถ้วน, swap Thai numerals ๑๒๓ and 123 across a column"],
+  "thai-wordcount": ["Thai word counter", "Counts Thai words properly instead of treating a whole sentence as one word, plus characters, lines and a word-boundary view you can check"],
   "freebies": ["Ready made files, free to take", "Deneb specs and a Power Query function this site actually uses, take them as they are without opening each tool"],
   "pbi-matrix-details": ["Matrix transaction details in one column", "Fold several columns into a single matrix column while the row headers stay frozen, every data type is turned into text first so zeros and FALSE never vanish"],
   "pbi-bar": ["Deneb horizontal bar chart", "Tweak the bars, value labels and target line live, with bar length always true to the real numbers, then copy the spec into Deneb"],

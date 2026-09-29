@@ -49,7 +49,7 @@ READ = """() => {
     boxes.push(ps.map(p => {
       const r = p.getBoundingClientRect();
       const name = p.getAttribute('aria-label').match(/^Task: ([^;]+)/)[1];
-      return { name, x0: r.left, x1: r.right, y: r.top, w: r.width, fill: p.getAttribute('fill'),
+      return { name, x0: r.left, x1: r.right, y: r.top, w: r.width, h: r.height, bottom: r.bottom, fill: p.getAttribute('fill'),
                opacity: Number(p.getAttribute('opacity') ?? 1) };
     }));
   }
@@ -106,6 +106,16 @@ def check_geometry(pg, rows, label):
         worst_x = max(worst_x, abs((b["x0"] - first_x0) - (d(r["Start"]) - origin).days * ppd))
     ck_true(f"{label}: ความกว้างแท่งตรงจำนวนวัน (เพี้ยนสูงสุด {worst_w:.2f}px เพดาน 1px)", worst_w <= 1.0)
     ck_true(f"{label}: ตำแหน่งเริ่มแท่งตรงวันเริ่ม (เพี้ยนสูงสุด {worst_x:.2f}px เพดาน 1px)", worst_x <= 1.0)
+    # ‼️ ความสูงแท่ง: รอบแรกเทสวัดแค่ความกว้างกับตำแหน่งซ้ายขวา จึงไม่เห็นว่าใส่ข้อมูล 3 งานแล้วแท่งสูง 0px
+    #    (พื้นที่พล็อตเหลือศูนย์เพราะหักขอบซ้ำ เห็นจากภาพเว็บจริงเท่านั้น) และไม่เห็นว่าที่ว่างด้านบนกินไปเกินครึ่ง
+    box = pg.evaluate("() => { const r = document.querySelector('.pbig-chart-box').getBoundingClientRect(); return { t: r.top, b: r.bottom }; }")
+    thin = [b0["name"] for b0 in base if b0["h"] < 8]
+    ck_true(f"{label}: ทุกแท่งสูงอย่างน้อย 8px (ต่ำสุด {min(b0['h'] for b0 in base):.1f}px)", not thin, str(thin))
+    out_box = [b0["name"] for b0 in base if b0["y"] < box["t"] - 0.5 or b0["bottom"] > box["b"] + 0.5]
+    ck_true(f"{label}: ทุกแท่งอยู่ในกรอบกราฟตามแนวตั้ง", not out_box, str(out_box))
+    blank = min(b0["y"] for b0 in base) - box["t"]
+    ck_true(f"{label}: ที่ว่างเหนือแท่งแรก {blank:.0f}px ไม่เกิน 60% ของกรอบสูง {box['b'] - box['t']:.0f}px",
+            blank <= 0.6 * (box["b"] - box["t"]))
     return {"ppd": ppd, "first_x0": first_x0, "origin": origin, "base": base, "prog": layers[1]}
 
 
@@ -260,6 +270,9 @@ def main():
         layers = pg.evaluate(READ)
         names = sorted([b0["name"] for b0 in layers[0]], key=lambda n: n)
         ck("ข้อมูลมีจุดผิด: เหลือเฉพาะงานที่ใช้ได้ 3 งาน", names, sorted(["เตรียมพื้นที่", "เทฐานราก", "ก่ออิฐผนัง"]))
+        # ‼️ ข้อมูลน้อย (3 งาน) กล่องกราฟเตี้ยสุด เคยได้แท่งสูง 0px ทั้งที่ DOM มีแท่งครบ ต้องวัดความสูงจริง
+        ck_true("ข้อมูลมีจุดผิด (3 งาน กล่องเตี้ยสุด): ทุกแท่งสูงอย่างน้อย 8px", all(b0["h"] >= 8 for b0 in layers[0]),
+                str([(b0["name"], round(b0["h"], 1)) for b0 in layers[0]]))
         note = pg.locator(".pbig-note").inner_text() if pg.locator(".pbig-note:not([hidden])").count() else ""
         ck_true("บอกว่าข้าม 3 แถว", "ข้าม 3 แถว" in note, note)
         for line, why in [(4, "วันจบมาก่อนวันเริ่ม"), (5, "ไม่มีชื่องาน"), (6, "วันเริ่มอ่านไม่ได้")]:

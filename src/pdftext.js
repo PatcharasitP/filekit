@@ -11,7 +11,8 @@ export async function pageLines(page, yTolerance = 2.5) {
     const x = it.transform[4], y = it.transform[5];
     let row = rows.find((r) => Math.abs(r.y - y) <= yTolerance);
     if (!row) { row = { y, items: [] }; rows.push(row); }
-    row.items.push({ x, str: it.str, w: it.width || 0 });
+    /* h = ขนาดตัวอักษร, font = ชื่อฟอนต์ภายในของ pdf.js (เพิ่ม 29/09/2026 ให้ PDF เป็น Markdown เดาหัวข้อ ผู้ใช้เดิมไม่อ่านสองช่องนี้) */
+    row.items.push({ x, str: it.str, w: it.width || 0, h: it.height || Math.hypot(it.transform[2], it.transform[3]) || 0, font: it.fontName });
   }
   rows.sort((a, b) => b.y - a.y);
   rows.forEach((r) => r.items.sort((a, b) => a.x - b.x));

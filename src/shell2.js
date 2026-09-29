@@ -342,7 +342,10 @@ export function toolShell2(tool, cfg = {}) {
   const subBtns = buttons.slice(1);
   for (const b of subBtns) b.classList.add("s2-sub");
   if (statusNodes.length) sideFoot.insertBefore(el("div", { class: "s2-stat" }, statusNodes), ctaWhy);
-  ctaRow.append(sheetBtn, mainBtn || el("span"));
+  /* ‼️ เครื่องมือแบบเดิมไม่มีปุ่มหลักตอนนี้ ใช้ span จองที่ไว้ แล้วต้องถอดทิ้งตอนยกปุ่มจริงเข้ามา
+     ไม่งั้นช่องว่างระหว่างปุ่มของ span ว่างดันปุ่มหลักเยื้อง 10px (เจอ 29/09/2026 จากภาพจอ 390) */
+  const ctaSlot = mainBtn || el("span");
+  ctaRow.append(sheetBtn, ctaSlot);
   if (subBtns.length) sideFoot.appendChild(el("div", { class: "s2-subrow" }, subBtns));
 
   /* ── ทางเข้าแบบไม่มีไฟล์ ─────────────────────────────────────────────
@@ -710,7 +713,7 @@ export function toolShell2(tool, cfg = {}) {
        *   เครื่องมือที่ถือ reference ไว้เปลี่ยนข้อความ เปิดปิด ซ่อน ยังทำงานเหมือนเดิมทุกอย่าง */
       real.classList.add("s2-lifted");
       ghosts.set(real, ghost);
-      if (first) ctaRow.appendChild(ghost);
+      if (first) { if (!mainBtn) ctaSlot.remove(); ctaRow.appendChild(ghost); }
       else {
         /* หาจากทั้งแผง เพราะตอนสถานะผลลัพธ์ แถบปุ่มรองถูกย้ายขึ้นไปอยู่ในแผงผลลัพธ์
            ถ้าหาจาก sideFoot อย่างเดียวจะไม่เจอแล้วสร้างใหม่ ปุ่มจะกระจายอยู่สองที่ */

@@ -43,6 +43,7 @@ export const ICONS = {
   "pdf-to-powerpoint": `<rect x="3" y="4" width="18" height="12" rx="1.8"/><path d="M12 16v4M8.6 20h6.8"/><path d="M8.8 12.4V7.6h2.6a1.7 1.7 0 0 1 0 3.4H8.8"/>`,
   "pdf-to-images":`<rect x="4.2"y="6.2"width="15.6"height="11.6"rx="1.9"/><circle cx="8.2"cy="10.1"r="1.4"/><path d="M4.2 15.2l4-3.7 3.1 2.7 2.2-1.9 6.3 5.4"/>`,
   "pdf-to-text":  `<path d="M4.4 7h15.2M4.4 12h15.2M4.4 17h9.4"/>`,
+  "pdf-to-markdown": `<rect x="2.5" y="5.5" width="19" height="13" rx="2.2"/><path d="M6 15.2V8.8l2.6 3.2 2.6-3.2v6.4"/><path d="M16.2 8.8v6.2M13.9 12.8l2.3 2.4 2.3-2.4"/>`,
   "pdf-to-word":  `<path d="M4.4 7.4l2.5 9.2 3.7-6.6 3.7 6.6 2.5-9.2"/>`,
   "pdf-to-excel": `<rect x="4.4"y="5.6"width="15.2"height="12.8"rx="1.8"/><path d="M4.4 10h15.2M4.4 14h15.2M9.5 5.6v12.8M14.6 5.6v12.8"/>`,
 

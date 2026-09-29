@@ -149,6 +149,11 @@ export const TOOLS = [
     accepts:["pdf"],
     libs:["pdfjs"], next:["pdf-to-word","pdf-ocr"] },
 
+  { id:"pdf-to-markdown", group:"pdf", sub:"convert", icon:"Ⓜ", since:"2026-09-29", title:"PDF เป็น Markdown",
+    desc:"เก็บหัวข้อ รายการ และตารางไว้ ส่งให้ AI หรือย้ายเข้า Notion และ Obsidian ได้ บอกเมื่อสระไทยในไฟล์เชื่อไม่ได้",
+    accepts:["pdf"],
+    libs:["pdfjs"], next:["pdf-to-text","pdf-ocr"] },
+
   { id:"pdf-to-word", group:"pdf", sub:"convert", icon:"📝", title:"PDF เป็น Word",
     desc:"แปลงเนื้อหาเป็นเอกสาร DOCX ที่แก้ไขต่อได้",
     accepts:["pdf"],

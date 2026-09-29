@@ -420,6 +420,17 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
 .s2-work.side-empty .s2-side-ft{display:flex; align-items:center; gap:12px; padding:12px 18px}
 .s2-work.side-empty .s2-cta-row{max-width:420px; margin-inline-start:auto}
 .s2-work.side-empty .s2-stat{margin:0; flex:1 1 auto; min-width:0}
+/* ‼️ แผงว่าง ปุ่ม "ตัวเลือก" เปิดได้แต่แผ่นเปล่า (กดดูจริง 29/09/2026 ตัวแผงไม่มีลูกเลย) จึงซ่อน */
+.s2-work.side-empty .s2-sheetbtn{display:none}
+/* ‼️ จอแคบ ห้ามเรียงสถานะ ปุ่มหลัก ปุ่มรองในแถวเดียว (บั๊กเจอ 29/09/2026 จากภาพจอ 390)
+   สถานะถูกบีบเหลือกว้าง 52px ตัวหนังสือลงทีละคำสูง 331px และทับปุ่มข้าง ๆ
+   พังแบบเดียวกัน 4 เครื่องมือ tests/browser_sidefoot.py คุมไว้ จึงให้แต่ละส่วนขึ้นแถวของตัวเอง */
+@media (max-width:860px){
+  .s2-work.side-empty .s2-side-ft{flex-wrap:wrap; gap:8px}
+  .s2-work.side-empty .s2-stat,
+  .s2-work.side-empty .s2-subrow{flex:1 1 100%; margin:0}
+  .s2-work.side-empty .s2-cta-row{flex:1 1 100%; max-width:none; margin-inline-start:0}
+}
 
 /* มือถือสถานะผลลัพธ์: แผงผลลัพธ์แสดงเต็มอยู่แล้ว ไม่ต้องมีกล่องสรุปในผืนงานซ้ำอีก */
 @media (max-width:860px){

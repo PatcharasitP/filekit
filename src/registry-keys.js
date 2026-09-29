@@ -30,6 +30,7 @@ export const KEYS = {
   "pdf-to-images": "image png jpg รูป ภาพ export",
   "pdf-to-longimage": "long image ภาพยาว ต่อภาพ ไลน์ line แชท ส่งรูป สกรีนช็อต pdf เป็นรูป",
   "pdf-to-text": "text txt ข้อความ ดึง copy",
+  "pdf-to-markdown": "markdown md ai chatgpt claude gemini notion obsidian หัวข้อ ตาราง มาร์กดาวน์ แปลง ส่งให้ ai",
   "pdf-to-word": "word docx เอกสาร แก้ไข",
   "pdf-to-excel": "excel xlsx ตาราง table sheet",
   "image-convert": "png jpg webp heic heif iphone ไอโฟน แปลง รูป convert ico favicon ไอคอน ไอคอนเว็บ",

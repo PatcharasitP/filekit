@@ -49,6 +49,7 @@ export const EN_TOOLS = {
   "pdf-to-images": ["PDF to images", "Turn every page into PNG or JPG at the resolution you choose"],
   "pdf-to-longimage": ["PDF to one long image", "Stack every page into a single tall image, ready to send in a chat with no download step"],
   "pdf-to-text": ["PDF to text", "Pull the text out as a TXT file, ready to copy"],
+  "pdf-to-markdown": ["PDF to Markdown", "Keeps headings, lists and tables for AI tools, Notion or Obsidian, and warns when the Thai text in the file cannot be trusted"],
   "pdf-to-word": ["PDF to Word", "Turn the content into an editable DOCX document"],
   "pdf-to-excel": ["PDF to Excel", "Capture the tables inside a PDF as an XLSX file"],
   "word-to-pdf": ["Word to PDF", "Convert DOCX to PDF with full Thai support, several files at a time"],

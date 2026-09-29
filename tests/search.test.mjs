@@ -114,6 +114,16 @@ ck("‘รวมรูป pdf’ ยังได้ Images เป็น PDF ม�
 ck("‘รวมรูป’ ยังได้ Images เป็น PDF มาก่อน", top("รวมรูป"), ["images-to-pdf"]);
 ck("‘รวม pdf’ ยังเจอ Images เป็น PDF ใน 3 อันดับแรก", top("รวม pdf", 3).includes("images-to-pdf"), true);
 
+console.log("\n━━ ⑪ รูปจาก iPhone (HEIC) ต้องค้นเจอเครื่องมือที่เปิดได้ ━━");
+/* ‼️ ที่มา 29/09/2026 ตอนเทียบกับ PDF24 กับ TinyWow: FileKit อ่าน HEIC ได้ตั้งแต่ f190f4c (src/imgdecode.js)
+     แต่ก่อนแก้ พิมพ์ heic ได้ของสำเร็จรูปแจกฟรี (freebies คะแนน 41 เพราะตัวอักษรกระโดดไปตรง)
+     ส่วน HEIC เป็น jpg กับ รูป iphone ไม่เจออะไรเลย คนที่มีรูปจากไอโฟนจึงคิดว่าเว็บทำไม่ได้ */
+ck("‘heic’ → แปลงชนิดไฟล์รูป", top("heic"), ["image-convert"]);
+ck("‘HEIC เป็น jpg’ → แปลงชนิดไฟล์รูป", top("HEIC เป็น jpg"), ["image-convert"]);
+ck("‘รูป iphone’ → แปลงชนิดไฟล์รูป", top("รูป iphone"), ["image-convert"]);
+ck("‘รูปไอโฟน’ → แปลงชนิดไฟล์รูป", top("รูปไอโฟน"), ["image-convert"]);
+ck("‘heic เป็น pdf’ → Images เป็น PDF", top("heic เป็น pdf"), ["images-to-pdf"]);
+
 
 console.log("\n" + "━".repeat(52));
 console.log(`ผ่าน ${pass} · ตก ${F.length}`);

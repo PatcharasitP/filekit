@@ -437,3 +437,21 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
   .s2[data-state="result"] .s2-done-big{display:none !important}
   .s2[data-state="result"] .s2-canvas{display:none}
 }
+
+/* ── แถวปุ่มรองพับได้บนจอแคบ (makeSubrow ใน src/shell2.js, เพิ่ม 29/09/2026) ──────
+ * ปุ่มรองตั้งแต่ 3 ปุ่มเหลือปุ่มแรกกับ "อีก N ปุ่ม" แถบล่างจึงไม่โตตามจำนวนปุ่ม
+ * ‼️ พับเฉพาะใน .s2-side-ft ตอนงานเสร็จแถวย้ายไปแผงผลลัพธ์ ซึ่งต้องเห็นปุ่มดาวน์โหลดครบ */
+.s2-more{display:none}
+@media (max-width:860px){
+  .s2-side-ft .s2-subrow.s2-many .s2-more{display:inline-flex; flex:1 1 auto; align-items:center; justify-content:center;
+    height:40px; padding-inline:14px; border-radius:var(--r-sm); border:1px dashed var(--line);
+    background:transparent; color:var(--text-mute); font:inherit; font-size:13.5px; font-weight:600; box-shadow:none}
+  .s2-side-ft .s2-subrow.s2-many .s2-more:hover{background:var(--bg-soft); color:var(--text)}
+  .s2-side-ft .s2-subrow.s2-many:not(.s2-open) .s2-subfold{display:none}
+  .s2-side-ft .s2-subrow.s2-open{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .s2-side-ft .s2-subrow.s2-open .s2-more{grid-column:1 / -1}
+}
+/* ‼️ จอสัมผัส ปุ่มรองต้องแตะได้สบาย 44px ตามที่ Apple แนะนำ (วัด 29/09/2026 เดิม 40px ใน 26 เครื่องมือ) */
+@media (pointer:coarse){
+  .s2-sub.btn, .s2-side-ft .s2-subrow.s2-many .s2-more{height:44px; min-height:44px}
+}

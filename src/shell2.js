@@ -271,6 +271,38 @@ function attachSideSearch(panel) {
   new MutationObserver(tryAttach).observe(panel, { childList: true, subtree: true });
 }
 
+/* ── แถวปุ่มรอง พับได้บนจอแคบ ───────────────────────────────────────────
+ * ‼️ ย้ายมาจาก workspace.js ของโครงเดิม (เพิ่ม 18/09/2026) ซึ่งหายไปตอนย้ายมาโครงหน้ารุ่น 2
+ *   วัดจริง 29/09/2026 จอ 390 กราฟโดนัทกับกราฟแท่งมีปุ่มรอง 5 ปุ่ม แถบล่างสูง 297px (35% ของจอ)
+ *   tests/browser_footbar.py รุ่นเดิมจับไม่ได้เพราะหาแถบของโครงเดิม ตรวจได้ 0 เครื่องมือแล้วขึ้นผ่าน
+ * ปุ่มรองตั้งแต่ 3 ปุ่มที่กดได้ตอนนี้ เหลือปุ่มแรกกับปุ่ม "อีก N ปุ่ม" ที่บอกจำนวนตรง ๆ
+ * ‼️ นับเฉพาะปุ่มที่ไม่ได้ซ่อน (บทเรียน 20/09 ปุ่มเคยบอก "อีก 2 ปุ่ม" แต่กางแล้วไม่มีอะไร)
+ * ‼️ พับเฉพาะตอนแถวอยู่ในแถบล่างบนจอแคบ (CSS ใน tool2.css) ตอนงานเสร็จแถวนี้ย้ายไปแผงผลลัพธ์
+ *   ซึ่งเลื่อนได้ และปุ่มดาวน์โหลดต้องเห็นครบ
+ * ‼️ ไม่จำสถานะกางข้ามหน้า เหตุผลเดียวกับโครงเดิม กางไว้ครั้งเดียวแถบจะสูงค้างทุกเครื่องมือ */
+function makeSubrow(buttons) {
+  const row = el("div", { class: "s2-subrow" }, buttons);
+  const more = el("button", { type: "button", class: "btn s2-more", "aria-expanded": "false",
+    onclick: () => { const open = row.classList.toggle("s2-open"); more.setAttribute("aria-expanded", String(open)); sync(); } });
+  row.appendChild(more);
+  function sync() {
+    const live = [...row.children].filter((b) => b !== more && b.tagName === "BUTTON" && !b.hidden);
+    const many = live.length >= 3;
+    row.classList.toggle("s2-many", many);
+    live.forEach((b, i) => b.classList.toggle("s2-subfold", many && i > 0));
+    const txt = row.classList.contains("s2-open") ? tr("ซ่อนปุ่มที่เหลือ", "Fewer buttons")
+      : tr(`อีก ${live.length - 1} ปุ่ม`, `${live.length - 1} more`);
+    if (more.textContent !== txt) more.textContent = txt;
+    /* ปุ่มพับต้องอยู่ท้ายแถวเสมอ ปุ่มที่ยกมาทีหลังจะต่อท้ายมัน */
+    if (row.lastElementChild !== more) row.appendChild(more);
+  }
+  /* ‼️ เฝ้าเฉพาะลูกของแถวกับแอตทริบิวต์ hidden ห้ามเฝ้า class หรือข้อความ ไม่งั้น sync เรียกตัวเองวนไม่จบ */
+  new MutationObserver(sync).observe(row, { childList: true, subtree: false });
+  new MutationObserver(sync).observe(row, { attributes: true, attributeFilter: ["hidden"], subtree: true });
+  sync();
+  return row;
+}
+
 export function toolShell2(tool, cfg = {}) {
   const menu = wireToolMenu(tool);
   const panelMode = !cfg.center && !cfg.right && !cfg.left;
@@ -346,7 +378,7 @@ export function toolShell2(tool, cfg = {}) {
      ไม่งั้นช่องว่างระหว่างปุ่มของ span ว่างดันปุ่มหลักเยื้อง 10px (เจอ 29/09/2026 จากภาพจอ 390) */
   const ctaSlot = mainBtn || el("span");
   ctaRow.append(sheetBtn, ctaSlot);
-  if (subBtns.length) sideFoot.appendChild(el("div", { class: "s2-subrow" }, subBtns));
+  if (subBtns.length) sideFoot.appendChild(makeSubrow(subBtns));
 
   /* ── ทางเข้าแบบไม่มีไฟล์ ─────────────────────────────────────────────
    * เครื่องมือที่มีโหมด "วางตัวเลขเอง" (หายอดที่บวกกันได้, แบ่งช่วงตัวเลข) ใช้งานได้โดยไม่ต้องมีไฟล์
@@ -718,7 +750,7 @@ export function toolShell2(tool, cfg = {}) {
         /* หาจากทั้งแผง เพราะตอนสถานะผลลัพธ์ แถบปุ่มรองถูกย้ายขึ้นไปอยู่ในแผงผลลัพธ์
            ถ้าหาจาก sideFoot อย่างเดียวจะไม่เจอแล้วสร้างใหม่ ปุ่มจะกระจายอยู่สองที่ */
         let sub = side.querySelector(".s2-subrow");
-        if (!sub) { sub = el("div", { class: "s2-subrow" }); sideFoot.appendChild(sub); }
+        if (!sub) { sub = makeSubrow([]); sideFoot.appendChild(sub); }
         sub.appendChild(ghost);
       }
     }

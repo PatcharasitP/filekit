@@ -92,6 +92,7 @@ export const ICONS = {
 
   // ── Power BI ──
   // วงแหวนโดนัทที่มีเส้นแบ่งส่วนสองเส้น ให้อ่านออกว่าเป็นกราฟ ไม่ใช่แค่วงกลมซ้อน
+  "pbi-gantt":    `<path d="M4 4v16"/><rect x="6" y="5.5" width="8" height="3.2" rx="1"/><rect x="10" y="10.4" width="9" height="3.2" rx="1"/><rect x="7.5" y="15.3" width="7" height="3.2" rx="1"/><path d="M16.5 3.5v3M16.5 8.5v2M16.5 13.5v2M16.5 18v2.5" stroke-dasharray="1.5 2"/>`,
   "pbi-bar":      `<path d="M4 4.5v15"/><rect x="4" y="6" width="14.5" height="3.6" rx="1"/><rect x="4" y="11.2" width="9.5" height="3.6" rx="1"/><rect x="4" y="16.4" width="5" height="3.6" rx="1"/>`,
   // ตารางที่คอลัมน์ซ้ายถูกตรึง (เส้นทึบคั่น) ส่วนช่องขวามีบรรทัดข้อความซ้อนกัน
   "pbi-matrix-details": `<rect x="3.2" y="4.6" width="17.6" height="14.8" rx="1.8"/><path d="M9 4.6v14.8"/><path d="M3.2 9.2h17.6"/><path d="M11.4 12.4h6.8"/><path d="M11.4 15.6h4.4"/>`,

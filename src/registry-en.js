@@ -83,6 +83,7 @@ export const EN_TOOLS = {
   "thai-wordcount": ["Thai word counter", "Counts Thai words properly instead of treating a whole sentence as one word, plus characters, lines and a word-boundary view you can check"],
   "freebies": ["Ready made files, free to take", "Deneb specs and a Power Query function this site actually uses, take them as they are without opening each tool"],
   "pbi-matrix-details": ["Matrix transaction details in one column", "Fold several columns into a single matrix column while the row headers stay frozen, every data type is turned into text first so zeros and FALSE never vanish"],
+  "pbi-gantt": ["Deneb Gantt chart", "Drop in a task table with start and end dates and get a plan chart with a today line and progress fill. Reads Buddhist Era dates, then copy the spec into Deneb"],
   "pbi-bar": ["Deneb horizontal bar chart", "Tweak the bars, value labels and target line live, with bar length always true to the real numbers, then copy the spec into Deneb"],
   "pbi-donut": ["Deneb donut chart", "Tweak a live donut chart and see it change instantly, then copy the spec straight into Deneb"],
   "pbi-theme": ["Build a Power BI theme (theme.json)", "Pick a palette and a canvas size, watch a live report preview, and get told which colours fall below the contrast floor or merge for colour blind viewers"],

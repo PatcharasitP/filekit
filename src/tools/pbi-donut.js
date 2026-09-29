@@ -674,6 +674,7 @@ export function mount(tool) {
     input.checked = !!paramValues[name];
     const track = el("span", { class: "pbid-switch-track" });
     const sw = el("label", { class: "pbid-switch" }, [input, track]);
+    input.setAttribute("aria-label", labelText);   // ป้ายอยู่ใน <span> ข้าง ๆ ไม่ได้ครอบช่อง จึงต้องใส่ชื่อให้ช่องเอง ไม่งั้นโปรแกรมอ่านหน้าจออ่านว่า checkbox เฉย ๆ (เทส browser_ctlnames.py)
     input.addEventListener("change", () => setParam(name, input.checked));
     controls[name] = { setUI: (v) => { input.checked = !!v; } };
     return mark(el("div", { class: "field pbid-switch-field" }, [el("span", {}, labelText), sw]), name);

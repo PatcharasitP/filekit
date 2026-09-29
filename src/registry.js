@@ -304,6 +304,11 @@ export const TOOLS = [
     libs:["vega","vegaLite","vegaEmbed"],
     next:["pbi-donut","pbi-theme"] },
 
+  { id:"pbi-gantt", group:"powerbi", icon:"📅", since:"2026-09-30", title:"กราฟ Gantt แผนงาน Deneb",
+    desc:"ใส่ตารางงานกับวันเริ่มวันจบ ได้กราฟแผนงานพร้อมเส้นวันนี้และแถบความคืบหน้า อ่านวันที่ พ.ศ. ได้ แล้วคัดลอกสเปกไปวางใน Deneb",
+    libs:["vega","vegaLite","vegaEmbed"],
+    next:["pbi-bar","thai-date"] },
+
   { id:"freebies", group:"powerbi", icon:"🎁", since:"2026-09-12", title:"ของสำเร็จรูปแจกฟรี",
     desc:"สเปก Deneb และฟังก์ชัน Power Query ที่เว็บนี้ใช้อยู่จริง หยิบไปใช้ต่อได้เลย ไม่ต้องเปิดเครื่องมือทีละตัว",
     libs:[],

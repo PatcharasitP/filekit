@@ -1,0 +1,756 @@
+{
+ "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+ "width": "container",
+ "height": "container",
+ "padding": {
+  "left": 6,
+  "right": 6,
+  "top": 112,
+  "bottom": 8
+ },
+ "autosize": {
+  "type": "fit",
+  "contains": "padding"
+ },
+ "background": "transparent",
+ "usermeta": {
+  "deneb": {
+   "build": "1.9.1.0",
+   "metaVersion": 1,
+   "provider": "vegaLite",
+   "providerVersion": "6.4.0"
+  },
+  "information": {
+   "name": "SiteScope Dynamic Gantt",
+   "description": "แผนภูมิ Gantt แนวนอน field contract ตายตัว 4 ช่องบังคับ Task (nominal, ชื่องาน), Start (temporal, วันที่เริ่ม, ISO yyyy-mm-dd), End (temporal, วันที่สิ้นสุด, ISO yyyy-mm-dd) และ Group (nominal, ชื่อเฟส/ชนิดงาน ใช้ระบายสี) บวก Progress (quantitative, ไม่บังคับ, 0 ถึง 1, ว่างได้ทั้งแถวหรือทั้งชุดข้อมูล) End นับรวมวันนั้นเต็มวัน (inclusive) เช่น Start และ End เป็นวันเดียวกันจะเห็นเป็นแท่งกว้าง 1 วันเต็ม ไม่ใช่แท่งกว้างศูนย์ สเปกบวก 1 วันให้เองตอนวาด ไม่ต้องแก้ข้อมูลต้นทาง แถวบนสุดมีคำอธิบายสี (legend) ของ Group วาดเองจากข้อมูลจริง รองรับ 1 ถึง 8 กลุ่ม ห่อบรรทัดเองตามความกว้างจริงของกล่องกราฟ (อ่านผ่าน containerSize()[0] ลบ 16px สำหรับขอบ 8px สองข้าง ไม่ใช่ signal width เฉย ๆ และ legend ถูกเลื่อนซ้ายด้วย __legendXOffset ให้เริ่มชิดขอบกล่องจริง ไม่ใช่เริ่มที่จุดเริ่ม plot area ที่ถูกดันขวาด้วยความกว้างแกนชื่องาน — ดูเหตุผลเต็มในหัวข้อ paddingDynamicTest) ตั้งแต่จอมือถือ 320px ถึงเดสก์ท็อป สูงสุด 3 แถว (ทดสอบจริงแล้วว่าชุดตัวอย่างหลัก 5 กลุ่มต้องการ 3 แถวจริงที่กล่องแคบสุด ~280px ถึงจะไม่ต้องซ่อนกลุ่มไหนเลย) ถ้ากลุ่มเกินที่ 3 แถวจะรับได้จะโชว์เท่าที่พอแล้วต่อท้ายด้วย +N (ตัวเลขล้วน ไม่ใช่ข้อความไทย) padding.top กันที่ไว้คงที่สำหรับ 3 แถวเสมอ (112px) ส่วนตำแหน่งป้ายวันนี้ (todayLabel) เป็นแบบ adaptive จริง คำนวณจากจำนวนแถว legend ที่ข้อมูลใช้จริงในแต่ละสถานการณ์ (ผ่าน data transform ต่อแถว ไม่ใช่ view-level padding) ทำให้ช่องว่างระหว่าง legend กับป้ายวันนี้แคบลงอัตโนมัติเมื่อใช้น้อยกว่า 3 แถว (พบบ่อยบนจอกว้าง) แทนที่จะเหลือที่ว่างคงที่แบบเดิม ดูหัวข้อ paddingDynamicTest สำหรับรายละเอียดการทดสอบเต็มรวมบั๊กที่เจอ 2 รอบ แกนวันที่คิดช่วงจาก Start ต่ำสุดถึง End+1วันสูงสุดของข้อมูลเท่านั้น เส้นวันนี้ไม่ขยายช่วงแกนเด็ดขาด ถ้าวันนี้อยู่นอกช่วงข้อมูลจะไม่วาดเส้น/ป้ายเลย วิธีใช้กับไฟล์อื่น: ลากคอลัมน์เข้า field well ของ Deneb แล้ว Rename for this visual เป็น Task / Start / End / Group / Progress ตามลำดับ",
+   "author": "ลุงเอ (Power BI + Deneb), เครื่องมือ pbi-gantt",
+   "uuid": "9b3f2d6a-1c4e-4a8f-9d7b-2e6a5c8f0b1d",
+   "generated": "2026-09-30"
+  },
+  "dataset": [
+   {
+    "key": "Task",
+    "name": "Task",
+    "type": "text",
+    "kind": "column"
+   },
+   {
+    "key": "Start",
+    "name": "Start",
+    "type": "datetime",
+    "kind": "column"
+   },
+   {
+    "key": "End",
+    "name": "End",
+    "type": "datetime",
+    "kind": "column"
+   },
+   {
+    "key": "Group",
+    "name": "Group",
+    "type": "text",
+    "kind": "column"
+   }
+  ],
+  "paramGuide": {
+   "sortMode": "การเรียงลำดับแถวงานบนแกนตั้ง: 'start' เรียงตามวันเริ่มก่อนหลัง (ค่าเริ่มต้น), 'end' เรียงตามวันสิ้นสุดก่อนหลัง, 'asGiven' เรียงตามลำดับแถวเดิมในข้อมูล",
+   "showToday": "true = แสดงเส้นแนวตั้งวันนี้พร้อมป้าย เฉพาะเมื่อวันนี้อยู่ในช่วงข้อมูลเท่านั้น (ค่าเริ่มต้น), false = ซ่อนเสมอ",
+   "todayDate": "ตรึงวันที่ของเส้นวันนี้เป็นข้อความ yyyy-mm-dd เพื่อให้ผลเรนเดอร์นิ่งทดสอบซ้ำได้ ปล่อยว่าง = ใช้วันที่ปัจจุบันจริงของเครื่องที่เปิดดู",
+   "todayLabel": "ข้อความป้ายกำกับเส้นวันนี้ ค่าเริ่มต้น 'วันนี้' เปลี่ยนเป็นภาษาอื่นได้โดยตั้งค่า param นี้ ไม่ต้องแก้สเปก",
+   "groupLabel": "ข้อความหัวคำอธิบายสี (legend) ของ Group ค่าเริ่มต้น 'กลุ่ม' เปลี่ยนภาษาได้โดยตั้งค่า param นี้ (ใช้ร่วมกับหัว tooltip กลุ่มไม่ได้ เพราะ tooltip title ผูก param ไม่ได้ ดู description ท้ายไฟล์)",
+   "unknownLabel": "ข้อความแทนค่าที่ไม่มีข้อมูล (Group ว่าง หรือ Progress ไม่มีค่า) ค่าเริ่มต้น 'ไม่ระบุ' เปลี่ยนภาษาได้โดยตั้งค่า param นี้",
+   "showProgress": "true = แสดงชั้นความคืบหน้าทับในแท่งเมื่อแถวนั้นมีค่า Progress (ค่าเริ่มต้น), false = ปิดทั้งหมด แสดงแท่งทึบสีเดียวแทน",
+   "palette": "array สี hex ของตัวเอง ไล่ตามลำดับตัวอักษรของชื่อ Group ถ้าสีหมดก่อน Group หมดจะวนซ้ำ ปล่อยว่าง [] = ใช้สีตามธีมไฟล์แทน (pbiColor ไล่ตามลำดับเดียวกัน) สีเดียวกันนี้ใช้ทั้งแท่งและ legend เป๊ะ (มาจากฟิลด์เดียวกัน)",
+   "barThickness": "สัดส่วนความหนาแท่งต่อช่องแถว (0.3 ถึง 1.0) ยิ่งมากยิ่งหนา ที่เหลือเป็นช่องว่างระหว่างแถว",
+   "cornerRadius": "มุมโค้งปลายแท่ง (พิกเซล, 0 ถึง 8) ใช้ทั้งแท่งหลักและชั้นความคืบหน้า",
+   "fontScale": "ตัวคูณขนาดตัวอักษรทุกก้อนพร้อมกัน (0.6 ถึง 1.6) คูณทับขนาดฐาน ค่าเริ่มต้น 1 = ไม่เปลี่ยนอะไรเลย",
+   "labelFontScale": "ตัวคูณเฉพาะป้ายชื่องานบนแกนตั้ง (0.5 ถึง 2.0) คูณทับ fontScale อีกชั้น",
+   "buddhistYear": "true = แกนวันที่ด้านบนและวันที่ใน tooltip แสดงปีเป็น พ.ศ. (บวก 543) พร้อมกัน, false = ค่าเริ่มต้น แสดงปี ค.ศ. ทั้งคู่"
+  },
+  "colorMode": "production: ชั้นสีธีม default ใช้ pbiColor(index) จริงตามธีมไฟล์ ไล่ตามลำดับตัวอักษรของชื่อ Group",
+  "tooltipTitleLimitation": "ทดสอบแล้ว (30/09/2026): Vega-Lite tooltip encoding channel 'title' ไม่รองรับ ExprRef/param จริง — compile ผ่านเงียบ ๆ แต่ค่าที่ได้ตอนเรนเดอร์กลายเป็นข้อความ '[object Object]' แทนที่จะเป็นค่า param จึงคงหัว tooltip (งาน/กลุ่ม/เริ่ม/สิ้นสุด/ความคืบหน้า) เป็นข้อความไทยตายตัวไว้ตามเดิม ส่วนข้อความค่า 'ไม่ระบุ' (ไม่ใช่หัว tooltip) เปลี่ยนได้ผ่าน param unknownLabel เพราะเป็นค่าข้อมูลปกติไม่ใช่ title",
+  "paddingDynamicTest": "ทดสอบแล้วจริงจัง (30/09/2026) ผ่าน vegaEmbed({ast:true, expr:interpreter}) จริงในเบราว์เซอร์ ไม่ใช่แค่ compile รวม 4 รอบค้นพบ (2 sub-round): (1) padding.top รับ ExprRef ได้ถูกต้องตามไวยากรณ์ (compile ผ่าน ไม่ error) แต่การทำให้ค่านั้นคำนวณจาก 'จำนวนกลุ่มจริงในข้อมูล' ผ่าน Vega expression function data('name') คืนอาร์เรย์ว่างเงียบ ๆ ภายใต้ ast:true interpreter runtime (ไม่มี error ให้เห็นเลย ทดสอบด้วยสเปกแยกเทียบชุดข้อมูล 7 แถวกับ 15 แถว ได้ padTop=20 เท่ากันทั้งคู่ ทั้งที่ควรต่างกัน) จึงไม่ใช้ padding.top แบบ dynamic เป็นของส่งมอบจริง (2) พบบั๊กที่ไม่เคยถูกตรวจมาก่อนตั้งแต่รอบ 3: สูตร __legendItemsPerRow เดิมอ่านค่าจาก signal เปล่า ๆ 'width' ซึ่งใน Vega-Lite คือความกว้างของ plot area หลังหักพื้นที่ label แกน Y ที่ auto-reserve ไปแล้ว (ไม่ใช่ความกว้างเต็มของ container) วัดจริงที่ width=320px กับ house_build ได้ width signal=191 ไม่ใช่ ~308 ทำให้ itemsPerRow ผิดเป็น 1 แทน 3 แก้ด้วย containerSize()[0] (คืนขนาด DOM container จริง ยืนยัน containerSize()=[318,618] ที่ container CSS 320px) (3) ‼️ ฟ้าตรวจในหน้าเว็บเครื่องมือจริง (ไม่ใช่หน้าทดสอบแยกของลุงเอ) เจอบั๊กที่ 2 ต่อจากข้อ (2): แก้เป็น containerSize()[0] แล้วคำนวณ 'ที่ว่างที่มี' ถูกต้อง แต่ตำแหน่งวาง legend (__legendItemX) ยังอ้างอิงจุดเริ่ม plot area (view-local x=0) ซึ่งถูกดันขวาไปแล้วด้วยความกว้างแกนชื่องานฝั่งซ้าย (~100-130px) ทำให้ legend ที่คำนวณว่า 'พอดีกับความกว้างเต็มกล่อง' จริง ๆ ล้นขอบขวาไปเท่ากับความกว้างแกนซ้ายนั้น (วัดจริงที่กล่อง 350px: 'ตกแต่ง' ขวาสุด 386px เกินขอบ 370 / กล่อง 280px: 'ฐานราก' ล้น 306 เทียบขอบ 300) แก้ด้วยฟิลด์ใหม่ __legendXOffset = 14 - containerSize()[0] + width (ระยะที่ต้องเลื่อนซ้าย เพื่อให้ legend เริ่มที่ขอบกล่องจริง+8px แทนจุดเริ่ม plot area) บวกเข้ากับ __legendItemX/__legendPlusX/x ของ header ทุกจุด และเปลี่ยนสูตรความกว้างที่ใช้ได้เป็น containerSize()[0]-16 (เผื่อขอบ 8px สองข้างของกล่องจริง ไม่ใช่ของ plot area) (4) ผลคือเพดาน 2 แถว (ที่เคยลองในช่วงกลางรอบ 4 เพื่อลด padding.top) ไม่พอจริงที่กล่องแคบสุด ~280px (320px viewport): house_build 5 กลุ่มต้องการ 3 แถวเต็มถึงจะไม่ซ่อนกลุ่มไหนเลย จึงย้อนกลับไปใช้เพดาน 3 แถว + padding.top=112 ตามเดิม (ยึดหลักที่ฟ้าสั่ง: ไม่ซ่อนกลุ่มสำคัญกว่าที่ว่างบนเดสก์ท็อป) แต่ยังคงกลไก __todayLabelY แบบ adaptive ไว้ (คำนวณจากจำนวนแถว legend ที่ใช้จริงต่อสถานการณ์ ผ่าน data-transform ต่อแถว ไม่ใช่ view-level padding) ปรับ buffer คงที่จาก 26→40→กลับเป็น 26 (คาลิเบรตใหม่ให้ตรงกับ maxLastRow=2 ของเพดาน 3 แถว ให้ค่าที่ lastRow สูงสุดตรงกับค่า y=-30 เดิมที่พิสูจน์แล้วว่าปลอดภัย) ผลคือช่องว่าง legend-ถึง-วันนี้แคบลงอัตโนมัติเหลือ ~17px เมื่อใช้แค่ 1-2 แถว (พบบ่อยบนจอกว้าง) แทนที่จะคงที่ ~43px เหมือนเดิมเสมอ ‼️ ข้อจำกัดที่พบเพิ่ม: vl-convert (headless renderer ที่ deneb_lint.py/deneb_render.py ใช้) ไม่รองรับ containerSize() ถูกต้องตอนเรนเดอร์ PNG จริง (vegalite_to_png ให้ภาพ legend เพี้ยน/ซ้อนทับ ทั้งที่ compile/scenegraph ปกติ) จึงต้องใช้ Playwright(ast:true) จริงแทนสำหรับตรวจ/สร้างภาพของสเปกนี้ตั้งแต่รอบนี้เป็นต้นไป ‼️ บทเรียนสำคัญที่สุดของรอบนี้: ต้องทดสอบบนหน้าเว็บเครื่องมือจริง (`#/pbi-gantt` ของ FileKit) ไม่ใช่แค่หน้าทดสอบแยกที่ประกอบเอง เพราะหน้าทดสอบแยกไม่มีความกว้างแกนชื่องานจริงที่ดันจุดเริ่ม plot area แบบเดียวกับหน้าจริง ทำให้พลาดบั๊ก __legendXOffset ไปทั้งที่เทสแยกผ่านหมด ทดสอบยืนยันสุดท้ายด้วย `FileKit/tests/browser_gantt.py` (สคริปต์ทางการของทีม ไม่ใช่ของลุงเอเอง) ผ่านครบ 66/66 ข้อทั้งที่ 320/390/720/1440px รวมเคส dataset ที่ไม่มี Progress, ภาษาอังกฤษ, งานวันเดียว, ไฟล์ Excel/CSV import"
+ },
+ "params": [
+  {
+   "name": "sortMode",
+   "value": "start"
+  },
+  {
+   "name": "showToday",
+   "value": true
+  },
+  {
+   "name": "todayDate",
+   "value": ""
+  },
+  {
+   "name": "todayLabel",
+   "value": "วันนี้"
+  },
+  {
+   "name": "groupLabel",
+   "value": "กลุ่ม"
+  },
+  {
+   "name": "unknownLabel",
+   "value": "ไม่ระบุ"
+  },
+  {
+   "name": "showProgress",
+   "value": true
+  },
+  {
+   "name": "palette",
+   "value": []
+  },
+  {
+   "name": "barThickness",
+   "value": 0.7
+  },
+  {
+   "name": "cornerRadius",
+   "value": 3
+  },
+  {
+   "name": "fontScale",
+   "value": 1
+  },
+  {
+   "name": "labelFontScale",
+   "value": 1
+  },
+  {
+   "name": "buddhistYear",
+   "value": false
+  }
+ ],
+ "data": {
+  "name": "dataset"
+ },
+ "transform": [
+  {
+   "calculate": "isValid(datum.Start) && length(datum.Start) > 0 ? time(datetime(datum.Start)) : now()",
+   "as": "__startMs"
+  },
+  {
+   "calculate": "isValid(datum.End) && length(datum.End) > 0 ? time(datetime(datum.End)) + 86400000 : datum.__startMs + 86400000",
+   "as": "__endMs"
+  },
+  {
+   "calculate": "buddhistYear ? (timeFormat(datetime(datum.Start), '%d %b ') + (year(datetime(datum.Start)) + 543)) : timeFormat(datetime(datum.Start), '%d %b %Y')",
+   "as": "__startText"
+  },
+  {
+   "calculate": "buddhistYear ? (timeFormat(datetime(datum.End), '%d %b ') + (year(datetime(datum.End)) + 543)) : timeFormat(datetime(datum.End), '%d %b %Y')",
+   "as": "__endText"
+  },
+  {
+   "calculate": "isValid(datum.Group) && length(datum.Group) > 0 ? datum.Group : unknownLabel",
+   "as": "__group"
+  },
+  {
+   "calculate": "isValid(datum.Progress) && isFinite(toNumber(datum.Progress)) ? clamp(toNumber(datum.Progress), 0, 1) : null",
+   "as": "__progress"
+  },
+  {
+   "calculate": "isValid(datum.__progress) ? format(datum.__progress, '.0%') : unknownLabel",
+   "as": "__progressText"
+  },
+  {
+   "calculate": "sortMode == 'end' ? datum.__endMs : (sortMode == 'asGiven' ? datum.__row__ : datum.__startMs)",
+   "as": "__sortKey"
+  },
+  {
+   "window": [
+    {
+     "op": "row_number",
+     "as": "__barRank"
+    }
+   ],
+   "sort": [
+    {
+     "field": "__sortKey",
+     "order": "ascending"
+    }
+   ]
+  },
+  {
+   "window": [
+    {
+     "op": "dense_rank",
+     "as": "__groupOrder"
+    }
+   ],
+   "sort": [
+    {
+     "field": "__group",
+     "order": "ascending"
+    }
+   ]
+  },
+  {
+   "calculate": "length(palette) > 0 ? palette[(datum.__groupOrder - 1) % length(palette)] : pbiColor(datum.__groupOrder - 1)",
+   "as": "__color"
+  },
+  {
+   "calculate": "(showProgress && isValid(datum.__progress)) ? datum.__startMs + (datum.__endMs - datum.__startMs) * datum.__progress : datum.__startMs",
+   "as": "__progressEndMs"
+  },
+  {
+   "calculate": "(showProgress && isValid(datum.__progress)) ? 1 : 0",
+   "as": "__progressOpacity"
+  },
+  {
+   "calculate": "(showProgress && isValid(datum.__progress)) ? 0.32 : 1",
+   "as": "__baseOpacity"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "min",
+     "field": "__startMs",
+     "as": "__domainMinRaw"
+    },
+    {
+     "op": "max",
+     "field": "__endMs",
+     "as": "__domainMaxRaw"
+    }
+   ]
+  },
+  {
+   "calculate": "length(todayDate) > 0 ? time(datetime(todayDate)) : now()",
+   "as": "__todayMsRaw"
+  },
+  {
+   "calculate": "datum.__todayMsRaw >= datum.__domainMinRaw && datum.__todayMsRaw <= datum.__domainMaxRaw",
+   "as": "__todayInRange"
+  },
+  {
+   "calculate": "datum.__todayInRange ? datum.__todayMsRaw : datum.__domainMinRaw",
+   "as": "__todayMsForScale"
+  },
+  {
+   "calculate": "(showToday && datum.__todayInRange) ? 1 : 0",
+   "as": "__todayVisible"
+  },
+  {
+   "calculate": "(datum.__domainMaxRaw - datum.__domainMinRaw) != 0 ? (datum.__todayMsForScale - datum.__domainMinRaw) / (datum.__domainMaxRaw - datum.__domainMinRaw) : 0",
+   "as": "__todayFrac"
+  },
+  {
+   "calculate": "datum.__todayFrac > 0.88",
+   "as": "__todayNearRight"
+  },
+  {
+   "window": [
+    {
+     "op": "row_number",
+     "as": "__groupFirstRank"
+    }
+   ],
+   "groupby": [
+    "__group"
+   ],
+   "sort": [
+    {
+     "field": "__row__",
+     "order": "ascending"
+    }
+   ]
+  },
+  {
+   "calculate": "10 + 4 + length(datum.__group) * 6 * fontScale + 16",
+   "as": "__legendItemW"
+  },
+  {
+   "joinaggregate": [
+    {
+     "op": "max",
+     "field": "__legendItemW",
+     "as": "__legendMaxItemW"
+    },
+    {
+     "op": "max",
+     "field": "__groupOrder",
+     "as": "__legendGroupCount"
+    }
+   ]
+  },
+  {
+   "calculate": "length(groupLabel) * 6 * fontScale + 14",
+   "as": "__legendHeaderW"
+  },
+  {
+   "calculate": "max(1, floor((containerSize()[0] - 16 - datum.__legendHeaderW) / datum.__legendMaxItemW))",
+   "as": "__legendItemsPerRow"
+  },
+  {
+   "calculate": "datum.__legendItemsPerRow * 3",
+   "as": "__legendMaxVisible"
+  },
+  {
+   "calculate": "datum.__legendGroupCount > datum.__legendMaxVisible ? (datum.__legendMaxVisible - 1) : datum.__legendGroupCount",
+   "as": "__legendShowCount"
+  },
+  {
+   "calculate": "datum.__legendGroupCount > datum.__legendMaxVisible ? (datum.__legendGroupCount - datum.__legendShowCount) : 0",
+   "as": "__legendHiddenCount"
+  },
+  {
+   "calculate": "datum.__groupOrder - 1",
+   "as": "__legendIdx0"
+  },
+  {
+   "calculate": "floor(datum.__legendIdx0 / datum.__legendItemsPerRow)",
+   "as": "__legendRow"
+  },
+  {
+   "calculate": "datum.__legendIdx0 % datum.__legendItemsPerRow",
+   "as": "__legendCol"
+  },
+  {
+   "calculate": "14 - containerSize()[0] + width",
+   "as": "__legendXOffset"
+  },
+  {
+   "calculate": "datum.__legendXOffset + datum.__legendHeaderW + datum.__legendCol * datum.__legendMaxItemW",
+   "as": "__legendItemX"
+  },
+  {
+   "calculate": "-96 + datum.__legendRow * 20",
+   "as": "__legendItemY"
+  },
+  {
+   "calculate": "datum.__legendIdx0 < datum.__legendShowCount",
+   "as": "__legendItemVisible"
+  },
+  {
+   "calculate": "floor(datum.__legendShowCount / datum.__legendItemsPerRow)",
+   "as": "__legendPlusRow"
+  },
+  {
+   "calculate": "datum.__legendShowCount % datum.__legendItemsPerRow",
+   "as": "__legendPlusCol"
+  },
+  {
+   "calculate": "datum.__legendXOffset + datum.__legendHeaderW + datum.__legendPlusCol * datum.__legendMaxItemW",
+   "as": "__legendPlusX"
+  },
+  {
+   "calculate": "-96 + datum.__legendPlusRow * 20",
+   "as": "__legendPlusY"
+  },
+  {
+   "calculate": "'+' + datum.__legendHiddenCount",
+   "as": "__legendPlusText"
+  },
+  {
+   "calculate": "-96 + floor((datum.__legendHiddenCount > 0 ? datum.__legendShowCount : datum.__legendGroupCount - 1) / datum.__legendItemsPerRow) * 20 + 26",
+   "as": "__todayLabelY"
+  }
+ ],
+ "layer": [
+  {
+   "description": "แท่งพื้นหลัง 1 แถวต่อ 1 งาน เต็มช่วง Start ถึง End+1วัน (inclusive) โปร่งแสงเมื่อมีชั้นความคืบหน้าทับอยู่ ทึบเต็มเมื่อไม่มีข้อมูล Progress หรือปิด showProgress แกน x นี้คือแกนเดียวที่ประกาศ axis จริง (layer อื่นใช้ scale เดียวกันแบบไม่ประกาศ axis ซ้ำ)",
+   "mark": {
+    "type": "rect",
+    "tooltip": true,
+    "cornerRadius": {
+     "expr": "cornerRadius"
+    }
+   },
+   "encoding": {
+    "x": {
+     "field": "__startMs",
+     "type": "temporal",
+     "axis": {
+      "orient": "top",
+      "title": null,
+      "grid": true,
+      "gridDash": [
+       2,
+       2
+      ],
+      "gridColor": "#EDEBE9",
+      "domain": false,
+      "format": "%d %b",
+      "labelExpr": "buddhistYear ? (timeFormat(datum.value, '%d %b ') + (year(datum.value) + 543)) : datum.label",
+      "labelFontSize": {
+       "expr": "10 * fontScale"
+      },
+      "labelColor": "#605E5C"
+     }
+    },
+    "x2": {
+     "field": "__endMs"
+    },
+    "y": {
+     "field": "Task",
+     "type": "nominal",
+     "sort": {
+      "field": "__sortKey",
+      "op": "min",
+      "order": "ascending"
+     },
+     "scale": {
+      "paddingInner": {
+       "expr": "1 - clamp(barThickness, 0.3, 1.0)"
+      }
+     },
+     "axis": {
+      "title": null,
+      "domain": false,
+      "ticks": false,
+      "labelLimit": 220,
+      "labelFontSize": {
+       "expr": "10 * fontScale * labelFontScale"
+      },
+      "labelColor": "#252423",
+      "labelPadding": 6
+     }
+    },
+    "color": {
+     "field": "__color",
+     "type": "nominal",
+     "scale": null,
+     "legend": null
+    },
+    "opacity": {
+     "condition": [
+      {
+       "test": {
+        "field": "__selected__",
+        "equal": "off"
+       },
+       "value": 0.3
+      }
+     ],
+     "value": {
+      "expr": "datum.__baseOpacity"
+     }
+    },
+    "tooltip": [
+     {
+      "field": "Task",
+      "type": "nominal",
+      "title": "งาน"
+     },
+     {
+      "field": "__group",
+      "type": "nominal",
+      "title": "กลุ่ม"
+     },
+     {
+      "field": "__startText",
+      "type": "nominal",
+      "title": "เริ่ม"
+     },
+     {
+      "field": "__endText",
+      "type": "nominal",
+      "title": "สิ้นสุด"
+     },
+     {
+      "field": "__progressText",
+      "type": "nominal",
+      "title": "ความคืบหน้า"
+     }
+    ]
+   }
+  },
+  {
+   "description": "ชั้นความคืบหน้าทับด้านซ้ายของแท่ง ยาวตามสัดส่วน Progress ของช่วง Start ถึง End+1วัน มองไม่เห็น (opacity 0) เมื่อไม่มี Progress หรือปิด showProgress แต่ mark group ยังมี item อยู่เสมอ (ไม่ใช่กราฟว่างหลอกตา)",
+   "mark": {
+    "type": "rect",
+    "cornerRadius": {
+     "expr": "cornerRadius"
+    }
+   },
+   "encoding": {
+    "x": {
+     "field": "__startMs",
+     "type": "temporal"
+    },
+    "x2": {
+     "field": "__progressEndMs"
+    },
+    "y": {
+     "field": "Task",
+     "type": "nominal",
+     "sort": {
+      "field": "__sortKey",
+      "op": "min",
+      "order": "ascending"
+     },
+     "scale": {
+      "paddingInner": {
+       "expr": "1 - clamp(barThickness, 0.3, 1.0)"
+      }
+     }
+    },
+    "color": {
+     "field": "__color",
+     "type": "nominal",
+     "scale": null,
+     "legend": null
+    },
+    "opacity": {
+     "condition": [
+      {
+       "test": {
+        "field": "__selected__",
+        "equal": "off"
+       },
+       "value": 0.15
+      }
+     ],
+     "value": {
+      "expr": "datum.__progressOpacity"
+     }
+    }
+   }
+  },
+  {
+   "description": "เส้นแนวตั้งวันนี้ ใช้ __todayMsForScale (เท่ากับ __domainMinRaw เมื่อวันนี้อยู่นอกช่วงข้อมูล จึงไม่ดันโดเมนแกนให้กว้างขึ้นเด็ดขาด) ครอบความสูงทั้งพื้นที่พล็อต วาดจากแถวเดียว (__barRank==1) กันซ้อนกัน __barCount ครั้ง opacity มาจาก __todayVisible (รวมทั้ง showToday และเช็คว่าอยู่ในช่วงข้อมูลแล้ว) สีเทาเข้มคงที่เพราะเป็น non-data ink",
+   "transform": [
+    {
+     "filter": "datum.__barRank == 1"
+    }
+   ],
+   "mark": {
+    "type": "rule",
+    "strokeDash": [
+     4,
+     3
+    ],
+    "strokeWidth": 1.5,
+    "color": "#252423"
+   },
+   "encoding": {
+    "x": {
+     "field": "__todayMsForScale",
+     "type": "temporal"
+    },
+    "y": {
+     "value": 0
+    },
+    "y2": {
+     "value": {
+      "expr": "height"
+     }
+    },
+    "opacity": {
+     "value": {
+      "expr": "datum.__todayVisible * 0.85"
+     }
+    }
+   }
+  },
+  {
+   "description": "ป้ายกำกับเส้นวันนี้ ข้อความจาก param todayLabel แนวนอน (ไม่หมุนแล้ว อ่านง่ายกว่าเดิม) วางเหนือเส้นในโซน padding.top ชิดขวาแทนอัตโนมัติเมื่อ __todayNearRight (ตำแหน่งวันนี้เกิน 88% ของช่วงข้อมูล) กันล้นกรอบขวา y เป็น adaptive จริง (field __todayLabelY คำนวณจากจำนวนแถว legend ที่ใช้จริง ไม่ใช่ค่าคงที่) ทดสอบยืนยันด้วย getBoundingClientRect จริงในเบราว์เซอร์แล้วว่าไม่ทับ legend/แกนทุกความกว้างและทุกจำนวนแถว",
+   "transform": [
+    {
+     "filter": "datum.__barRank == 1"
+    }
+   ],
+   "mark": {
+    "type": "text",
+    "baseline": "bottom",
+    "fontWeight": "bold",
+    "color": "#252423"
+   },
+   "encoding": {
+    "x": {
+     "field": "__todayMsForScale",
+     "type": "temporal"
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__todayLabelY"
+     }
+    },
+    "align": {
+     "condition": {
+      "test": "datum.__todayNearRight",
+      "value": "right"
+     },
+     "value": "center"
+    },
+    "text": {
+     "value": {
+      "expr": "todayLabel"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "10 * fontScale"
+     }
+    },
+    "opacity": {
+     "value": {
+      "expr": "datum.__todayVisible"
+     }
+    }
+   }
+  },
+  {
+   "description": "หัวคำอธิบายสี (legend) ข้อความจาก param groupLabel วาดจากแถวเดียว (__barRank==1) ชิดซ้ายสุดของแถวบนสุด (row0 เสมอที่ y=-96) ไม่ขยับตามจำนวนแถวจริง เพราะ Vega-Lite ไม่มีกลไก reactive margin",
+   "transform": [
+    {
+     "filter": "datum.__barRank == 1"
+    }
+   ],
+   "mark": {
+    "type": "text",
+    "align": "left",
+    "baseline": "middle",
+    "fontWeight": "bold",
+    "color": "#252423"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendXOffset"
+     }
+    },
+    "y": {
+     "value": -96
+    },
+    "text": {
+     "value": {
+      "expr": "groupLabel + ':'"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "9 * fontScale"
+     }
+    }
+   }
+  },
+  {
+   "description": "สี่เหลี่ยมสีของ legend 1 ชิ้นต่อ 1 Group ไม่ซ้ำ (__groupFirstRank==1 และ __legendItemVisible) ตำแหน่งจากตาราง __legendRow/__legendCol ที่คำนวณจาก signal width จริง (itemsPerRow = floor((width-headerW)/maxItemW)) ห่อบรรทัดสูงสุด 3 แถว เกินกว่านั้นถูกตัดไปโผล่เป็น +N แทน (เลเยอร์ถัดไป) ใช้ฟิลด์ __color เดียวกับแท่งเป๊ะ ตำแหน่ง x เลื่อนด้วย __legendXOffset ให้เริ่มชิดขอบกล่องซ้ายจริง",
+   "transform": [
+    {
+     "filter": "datum.__groupFirstRank == 1 && datum.__legendItemVisible"
+    }
+   ],
+   "mark": {
+    "type": "rect"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendItemX"
+     }
+    },
+    "x2": {
+     "value": {
+      "expr": "datum.__legendItemX + 10"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__legendItemY"
+     }
+    },
+    "y2": {
+     "value": {
+      "expr": "datum.__legendItemY + 10"
+     }
+    },
+    "color": {
+     "field": "__color",
+     "type": "nominal",
+     "scale": null,
+     "legend": null
+    }
+   }
+  },
+  {
+   "description": "ชื่อกลุ่มของ legend ต่อท้ายสี่เหลี่ยมสีแต่ละอัน (ใช้ __legendItemX/__legendItemY เดียวกับสี่เหลี่ยมสี)",
+   "transform": [
+    {
+     "filter": "datum.__groupFirstRank == 1 && datum.__legendItemVisible"
+    }
+   ],
+   "mark": {
+    "type": "text",
+    "align": "left",
+    "baseline": "middle",
+    "color": "#252423"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendItemX + 14"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__legendItemY + 5"
+     }
+    },
+    "text": {
+     "field": "__group",
+     "type": "nominal"
+    },
+    "size": {
+     "value": {
+      "expr": "9 * fontScale"
+     }
+    }
+   }
+  },
+  {
+   "description": "ป้าย '+N' เมื่อจำนวนกลุ่มเกินที่ 3 แถวของ legend จะรับได้ (__legendHiddenCount > 0) วาดจากแถวเดียว (__barRank==1) ที่ตำแหน่งช่องถัดจากรายการสุดท้ายที่แสดง ข้อความสร้างจากตัวเลขล้วน ไม่ใช้ตัวอักษรไทยตายตัว จึงไม่ต้องมี param ภาษาแยก",
+   "transform": [
+    {
+     "filter": "datum.__barRank == 1 && datum.__legendHiddenCount > 0"
+    }
+   ],
+   "mark": {
+    "type": "text",
+    "align": "left",
+    "baseline": "middle",
+    "fontWeight": "bold",
+    "color": "#252423"
+   },
+   "encoding": {
+    "x": {
+     "value": {
+      "expr": "datum.__legendPlusX"
+     }
+    },
+    "y": {
+     "value": {
+      "expr": "datum.__legendPlusY + 5"
+     }
+    },
+    "text": {
+     "value": {
+      "expr": "datum.__legendPlusText"
+     }
+    },
+    "size": {
+     "value": {
+      "expr": "9 * fontScale"
+     }
+    }
+   }
+  }
+ ],
+ "config": {
+  "font": "Segoe UI, Leelawadee UI, Sarabun, Tahoma, sans-serif",
+  "view": {
+   "stroke": null
+  },
+  "background": "transparent",
+  "axis": {
+   "titlePadding": 12
+  }
+ }
+}

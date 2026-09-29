@@ -223,6 +223,7 @@ export function mount(tool) {
   function sw(label, get, set, hint) {
     const box = el("input", { type: "checkbox" });
     box.checked = !!get();
+    box.setAttribute("aria-label", label);   // ป้ายอยู่ใน <span> ข้าง ๆ ไม่ได้ครอบช่อง จึงต้องใส่ชื่อให้ช่องเอง ไม่งั้นโปรแกรมอ่านหน้าจออ่านว่า checkbox เฉย ๆ (เทส browser_ctlnames.py)
     box.addEventListener("change", () => { set(box.checked); presets.clearActive(); render(); });
     return el("div", {}, [
       el("div", { class: "field pqc-switch-field" }, [

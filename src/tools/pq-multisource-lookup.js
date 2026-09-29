@@ -341,6 +341,7 @@ export function mount(tool) {
     optionsEl.innerHTML = "";
     const keep = el("input", { type: "checkbox" });
     keep.checked = options.keepPerSource;
+    keep.setAttribute("aria-label", tr("เก็บผลลัพธ์แยกรายแหล่งด้วย", "Also keep a column per source"));   // ป้ายอยู่ใน <span> ข้าง ๆ ไม่ได้ครอบช่อง จึงต้องใส่ชื่อให้ช่องเอง ไม่งั้นโปรแกรมอ่านหน้าจออ่านว่า checkbox เฉย ๆ (เทส browser_ctlnames.py)
     keep.addEventListener("change", () => { options.keepPerSource = keep.checked; render(); });
 
     optionsEl.append(

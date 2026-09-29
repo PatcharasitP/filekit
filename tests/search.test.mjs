@@ -125,6 +125,19 @@ ck("‘รูปไอโฟน’ → แปลงชนิดไฟล์ร�
 ck("‘heic เป็น pdf’ → Images เป็น PDF", top("heic เป็น pdf"), ["images-to-pdf"]);
 
 
+/* ‼️ ที่มา 30/09/2026 เพิ่มเครื่องมือ pbi-gantt แล้วลองค้นแบบที่คนพิมพ์จริง ค่าที่คาดทุกตัวมาจากการรัน searchTools จริง
+     พบช่องว่างของเดิมด้วย: ‘bar chart’ กับ ‘donut chart’ ไม่เจอเครื่องมือใดเลย ทั้งที่มีกราฟแท่งกับโดนัทอยู่
+     เพราะคำค้นสำรองของสองตัวนั้นไม่มีคำว่า chart (ค้นหลายคำต้องเจอครบทุกคำ) */
+console.log("\n━━ ⑫ ค้นหากราฟ Deneb ด้วยคำอังกฤษที่คนพิมพ์จริง ━━");
+ck("‘gantt’ → Gantt", top("gantt"), ["pbi-gantt"]);
+ck("‘Gantt chart’ → Gantt", top("Gantt chart"), ["pbi-gantt"]);
+ck("‘project plan’ → Gantt", top("project plan"), ["pbi-gantt"]);
+ck("‘แผนงาน’ → Gantt", top("แผนงาน"), ["pbi-gantt"]);
+ck("‘timeline’ → Gantt", top("timeline"), ["pbi-gantt"]);
+ck("‘bar chart’ → กราฟแท่ง (ไม่ใช่ Gantt ที่ไม่มีคำว่า bar)", top("bar chart"), ["pbi-bar"]);
+ck("‘donut chart’ → กราฟโดนัท", top("donut chart"), ["pbi-donut"]);
+ck("‘chart’ เฉย ๆ → เจอกราฟ Deneb ครบสามตัว", top("chart", 3).sort(), ["pbi-bar", "pbi-donut", "pbi-gantt"]);
+
 console.log("\n" + "━".repeat(52));
 console.log(`ผ่าน ${pass} · ตก ${F.length}`);
 if (F.length) { console.log("\nรายการที่ตก:"); F.forEach((f, i) => console.log(`  ${i + 1}. ${f}`)); process.exit(1); }

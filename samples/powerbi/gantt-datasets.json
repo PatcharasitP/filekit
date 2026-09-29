@@ -1,0 +1,67 @@
+{
+ "house_build": {
+  "title": "แผนสร้างบ้าน 2 ชั้น",
+  "title_en": "Two-storey house build plan",
+  "caption": "จำนวนงานทั้งหมด",
+  "caption_en": "Total tasks",
+  "note": "ทุกงานมีความคืบหน้า แถบสีเข้มคือส่วนที่ทำเสร็จแล้ว",
+  "note_en": "Every task has progress, the darker fill is the part already done",
+  "demoToday": "2026-03-22",
+  "rows": [
+   {"Task": "ขุดดินและปรับพื้นที่", "Task_en": "Excavation and site grading", "Start": "2026-01-05", "End": "2026-01-12", "Group": "ฐานราก", "Group_en": "Foundation", "Progress": 1},
+   {"Task": "เทฐานราก", "Task_en": "Pour foundation footing", "Start": "2026-01-13", "End": "2026-01-25", "Group": "ฐานราก", "Group_en": "Foundation", "Progress": 1},
+   {"Task": "หล่อเสาเข็มชั้น 1", "Task_en": "Cast ground-floor columns", "Start": "2026-01-20", "End": "2026-02-10", "Group": "โครงสร้าง", "Group_en": "Structure", "Progress": 1},
+   {"Task": "หล่อพื้นชั้น 1", "Task_en": "Cast ground-floor slab", "Start": "2026-02-05", "End": "2026-02-20", "Group": "โครงสร้าง", "Group_en": "Structure", "Progress": 1},
+   {"Task": "หล่อเสาชั้น 2", "Task_en": "Cast second-floor columns", "Start": "2026-02-15", "End": "2026-03-05", "Group": "โครงสร้าง", "Group_en": "Structure", "Progress": 0.9},
+   {"Task": "หล่อพื้นชั้น 2", "Task_en": "Cast second-floor slab", "Start": "2026-03-01", "End": "2026-03-18", "Group": "โครงสร้าง", "Group_en": "Structure", "Progress": 0.7},
+   {"Task": "ติดตั้งโครงหลังคา", "Task_en": "Install roof truss", "Start": "2026-03-15", "End": "2026-03-30", "Group": "หลังคา", "Group_en": "Roof", "Progress": 0.5},
+   {"Task": "มุงกระเบื้องหลังคา", "Task_en": "Lay roof tiles", "Start": "2026-03-25", "End": "2026-04-10", "Group": "หลังคา", "Group_en": "Roof", "Progress": 0.2},
+   {"Task": "เดินสายไฟฟ้า", "Task_en": "Run electrical wiring", "Start": "2026-03-20", "End": "2026-04-15", "Group": "งานระบบ", "Group_en": "MEP systems", "Progress": 0.3},
+   {"Task": "เดินท่อประปา", "Task_en": "Run plumbing pipework", "Start": "2026-03-22", "End": "2026-04-12", "Group": "งานระบบ", "Group_en": "MEP systems", "Progress": 0.35},
+   {"Task": "ติดตั้งเครื่องปรับอากาศ", "Task_en": "Install air conditioning", "Start": "2026-04-16", "End": "2026-04-28", "Group": "งานระบบ", "Group_en": "MEP systems", "Progress": 0},
+   {"Task": "ฉาบปูนผนัง", "Task_en": "Plaster interior and exterior walls", "Start": "2026-04-05", "End": "2026-04-30", "Group": "ตกแต่ง", "Group_en": "Finishing", "Progress": 0.1},
+   {"Task": "ทาสีภายในภายนอก", "Task_en": "Paint interior and exterior", "Start": "2026-05-01", "End": "2026-05-20", "Group": "ตกแต่ง", "Group_en": "Finishing", "Progress": 0},
+   {"Task": "ปูกระเบื้องและติดตั้งสุขภัณฑ์", "Task_en": "Lay tiles and install sanitary ware", "Start": "2026-05-10", "End": "2026-06-05", "Group": "ตกแต่ง", "Group_en": "Finishing", "Progress": 0}
+  ]
+ },
+ "it_rollout": {
+  "title": "แผนโครงการขึ้นระบบไอทีใหม่",
+  "title_en": "New IT system rollout plan",
+  "caption": "จำนวนงานทั้งหมด",
+  "caption_en": "Total tasks",
+  "note": "แผนที่ยังไม่มีข้อมูลความคืบหน้า แท่งจึงเป็นสีเต็มตามกลุ่ม",
+  "note_en": "A plan with no progress data yet, so each bar is drawn solid in its group color",
+  "demoToday": "2026-03-20",
+  "rows": [
+   {"Task": "รวบรวมความต้องการผู้ใช้งาน", "Task_en": "Gather user requirements", "Start": "2026-02-02", "End": "2026-02-13", "Group": "วางแผน", "Group_en": "Planning"},
+   {"Task": "ออกแบบสถาปัตยกรรมระบบ", "Task_en": "Design system architecture", "Start": "2026-02-10", "End": "2026-02-24", "Group": "วางแผน", "Group_en": "Planning"},
+   {"Task": "พัฒนาโมดูลบัญชี", "Task_en": "Develop accounting module", "Start": "2026-02-25", "End": "2026-03-20", "Group": "พัฒนา", "Group_en": "Development"},
+   {"Task": "พัฒนาโมดูลคลังสินค้า", "Task_en": "Develop warehouse module", "Start": "2026-03-01", "End": "2026-03-25", "Group": "พัฒนา", "Group_en": "Development"},
+   {"Task": "พัฒนาโมดูลรายงาน", "Task_en": "Develop reporting module", "Start": "2026-03-15", "End": "2026-04-02", "Group": "พัฒนา", "Group_en": "Development"},
+   {"Task": "ทดสอบระบบรวม", "Task_en": "System integration testing", "Start": "2026-04-03", "End": "2026-04-17", "Group": "ทดสอบ", "Group_en": "Testing"},
+   {"Task": "ทดสอบยอมรับผู้ใช้งาน", "Task_en": "User acceptance testing", "Start": "2026-04-18", "End": "2026-04-28", "Group": "ทดสอบ", "Group_en": "Testing"},
+   {"Task": "ติดตั้งระบบที่ไซต์จริง", "Task_en": "Deploy system on site", "Start": "2026-04-29", "End": "2026-05-05", "Group": "ติดตั้ง", "Group_en": "Deployment"},
+   {"Task": "ย้ายข้อมูลจากระบบเก่า", "Task_en": "Migrate data from legacy system", "Start": "2026-05-01", "End": "2026-05-08", "Group": "ติดตั้ง", "Group_en": "Deployment"},
+   {"Task": "ฝึกอบรมผู้ใช้งาน", "Task_en": "Train end users", "Start": "2026-05-06", "End": "2026-05-15", "Group": "ฝึกอบรม", "Group_en": "Training"}
+  ]
+ },
+ "site_maintenance": {
+  "title": "แผนซ่อมบำรุงประจำปีของไซต์",
+  "title_en": "Annual site maintenance plan",
+  "caption": "จำนวนงานทั้งหมด",
+  "caption_en": "Total tasks",
+  "note": "มีงานวันเดียว (เริ่มกับจบวันเดียวกัน) ที่ยังเห็นเป็นแท่งกว้าง 1 วันเต็ม และมีทั้งงานที่มีและไม่มีความคืบหน้าในชุดเดียว",
+  "note_en": "Includes single-day tasks (start and end on the same day) that still show as one full day wide, and tasks both with and without progress in one set",
+  "demoToday": "2026-06-12",
+  "rows": [
+   {"Task": "ตรวจสอบระบบไฟฟ้าประจำปี", "Task_en": "Annual electrical system inspection", "Start": "2026-06-01", "End": "2026-06-01", "Group": "ตรวจสอบ", "Group_en": "Inspection", "Progress": 1},
+   {"Task": "ตรวจสอบระบบดับเพลิง", "Task_en": "Fire system inspection", "Start": "2026-06-02", "End": "2026-06-03", "Group": "ตรวจสอบ", "Group_en": "Inspection", "Progress": 1},
+   {"Task": "ล้างเครื่องปรับอากาศทุกชั้น", "Task_en": "Clean air conditioners on every floor", "Start": "2026-06-05", "End": "2026-06-10", "Group": "ซ่อมบำรุง", "Group_en": "Maintenance", "Progress": 1},
+   {"Task": "ซ่อมแซมรอยรั่วบนหลังคา", "Task_en": "Repair roof leaks", "Start": "2026-06-08", "End": "2026-06-15", "Group": "ซ่อมบำรุง", "Group_en": "Maintenance", "Progress": 0.6},
+   {"Task": "ทาสีกันสนิมโครงเหล็ก", "Task_en": "Apply anti-rust paint on steel frames", "Start": "2026-06-16", "End": "2026-06-25", "Group": "ซ่อมบำรุง", "Group_en": "Maintenance"},
+   {"Task": "ทดสอบเครื่องกำเนิดไฟฟ้าสำรอง", "Task_en": "Test backup generator", "Start": "2026-06-20", "End": "2026-06-20", "Group": "ทดสอบระบบ", "Group_en": "System test"},
+   {"Task": "ทดสอบระบบสูบน้ำดับเพลิง", "Task_en": "Test fire pump system", "Start": "2026-06-22", "End": "2026-06-23", "Group": "ทดสอบระบบ", "Group_en": "System test"},
+   {"Task": "สรุปผลและวางแผนปีถัดไป", "Task_en": "Summarise results and plan next year", "Start": "2026-06-26", "End": "2026-06-30", "Group": "สรุปผล", "Group_en": "Wrap-up"}
+  ]
+ }
+}

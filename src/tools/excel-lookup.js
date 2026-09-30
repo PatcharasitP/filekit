@@ -1,0 +1,755 @@
+import { workspace } from "../workspace.js";
+import { el, statusBar, button, field, select, segmented, dropzone, saveFile } from "../ui.js";
+import { tr, pl } from "../i18n.js";
+import { loadLibs } from "../loader.js";
+import { readWorkbook, tablesToBlob, cellText } from "../sheetpick.js";
+import { lookup, applyFill, tableFromAoa, guessHeaderRow, guessKeyPair, guessPullCols,
+         colLetter, normHead, isBlank } from "../lookupkit.js";
+import { patchXlsx } from "../xlsxpatch.js";
+import { watchDrops, handleOf, pickWritable, askWrite, writeBack, canWriteInPlace } from "../fshandle.js";
+
+/* ‼️ ทำไมต้องมีเครื่องมือนี้ (พี่ปอนด์ 30/09/2026)
+ * ไฟล์ Pending VAT 2026 ต้องเอาข้อมูลใบกำกับภาษีจากไฟล์ของทีมภาษีมาเติม 3 คอลัมน์ โดยจับคู่ด้วยคีย์ Mapping
+ * VLOOKUP ทำได้ แต่ (1) เงียบเวลาไฟล์รองมีคีย์ซ้ำ มันหยิบแถวแรกให้โดยไม่บอกว่ามีแถวอื่นที่ค่าไม่เหมือนกัน
+ * (2) ต้องเขียนสูตรทีละคอลัมน์ (3) ต้องรู้เลขลำดับคอลัมน์ (4) ไม่บอกว่ากี่แถวที่ไม่เจอ
+ * เครื่องมือนี้บอกครบ และเลือกดึงหลายคอลัมน์พร้อมกันได้
+ *
+ * ‼️ เขียนกลับทับไฟล์เดิมได้เลย (Challenge จากพี่ปอนด์): ไม่ใช่ให้ SheetJS สร้างไฟล์ใหม่ (สไตล์ สูตร ฟิลเตอร์จะหาย
+ *    เช่นคอลัมน์ Mapping ที่เป็นสูตร =A&F จะกลายเป็นตัวเลขตายตัว) แต่แก้เฉพาะช่องปลายทางใน XML ของชีต
+ *    (src/xlsxpatch.js) ที่เหลือคงไบต์เดิม พิสูจน์แล้วด้วย Excel จริง ดู tests/xlsxpatch.test.mjs
+ * ‼️ Excel ที่เปิดไฟล์อยู่ล็อกไฟล์ เขียนทับไม่ได้ (พิสูจน์แล้ว) หน้านี้บอกให้ปิดใน Excel ก่อน และมีปุ่มดาวน์โหลดสำรองเสมอ
+ */
+
+const STYLE = `
+.lk-side{display:flex;flex-direction:column;gap:10px}
+.lk-side + .lk-side{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.lk-h{margin:0;font-size:13px;font-weight:700;color:var(--text)}
+.lk-sub{font-size:12px;color:var(--text-mute);line-height:1.6;margin:0}
+.lk-num{width:100%;min-height:36px;padding:8px 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--bg-soft);color:var(--text);font-size:14px}
+.lk-num:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.lk-two{display:flex;gap:10px;flex-wrap:wrap}
+.lk-two > *{flex:1 1 130px;min-width:0}
+.lk-inplace{font-size:12.5px;line-height:1.65;padding:8px 11px;border-radius:var(--r-sm);border:1px solid var(--line);
+  background:var(--bg-soft);color:var(--text-mute)}
+.lk-inplace.ok{border-left:3px solid var(--g-data,var(--brand));color:var(--text)}
+.lk-switch{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--text);
+  padding:5px 0;min-height:36px}
+.lk-switch input{width:20px;height:20px;flex:none}
+.lk-pull{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:2px}
+.lk-pr{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;padding:7px 9px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft)}
+.lk-pr.on{border-color:var(--g-data,var(--brand))}
+.lk-pr input[type=checkbox]{width:18px;height:18px}
+.lk-pr .nm{font-size:13px;color:var(--text);word-break:break-word}
+.lk-pr select{grid-column:2;min-height:32px;font-size:12.5px}
+.lk-pr:not(.on) select{display:none}
+.lk-mini{display:flex;gap:8px}
+.lk-mini .btn{font-size:12px;padding:4px 10px}
+.lk-banner{border:1px solid var(--line);border-left:3px solid var(--g-data,var(--brand));border-radius:var(--r-sm);
+  background:var(--bg-soft);padding:10px 13px;font-size:13px;line-height:1.75;color:var(--text);margin:0 0 12px}
+.lk-banner.warn{border-left-color:var(--warn,#d99a00)}
+.lk-banner.bad{border-left-color:var(--bad,#d64545)}
+.lk-banner b{font-weight:700}
+.lk-badge{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.lk-badge.one{border-color:var(--g-data,var(--brand))}
+.lk-badge.dupSame{border-color:#b8860b}
+.lk-badge.dupDiff,.lk-badge.none{border-color:var(--bad,#d64545);color:var(--bad,#d64545)}
+.lk-badge.nokey{color:var(--text-mute)}
+.lk-tabs{margin-bottom:12px}
+td.lk-chg{font-weight:700;background:color-mix(in srgb,var(--g-data,var(--brand)) 14%,transparent)}
+td.lk-mono{font-variant-numeric:tabular-nums;white-space:nowrap}
+.lk-list td small{color:var(--text-mute);display:block}
+`;
+
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const XLSM_MIME = "application/vnd.ms-excel.sheet.macroEnabled.12";
+const PREVIEW = 40;
+const REVIEW_MAX = 300;
+
+const extOf = (n) => (n.split(".").pop() || "").toLowerCase();
+const stemOf = (n) => (n.lastIndexOf(".") > 0 ? n.slice(0, n.lastIndexOf(".")) : n);
+
+/* ‼️ ใช้ saveFile ไม่ใช่ download: download() ประกาศว่า “นี่คือผลลัพธ์ของหน้านี้” แล้วโครงหน้า v2 สลับไปหน้าผลลัพธ์
+ *    ซ่อนพื้นที่ทำงานทั้งหมด งานนี้คนมักปรับตัวเลือกแล้วดาวน์โหลดซ้ำ จึงต้องอยู่ในพื้นที่ทำงานต่อ (เห็นตอนทดสอบ 30/09/2026) */
+
+/** อ่านทั้งชีตเป็นตารางที่แถว 1 คือแถว 1 ของ Excel เสมอ (ไม่ใช้ sheetToTable กลาง)
+ *  ‼️ sheetToTable สั่ง blankrows:false ทิ้งแถวว่างแล้วเลขแถวเลื่อน และเดาหัวตาราง 2 ชั้นเอง
+ *     ไฟล์ Pending VAT แถว 1 เป็นยอดรวม หัวจริงอยู่แถว 2 ผลคือหัวคอลัมน์กลายเป็น “18 Vendor/Customer Name”
+ *     งานเทียบข้อมูลต้องบอกเลขแถวที่ตรงกับ Excel ทุกแถว ไม่งั้นพี่เปิดไปดูแล้วคนละแถว */
+function sheetAoa(sheet) {
+  const ref = sheet["!ref"];
+  if (!ref) return [];
+  const rg = XLSX.utils.decode_range(ref);
+  const rows = [];
+  for (let R = 0; R <= rg.e.r; R++) {
+    const line = new Array(rg.e.c + 1).fill(null);
+    for (let C = rg.s.c; C <= rg.e.c; C++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r: R, c: C })];
+      // ‼️ ช่อง error (#N/A) เก็บเป็นข้อความ ไม่ใช่ว่าง ไม่งั้นแยกไม่ออกว่า "ไม่มีค่า" กับ "มีแต่เสีย"
+      if (cell) line[C] = cell.t === "e" ? (cell.w || "#ERROR") : cell.t === "z" ? null : cell.v;
+    }
+    rows.push(line);
+  }
+  return rows;
+}
+
+function sameCell(a, b) {
+  if (a instanceof Date || b instanceof Date) {
+    return a instanceof Date && b instanceof Date && Math.round(a.getTime() / 60000) === Math.round(b.getTime() / 60000);
+  }
+  if (typeof a === "number" || typeof b === "number") return Number(a) === Number(b);
+  return String(a ?? "").trim() === String(b ?? "").trim();
+}
+
+const newSide = () => ({ file: null, bytes: null, ext: "", wb: null, sheetNames: [], sheetIdx: 0,
+  aoa: null, headerIdx: 0, table: null, handle: null, meta: null });
+
+export function mount(tool) {
+  const styleEl = el("style", { text: STYLE });
+  const st = statusBar();
+  watchDrops();
+
+  const M = newSide(), S = newSide();
+  let userKey = false, userPull = false;
+  let pullState = new Map();               // คอลัมน์ไฟล์รอง → { on, dest: "new" | เลขคอลัมน์ไฟล์หลัก }
+  let last = null;                         // ผลล่าสุด { spec, result, fill, problems }
+  let lastSave = null;                     // ไว้ย้อนกลับ { orig, handle, meta }
+  let confirmTimer = null;
+
+  // ── แผงซ้าย: ไฟล์ ─────────────────────────────────────────────────────────
+  const mkDz = (which) => dropzone({
+    accept: ".xlsx,.xlsm,.xls,.csv,.txt", multiple: false,
+    expect: ["xlsx", "csv", "txt"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
+    hint: which === "main"
+      ? tr("ไฟล์ที่จะถูกเติมข้อมูล", "The file that gets filled in")
+      : tr("ไฟล์ที่เป็นแหล่งข้อมูล", "The file the data comes from"),
+    onChange: () => onFile(which),
+  });
+  const mainDz = mkDz("main"), secDz = mkDz("sec");
+
+  const numIn = () => el("input", { class: "lk-num", type: "number", min: "1", step: "1", inputmode: "numeric" });
+  const mainSheet = select([["0", "-"]], "0"), secSheet = select([["0", "-"]], "0");
+  const mainHead = numIn(), secHead = numIn();
+  const mainSheetF = field(tr("ชีต", "Sheet"), mainSheet), secSheetF = field(tr("ชีต", "Sheet"), secSheet);
+  const headHint = tr("เดาให้แล้ว แก้ได้ถ้าไม่ตรง", "Guessed for you, change it if wrong");
+  const mainHeadF = field(tr("หัวตารางอยู่แถวที่", "Header row number"), mainHead, headHint);
+  const secHeadF = field(tr("หัวตารางอยู่แถวที่", "Header row number"), secHead, headHint);
+  mainSheetF.hidden = secSheetF.hidden = mainHeadF.hidden = secHeadF.hidden = true;
+
+  const inplaceBox = el("div", { class: "lk-inplace", hidden: true });
+  const pickBtn = button(tr("เปิดไฟล์หลักแบบแก้ตรงในไฟล์ได้", "Open the main file for direct editing"), { icon: "upload", ghost: true, onclick: pickMain });
+  pickBtn.hidden = !canWriteInPlace();
+  const mainInfo = el("div", { class: "lk-sub" });
+  const secInfo = el("div", { class: "lk-sub" });
+
+  const left = el("div", {}, [
+    el("div", { class: "lk-side" }, [
+      el("h3", { class: "lk-h" }, tr("1. ไฟล์หลัก", "1. Main file")),
+      el("p", { class: "lk-sub" }, tr("ไฟล์ที่มีคอลัมน์ว่างรอเติม เช่น Pending VAT", "The file with empty columns waiting to be filled")),
+      mainDz.container, pickBtn, mainInfo, mainSheetF, mainHeadF, inplaceBox,
+    ]),
+    el("div", { class: "lk-side" }, [
+      el("h3", { class: "lk-h" }, tr("2. ไฟล์รอง", "2. Source file")),
+      el("p", { class: "lk-sub" }, tr("ไฟล์ที่มีข้อมูลที่จะดึงมาเติม เช่นไฟล์จากทีมภาษี", "The file that holds the data to bring over")),
+      secDz.container, secInfo, secSheetF, secHeadF,
+    ]),
+  ]);
+
+  // ── แผงขวา: เงื่อนไข ─────────────────────────────────────────────────────
+  const keyM1 = select([["0", "-"]], "0"), keyM2 = select([["-1", "-"]], "-1");
+  const keyS1 = select([["0", "-"]], "0"), keyS2 = select([["-1", "-"]], "-1");
+  const caseSw = el("input", { type: "checkbox", checked: true, "aria-label": tr("ไม่สนตัวพิมพ์ใหญ่เล็ก", "Ignore upper and lower case") });
+  const zeroSw = el("input", { type: "checkbox", "aria-label": tr("มองว่า 0012 กับ 12 เป็นค่าเดียวกัน", "Treat 0012 and 12 as the same") });
+  const sw = (label, input, hint) => el("div", {}, [
+    el("label", { class: "lk-switch" }, [el("span", {}, label), input]),
+    hint ? el("small", { class: "lk-sub" }, hint) : null,
+  ]);
+  const pullBox = el("div", { class: "lk-pull" });
+  const pullAll = button(tr("ติ๊กทั้งหมด", "Tick all"), { ghost: true, onclick: () => setAllPull(true) });
+  const pullNone = button(tr("ล้าง", "Clear"), { ghost: true, onclick: () => setAllPull(false) });
+  const dupSel = select([
+    ["first", tr("เอาแถวแรก (เหมือน VLOOKUP)", "Take the first row (like VLOOKUP)")],
+    ["last", tr("เอาแถวสุดท้าย", "Take the last row")],
+    ["blank", tr("ไม่เติม ถ้าแถวซ้ำมีค่าต่างกัน", "Leave blank if the repeated rows differ")],
+    ["join", tr("รวมค่าที่ต่างกันเป็นข้อความเดียว", "Join the different values into one text")],
+  ], "first");
+  const fillSel = segmented([
+    ["empty", tr("เติมเฉพาะช่องว่าง", "Only empty cells")],
+    ["always", tr("ทับของเดิมด้วย", "Overwrite too")],
+  ], "empty");
+  const statusSw = el("input", { type: "checkbox", checked: true, "aria-label": tr("เพิ่มคอลัมน์ผลการหาท้ายตาราง", "Add result columns at the end") });
+
+  const right = el("div", {}, [
+    el("h3", { class: "lk-h" }, tr("คีย์ที่ใช้จับคู่", "Match on")),
+    el("p", { class: "lk-sub" }, tr("เลือกคอลัมน์ที่ค่าตรงกันทั้งสองไฟล์ ถ้าต้องต่อหลายคอลัมน์ ให้เพิ่มคอลัมน์ที่สอง จะต่อกันตรง ๆ",
+      "Pick the column whose values agree in both files, like Mapping. To join several columns (company code and document number) add a second one. They are glued together like the formula A&F")),
+    el("div", { class: "lk-two" }, [
+      el("div", {}, [field(tr("ไฟล์หลัก คอลัมน์คีย์", "Main file key"), keyM1), field(tr("ต่อด้วย (ถ้ามี)", "Then (optional)"), keyM2)]),
+      el("div", {}, [field(tr("ไฟล์รอง คอลัมน์คีย์", "Source file key"), keyS1), field(tr("ต่อด้วย (ถ้ามี)", "Then (optional)"), keyS2)]),
+    ]),
+    sw(tr("ไม่สนตัวพิมพ์ใหญ่เล็ก", "Ignore upper and lower case"), caseSw),
+    sw(tr("มองว่า 0012 กับ 12 เป็นค่าเดียวกัน", "Treat 0012 and 12 as the same"), zeroSw,
+      tr("ปิดไว้ดีกว่าถ้าคีย์เป็นรหัสที่ขึ้นต้นด้วย 0", "Better off when keys are codes that start with 0")),
+    el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("คอลัมน์ที่จะดึงมาเติม", "Columns to bring over")),
+    el("p", { class: "lk-sub" }, tr("ติ๊กคอลัมน์ของไฟล์รอง แล้วเลือกว่าจะลงคอลัมน์ไหนของไฟล์หลัก ชื่อตรงกันเลือกให้แล้ว",
+      "Tick columns of the source file and choose where each goes in the main file. Same names are already paired")),
+    el("div", { class: "lk-mini" }, [pullAll, pullNone]),
+    pullBox,
+    el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("ถ้าไฟล์รองมีคีย์ซ้ำ", "If the source repeats a key")),
+    field(tr("เลือกค่าจากแถวไหน", "Which row to take from"), dupSel),
+    el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("ช่องปลายทางที่มีข้อมูลอยู่แล้ว", "Destination cells that already have data")),
+    fillSel,
+    sw(tr("เพิ่มคอลัมน์ผลการหาท้ายตาราง", "Add result columns at the end"), statusSw,
+      tr("บอกในแต่ละแถวว่าเจอหรือไม่ และเจอกี่แถวในไฟล์รอง", "Says on every row whether it was found and in how many source rows")),
+  ]);
+
+  // ── ตรงกลาง: ผล ──────────────────────────────────────────────────────────
+  const chips = el("div", { class: "stats" });
+  const banner = el("div", { class: "lk-banner", hidden: true });
+  const viewTabs = segmented([
+    ["preview", tr("ตัวอย่างผล", "Preview")],
+    ["review", tr("ต้องตรวจ", "To check")],
+    ["dups", tr("คีย์ซ้ำในไฟล์รอง", "Repeated keys in source")],
+  ], "preview");
+  viewTabs.classList.add("lk-tabs");
+  const reviewFilter = select([
+    ["all", tr("ทุกรายการที่ต้องตรวจ", "Everything to check")],
+    ["none", tr("ไม่เจอในไฟล์รอง", "Not found in source")],
+    ["dupDiff", tr("เจอซ้ำและค่าต่างกัน", "Repeated with different values")],
+    ["dupSame", tr("เจอซ้ำแต่ค่าเหมือนกัน", "Repeated with equal values")],
+    ["nokey", tr("คีย์ว่าง", "Empty key")],
+  ], "all");
+  const viewBox = el("div", { class: "xt-wrap" });
+  const centerNode = el("div", {}, [chips, banner, viewTabs, viewBox]);
+
+  // ── ปุ่มล่าง ─────────────────────────────────────────────────────────────
+  const saveBtn = button(tr("บันทึกลงไฟล์หลักเดิม", "Save into the main file"), { icon: "check", onclick: onSaveClick });
+  const dlBtn = button(tr("ดาวน์โหลดไฟล์ที่เติมแล้ว", "Download the filled file"), { icon: "download", ghost: true, onclick: downloadFilled });
+  const repBtn = button(tr("ดาวน์โหลดรายงาน", "Download the report"), { icon: "download", ghost: true, onclick: downloadReport });
+  const undoBtn = button(tr("ย้อนกลับ", "Undo"), { icon: "undo", ghost: true, onclick: undoSave });
+  saveBtn.hidden = true; undoBtn.hidden = true;
+  const setActions = (on) => { saveBtn.disabled = dlBtn.disabled = repBtn.disabled = !on; };
+  setActions(false);
+
+  const ws = workspace(tool, {
+    left: { title: tr("ไฟล์", "Files"), node: left, hint: tr("อ่านจากไฟล์ในเครื่องคุณเอง ไม่ได้ส่งขึ้นเซิร์ฟเวอร์", "Read on your own machine, nothing is uploaded") },
+    center: { title: tr("ผลการจับคู่", "Match result"), node: centerNode,
+      empty: tr("เปิดไฟล์หลักและไฟล์รอง แล้วเลือกคอลัมน์ที่จะดึงมาเติม", "Open the main file and the source file, then choose the columns to bring over") },
+    right: { title: tr("เงื่อนไข", "Conditions"), node: right },
+    footer: [saveBtn, dlBtn, repBtn, undoBtn, st.node],
+  });
+  ws.body.prepend(styleEl);
+  ws.showCanvas(false);
+
+  // ── อ่านไฟล์ ─────────────────────────────────────────────────────────────
+  const sideOf = (w) => (w === "main" ? M : S);
+  const dzOf = (w) => (w === "main" ? mainDz : secDz);
+
+  async function onFile(which) {
+    const f = dzOf(which).files[0];
+    const side = sideOf(which);
+    if (!f) { Object.assign(side, newSide()); afterTables(true); return; }
+    await loadSide(which, f, null, false);
+  }
+
+  /** โหลดไฟล์เข้าฝั่งนั้น keep = โหลดซ้ำหลังบันทึก ให้คงชีตและแถวหัวตารางที่เลือกไว้ */
+  async function loadSide(which, file, handle, keep) {
+    const side = sideOf(which);
+    const prev = { name: side.sheetNames[side.sheetIdx], headerIdx: side.headerIdx };
+    // ‼️ โหลดซ้ำหลังบันทึก (keep) ห้ามแตะแถบสถานะ ไม่งั้นข้อความ “บันทึกแล้ว อ่านกลับตรงทุกช่อง” หายทันทีที่โผล่ (เจอตอนทดสอบ 30/09/2026)
+    if (!keep) st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
+    try {
+      await loadLibs("xlsx", "jszip");
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const { wb } = await readWorkbook(file);
+      const names = wb.SheetNames.filter((n) => wb.Sheets[n]);
+      if (!names.length) throw new Error(tr("ไม่พบชีตในไฟล์นี้", "No sheets in this file"));
+      side.file = file; side.bytes = bytes; side.ext = extOf(file.name); side.wb = wb; side.sheetNames = names;
+      side.meta = { size: file.size, lastModified: file.lastModified };
+      if (which === "main") side.handle = handle || await handleOf(file);
+      const sel = which === "main" ? mainSheet : secSheet;
+      sel.innerHTML = "";
+      names.forEach((n, i) => sel.appendChild(el("option", { value: String(i) }, n)));
+      const idx = keep ? Math.max(0, names.indexOf(prev.name)) : 0;
+      sel.value = String(idx);
+      (which === "main" ? mainSheetF : secSheetF).hidden = names.length < 2;
+      pickSheet(which, idx, keep ? prev.headerIdx : null);
+      if (!keep) st.clear();
+    } catch (e) {
+      Object.assign(side, newSide());
+      st.err(tr("อ่านไฟล์ไม่สำเร็จ: ", "Could not read the file: ") + (e.message || e));
+      afterTables(true);
+    }
+  }
+
+  function pickSheet(which, i, headerIdx) {
+    const side = sideOf(which);
+    side.sheetIdx = i;
+    side.aoa = sheetAoa(side.wb.Sheets[side.sheetNames[i]]);
+    side.headerIdx = headerIdx != null ? headerIdx : guessHeaderRow(side.aoa);
+    (which === "main" ? mainHead : secHead).value = String(side.headerIdx + 1);
+    (which === "main" ? mainHeadF : secHeadF).hidden = false;
+    side.table = tableFromAoa(side.aoa, side.headerIdx);
+    afterTables(headerIdx == null);
+  }
+
+  mainSheet.onchange = () => pickSheet("main", +mainSheet.value, null);
+  secSheet.onchange = () => pickSheet("sec", +secSheet.value, null);
+  const onHead = (which, input) => () => {
+    const side = sideOf(which);
+    const n = Math.max(1, Math.min(side.aoa ? side.aoa.length : 1, Math.round(+input.value) || 1));
+    input.value = String(n);
+    side.headerIdx = n - 1;
+    side.table = tableFromAoa(side.aoa, side.headerIdx);
+    afterTables(true);
+  };
+  mainHead.onchange = onHead("main", mainHead);
+  secHead.onchange = onHead("sec", secHead);
+
+  // ── หลังตารางเปลี่ยน: เติมตัวเลือก เดาค่าเริ่มต้น ─────────────────────────
+  const fillSel_ = (sel, opts, value) => {
+    sel.innerHTML = "";
+    opts.forEach(([v, t]) => sel.appendChild(el("option", { value: v }, t)));
+    if (value != null && opts.some(([v]) => v === String(value))) sel.value = String(value);
+  };
+  const colOpts = (t, none) => [
+    ...(none ? [["-1", tr("ไม่ใช้", "None")]] : []),
+    ...t.header.map((h, c) => [String(c), `${colLetter(c)}: ${h}`]),
+  ];
+
+  function afterTables(reguess) {
+    const mt = M.table, stt = S.table;
+    mainInfo.textContent = mt ? tr(`${mt.rows.length.toLocaleString()} แถวข้อมูล ${mt.width} คอลัมน์`, `${pl(mt.rows.length.toLocaleString(), "data row", "data rows")}, ${pl(mt.width, "column", "columns")}`) : "";
+    secInfo.textContent = stt ? tr(`${stt.rows.length.toLocaleString()} แถวข้อมูล ${stt.width} คอลัมน์`, `${pl(stt.rows.length.toLocaleString(), "data row", "data rows")}, ${pl(stt.width, "column", "columns")}`) : "";
+    renderInplace();
+    if (mt) { fillSel_(keyM1, colOpts(mt, false), keyM1.value); fillSel_(keyM2, colOpts(mt, true), keyM2.value); }
+    if (stt) { fillSel_(keyS1, colOpts(stt, false), keyS1.value); fillSel_(keyS2, colOpts(stt, true), keyS2.value); }
+    if (mt && stt && (reguess || !userKey)) {
+      if (!userKey) {
+        const g = guessKeyPair(mt.header, stt.header);
+        if (g) { keyM1.value = String(g.main); keyS1.value = String(g.sec); }
+        keyM2.value = "-1"; keyS2.value = "-1";
+      }
+    }
+    if (mt && stt) buildPullList(reguess && !userPull);
+    else pullBox.innerHTML = "";
+    refresh();
+  }
+
+  function buildPullList(guess) {
+    const mt = M.table, stt = S.table;
+    const skip = [+keyS1.value, +keyS2.value].filter((c) => c >= 0);
+    const old = pullState;
+    pullState = new Map();
+    const guessed = new Map(guess ? guessPullCols(mt.header, mt.rows, stt.header, skip).map((g) => [g.sec, g.main]) : []);
+    pullBox.innerHTML = "";
+    stt.header.forEach((h, j) => {
+      if (skip.includes(j)) return;
+      if (isBlank(h) || /^\([A-Z]+\)$/.test(h)) return;       // คอลัมน์ไม่มีหัว ไม่มีอะไรให้เลือกด้วยชื่อ
+      const sameName = mt.header.findIndex((mh) => normHead(mh) === normHead(h));
+      const prev = old.get(j);
+      const st0 = prev && !guess ? prev : { on: guessed.has(j), dest: sameName >= 0 ? String(sameName) : "new" };
+      pullState.set(j, st0);
+      const cb = el("input", { type: "checkbox", checked: st0.on || null, "aria-label": tr(`ดึงคอลัมน์ ${h}`, `Bring the column ${h}`) });
+      const dest = select([["new", tr("คอลัมน์ใหม่ท้ายตาราง", "New column at the end")],
+        ...mt.header.map((mh, c) => [String(c), `${colLetter(c)}: ${mh}`])], st0.dest);
+      dest.setAttribute("aria-label", tr(`ปลายทางของ ${h}`, `Destination for ${h}`));
+      const row = el("div", { class: "lk-pr" + (st0.on ? " on" : "") }, [cb, el("span", { class: "nm" }, `${colLetter(j)}: ${h}`), dest]);
+      cb.onchange = () => { st0.on = cb.checked; row.classList.toggle("on", cb.checked); userPull = true; refresh(); };
+      dest.onchange = () => { st0.dest = dest.value; userPull = true; refresh(); };
+      pullBox.appendChild(row);
+    });
+  }
+
+  function setAllPull(on) {
+    userPull = true;
+    for (const [, v] of pullState) v.on = on;
+    [...pullBox.children].forEach((row, i) => {
+      const cb = row.querySelector("input"); cb.checked = on; row.classList.toggle("on", on);
+    });
+    refresh();
+  }
+
+  for (const c of [keyM1, keyM2, keyS1, keyS2]) c.onchange = () => { userKey = true; if (M.table && S.table) buildPullList(false); refresh(); };
+  for (const c of [caseSw, zeroSw, dupSel, statusSw]) c.onchange = refresh;
+  fillSel.onchange = refresh;
+  viewTabs.onchange = renderView;
+  reviewFilter.onchange = renderView;
+
+  // ── คำนวณ ─────────────────────────────────────────────────────────────────
+  const stLabel = (p) => {
+    if (p.status === "one") return tr("เจอ 1 แถว", "Found in 1 row");
+    if (p.status === "dupSame") return tr(`เจอ ${p.n} แถว (ค่าเหมือนกัน)`, `Found in ${pl(p.n, "row", "rows")} (equal values)`);
+    if (p.status === "dupDiff") return p.withheld
+      ? tr(`เจอ ${p.n} แถว (ค่าต่างกัน ไม่ได้เติม)`, `Found in ${pl(p.n, "row", "rows")} (different values, not filled)`)
+      : tr(`เจอ ${p.n} แถว (ค่าต่างกัน)`, `Found in ${pl(p.n, "row", "rows")} (different values)`);
+    if (p.status === "none") return tr("ไม่เจอ", "Not found");
+    return tr("คีย์ว่าง", "Empty key");
+  };
+
+  function spec() {
+    const mk = [+keyM1.value, +keyM2.value].filter((c) => c >= 0);
+    const sk = [+keyS1.value, +keyS2.value].filter((c) => c >= 0);
+    const pull = [...pullState].filter(([, v]) => v.on).map(([j, v]) => ({ sec: j, dest: v.dest }));
+    return { mk, sk, pull };
+  }
+
+  function problemsOf({ mk, sk, pull }) {
+    const out = [];
+    const dests = pull.filter((p) => p.dest !== "new").map((p) => +p.dest);
+    if (new Set(dests).size !== dests.length) out.push(tr("มีสองคอลัมน์ลงปลายทางเดียวกัน", "Two columns go to the same destination"));
+    if (dests.some((d) => mk.includes(d))) out.push(tr("ปลายทางเป็นคอลัมน์คีย์ของไฟล์หลัก จะทำให้คีย์เปลี่ยน", "A destination is a key column of the main file, that would change the keys"));
+    if (!pull.length) out.push(tr("ยังไม่ได้ติ๊กคอลัมน์ที่จะดึงมาเติม", "No column ticked to bring over yet"));
+    return out;
+  }
+
+  let timer = 0;
+  function refresh() {
+    clearTimeout(timer);
+    timer = setTimeout(compute, 40);
+  }
+
+  function compute() {
+    last = null; setActions(false);
+    confirmReset();
+    if (!M.table || !S.table) { ws.showCanvas(false); return; }
+    const sp = spec();
+    const keyOpts = { ignoreCase: caseSw.checked, ignoreZeros: zeroSw.checked };
+    const result = lookup({
+      mainRows: M.table.rows, mainKeyCols: sp.mk, secRows: S.table.rows, secKeyCols: sp.sk,
+      pullCols: sp.pull.map((p) => p.sec), keyOpts, dup: dupSel.value,
+    });
+    const problems = problemsOf(sp);
+    let fill = null;
+    if (!problems.length) {
+      // ‼️ ปลายทาง “คอลัมน์ใหม่” แต่ในไฟล์หลักมีคอลัมน์ชื่อเดียวกันอยู่แล้ว (เช่นทำซ้ำบนไฟล์ที่เพิ่งบันทึก) ใช้ของเดิม ไม่ต่อซ้ำ
+      const existing = (name) => M.table.header.findIndex((h) => normHead(h) === normHead(name));
+      const dests = sp.pull.map((p) => {
+        if (p.dest !== "new") return { col: +p.dest };
+        const at = existing(S.table.header[p.sec]);
+        return at >= 0 ? { col: at } : { col: null, name: S.table.header[p.sec] };
+      });
+      fill = applyFill({
+        aoa: M.aoa, headerIdx: M.headerIdx, rowIdx: M.table.rowIdx, width: M.table.width, result, dests,
+        fill: fillSel.value,
+        status: statusSw.checked ? { head: [tr("ผลการหา", "Lookup result"), tr("เจอในไฟล์รองกี่แถว", "Rows found in source")], label: stLabel } : null,
+      });
+    }
+    last = { sp, result, fill, problems };
+    ws.showCanvas(true);
+    renderChips();
+    renderView();
+    setActions(!problems.length && !!fill);
+    renderInplace();
+  }
+
+  function renderChips() {
+    const { result, fill, problems } = last;
+    const s = result.stats;
+    chips.innerHTML = "";
+    const chip = (cls, text) => chips.appendChild(el("span", { class: "stat " + cls }, text));
+    chip("dim", tr(`ไฟล์หลัก ${s.total.toLocaleString()} แถว`, `${pl(s.total.toLocaleString(), "main row", "main rows")}`));
+    chip("ok", tr(`เจอ ${s.found.toLocaleString()} แถว`, `${s.found.toLocaleString()} found`));
+    if (s.none) chip("bad", tr(`ไม่เจอ ${s.none.toLocaleString()} แถว`, `${s.none.toLocaleString()} not found`));
+    if (s.dupSame) chip("warn", tr(`เจอซ้ำค่าเหมือนกัน ${s.dupSame.toLocaleString()} แถว`, `${s.dupSame.toLocaleString()} repeated, equal values`));
+    if (s.dupDiff) chip("bad", tr(`เจอซ้ำค่าต่างกัน ${s.dupDiff.toLocaleString()} แถว`, `${s.dupDiff.toLocaleString()} repeated, different values`));
+    if (s.nokey) chip("dim", tr(`คีย์ว่าง ${s.nokey.toLocaleString()} แถว`, `${s.nokey.toLocaleString()} empty keys`));
+    if (fill) chip("ok", tr(`จะเติม ${fill.stat.filled.toLocaleString()} ช่อง`, `${pl(fill.stat.filled.toLocaleString(), "cell", "cells")} to fill`));
+    if (fill && fill.stat.keptOld) chip("dim", tr(`ไม่ทับของเดิม ${fill.stat.keptOld.toLocaleString()} ช่อง`, `${pl(fill.stat.keptOld.toLocaleString(), "cell", "cells")} kept as is`));
+
+    const lines = [];
+    let cls = "";
+    if (problems.length) { lines.push(...problems.map((p) => `<b>${esc(p)}</b>`)); cls = " bad"; }
+    if (s.secDupKeys) {
+      lines.push(tr(
+        `ไฟล์รองมีคีย์ซ้ำ <b>${s.secDupKeys.toLocaleString()}</b> ค่า ถูกไฟล์หลักใช้จริง <b>${s.secDupKeysHit.toLocaleString()}</b> ค่า`,
+        `The source repeats <b>${s.secDupKeys.toLocaleString()}</b> keys, <b>${s.secDupKeysHit.toLocaleString()}</b> of them are used by the main file`));
+      if (s.dupDiff) { lines.push(tr(`มี <b>${s.dupDiff.toLocaleString()}</b> แถวที่คีย์ซ้ำและข้อมูลที่ดึงไม่เหมือนกัน ดูแท็บ “ต้องตรวจ” ก่อนใช้`, `<b>${s.dupDiff.toLocaleString()}</b> rows have a repeated key with different data. Check the “To check” tab before using`)); cls = cls || " warn"; }
+    }
+    // ‼️ คีย์ว่างเกินครึ่ง: สาเหตุที่เจอจริงคือคีย์เป็นสูตรในไฟล์ที่ไม่เคยถูก Excel บันทึก (เช่นสร้างจากสคริปต์) สูตรจึงไม่มีค่าที่คำนวณไว้
+    //    SheetJS ไม่สร้างเซลล์นั้นให้เลยจึงแยกไม่ได้ว่าเป็นสูตรหรือว่างจริง ต้องบอกสาเหตุที่เป็นไปได้ ไม่ใช่ให้ผู้ใช้เดาเอง
+    if (s.total && s.nokey > s.total / 2) {
+      lines.push(`<b>${esc(tr(`คีย์ของไฟล์หลักว่างเกินครึ่ง (${s.nokey.toLocaleString()} จาก ${s.total.toLocaleString()} แถว) ถ้าเป็นสูตร ให้เปิดไฟล์ใน Excel แล้วกดบันทึกก่อน`,
+        `The main file's key is empty on over half the rows (${s.nokey.toLocaleString()} of ${s.total.toLocaleString()}). If it is a formula, open the file in Excel and save once`))}</b>`);
+      cls = " bad";
+    }
+    if (s.secBlankKeys) lines.push(tr(`ไฟล์รองมี ${s.secBlankKeys.toLocaleString()} แถวที่คีย์ว่างหรือเป็น error (ข้ามไป)`, `${pl(s.secBlankKeys.toLocaleString(), "source row has", "source rows have")} an empty or error key (skipped)`));
+    banner.className = "lk-banner" + cls;
+    banner.hidden = !lines.length;
+    banner.innerHTML = lines.join("<br>");
+  }
+
+  const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const keyText = (row, cols) => cols.map((c) => cellText(row[c])).filter(Boolean).join(" ");
+  const badge = (p) => el("span", { class: "lk-badge " + p.status }, stLabel(p));
+
+  function renderView() {
+    viewBox.innerHTML = "";
+    if (!last) return;
+    const v = viewTabs.value;
+    if (v === "preview") return renderPreview();
+    if (v === "review") return renderReview();
+    return renderDups();
+  }
+
+  function renderPreview() {
+    const { sp, result, fill } = last;
+    if (!fill) { viewBox.appendChild(el("div", { class: "note" }, tr("แก้ข้อความสีแดงด้านบนก่อน จึงจะเห็นตัวอย่างผล", "Fix the notice above first to see a preview"))); return; }
+    const cols = fill.cols;
+    const head = cols.map((c) => fill.aoa[M.headerIdx][c]);
+    const n = Math.min(PREVIEW, result.perRow.length);
+    viewBox.appendChild(el("table", { class: "xt" }, [
+      el("thead", {}, [el("tr", {}, [el("th", {}, tr("แถว", "Row")), el("th", {}, tr("คีย์", "Key")), ...head.map((h) => el("th", {}, String(h ?? ""))), el("th", {}, tr("ผล", "Result"))])]),
+      el("tbody", {}, result.perRow.slice(0, n).map((p, k) => {
+        const i = M.table.rowIdx[k];
+        return el("tr", {}, [
+          el("td", { class: "num" }, String(i + 1)),
+          el("td", { class: "old lk-mono" }, keyText(M.table.rows[k], sp.mk)),
+          ...cols.map((c) => {
+            const after = fill.aoa[i][c], before = M.aoa[i][c];
+            const changed = !sameCell(after, before) && !(after == null && before == null);
+            return el("td", { class: (changed ? "new lk-chg" : "old") }, cellText(after));
+          }),
+          el("td", {}, [badge(p)]),
+        ]);
+      })),
+    ]));
+    viewBox.appendChild(el("div", { class: "note" }, tr(
+      `แสดง ${n} จาก ${result.perRow.length.toLocaleString()} แถว ช่องที่ถูกเติมใหม่ตัวหนาและมีสีรอง ไฟล์ที่ได้มีครบทุกแถว`,
+      `Showing ${n} of ${pl(result.perRow.length.toLocaleString(), "row", "rows")}. Newly filled cells are bold and tinted. The file has every row`)));
+  }
+
+  function reviewRows() {
+    const { sp, result } = last;
+    const f = reviewFilter.value;
+    const out = [];
+    result.perRow.forEach((p, k) => {
+      if (p.status === "one") return;
+      if (f !== "all" && p.status !== f) return;
+      out.push({ p, k });
+    });
+    return out;
+  }
+
+  function renderReview() {
+    const { sp } = last;
+    viewBox.appendChild(el("div", { class: "lk-two", style: "margin-bottom:10px" }, [field(tr("แสดง", "Show"), reviewFilter)]));
+    const rows = reviewRows();
+    if (!rows.length) { viewBox.appendChild(el("div", { class: "note" }, tr("ไม่มีรายการในกลุ่มนี้", "Nothing in this group"))); return; }
+    viewBox.appendChild(el("table", { class: "xt lk-list" }, [
+      el("thead", {}, [el("tr", {}, [
+        el("th", {}, tr("แถวในไฟล์หลัก", "Main row")), el("th", {}, tr("คีย์", "Key")),
+        el("th", {}, tr("ผล", "Result")), el("th", {}, tr("แถวในไฟล์รอง", "Source rows"))])]),
+      el("tbody", {}, rows.slice(0, REVIEW_MAX).map(({ p, k }) => el("tr", {}, [
+        el("td", { class: "num" }, String(M.table.rowIdx[k] + 1)),
+        el("td", { class: "old lk-mono" }, keyText(M.table.rows[k], sp.mk)),
+        el("td", {}, [badge(p)]),
+        el("td", { class: "old" }, p.hits.map((h) => S.table.rowIdx[h] + 1).join(", ")),
+      ]))),
+    ]));
+    if (rows.length > REVIEW_MAX) viewBox.appendChild(el("div", { class: "note" }, tr(
+      `แสดง ${REVIEW_MAX} จาก ${rows.length.toLocaleString()} รายการ รายงานที่ดาวน์โหลดมีครบ`,
+      `Showing ${REVIEW_MAX} of ${pl(rows.length.toLocaleString(), "item", "items")}. The downloadable report has all of them`)));
+  }
+
+  function renderDups() {
+    const { result } = last;
+    const list = result.secDupKeys;
+    if (!list.length) { viewBox.appendChild(el("div", { class: "note" }, tr("ไฟล์รองไม่มีคีย์ซ้ำเลย", "The source has no repeated key"))); return; }
+    const sorted = list.slice().sort((a, b) => (a.agree - b.agree) || (b.mainHits - a.mainHits));
+    viewBox.appendChild(el("table", { class: "xt lk-list" }, [
+      el("thead", {}, [el("tr", {}, [
+        el("th", {}, tr("คีย์", "Key")), el("th", {}, tr("แถวในไฟล์รอง", "Source rows")),
+        el("th", {}, tr("ค่าที่ดึง", "Values")), el("th", {}, tr("ไฟล์หลักใช้", "Used by main"))])]),
+      el("tbody", {}, sorted.slice(0, REVIEW_MAX).map((d) => el("tr", {}, [
+        el("td", { class: "old lk-mono" }, d.key),
+        el("td", { class: "old" }, d.rows.map((h) => S.table.rowIdx[h] + 1).join(", ")),
+        el("td", {}, [el("span", { class: "lk-badge " + (d.agree ? "dupSame" : "dupDiff") }, d.agree ? tr("เหมือนกัน", "Equal") : tr("ต่างกัน", "Different"))]),
+        el("td", { class: "num" }, d.mainHits.toLocaleString()),
+      ]))),
+    ]));
+    if (sorted.length > REVIEW_MAX) viewBox.appendChild(el("div", { class: "note" }, tr(`แสดง ${REVIEW_MAX} จาก ${sorted.length.toLocaleString()} ค่า`, `Showing ${REVIEW_MAX} of ${sorted.length.toLocaleString()}`)));
+  }
+
+  // ── ผลลัพธ์เป็นไฟล์ ───────────────────────────────────────────────────────
+  const isXlsx = () => M.ext === "xlsx" || M.ext === "xlsm";
+
+  /** สร้างไฟล์หลักที่เติมแล้ว xlsx/xlsm = แก้เฉพาะช่องใน XML เดิม, ชนิดอื่น = สร้างไฟล์ใหม่ด้วย SheetJS */
+  async function buildFilled() {
+    const { fill } = last;
+    if (isXlsx()) {
+      const edits = fill.edits.map((e) => ({ r: e.i + 1, c: e.c, v: e.v }));
+      const out = await patchXlsx(window.JSZip, M.bytes, M.sheetNames[M.sheetIdx], edits);
+      return { bytes: out.bytes, patch: out, ext: M.ext };
+    }
+    const wsx = XLSX.utils.aoa_to_sheet(fill.aoa, { cellDates: true, dateNF: "dd/mm/yyyy" });
+    const wbx = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wbx, wsx, String(M.sheetNames[M.sheetIdx]).replace(/[[\]*?/\\:]/g, "-").slice(0, 31) || "Sheet1");
+    return { bytes: new Uint8Array(XLSX.write(wbx, { bookType: "xlsx", type: "array" })), patch: null, ext: "xlsx" };
+  }
+
+  const mimeOf = (ext) => (ext === "xlsm" ? XLSM_MIME : XLSX_MIME);
+
+  async function downloadFilled() {
+    if (!last || !last.fill) return;
+    setActions(false); st.info(tr("กำลังสร้างไฟล์…", "Building the file…"));
+    try {
+      const out = await buildFilled();
+      const name = `${stemOf(M.file.name)}${tr("-เติมแล้ว", "-filled")}.${out.ext}`;
+      saveFile(new Blob([out.bytes], { type: mimeOf(out.ext) }), name);
+      st.ok(doneText(out, tr("ดาวน์โหลดแล้ว", "Downloaded")));
+    } catch (e) {
+      st.err(tr("สร้างไฟล์ไม่สำเร็จ: ", "Could not build the file: ") + (e.message || e));
+    } finally { setActions(!!last && !last.problems.length); }
+  }
+
+  function doneText(out, head) {
+    const f = last.fill.stat;
+    let t = tr(`${head} เติม ${f.filled.toLocaleString()} ช่อง`, `${head}, filled ${pl(f.filled.toLocaleString(), "cell", "cells")}`);
+    if (out.patch && out.patch.stat.skippedFormula)
+      t += tr(`, ข้าม ${out.patch.stat.skippedFormula.toLocaleString()} ช่องที่เป็นสูตร (ไม่ทับสูตร)`, `, skipped ${pl(out.patch.stat.skippedFormula.toLocaleString(), "formula cell", "formula cells")} (formulas are never overwritten)`);
+    if (!isXlsx()) t += tr(" (ไฟล์ชนิดนี้สร้างเป็น .xlsx ใหม่ สไตล์เดิมไม่ติดมา)", " (this file type is rebuilt as .xlsx, original styling does not carry over)");
+    return t;
+  }
+
+  function downloadReport() {
+    if (!last || !last.fill) return;
+    const { sp, result } = last;
+    const s = result.stats;
+    const summary = { header: [tr("รายการ", "Item"), tr("จำนวน", "Count")], rows: [
+      [tr("ไฟล์หลัก", "Main file"), M.file.name], [tr("ไฟล์รอง", "Source file"), S.file.name],
+      [tr("คีย์ไฟล์หลัก", "Main key"), sp.mk.map((c) => M.table.header[c]).join(" + ")],
+      [tr("คีย์ไฟล์รอง", "Source key"), sp.sk.map((c) => S.table.header[c]).join(" + ")],
+      [tr("แถวไฟล์หลัก", "Main rows"), s.total], [tr("เจอ", "Found"), s.found],
+      [tr("เจอ 1 แถว", "Found once"), s.one], [tr("เจอซ้ำ ค่าเหมือนกัน", "Repeated, equal values"), s.dupSame],
+      [tr("เจอซ้ำ ค่าต่างกัน", "Repeated, different values"), s.dupDiff], [tr("ไม่เจอ", "Not found"), s.none],
+      [tr("คีย์ว่าง", "Empty key"), s.nokey], [tr("คีย์ซ้ำในไฟล์รอง (ค่า)", "Repeated keys in source"), s.secDupKeys],
+      [tr("ในนั้นไฟล์หลักใช้จริง", "Of which used by the main file"), s.secDupKeysHit],
+    ] };
+    const check = { header: [tr("แถวในไฟล์หลัก", "Main row"), tr("คีย์", "Key"), tr("ผล", "Result"), tr("เจอกี่แถว", "Rows found"), tr("แถวในไฟล์รอง", "Source rows")],
+      rows: result.perRow.map((p, k) => [p, k]).filter(([p]) => p.status !== "one")
+        .map(([p, k]) => [M.table.rowIdx[k] + 1, keyText(M.table.rows[k], sp.mk), stLabel(p), p.n, p.hits.map((h) => S.table.rowIdx[h] + 1).join(", ")]) };
+    const dups = { header: [tr("คีย์", "Key"), tr("แถวในไฟล์รอง", "Source rows"), tr("ค่าที่ดึง", "Values"), tr("ไฟล์หลักใช้กี่แถว", "Main rows using it")],
+      rows: result.secDupKeys.map((d) => [d.key, d.rows.map((h) => S.table.rowIdx[h] + 1).join(", "), d.agree ? tr("เหมือนกัน", "Equal") : tr("ต่างกัน", "Different"), d.mainHits]) };
+    const sheets = [[tr("สรุป", "Summary"), summary], [tr("ต้องตรวจ", "To check"), check]];
+    if (dups.rows.length) sheets.push([tr("คีย์ซ้ำในไฟล์รอง", "Repeated in source"), dups]);
+    saveFile(tablesToBlob(sheets), `${stemOf(M.file.name)}${tr("-รายงานการจับคู่.xlsx", "-lookup-report.xlsx")}`);
+    st.ok(tr("ดาวน์โหลดรายงานแล้ว", "Report downloaded"));
+  }
+
+  // ── แก้ตรงในไฟล์เดิม ─────────────────────────────────────────────────────
+  function renderInplace() {
+    inplaceBox.className = "lk-inplace";
+    saveBtn.hidden = true;
+    if (!M.file) { inplaceBox.hidden = true; return; }
+    inplaceBox.hidden = false;
+    if (!canWriteInPlace()) {
+      inplaceBox.textContent = tr("เบราว์เซอร์นี้เขียนกลับทับไฟล์เดิมไม่ได้ (ใช้ได้ใน Chrome และ Edge บนคอม) ให้ใช้ปุ่มดาวน์โหลดแทน",
+        "This browser cannot write back into the original file (Chrome or Edge on a computer can). Use the download button instead");
+    } else if (!isXlsx()) {
+      inplaceBox.textContent = tr("แก้ตรงในไฟล์ได้เฉพาะ .xlsx และ .xlsm ไฟล์ชนิดนี้ให้ดาวน์โหลดแทน", "Direct editing works for .xlsx and .xlsm only. Download this one instead");
+    } else if (!M.handle) {
+      inplaceBox.textContent = tr("ไฟล์ที่เลือกด้วยปุ่ม “เลือกไฟล์” เขียนกลับไม่ได้ ให้ลากไฟล์มาวาง หรือใช้ปุ่มแก้ตรงด้านบน",
+        "A file chosen with the Choose button cannot be written back. To edit in place, drag the file in or use the “Open the main file for direct editing” button above");
+    } else {
+      inplaceBox.classList.add("ok");
+      inplaceBox.textContent = tr("แก้ตรงในไฟล์นี้ได้ ต้องปิดไฟล์ใน Excel ก่อนกดบันทึก เพราะ Excel ล็อกไฟล์ที่เปิดอยู่",
+        "This file can be edited in place. Close it in Excel before saving, because Excel locks an open file and it cannot be overwritten (the original stays safe)");
+      saveBtn.hidden = false;
+    }
+  }
+
+  async function pickMain() {
+    try {
+      const r = await pickWritable();
+      if (!r) return;
+      // ส่งไฟล์เข้ากล่องหย่อนของไฟล์หลักให้ทำงานเหมือนลากมาวาง แล้วผูกมือจับให้
+      const input = mainDz.container.querySelector("input[type=file]");
+      const dt = new DataTransfer(); dt.items.add(r.file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    } catch (e) {
+      st.err(tr("เปิดไฟล์ไม่สำเร็จ: ", "Could not open the file: ") + (e.message || e));
+    }
+  }
+
+  function confirmReset() {
+    clearTimeout(confirmTimer); confirmTimer = null;
+    saveBtn.querySelector("span").textContent = tr("บันทึกลงไฟล์หลักเดิม", "Save into the main file");
+    saveBtn.classList.remove("danger");
+  }
+
+  /** กดครั้งแรก = ขอยืนยัน (5 วินาที) กดซ้ำ = เขียนจริง กันเผลอกดทับไฟล์จริงของบริษัท */
+  function onSaveClick() {
+    if (!last || !last.fill || !M.handle) return;
+    if (!confirmTimer) {
+      const n = last.fill.stat.filled;
+      saveBtn.querySelector("span").textContent = tr(`กดอีกครั้งเพื่อเขียนทับ ${M.file.name} (${n.toLocaleString()} ช่อง)`, `Press again to overwrite ${M.file.name} (${pl(n.toLocaleString(), "cell", "cells")})`);
+      saveBtn.classList.add("danger");
+      confirmTimer = setTimeout(confirmReset, 5000);
+      return;
+    }
+    confirmReset();
+    saveInPlace();
+  }
+
+  async function saveInPlace() {
+    const handle = M.handle;
+    setActions(false); undoBtn.hidden = true;
+    try {
+      st.info(tr("กำลังตรวจสอบก่อนเขียนทับ…", "Checking before overwriting…"));
+      if (!(await askWrite(handle))) throw Object.assign(new Error(tr("ไม่ได้รับอนุญาตให้เขียนไฟล์นี้", "Permission to write this file was not given")), { soft: true });
+      // ‼️ กันเขียนทับงานที่ใครบันทึกทับไปหลังเปิดเข้ามา (เช่นพี่แก้ใน Excel แล้วเซฟระหว่างที่หน้านี้เปิดอยู่)
+      const cur = await handle.getFile();
+      if (cur.size !== M.meta.size || cur.lastModified !== M.meta.lastModified)
+        throw Object.assign(new Error(tr("ไฟล์ถูกเปลี่ยนหลังจากที่เปิดเข้ามา จึงไม่เขียนทับ ให้ลากไฟล์เข้ามาใหม่แล้วทำอีกครั้ง",
+          "The file changed after it was opened here, so it was not overwritten. Drop the file in again and repeat")), { soft: true });
+      const out = await buildFilled();
+      const orig = M.bytes;
+      st.info(tr("กำลังเขียนทับไฟล์เดิม…", "Overwriting the original file…"));
+      try {
+        await writeBack(handle, out.bytes);
+      } catch (e) {
+        throw Object.assign(new Error(tr(
+          `เขียนทับไม่ได้ (${e.name || "error"}) ส่วนใหญ่เพราะไฟล์ยังเปิดใน Excel ปิดแล้วกดอีกครั้ง ไฟล์เดิมไม่ได้เสียหาย`,
+          `Could not overwrite (${e.name || "error"}). Usually the file is still open in Excel. Close it there and press again. The original is not damaged. You can also download the filled file instead`)), { soft: true });
+      }
+      // อ่านกลับจากไฟล์บนดิสก์จริง ๆ แล้วเทียบทุกช่องที่เขียน
+      const back = await handle.getFile();
+      const { wb } = await readWorkbook(back);
+      const aoa = sheetAoa(wb.Sheets[M.sheetNames[M.sheetIdx]]);
+      const bad = out.patch.applied.filter((a) => !sameCell(a.v, (aoa[a.r - 1] || [])[a.c]));
+      lastSave = { orig, handle, meta: { size: back.size, lastModified: back.lastModified }, name: M.file.name };
+      let msg = bad.length
+        ? tr(`เขียนแล้ว แต่อ่านกลับมาไม่ตรง ${bad.length} ช่อง กดย้อนกลับได้`, `Written, but ${bad.length} cells read back different. You can undo`)
+        : tr(`บันทึกลง ${M.file.name} แล้ว เติม ${out.patch.stat.written.toLocaleString()} ช่อง อ่านกลับจากไฟล์แล้วตรงทุกช่อง`,
+             `Saved into ${M.file.name}, ${pl(out.patch.stat.written.toLocaleString(), "cell", "cells")} filled, all read back correctly from the file`);
+      if (out.patch.stat.skippedFormula) msg += tr(`, ข้าม ${out.patch.stat.skippedFormula.toLocaleString()} ช่องที่เป็นสูตร`, `, skipped ${pl(out.patch.stat.skippedFormula.toLocaleString(), "formula cell", "formula cells")}`);
+      (bad.length ? st.err : st.ok)(msg);
+      undoBtn.hidden = false;
+      await loadSide("main", back, handle, true);       // โหลดสถานะไฟล์ใหม่ ตัวเลือกที่ตั้งไว้คงเดิม
+    } catch (e) {
+      st.err(e.soft ? e.message : tr("บันทึกไม่สำเร็จ: ", "Could not save: ") + (e.message || e));
+    } finally { setActions(!!last && !last.problems.length); }
+  }
+
+  async function undoSave() {
+    if (!lastSave) return;
+    const { orig, handle, meta } = lastSave;
+    try {
+      const cur = await handle.getFile();
+      if (cur.size !== meta.size || cur.lastModified !== meta.lastModified)
+        throw new Error(tr("ไฟล์ถูกเปลี่ยนหลังจากที่บันทึกไว้ จึงไม่ย้อนกลับให้ กันทับงานใหม่", "The file changed after the save, so it will not be rolled back over newer work"));
+      await writeBack(handle, orig);
+      const back = await handle.getFile();
+      lastSave = null; undoBtn.hidden = true;
+      st.ok(tr("ย้อนกลับแล้ว ไฟล์กลับเป็นเหมือนก่อนบันทึก", "Undone, the file is back as it was before the save"));
+      await loadSide("main", back, handle, true);
+    } catch (e) {
+      st.err(tr("ย้อนกลับไม่สำเร็จ: ", "Could not undo: ") + (e.message || e));
+    }
+  }
+
+  return ws.wrap;
+}

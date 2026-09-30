@@ -4,7 +4,7 @@ import { tr, IS_EN } from "../i18n.js";
 import { readWorkbook, sheetToTable, tablesToBlob } from "../sheetpick.js";
 import { stateKit, shareButton } from "../statekit.js";
 import {
-  distanceKm, circleWKT, toCoord, buildGrid, withinKm, nearestOf, coverageOf,
+  distanceKm, circleWKT, toCoord, buildGrid, withinKm, nearestOf, coverageOf, coverageLegend,
   mercator, fitProjection, boundsOf,
 } from "../geokit.js";
 
@@ -52,6 +52,17 @@ const STYLE = `
 .mc-tbl th{color:var(--text-mute);font-weight:600;position:sticky;top:0;background:var(--card)}
 .mc-tbl tr.warn td{background:color-mix(in srgb,var(--warn,#e8a33c) 12%,transparent)}
 .mc-tblwrap{max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.mc-legend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:12.5px;color:var(--text-mute);margin:8px 2px 0}
+.mc-legend:empty{display:none}
+.mc-legend > span{display:inline-flex;align-items:center;gap:6px}
+.mc-legend i{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(128,128,128,.5)}
+/* ‼️ จุดศูนย์กลางสีเข้ม (ค่าเริ่มต้น #222) บนพื้นธีมมืดมองไม่เห็นเลย บนแผนที่จริงมันมีขอบขาวช่วยไว้ ตัวอย่างในคำอธิบายจึงต้องมีขอบขาวเหมือนกัน
+   และทุกตัวอย่างมีเส้นขอบเทาจาง ให้เห็นได้ทั้งสองธีม (เห็นจากภาพธีมมืดตอนทดสอบ 30/09/2026) */
+.mc-legend i.ctr{box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px rgba(128,128,128,.4)}
+.mc-legend i.ring{width:14px;height:14px;background:transparent;border:2px solid}
+.mc-legend i.ring.halo{box-shadow:0 0 0 1.5px rgba(255,255,255,.55),inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.mc-legend i.ln{box-shadow:none;width:18px;height:0;border-radius:0;border-top:2px solid rgba(130,130,130,.7)}
+.mc-legend i.cnt{box-shadow:none;width:auto;height:auto;border-radius:5px;border:1px solid;background:#fff;padding:0 4px;font:700 12px/16px system-ui,sans-serif}
 .mc-row{display:flex;gap:8px;align-items:center}
 .mc-row input[type=range]{flex:1}
 .mc-num{min-width:74px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
@@ -125,6 +136,7 @@ export function mount(tool) {
   const showNew = segmented(onOff(), "on");
   const showLink = segmented(onOff(), "on");
   const showCount = segmented(onOff(), "on");
+  const legendInPng = segmented(onOff(), "on");
   const cCenter = el("input", { type: "color", value: PALETTE.center });
   const cOld = el("input", { type: "color", value: PALETTE.old });
   const cNew = el("input", { type: "color", value: PALETTE.neu });
@@ -136,6 +148,8 @@ export function mount(tool) {
     field(tr("จุดใหม่", "New points"), showNew),
     field(tr("เส้นเชื่อมเดิมกับใหม่", "Link old to new"), showLink),
     field(tr("ตัวเลขจำนวนข้างวง", "Count label"), showCount),
+    field(tr("คำอธิบายสัญลักษณ์ในภาพที่บันทึก", "Legend in the saved image"), legendInPng,
+      tr("เพิ่มแถบใต้แผนที่ให้คนที่ได้ภาพไปรู้ว่าสีและจุดแปลว่าอะไร", "Adds a strip under the map so whoever gets the image knows what the colours mean")),
     field(tr("สีจุดศูนย์กลาง", "Centre colour"), cCenter),
     field(tr("สีจุดเดิม", "Original colour"), cOld),
     field(tr("สีจุดใหม่", "New colour"), cNew),
@@ -150,8 +164,10 @@ export function mount(tool) {
   ]);
   const statBox = el("div", { class: "mc-stat" });
   const tblWrap = el("div", { class: "mc-tblwrap" });
+  let legendSig = "";      // ประกาศไว้ก่อน draw() ตัวแรก ไม่งั้นเรียกก่อนบรรทัดประกาศจะพัง (TDZ)
+  const legendBox = el("div", { class: "mc-legend", role: "list", "aria-label": tr("คำอธิบายสัญลักษณ์", "Map legend") });
   const centerNode = el("div", {}, [
-    el("div", { class: "mc-canvas-wrap" }, [canvas, zoomBox]), statBox, tblWrap,
+    el("div", { class: "mc-canvas-wrap" }, [canvas, zoomBox]), legendBox, statBox, tblWrap,
   ]);
 
   const goPng = button(tr("บันทึกภาพ", "Save image"), { icon: "image", onclick: savePng });
@@ -164,21 +180,21 @@ export function mount(tool) {
   const LOOK = () => ({
     radius: radius.value, dotSize: dotSize.value,
     showOut: showOut.value, showNew: showNew.value,
-    showLink: showLink.value, showCount: showCount.value,
+    showLink: showLink.value, showCount: showCount.value, legendInPng: legendInPng.value,
     cCenter: cCenter.value, cOld: cOld.value, cNew: cNew.value,
   });
   const store = stateKit(tool.id, {
     defaults: LOOK(), collect: LOOK,
     apply: (v) => {
       for (const [node, key] of [[radius, "radius"], [dotSize, "dotSize"], [showOut, "showOut"],
-                                 [showNew, "showNew"], [showLink, "showLink"], [showCount, "showCount"],
+                                 [showNew, "showNew"], [showLink, "showLink"], [showCount, "showCount"], [legendInPng, "legendInPng"],
                                  [cCenter, "cCenter"], [cOld, "cOld"], [cNew, "cNew"]])
         if (v[key] !== undefined) node.value = v[key];
     },
   });
   store.restore();
   for (const n of [radius, dotSize, cCenter, cOld, cNew]) n.addEventListener("input", () => store.save());
-  for (const n of [showOut, showNew, showLink, showCount]) n.addEventListener("change", () => store.save());
+  for (const n of [showOut, showNew, showLink, showCount, legendInPng]) n.addEventListener("change", () => store.save());
 
   const ws = workspace(tool, {
     left: { title: tr("ไฟล์พิกัด", "Coordinate files"), node: leftBody },
@@ -336,7 +352,8 @@ export function mount(tool) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = getComputedStyle(document.body).getPropertyValue("--card") || "#fff";
     g.fillRect(0, 0, canvas.width, canvas.height);
-    if (!centers.length || !points.length) return;
+    if (!centers.length || !points.length) { legendSig = ""; legendBox.innerHTML = ""; return; }
+    renderLegend();
     const P = project(); if (!P) return;
     const R = Number(radius.value), sz = Number(dotSize.value) * dpr;
 
@@ -360,7 +377,7 @@ export function mount(tool) {
     for (const c of centers) {
       if (!centers.some((o) => o !== c && distanceKm(c.lat, c.lon, o.lat, o.lon) <= 2 * R)) lonely.add(c.id);
     }
-    const cc = cCenter.value;
+    const cc = cCenter.value, halo = needRingHalo();
     for (const c of centers) {
       const pts = [];
       for (let i = 0; i <= 72; i++) {
@@ -370,6 +387,7 @@ export function mount(tool) {
       }
       g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
       if (lonely.has(c.id)) { g.fillStyle = hexA(cc, 0.07); g.fill(); }
+      if (halo) { g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 3.8 * dpr; g.stroke(); }
       g.strokeStyle = hexA(cc, 0.78); g.lineWidth = 1.6 * dpr; g.stroke();
     }
 
@@ -411,6 +429,59 @@ export function mount(tool) {
       }
     }
   }
+
+  /* คำอธิบายสัญลักษณ์ ตรงกับที่วาดจริง (รายการมาจาก coverageLegend ใน geokit ซึ่งมีเทส node)
+     ‼️ draw() ถูกเรียกทุกครั้งที่ลากหรือซูม จึงสร้าง DOM ใหม่เฉพาะเมื่อสิ่งที่ต้องแสดงเปลี่ยนจริง */
+  function legendItems() {
+    const R = Number(radius.value);
+    const items = coverageLegend({
+      points, covered: cov ? cov.covered : new Set(), outMode: showOut.value,
+      showNew: showNew.value === "on", showLink: showLink.value === "on", showCount: showCount.value === "on",
+    });
+    const say = {
+      center: tr("จุดศูนย์กลาง", "Centre"),
+      ring: tr(`วงรัศมี ${R.toFixed(1)} กม.`, `${R.toFixed(1)} km radius`),
+      old: tr("จุดเดิม", "Original point"),
+      new: tr("จุดใหม่", "New point"),
+      faded: tr("จุดที่อยู่นอกวง (จาง)", "Point outside the circles (faded)"),
+      link: tr("เส้นเชื่อมจุดเดิมกับจุดใหม่", "Line joining old and new"),
+      count: tr("ตัวเลข = จำนวนจุดในวง", "Number = points inside the circle"),
+    };
+    const color = { center: cCenter.value, ring: cCenter.value, old: cOld.value, new: cNew.value,
+                    faded: hexA(cOld.value, 0.38), link: "rgba(130,130,130,.7)", count: cCenter.value };
+    const halo = needRingHalo();
+    return items.map((it) => ({ role: it.role, text: say[it.role], color: color[it.role], ...(it.role === "ring" && halo ? { halo: true } : {}) }));
+  }
+  function renderLegend() {
+    const items = legendItems();
+    const sig = JSON.stringify(items);
+    if (sig === legendSig) return;
+    legendSig = sig;
+    legendBox.innerHTML = "";
+    for (const it of items) {
+      const mark = it.role === "ring" ? el("i", { class: it.halo ? "ring halo" : "ring", style: `border-color:${it.color}` })
+        : it.role === "link" ? el("i", { class: "ln" })
+        : it.role === "count" ? el("i", { class: "cnt", style: `color:${it.color};border-color:${it.color}` }, "3")
+        : el("i", { class: it.role === "center" ? "ctr" : "", style: `background:${it.color}` });
+      legendBox.appendChild(el("span", { role: "listitem", "data-role": it.role }, [mark, it.text]));
+    }
+  }
+
+  /* ‼️ วงรัศมีสีเข้ม (เช่นน้ำเงินกรมท่า) บนพื้นธีมมืดมองไม่เห็นเลย (จับได้ 30/09/2026)
+     แก้แบบไม่แตะสีที่ผู้ใช้เลือก และไม่เปลี่ยนภาพธีมสว่าง: ใส่ขอบสว่างบาง ๆ ใต้เส้นวง เฉพาะเมื่อพื้นมืดและสีวงเข้ม */
+  function luma(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return 255;
+    const n = parseInt(m[1], 16);
+    return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  }
+  function darkBackdrop() {
+    for (let e = canvas; e; e = e.parentElement) {
+      const m = getComputedStyle(e).backgroundColor.match(/[\d.]+/g);
+      if (m && (m.length < 4 || Number(m[3]) > 0.5)) return luma("#" + m.slice(0, 3).map((v) => Number(v).toString(16).padStart(2, "0")).join("")) < 110;
+    }
+    return false;
+  }
+  const needRingHalo = () => darkBackdrop() && luma(cCenter.value) < 140;
 
   function hexA(hex, a) {
     const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
@@ -487,8 +558,59 @@ export function mount(tool) {
   }
 
   // ── ส่งออก ───────────────────────────────────────────────────────
+  /* ‼️ ภาพ PNG ต้องอ่านรู้เรื่องเมื่ออยู่ตัวเดียว: คนที่ได้ภาพไปทางแชทหรือสไลด์ไม่เห็นกล่องคำอธิบายบนหน้าเว็บ
+     จึงวางแถบคำอธิบายไว้ใต้แผนที่ (แผนที่ด้านบนไม่ถูกแตะ ขนาดและพิกเซลเดิมทุกจุด) ปิดได้ด้วยสวิตช์ */
+  function pngWithLegend(items) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = canvas.width, pad = 12 * dpr, rowH = 24 * dpr, gap = 18 * dpr, mark = 14 * dpr;
+    const cs = getComputedStyle(document.body);
+    const bg = cs.getPropertyValue("--card") || "#fff", fg = cs.getPropertyValue("--text") || "#222";
+    const meas = document.createElement("canvas").getContext("2d");
+    meas.font = `${12.5 * dpr}px system-ui, "Sarabun", "Tahoma", sans-serif`;
+    // จัดแถว: ห่อบรรทัดเมื่อเต็มความกว้าง
+    const rows = [[]]; let x = pad;
+    for (const it of items) {
+      const w = mark + 6 * dpr + meas.measureText(it.text).width;
+      if (x + w > W - pad && rows[rows.length - 1].length) { rows.push([]); x = pad; }
+      rows[rows.length - 1].push({ it, x, w }); x += w + gap;
+    }
+    const band = pad + rows.length * rowH;
+    const out = document.createElement("canvas");
+    out.width = W; out.height = canvas.height + band;
+    const g = out.getContext("2d");
+    g.drawImage(canvas, 0, 0);
+    g.fillStyle = bg; g.fillRect(0, canvas.height, W, band);
+    g.strokeStyle = "rgba(128,128,128,.35)"; g.lineWidth = dpr;
+    g.beginPath(); g.moveTo(0, canvas.height + 0.5 * dpr); g.lineTo(W, canvas.height + 0.5 * dpr); g.stroke();
+    g.font = meas.font; g.textBaseline = "middle";
+    rows.forEach((row, ri) => {
+      const cy = canvas.height + pad / 2 + ri * rowH + rowH / 2;
+      for (const { it, x: x0 } of row) {
+        const cx = x0 + mark / 2;
+        g.lineWidth = dpr;
+        if (it.role === "ring" || it.role === "center" || it.role === "old" || it.role === "new" || it.role === "faded") {
+          // ขอบเทาจางรอบตัวอย่าง ให้เห็นบนพื้นทั้งสองธีม (เหมือนกล่องคำอธิบายบนจอ) จุดศูนย์กลางมีขอบขาวเหมือนที่วาดบนแผนที่
+          g.strokeStyle = "rgba(128,128,128,.5)"; g.beginPath(); g.arc(cx, cy, (it.role === "ring" ? mark / 2 : 5.5 * dpr) + (it.role === "center" ? 2 : 1) * dpr, 0, 2 * Math.PI); g.stroke();
+          if (it.role === "center") { g.strokeStyle = "#fff"; g.lineWidth = 1.5 * dpr; g.beginPath(); g.arc(cx, cy, 5.5 * dpr + 0.75 * dpr, 0, 2 * Math.PI); g.stroke(); }
+        }
+        if (it.role === "ring") { if (it.halo) { g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 4.5 * dpr; g.beginPath(); g.arc(cx, cy, mark / 2 - dpr, 0, 2 * Math.PI); g.stroke(); } g.strokeStyle = it.color; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(cx, cy, mark / 2 - dpr, 0, 2 * Math.PI); g.stroke(); }
+        else if (it.role === "link") { g.strokeStyle = it.color; g.lineWidth = 2 * dpr; g.beginPath(); g.moveTo(x0, cy); g.lineTo(x0 + mark, cy); g.stroke(); }
+        else if (it.role === "count") {
+          g.fillStyle = "#fff"; g.strokeStyle = it.color; g.lineWidth = dpr;
+          g.beginPath(); g.roundRect(x0, cy - 8 * dpr, mark, 16 * dpr, 4 * dpr); g.fill(); g.stroke();
+          g.fillStyle = it.color; g.font = `700 ${12 * dpr}px system-ui, sans-serif`; g.textAlign = "center"; g.fillText("3", cx, cy + dpr);
+          g.textAlign = "left"; g.font = meas.font;
+        } else { g.fillStyle = it.color; g.beginPath(); g.arc(cx, cy, 5.5 * dpr, 0, 2 * Math.PI); g.fill(); }
+        g.fillStyle = fg; g.textAlign = "left"; g.fillText(it.text, x0 + mark + 6 * dpr, cy + dpr * 0.5);
+      }
+    });
+    return out;
+  }
+
   function savePng() {
-    canvas.toBlob((b) => download(b, tr("แผนที่พื้นที่รอบจุด", "coverage-map") + ".png"), "image/png");
+    const items = legendInPng.value === "on" ? legendItems() : [];
+    const src = items.length ? pngWithLegend(items) : canvas;
+    src.toBlob((b) => download(b, tr("แผนที่พื้นที่รอบจุด", "coverage-map") + ".png"), "image/png");
   }
 
   function saveXlsx() {

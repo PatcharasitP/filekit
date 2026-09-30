@@ -367,3 +367,26 @@ export function coverageOf(centers, grid, km) {
   });
   return { rows, covered, emptyCenters: rows.filter((r) => r.count === 0).length };
 }
+
+/**
+ * รายการในคำอธิบายสัญลักษณ์ของแผนที่พื้นที่รอบจุด (ไม่มีข้อความ ไม่มีสี: เครื่องมือเติมเองตามภาษาและสีที่ผู้ใช้เลือก)
+ *
+ * ‼️ ที่มา 30/09/2026: ศึกษาเว็บแผนที่ EEC ของ NGIS แล้วเทียบกับของเรา พบว่าแผนที่นี้ไม่มีคำอธิบายสัญลักษณ์เลย
+ *    ทั้งบนจอและในภาพ PNG ที่ส่งต่อ คนที่ได้ภาพไปไม่รู้ว่าสีและจุดจางแปลว่าอะไร
+ * ‼️ รายการต้อง "ตรงกับที่วาดจริง" ชั้นที่ผู้ใช้ปิดอยู่ (จุดใหม่ เส้นเชื่อม ตัวเลข) ต้องไม่โผล่ในคำอธิบาย
+ *    ไม่งั้นคำอธิบายบอกถึงสิ่งที่ไม่มีอยู่ในภาพ ซึ่งแย่กว่าไม่มีคำอธิบาย
+ *
+ * role: center | ring | old | new | faded | link | count
+ */
+export function coverageLegend({ points, covered, outMode, showNew, showLink, showCount }) {
+  const has = (kind) => points.some((p) => p.kind === kind && !(kind === "new" && !showNew));
+  const out = [{ role: "center" }, { role: "ring" }];
+  if (has("old")) out.push({ role: "old" });
+  if (has("new")) out.push({ role: "new" });   // has() ตัดจุดใหม่ที่ถูกซ่อนออกให้แล้ว
+  // จุดที่ "จาง" มีอยู่จริงเมื่อโหมดเป็นจาง และมีจุดที่มองเห็นอยู่นอกวง
+  if (outMode === "dim" && points.some((p, i) => !covered.has(i) && !(p.kind === "new" && !showNew)))
+    out.push({ role: "faded" });
+  if (showLink && showNew && points.some((p, i) => p.kind === "new" && p.from && covered.has(i))) out.push({ role: "link" });
+  if (showCount) out.push({ role: "count" });
+  return out;
+}

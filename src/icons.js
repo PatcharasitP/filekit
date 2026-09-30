@@ -75,6 +75,7 @@ export const ICONS = {
   "pdf-to-longimage": `<rect x="2.5"y="3"width="7"height="5"rx="1.2"/><rect x="2.5"y="9.5"width="7"height="5"rx="1.2"/><rect x="2.5"y="16"width="7"height="5"rx="1.2"/><path d="M11.2 12h2.4"/><path d="M15 9.6L17.4 12L15 14.4"/><rect x="18.4"y="3"width="3.1"height="18"rx="1.2"/>`,
   "excel-split":  `<rect x="2.5"y="8"width="7.5"height="8"rx="1.5"/><path d="M2.5 10.8h7.5"/><path d="M10.6 12h2"/><path d="M15 4.6h6.5a1.3 1.3 0 0 1 1.3 1.3v3.9a1.3 1.3 0 0 1-1.3 1.3H15a1.3 1.3 0 0 1-1.3-1.3V5.9A1.3 1.3 0 0 1 15 4.6z"/><path d="M13.7 7h9.1"/><path d="M15 13.9h6.5a1.3 1.3 0 0 1 1.3 1.3v3.9a1.3 1.3 0 0 1-1.3 1.3H15a1.3 1.3 0 0 1-1.3-1.3v-3.9a1.3 1.3 0 0 1 1.3-1.3z"/><path d="M13.7 16.3h9.1"/>`,
   // ตารางสองใบรวมเป็นใบเดียว
+  "excel-lookup": `<rect x="2.5"y="3"width="9"height="7"rx="1.5"/><path d="M2.5 5.6h9"/><rect x="2.5"y="14"width="9"height="7"rx="1.5"/><path d="M2.5 16.6h9"/><circle cx="17"cy="9"r="3.2"/><path d="M19.3 11.3L21.5 13.5"/><path d="M14 17h6"/>`,
   "excel-merge":  `<rect x="2.5"y="3"width="8"height="7"rx="1.5"/><path d="M2.5 5.6h8"/><rect x="2.5"y="14"width="8"height="7"rx="1.5"/><path d="M2.5 16.6h8"/><path d="M11 6.5h3.6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H11"/><path d="M18.2 9.6L21 12l-2.8 2.4"/>`,
   // ตารางที่แปลงเป็นโค้ด สื่อด้วยวงเล็บปีกกาข้างตาราง
   "excel-to-pq": `<rect x="2.5"y="4.5"width="10"height="15"rx="1.4"/><path d="M2.5 9h10M7.5 4.5v15"/><path d="M17.4 6.5a2 2 0 0 0-2 2v2a1.6 1.6 0 0 1-1.6 1.6 1.6 1.6 0 0 1 1.6 1.6v2a2 2 0 0 0 2 2"/><path d="M21.5 9.4v5.2"/>`,

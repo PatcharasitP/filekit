@@ -63,7 +63,8 @@ const STYLE = `
 .mr-tip .mut{color:var(--text-mute)}
 .mr-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:12.5px;
   color:var(--text-mute);margin:8px 2px 0}
-.mr-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.mr-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;box-shadow:0 0 0 1px rgba(128,128,128,.5)}
+.mr-legend i.ring{width:14px;height:14px;opacity:.55;vertical-align:-3px}
 .mr-legend .ln{display:inline-block;width:18px;height:0;border-top:2px solid var(--text-mute);
   margin-right:6px;vertical-align:4px}
 .mr-help{font-size:12px;color:var(--text-mute);line-height:1.7;margin:6px 2px 0}
@@ -110,6 +111,7 @@ export function mount(tool) {
   let hover = null;
   let view = null;              // { project, w, h } ของภาพล่าสุด ใช้ทำ hit-test
   let sortKey = "distanceKm", sortDir = -1;
+  let lastMaxKm = 1;               // ระยะไกลสุดของรอบวาดล่าสุด ใช้เขียนคำอธิบายเส้นในภาพ PNG
   let lastHiddenLabels = 0;        // ป้ายที่ต้องซ่อนเพราะจะไปทับป้ายอื่น
   let radiusTooSmall = false;      // วงรัศมีเล็กกว่าที่ตาเห็นในมาตราส่วนนี้
   let lastMerged = 0;              // คู่ที่จุดสองจุดใกล้กันเกินกว่าจะวาดแยกกันได้
@@ -187,6 +189,7 @@ export function mount(tool) {
     ["100", tr("100 อันดับ", "Top 100")],
   ], "0");
   const unitIn = el("input", { class: "mr-num", type: "text", value: tr(" กม.", " km") });
+  const legendInPng = segmented([["on", tr("แสดง", "Show")], ["off", tr("ซ่อน", "Hide")]], "on");
 
   /* ── จำค่าการแสดงผลไว้ และส่งต่อด้วยลิงก์ ───────────────────────────────
      ‼️ ไม่เก็บชีตกับคอลัมน์ เพราะผูกกับไฟล์ที่เปิดอยู่ คนเปิดลิงก์ใช้ไฟล์ตัวเองแล้วจะเพี้ยน
@@ -198,6 +201,7 @@ export function mount(tool) {
     radiusOn: radiusSw.input.checked, radiusKm: radiusKm.value,
     provOn: provSw.input.checked, extent: extentSel.value,
     minKm: minKmIn.value, top: topSel.value, unit: unitIn.value,
+    legendInPng: legendInPng.value,
   });
   const store = stateKit(tool.id, {
     defaults: LOOK(), collect: LOOK,
@@ -205,7 +209,7 @@ export function mount(tool) {
       for (const [node, key] of [[colorOld, "colorOld"], [colorNew, "colorNew"], [dotSize, "dotSize"],
                                  [lineMode, "lineMode"], [labelMode, "labelMode"], [labelTop, "labelTop"],
                                  [radiusKm, "radiusKm"], [extentSel, "extent"], [minKmIn, "minKm"],
-                                 [topSel, "top"], [unitIn, "unit"]])
+                                 [topSel, "top"], [unitIn, "unit"], [legendInPng, "legendInPng"]])
         if (v[key] !== undefined) node.value = v[key];
       if (v.radiusOn !== undefined) radiusSw.input.checked = !!v.radiusOn;
       if (v.provOn !== undefined) provSw.input.checked = !!v.provOn;
@@ -215,7 +219,7 @@ export function mount(tool) {
   for (const n of [colorOld, colorNew, radiusKm, unitIn, minKmIn])
     n.addEventListener("input", () => store.save());
   for (const n of [dotSize, lineMode, labelMode, labelTop, extentSel, topSel,
-                   radiusSw.input, provSw.input, minKmIn])
+                   radiusSw.input, provSw.input, minKmIn, legendInPng])
     n.addEventListener("change", () => store.save());
 
   [colorOld, colorNew].forEach((c) => c.addEventListener("input", () => draw()));
@@ -248,6 +252,9 @@ export function mount(tool) {
     el("h3", { class: "mr-group-title" }, tr("กรองข้อมูล", "Filter")),
     field(tr("เอาเฉพาะที่ย้ายไกลกว่า (กม.)", "Only moves longer than (km)"), minKmIn),
     field(tr("หรือดูเฉพาะอันดับต้น", "Or only the top ranks"), topSel),
+    el("h3", { class: "mr-group-title" }, tr("ภาพที่บันทึก", "Saved image")),
+    field(tr("คำอธิบายสัญลักษณ์ใต้ภาพ", "Legend under the image"), legendInPng,
+      tr("เพิ่มแถบใต้แผนที่ ให้คนที่ได้ภาพไปรู้ว่าสีและเส้นแปลว่าอะไร", "Adds a strip under the map so whoever gets the image knows what the colours and lines mean")),
     el("small", { class: "mr-hint" }, tr(
       "ข้อมูลหลักพันคู่ ดูทีเดียวทั้งหมดจะอ่านไม่ออก เริ่มจากอันดับต้นก่อนแล้วค่อยเปิดดูทั้งหมด",
       "With thousands of pairs the map is unreadable at once. Start with the top ranks, then open it up")),
@@ -623,29 +630,45 @@ export function mount(tool) {
     }
     lastHiddenLabels = hidden;
 
+    lastMaxKm = maxKm;
     renderLegend(list, maxKm);
     renderSelBar();
     renderCrowdNote(list);
   }
 
+  /* รายการคำอธิบายสัญลักษณ์ ใช้ร่วมกันทั้งกล่องใต้แผนที่บนจอและแถบใต้ภาพ PNG จึงไม่มีทางไม่ตรงกัน */
+  function legendItems(maxKm) {
+    const R = Number(radiusKm.value) || 3;
+    const items = [
+      { role: "old", text: tr("จุดเดิม", "Old site"), color: colorOld.value },
+      { role: "new", text: tr("จุดใหม่", "New site"), color: colorNew.value },
+      { role: "line", text: lineMode.value === "fixed"
+        ? tr("เส้นเชื่อมคู่เดียวกัน", "Line joins the pair")
+        : tr(`เส้นยิ่งหนา ยิ่งย้ายไกล (ไกลสุด ${maxKm.toFixed(2)} กม.)`, `Thicker means a longer move (longest ${maxKm.toFixed(2)} km)`) },
+    ];
+    if (radiusSw.input.checked) {
+      items.push(radiusTooSmall
+        ? { role: "note", text: tr(`รัศมี ${R} กม. เล็กเกินกว่าจะเห็นในมาตราส่วนนี้ ลองเลือกซูมพอดีกับข้อมูลหรือคลิกดูทีละคู่`,
+            `A ${R} km radius is too small to see at this scale. Zoom to the data or click a single pair`) }
+        : { role: "ring", text: tr(`วงจาง = รัศมี ${R} กม.`, `Faded ring = ${R} km radius`), color: colorOld.value });
+    }
+    if (lastMerged) items.push({ role: "merged", color: colorOld.value, color2: colorNew.value, text: tr(
+      `จุดครึ่งส้มครึ่งน้ำเงิน ${lastMerged} จุด = คู่ที่อยู่ใกล้กันเกินกว่าจะแยกได้ที่ระยะซูมนี้`,
+      `${lastMerged} half-orange half-blue ${pl(lastMerged, "dot", "dots")} = pairs too close to separate at this zoom`) });
+    if (lastHiddenLabels) items.push({ role: "note", text: tr(`ซ่อนป้ายที่ทับกัน ${lastHiddenLabels} ป้าย`, `${lastHiddenLabels} overlapping ${pl(lastHiddenLabels, "label", "labels")} hidden`) });
+    return items;
+  }
+
   function renderLegend(list, maxKm) {
     legend.innerHTML = "";
-    const item = (html) => legend.appendChild(el("span", { html }));
-    item(`<i style="background:${colorOld.value}"></i>${tr("จุดเดิม", "Old site")}`);
-    item(`<i style="background:${colorNew.value}"></i>${tr("จุดใหม่", "New site")}`);
-    item(`<span class="ln"></span>${lineMode.value === "fixed"
-      ? tr("เส้นเชื่อมคู่เดียวกัน", "Line joins the pair")
-      : tr(`เส้นยิ่งหนา ยิ่งย้ายไกล (ไกลสุด ${maxKm.toFixed(2)} กม.)`, `Thicker means a longer move (longest ${maxKm.toFixed(2)} km)`)}`);
-    if (radiusSw.input.checked) {
-      item(radiusTooSmall
-        ? tr(`รัศมี ${Number(radiusKm.value) || 3} กม. เล็กเกินกว่าจะเห็นในมาตราส่วนนี้ ลองเลือกซูมพอดีข้อมูล หรือคลิกเลือกทีละคู่`,
-             `A ${Number(radiusKm.value) || 3} km radius is too small to see at this scale. Zoom to the data or click a single pair`)
-        : tr(`วงจาง = รัศมี ${Number(radiusKm.value) || 3} กม.`, `Faded ring = ${Number(radiusKm.value) || 3} km radius`));
+    for (const it of legendItems(maxKm)) {
+      const mark = it.role === "line" ? el("span", { class: "ln" })
+        : it.role === "merged" ? el("i", { style: `background:linear-gradient(90deg,${it.color} 50%,${it.color2} 50%)` })
+        : it.role === "ring" ? el("i", { class: "ring", style: `background:${it.color}` })
+        : it.role === "note" ? null
+        : el("i", { style: `background:${it.color}` });
+      legend.appendChild(el("span", { "data-role": it.role }, [mark, it.text].filter(Boolean)));
     }
-    if (lastMerged) item(tr(
-      `จุดครึ่งส้มครึ่งน้ำเงิน ${lastMerged} จุด = คู่ที่อยู่ใกล้กันเกินกว่าจะแยกได้ที่ระยะซูมนี้`,
-      `${lastMerged} half-orange half-blue ${pl(lastMerged, "dot", "dots")} = pairs too close to separate at this zoom`));
-    if (lastHiddenLabels) item(tr(`ซ่อนป้ายที่ทับกัน ${lastHiddenLabels} ป้าย`, `${lastHiddenLabels} overlapping ${pl(lastHiddenLabels, "label", "labels")} hidden`));
   }
 
   /** ‼️ วัดกับข้อมูลขนาดงานจริง 2,418 คู่ 16/09/2026: เปิดป้ายทุกคู่แล้วซ่อนเพราะทับกัน 2,385 ป้าย
@@ -815,12 +838,83 @@ export function mount(tool) {
   }
 
   // ── บันทึกผลลัพธ์ ─────────────────────────────────────────────────────
+  /* ‼️ ภาพ PNG ต้องอ่านรู้เรื่องเมื่ออยู่ตัวเดียว คนที่ได้ภาพไปทางแชทไม่เห็นกล่องคำอธิบายบนจอ
+     จึงต่อแถบคำอธิบายไว้ใต้แผนที่ (ตัวแผนที่ไม่ถูกแตะ ขนาดและพิกเซลเท่าเดิม) รายการมาจาก legendItems ตัวเดียวกับบนจอ */
+  function pngWithLegend(items) {
+    const dpr = canvas.width / (parseFloat(canvas.style.width) || canvas.width);
+    const W = canvas.width, pad = 12 * dpr, rowH = 24 * dpr, gap = 18 * dpr, mark = 14 * dpr;
+    const bg = cssVar("--card", cssVar("--bg", "#fff")), fg = cssVar("--text", "#222"), mute = cssVar("--text-mute", "#6b7280");
+    const meas = document.createElement("canvas").getContext("2d");
+    const font = `${12.5 * dpr}px system-ui, "Sarabun", "Tahoma", sans-serif`;
+    meas.font = font;
+    // ข้อความยาวกว่าแถวหนึ่ง ห่อเป็นหลายบรรทัดในช่องของตัวเอง ไม่ให้ล้นขอบภาพ
+    const room = W - 2 * pad - mark - 6 * dpr;
+    /* ตัดตามขอบคำ (ไทยไม่มีเว้นวรรค ตัดทีละตัวอักษรจะผ่าคำ "หรือ" เป็น "ห" กับ "รือ") ไม่มี Segmenter ก็ตัดทีละตัวอักษรเหมือนเดิม */
+    const pieces = (t) => (typeof Intl !== "undefined" && Intl.Segmenter
+      ? Array.from(new Intl.Segmenter(IS_EN ? "en" : "th", { granularity: "word" }).segment(t), (x) => x.segment)
+      : Array.from(t));
+    const wrap = (t) => {
+      const out = []; let cur = "";
+      for (const ch of pieces(t)) {
+        if (cur && meas.measureText(cur + ch).width > room) { out.push(cur); cur = ch; } else cur += ch;
+      }
+      if (cur) out.push(cur);
+      return out;
+    };
+    const rows = [[]]; let x = pad;
+    for (const it of items) {
+      const lines = it.role === "note" ? wrap(it.text) : [it.text];
+      const tw = Math.max(...lines.map((l) => meas.measureText(l).width));
+      const w = (it.role === "note" ? 0 : mark + 6 * dpr) + tw;
+      if (x + w > W - pad && rows[rows.length - 1].length) { rows.push([]); x = pad; }
+      rows[rows.length - 1].push({ it, x, w, lines }); x += w + gap;
+    }
+    const heightOf = (row) => Math.max(1, ...row.map((c) => c.lines.length)) * rowH;
+    const band = pad + rows.reduce((h, r) => h + heightOf(r), 0);
+    const out = document.createElement("canvas");
+    out.width = W; out.height = canvas.height + band;
+    const g = out.getContext("2d");
+    g.drawImage(canvas, 0, 0);
+    g.fillStyle = bg; g.fillRect(0, canvas.height, W, band);
+    g.strokeStyle = "rgba(128,128,128,.35)"; g.lineWidth = dpr;
+    g.beginPath(); g.moveTo(0, canvas.height + 0.5 * dpr); g.lineTo(W, canvas.height + 0.5 * dpr); g.stroke();
+    g.font = font; g.textBaseline = "middle"; g.textAlign = "left";
+    let top = canvas.height + pad / 2;
+    for (const row of rows) {
+      for (const { it, x: x0, lines } of row) {
+        const cy = top + rowH / 2, cx = x0 + mark / 2, r = 5.5 * dpr;
+        const halo = () => { g.strokeStyle = "rgba(128,128,128,.5)"; g.lineWidth = dpr; g.beginPath(); g.arc(cx, cy, r + dpr, 0, 2 * Math.PI); g.stroke(); };
+        if (it.role === "old" || it.role === "new") {
+          halo(); g.fillStyle = it.color; g.beginPath(); g.arc(cx, cy, r, 0, 2 * Math.PI); g.fill();
+        } else if (it.role === "merged") {
+          halo();
+          g.fillStyle = it.color; g.beginPath(); g.arc(cx, cy, r, Math.PI / 2, Math.PI * 1.5); g.fill();
+          g.fillStyle = it.color2; g.beginPath(); g.arc(cx, cy, r, Math.PI * 1.5, Math.PI / 2); g.fill();
+        } else if (it.role === "ring") {
+          g.globalAlpha = 0.25; g.fillStyle = it.color; g.beginPath(); g.arc(cx, cy, mark / 2, 0, 2 * Math.PI); g.fill(); g.globalAlpha = 1;
+          g.strokeStyle = "rgba(128,128,128,.5)"; g.lineWidth = dpr; g.beginPath(); g.arc(cx, cy, mark / 2, 0, 2 * Math.PI); g.stroke();
+        } else if (it.role === "line") {
+          g.strokeStyle = mute; g.lineWidth = 2 * dpr; g.beginPath(); g.moveTo(x0, cy); g.lineTo(x0 + mark, cy); g.stroke();
+        }
+        g.fillStyle = it.role === "note" ? mute : fg;
+        const tx = x0 + (it.role === "note" ? 0 : mark + 6 * dpr);
+        lines.forEach((l, i) => g.fillText(l, tx, cy + i * rowH + dpr * 0.5));
+      }
+      top += heightOf(row);
+    }
+    return out;
+  }
+
   function savePng() {
     draw();
-    canvas.toBlob((blob) => {
+    const items = legendInPng.value === "on" ? legendItems(lastMaxKm) : [];
+    const src = items.length ? pngWithLegend(items) : canvas;
+    src.toBlob((blob) => {
       if (!blob) { st.err(tr("บันทึกภาพไม่สำเร็จ", "Could not save the image")); return; }
       download(blob, tr("แผนที่การกระจัด", "relocation-map") + ".png");
-      st.ok(tr("บันทึกภาพแล้ว ขนาดเท่ากับที่เห็นบนจอ", "Image saved at the size you see on screen"));
+      st.ok(items.length
+        ? tr("บันทึกภาพแล้ว มีแถบคำอธิบายสัญลักษณ์ใต้แผนที่", "Image saved with a legend strip under the map")
+        : tr("บันทึกภาพแล้ว ขนาดเท่ากับที่เห็นบนจอ", "Image saved at the size you see on screen"));
     }, "image/png");
   }
 

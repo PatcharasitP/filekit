@@ -49,6 +49,7 @@ export const KEYS = {
   "excel-match-sum": "solver subset sum กระทบยอด reconcile หายอด รวมกันได้ จับคู่ยอด เงินโอน ใบแจ้งหนี้ ผลต่าง หาตัวที่หาย combination excel solver what combination adds up",
   "excel-csv": "csv excel xlsx แปลง data ข้อมูล",
   "excel-split": "split แยก แบ่ง group แผนก สาขา จังหวัด ตามคอลัมน์ excel",
+  "excel-lookup": "vlookup xlookup lookup index match จับคู่ ดึงข้อมูล เติมข้อมูล เติมคอลัมน์ ตามคีย์ mapping คีย์ สองไฟล์ ไฟล์รอง ไฟล์หลัก เจอซ้ำ ซ้ำ join merge เทียบ กระทบ tax invoice ใบกำกับภาษี fill column from another file",
   "excel-merge": "merge รวม ต่อ combine consolidate หลายไฟล์ สาขา excel",
   "excel-to-pdf": "excel xlsx sheet ตาราง pdf",
   "excel-to-pq": "power query m code #table pq โค้ด สูตร excel ชนิดข้อมูล type int64 currency pdf word รูป ocr",

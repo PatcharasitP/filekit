@@ -73,6 +73,7 @@ export const EN_TOOLS = {
   "excel-csv": ["Excel ⇄ CSV", "Turn XLSX into CSV (one per sheet), or fold CSV files back into Excel"],
   "excel-to-pq": ["Table to a Power Query formula", "Drop in an Excel, PDF, Word file or a photo of a table and get ready-to-paste #table code. Pick the Power Query type for every column"],
   "excel-split": ["Split an Excel file by column", "Pick a column and split into one file per group (ZIP), or one file with a sheet per group"],
+  "excel-lookup": ["Fill from another file", "Match two files on a key like VLOOKUP but bring over several columns at once. Says how many rows were found and how many were found more than once, then writes straight back into the main file with no download"],
   "excel-merge": ["Merge several Excel files", "Append rows from many files into one. Columns are matched by header name, not position"],
   "thai-encoding": ["Repair garbled Thai files", "Opened a CSV and got “เธชเธงเธฑ” or “à¸ªà¸§”? This detects the encoding and saves it back as UTF-8"],
   "thai-date": ["Buddhist ⇄ Gregorian years", "Reads every Thai date format (15 ม.ค. 2569, ๑๕/๐๑/๒๕๖๙), converts a whole column, output format is yours to pick"],

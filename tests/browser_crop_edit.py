@@ -234,7 +234,20 @@ def mdrag(pg, x0, y0, x1, y1, steps=8):
     pg.wait_for_timeout(200)
 
 
+FOLDED = []      # ปุ่มที่ต้องกาง อีก N ปุ่ม ก่อนถึงจะเจอ (แถบบนพับเป็นแถวเดียว เฟส 3)
+
+
 def tbtn(pg, name):
+    """ปุ่มบนแถบบนตามชื่อ ถ้าถูกพับไว้ในแผงลอย ให้กาง อีก N ปุ่ม ก่อน
+    ‼️ get_by_role ข้ามปุ่มที่ซ่อนอยู่ ปุ่มที่ถูกพับจึงหาไม่เจอจนกว่าจะกางแผง (รอบตรวจแย้ง S11, AK-07)"""
+    loc = pg.locator(".s2-tbar").get_by_role("button", name=name, exact=True)
+    if has(loc):
+        return loc
+    more = pg.locator(".s2-tbar .cr-more")
+    if has(more) and more.first.is_visible() and more.first.get_attribute("aria-expanded") != "true":
+        more.first.click()
+        pg.wait_for_timeout(150)
+        FOLDED.append(name)
     return pg.locator(".s2-tbar").get_by_role("button", name=name, exact=True)
 
 
@@ -755,9 +768,19 @@ def sc_mobile(b, a4, errs):
         open_tool(pg, a4)
         ow = pg.evaluate("() => document.documentElement.scrollWidth")
         ck("จอ 390 ไม่มีเลื่อนแนวนอนทั้งหน้า", ow <= 391, str(ow))
-        seps = pg.evaluate("() => [...document.querySelectorAll('.s2-tbar .sep')].map(s => getComputedStyle(s).display)")
-        ck("จอ 390 ซ่อนเส้นคั่นกลุ่มในแถบบน (แถบพับหลายแถว เส้นไปค้างท้ายแถว)",
-           len(seps) >= 2 and all(d == "none" for d in seps), str(seps))
+        # ‼️ เฟส 3 แถบบนเป็นแถวเดียวแล้ว เส้นคั่นโชว์ได้ แต่ต้องอยู่ระหว่างกลุ่มที่เห็นเท่านั้น (ไม่หัว ไม่ท้าย ไม่ติดกัน)
+        sp = pg.evaluate("""() => { const t = document.querySelector('.s2-tbar');
+          const vis = (n) => n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden';
+          const kids = [...t.children].filter(n => vis(n) && !n.classList.contains('cr-fold'));
+          const isSep = (n) => n.classList.contains('sep');
+          /* ‼️ นับแถวจากการซ้อนกันในแนวตั้ง ไม่ใช่ปัด top (รอบแรกปัด top/8 เส้นคั่นที่เว้นขอบบนล่าง 4 px
+             ตกคนละช่องปัดกับปุ่ม เลยนับได้ 2 แถวทั้งที่อยู่แถวเดียวกัน) แถวใหม่ = ของที่เริ่มต่ำกว่าก้นแถวแรก */
+          const r0 = kids.length ? kids[0].getBoundingClientRect() : null;
+          const rows = r0 ? 1 + (kids.some(n => n.getBoundingClientRect().top >= r0.bottom - 1) ? 1 : 0) : 0;
+          return { n: t.querySelectorAll('.sep').length, rows,
+                   bad: kids.some((n, i) => isSep(n) && (i === 0 || i === kids.length - 1 || isSep(kids[i - 1]))) }; }""")
+        ck("จอ 390 แถบบนแถวเดียว และเส้นคั่นไม่อยู่หัวแถว ท้ายแถว หรือติดกัน",
+           sp["n"] >= 2 and sp["rows"] == 1 and not sp["bad"], str(sp))
         pl_btn = tbtn(pg, "วางกรอบ")
         if not ck("มีปุ่ม วางกรอบ", has(pl_btn)):
             return
@@ -813,6 +836,23 @@ def sc_mobile(b, a4, errs):
 # ── ⑧ ภาษาอังกฤษ และกฎข้อความ ──────────────────────────────────────────
 # ‼️ รอบตรวจแย้ง: เดิมอ่านแค่ innerText ตอนยังไม่มีกรอบ จึงไม่เห็นข้อความแนะนำของจอสัมผัส (ซ่อนบนจอเมาส์)
 #    ชื่อกรอบ ข้อความผิดพลาด และสถานะซูม ตอนนี้วางกรอบ พิมพ์ค่าผิด ซูม แล้วอ่าน textContent ทุกโหนดรวมที่ซ่อน
+EN_TEXT_JS = """() => {
+  const out = [];
+  for (const sel of ['.s2-tbar', '.cr-wrap', '.s2-side-bd', '.s2-side-ft']) {
+    const n = document.querySelector(sel); if (!n) continue;
+    const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT);
+    for (let t = w.nextNode(); t; t = w.nextNode()) {
+      if (t.parentElement && t.parentElement.closest('style, script')) continue;
+      out.push(t.nodeValue);
+    }
+    n.querySelectorAll('[aria-label], [aria-roledescription], [placeholder]').forEach(e => {
+      for (const a of ['aria-label', 'aria-roledescription', 'placeholder']) if (e.getAttribute(a)) out.push(e.getAttribute(a));
+    });
+  }
+  return out.join('\\n');
+}"""
+
+
 def sc_english(b, a4, errs):
     ctx = b.new_context(viewport={"width": 1400, "height": 1000})
     ctx.add_init_script("try{localStorage.setItem('fk-lang','en')}catch(e){}")
@@ -821,8 +861,10 @@ def sc_english(b, a4, errs):
     try:
         open_tool(pg, a4)
         for name in ["Previous page", "Next page", "Zoom out", "Zoom in", "Fit page", "Fit width",
-                     "Place a frame", "Clear the frame"]:
+                     "Place a frame", "Clear the frame", "Undo", "Redo", "Preview result"]:
             ck(f"แถบบนมีปุ่ม {name}", has(tbtn(pg, name)))
+        # ‼️ เฟส 3: ข้อความใหม่ทั้งชุดต้องเป็นอังกฤษด้วย (โหมดกรอบ ปุ่มตัดขอบขาว) ตรวจรวมในข้อถัดไป
+        ck("แผงขวามีตัวเลือกโหมดกรอบและปุ่มตัดขอบขาว", has(pg.locator(".cr-mode")) and has(pg.locator(".cr-trim")))
         if has(tbtn(pg, "Place a frame")):
             tbtn(pg, "Place a frame").first.click()
             pg.wait_for_timeout(200)
@@ -833,28 +875,51 @@ def sc_english(b, a4, errs):
         if has(left):
             left.first.fill("999")
             pg.wait_for_timeout(150)
-        txt = pg.evaluate("""() => {
-          const out = [];
-          for (const sel of ['.s2-tbar', '.cr-wrap', '.s2-side-bd', '.s2-side-ft']) {
-            const n = document.querySelector(sel); if (!n) continue;
-            const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT);
-            for (let t = w.nextNode(); t; t = w.nextNode()) {
-              if (t.parentElement && t.parentElement.closest('style, script')) continue;
-              out.push(t.nodeValue);
-            }
-            n.querySelectorAll('[aria-label], [aria-roledescription], [placeholder]').forEach(e => {
-              for (const a of ['aria-label', 'aria-roledescription', 'placeholder']) if (e.getAttribute(a)) out.push(e.getAttribute(a));
-            });
-          }
-          return out.join('\\n');
-        }""")
+        txt = pg.evaluate(EN_TEXT_JS)
         th = THAI.findall(txt)
         ck("โหมดอังกฤษไม่มีภาษาไทยหลุด รวมข้อความที่ซ่อนอยู่ ชื่อกรอบ ข้อความผิดพลาด และสถานะ",
            not th and len(txt) > 200, f"เจอ {''.join(th)[:20]!r} อ่านได้ {len(txt)} ตัว")
-        for probe in [r"one finger", r"can be at most \d", r"Zoom \d+%"]:
+        # ‼️ รีวิวหลังทำ X7: ลิงก์ออกจากดูผลเดิมชื่ออังกฤษซ้ำกับปุ่ม Back to editing ของหน้าผลลัพธ์ (ทำคนละอย่าง)
+        for probe in [r"one finger", r"can be at most \d", r"Zoom \d+%", r"Exit preview"]:
             ck(f"อ่านเจอข้อความที่ต้องตรวจจริง ({probe})", re.search(probe, txt) is not None)
         bad = BANNED.findall(txt)
         ck("ข้อความไม่มีจุดกลาง ขีดยาว ขีดสั้น", not bad, repr(bad[:3]))
+        # ‼️ เฟส 3 โหมดแยกทีละหน้า: ข้อความที่ตั้งตอนใช้งาน (สรุปจำนวนหน้า สถานะของหน้า เลิกทำข้ามหน้า กรอบที่เก็บไว้)
+        #    ยังไม่มีใน DOM จนกว่าจะถึงสถานะนั้น ข้อบนจึงไม่เห็น (ภาพจอรอบ 1 พบว่าไม่เคยถูกตรวจ) ต้องเดินไปให้ถึงแล้วเก็บทุกจังหวะ
+        seen = []
+        lab = pg.locator(".cr-mode label").filter(has_text="Per page")
+        if ck("โหมดอังกฤษ สลับเป็น Per page ได้", has(lab)):
+            lab.first.click()
+            pg.wait_for_timeout(250)
+            tbtn(pg, "Next page").first.click()
+            pg.wait_for_timeout(500)
+            seen.append(pg.evaluate(EN_TEXT_JS))      # หน้านี้ใช้กรอบเดียวกับหน้าอื่น
+            tbtn(pg, "Clear the frame").first.click()
+            pg.wait_for_timeout(250)
+            seen.append(pg.evaluate(EN_TEXT_JS))      # สรุปจำนวนหน้า และหน้านี้ไม่ตัด
+            tbtn(pg, "Previous page").first.click()
+            pg.wait_for_timeout(500)
+            tbtn(pg, "Undo").first.click()
+            pg.wait_for_timeout(500)
+            seen.append(pg.evaluate(EN_TEXT_JS))      # ย้อนการแก้ที่หน้า 2 แล้ว
+            tbtn(pg, "Redo").first.click()
+            pg.wait_for_timeout(500)
+            seen.append(pg.evaluate(EN_TEXT_JS))      # ทำซ้ำการแก้ที่หน้า 2 แล้ว
+            pg.locator(".cr-mode label").filter(has_text="One frame").first.click()
+            pg.wait_for_timeout(250)
+            seen.append(pg.evaluate(EN_TEXT_JS))      # มีกรอบแยกเก็บไว้
+        txt2 = "\n".join(seen)
+        th = THAI.findall(txt2)
+        ck("โหมดอังกฤษ ข้อความของโหมดแยกทีละหน้าไม่มีภาษาไทยหลุด", not th and len(txt2) > 200,
+           f"เจอ {''.join(th)[:20]!r} อ่านได้ {len(txt2)} ตัว")
+        # ‼️ รีวิวหลังทำ K4 X4: สรุปบอกหน้าที่ตัดก่อน และบรรทัดกรอบที่เก็บไว้ต้องเป็นเอกพจน์เมื่อมีหน้าเดียว
+        #    (รุ่นก่อนของข้อนี้ยอม frames? (is|are) จึงผ่านทั้งที่จอเขียนว่า 1 per-page frames are kept)
+        for probe in [r"(?<!\d)3 cropped, 1 not cropped, 1 set separately", r"Shared [\d ]+x[\d ]+mm frame",
+                      r"This page is not cropped", r"Undid a change on page 2", r"Redid a change on page 2",
+                      r"(?<!\d)1 page has Per page settings, used when Per page is on"]:
+            ck(f"อ่านเจอข้อความโหมดแยกที่ต้องตรวจจริง ({probe})", re.search(probe, txt2) is not None)
+        bad = BANNED.findall(txt2)
+        ck("ข้อความโหมดแยกไม่มีจุดกลาง ขีดยาว ขีดสั้น", not bad, repr(bad[:3]))
     finally:
         ctx.close()
 
@@ -870,14 +935,19 @@ def sc_busy(pg, big):
     cta.first.click()
     lock = pg.evaluate("""() => {
       const b = (n) => [...document.querySelectorAll('.s2-tbar button')].find(x => (x.getAttribute('aria-label') || x.textContent).trim() === n);
-      return { reset: b('ล้างกรอบ').disabled, place: b('วางกรอบ').disabled, next: b('หน้าถัดไป').disabled,
+      const dis = (n) => { const x = b(n); return x ? x.disabled : 'ไม่มีปุ่ม'; };
+      const trim = document.querySelector('.cr-trim');
+      return { reset: dis('ล้างกรอบ'), place: dis('วางกรอบ'), next: dis('หน้าถัดไป'),
+               undo: dis('เลิกทำ'), redo: dis('ทำซ้ำ'), preview: dis('ดูผลหลังตัด'),
+               trim: trim ? trim.disabled : 'ไม่มีปุ่ม',
                stage: document.querySelector('.cr-stage').inert,
                edge: document.querySelector('input[data-edge="top"]').disabled,
                sel: document.querySelector('.s2-side-bd select').disabled,
                running: !!document.querySelector('button.btn-cancel:not([hidden])') }; }""")
     ck("ระหว่างบันทึกจริง (ปุ่มหยุดโผล่)", lock["running"], str(lock))
-    ck("ระหว่างบันทึก แถบบน ช่อง มม. ตัวเลือกหน้า และกรอบ แก้ไม่ได้ทั้งหมด",
-       all(lock[k] for k in ["reset", "place", "next", "stage", "edge", "sel"]), str(lock))
+    # ‼️ เฟส 3: เลิกทำ ทำซ้ำ ดูผล และตัดขอบขาว ต้องล็อกด้วย (รอบตรวจแย้ง S1, AK-02)
+    ck("ระหว่างบันทึก แถบบน ช่อง มม. ตัวเลือกหน้า กรอบ เลิกทำ ดูผล และตัดขอบขาว แก้ไม่ได้ทั้งหมด",
+       all(lock[k] is True for k in ["reset", "place", "next", "undo", "redo", "preview", "trim", "stage", "edge", "sel"]), str(lock))
     stop = pg.locator("button.btn-cancel")
     if stop.count() and stop.first.is_visible():
         stop.first.click()

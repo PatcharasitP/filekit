@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v188";
+const VERSION = "filekit-v189";
 const SHELL = `${VERSION}-shell`;
 /* เพดานเวลารอเครือข่ายตอนเปิดหน้าเว็บ ครบเวลาแล้วใช้แคชทันที */
 const NAV_NET_TIMEOUT_MS = 1200;
@@ -66,6 +66,7 @@ const PRECACHE = [
   "src/geokit.js",       /* map-relocate, map-coverage */
   "src/tools/map-coverage.js",
   "src/pdfimpose.js", /* pdf-nup, pdf-resize */
+  "src/trimbox.js",   /* pdf-crop ตัดขอบขาวอัตโนมัติ */
   "src/textdiff.js",  /* pdf-compare */
   "src/sqlgen.js",       /* pq-group-concat, pq-pick-date, pq-to-date */
   "src/pqcombine.js",    /* pq-combine */

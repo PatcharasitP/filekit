@@ -80,7 +80,7 @@ let menuWired = false;
 export function wireToolMenu(tool) {
   const btn = document.getElementById("toolmenu");
   const panel = document.getElementById("toolmenupanel");
-  if (!btn || !panel) return { close: () => {}, isOpen: () => false };
+  if (!btn || !panel) return { btn: null, close: () => {}, isOpen: () => false };
   /* ‼️ ต้องถอด hidden ด้วย JS ไม่ใช่ CSS เพราะโปรเจกต์นี้ประกาศ [hidden]{display:none !important}
      ไว้เป็นกฎกลาง (บทเรียน 09/09: กฎของเบราว์เซอร์แพ้ display ที่เราเขียนเอง จึงต้องมี !important)
      กฎที่มี !important จะชนะทุก selector ที่ไม่มี การซ่อนหรือแสดงของชิ้นนี้จึงทำผ่าน JS เท่านั้น */
@@ -144,7 +144,7 @@ export function wireToolMenu(tool) {
       to.focus();
     });
   }
-  return { close: () => toggle(false), isOpen: () => !panel.hidden };
+  return { btn, close: () => toggle(false), isOpen: () => !panel.hidden };
 }
 
 
@@ -802,12 +802,23 @@ export function toolShell2(tool, cfg = {}) {
   }).observe(side, { childList: true, subtree: true });
 
 
-  /* Esc ปิดเมนูกับแผ่นล่าง แล้วคืนโฟกัส */
-  wrap.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    if (menu.isOpen()) { menu.close(); menu.btn.focus(); e.stopPropagation(); return; }
+  /* Esc ปิดเมนูกับแผ่นล่าง แล้วคืนโฟกัส
+     ‼️ รีวิวหลังทำ F8 (02/10/2026 พบในเฟส 3 ของ pdf-crop แต่เป็นของเดิมของโครงหน้า)
+        ① menu.btn ไม่เคยมีจริง (wireToolMenu ไม่คืนปุ่ม) Esc ตอนเมนูเปิดพังเป็น TypeError ก่อนถึง stopPropagation
+           แล้วไหลไปตัวรับของทั้งเว็บที่พากลับหน้าแรก
+        ② Esc ที่เป้าเป็น body (Safari ไม่โฟกัสปุ่มที่แตะ) ไม่ผ่านกล่องนี้เลย แผ่นตัวเลือกไม่ปิด แต่ออกจากเครื่องมือแทน
+        กล่องยังรับก่อนตามเดิม ของข้างในได้ Esc ก่อนเสมอ ส่วนเป้า body รับที่ document ขาจับ ก่อนตัวรับของทั้งเว็บ
+        ③ เมนูรวมเครื่องมืออยู่ในแถบหัวของเว็บ ไม่ได้อยู่ในกล่องนี้ Esc ตอนโฟกัสอยู่ในเมนูจึงไหลไปตัวรับของทั้งเว็บ
+           ออกจากเครื่องมือทั้งที่แค่อยากปิดเมนู เมนูเปิดอยู่จึงรับที่ document ขาจับทุกเป้า */
+  const escOverlay = (e) => {
+    if (menu.isOpen()) { menu.close(); if (menu.btn) menu.btn.focus(); e.stopPropagation(); return; }
     if (sheetOpen) { setSheet(false); sheetBtn.focus(); e.stopPropagation(); }
-  });
+  };
+  wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") escOverlay(e); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !wrap.isConnected) return;
+    if (menu.isOpen() || e.target === document.body || e.target === document.documentElement) escOverlay(e);
+  }, true);
   document.addEventListener("click", (e) => {
     if (!wrap.isConnected) return;
     if (menu.isOpen() && !e.target.closest(".s2-menu") && !e.target.closest(".s2-menubtn")) menu.close();
@@ -826,6 +837,8 @@ export function toolShell2(tool, cfg = {}) {
     body: stage,
     grid, canvas, side, stage,
     setState, forward,
+    /** เปิดหรือปิดแผ่นตัวเลือกบนจอแคบ (เครื่องมือปิดให้เองได้หลังทำงานที่ต้องเห็นผลบนหน้ากระดาษ เช่นตัดขอบขาวของ pdf-crop) */
+    setSheet,
     setBusy: (on) => grid.classList.toggle("busy", !!on),
     showCanvas: (on) => {
       emptyBox.hidden = !!on;

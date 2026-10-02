@@ -107,6 +107,25 @@ def main():
         # ‼️ กล่องที่วางไว้ต้องไม่เลื่อนเมื่อซูม เพราะเก็บเป็นสัดส่วน
         after_zoom = pg.eval_on_selector(".pe-box.cover", "n=>n.style.left")
         ck(after_zoom == unit, f"ซูมแล้วกล่องยังอยู่ที่เดิม ({unit} เป็น {after_zoom})", f"{unit} -> {after_zoom}")
+
+        # ‼️ ซูมจนหน้ากว้างกว่ากล่องแล้ว ต้องเลื่อนไปดูขอบซ้ายของหน้าได้ (บั๊กเจอ 02/10/2026 ตอนทำตัวครอบตัด)
+        #    .pe-scroll เคยจัดกลางด้วย justify-content:center ส่วนที่ล้นทางซ้ายจึงเลื่อนไปไม่ถึงเลย
+        #    วัดจริงที่ 300%: หน้ากว้าง 2022px ในกล่อง 1020px ขอบซ้ายของหน้าหายไป 501px
+        for _ in range(8):
+            zb = pg.query_selector("button[aria-label='ซูมเข้า']")
+            if not zb or not zb.is_enabled():
+                break
+            zb.click()
+            pg.wait_for_timeout(150)
+        mid = pg.evaluate("""() => { const c = document.querySelector('.pe-scroll'), s = document.querySelector('.pe-stage');
+          const a = s.getBoundingClientRect(), b = c.getBoundingClientRect();
+          return (b.left + c.clientWidth / 2 - a.left) / a.width; }""")
+        ck(abs(mid - 0.5) < 0.02, f"ซูมเข้าแล้วยังมองกลางหน้าอยู่ (จุดกลางกล่องอยู่ที่ {mid:.3f} ของหน้า)", f"{mid:.3f}")
+        g = pg.evaluate("""() => { const c = document.querySelector('.pe-scroll'), s = document.querySelector('.pe-stage');
+          c.scrollLeft = 0;
+          return { gap: s.getBoundingClientRect().left - c.getBoundingClientRect().left, sw: s.offsetWidth, cw: c.clientWidth }; }""")
+        ck(g["sw"] > g["cw"] and g["gap"] >= 0,
+           f"ซูมใหญ่แล้วเลื่อนไปดูขอบซ้ายของหน้าได้ (ห่างขอบกล่อง {g['gap']:.0f}px)", str(g))
         pg.click("button:has-text('พอดีหน้า')")
         pg.wait_for_timeout(350)
 

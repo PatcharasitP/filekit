@@ -81,7 +81,11 @@ const STYLE = `
 /* ‼️ ต้อง align-items:start ไม่งั้นเวทีโดนยืดให้สูงเท่ากล่องเลื่อน
    ซึ่งเตี้ยกว่าหน้ากระดาษจริง แล้วชั้นวาดทับก็เตี้ยตาม พิกัดเพี้ยนเหมือนเดิมอีกรอบ
    เป็นกับดักเดียวกับที่เจอตอนแก้ flex:none ครั้งแรก แค่ย้ายมาอยู่ที่กล่องใหม่ */
-.pe-scroll{overflow:auto;padding:10px;display:flex;justify-content:center;align-items:flex-start}
+/* ‼️ ห้าม justify-content:center (บั๊กเจอ 02/10/2026 ตอนทำตัวครอบตัด)
+   ซูมจนหน้ากว้างกว่ากล่อง ส่วนที่ล้นทางซ้ายล้นออกฝั่งติดลบ เลื่อนไปดูไม่ได้เลย
+   วัดจริงที่ 300%: หน้ากว้าง 2022px ในกล่อง 1020px ขอบซ้ายของหน้าหายไป 501px แก้หรือปิดทับตรงนั้นไม่ได้
+   เวทีจัดกลางด้วย margin:0 auto อยู่แล้ว ซึ่งกลายเป็น 0 เองตอนหน้าใหญ่กว่ากล่อง */
+.pe-scroll{overflow:auto;padding:10px;display:flex;align-items:flex-start}
 .pe-stage canvas{display:block;width:100%;height:auto}
 .pe-layer{position:absolute;inset:0;cursor:crosshair}
 .pe-layer.text-mode{cursor:text}
@@ -326,7 +330,14 @@ export function mount(tool) {
      ภาพที่เรนเดอร์ไว้ละเอียดกว่าจออยู่แล้ว ขยายด้วย CSS จึงยังคมพอ */
   function applyZoom() {
     if (!fitWidth) return;
+    /* ซูมรอบกึ่งกลางที่มองอยู่ในแนวนอน ไม่งั้นพอเลิก justify-content:center แล้ว
+       กดซูมเข้าทีไรภาพจะไปค้างที่ขอบซ้ายของหน้าแทนตรงกลางที่ดูอยู่ */
+    const sr = scroller.getBoundingClientRect(), r0 = stage.getBoundingClientRect();
+    const cx = sr.left + scroller.clientWidth / 2;
+    const fx = r0.width ? (cx - r0.left) / r0.width : 0.5;
     stage.style.width = `${Math.round(fitWidth * zoom)}px`;
+    const r1 = stage.getBoundingClientRect();
+    if (r1.width) scroller.scrollLeft += r1.left + fx * r1.width - cx;
     zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
     zoomOutBtn.disabled = zoom <= ZOOMS[0];
     zoomInBtn.disabled = zoom >= ZOOMS[ZOOMS.length - 1];

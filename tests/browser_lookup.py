@@ -305,6 +305,32 @@ def main():
         pg.wait_for_timeout(700)
         ck("กลับมาใช้ Mapping แล้วไม่มีคำเตือนเจอน้อย", "เจอแค่" in pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"), False)
 
+        print("\n── ⑭ คอลัมน์ผลเลือกได้ทีละตัว ──")
+        # ‼️ 07/10/2026 พี่ปอนด์: ไม่อยากเพิ่ม หรือมีคอลัมน์นั้นอยู่แล้ว ทำยังไง
+        res = pg.locator(".lk-keys").nth(2).locator("select")
+        ck("มีตัวเลือกคอลัมน์ผล 4 ตัว ค่าเริ่มต้นคอลัมน์ใหม่", [res.nth(i).input_value() for i in range(res.count())], ["new"] * 4)
+        pg.locator("button").filter(has_text="ไม่ใส่เลย").click()
+        res.nth(2).select_option("new")
+        pg.wait_for_timeout(700)
+        p1 = download(pg, "ดาวน์โหลดไฟล์ที่เติมแล้ว")
+        v1 = openpyxl.load_workbook(p1, data_only=True)["2026"]
+        ck("เอาแค่ เติมแล้ว: ต่อคอลัมน์เดียวที่ R ไม่มี S", [v1["R2"].value, v1["S2"].value], ["เติมแล้ว", None])
+        ck("ค่า Yes/No ตรงกับที่คำนวณอิสระ", [v1.cell(r, 18).value for r in sorted(PER)], ["No" if PER[r][0] == "none" else "Yes" for r in sorted(PER)])
+        res.nth(2).select_option("16")       # Q: Clearing Doc. คอลัมน์ที่มีอยู่แล้ว
+        pg.wait_for_timeout(700)
+        p2 = download(pg, "ดาวน์โหลดไฟล์ที่เติมแล้ว")
+        v2 = openpyxl.load_workbook(p2, data_only=True)["2026"]
+        ck("ลงคอลัมน์ที่มีอยู่แล้ว: Q ได้ Yes/No หัวเดิมไม่เปลี่ยน และไม่ต่อคอลัมน์ใหม่",
+           [v2["Q2"].value, v2["R2"].value, [v2.cell(r, 17).value for r in sorted(PER)]],
+           ["Clearing Doc.", None, ["No" if PER[r][0] == "none" else "Yes" for r in sorted(PER)]])
+        res.nth(0).select_option("6")        # ชนคอลัมน์คีย์ G Mapping
+        pg.wait_for_timeout(600)
+        ck("คอลัมน์ผลชนคอลัมน์คีย์ ขึ้นเตือนและปิดปุ่มดาวน์โหลด",
+           ["คอลัมน์ผลการหาลงคอลัมน์ซ้ำกัน" in pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"),
+            pg.locator("button").filter(has_text="ดาวน์โหลดไฟล์ที่เติมแล้ว").first.is_disabled()], [True, True])
+        pg.locator("button").filter(has_text="ใส่ทั้งหมด").click()
+        pg.wait_for_timeout(600)
+
         print("\n── ⑥ เขียนกลับทับไฟล์เดิม (มือจับจำลองบน OPFS) ──")
         b.close()
         b = pw.chromium.launch()

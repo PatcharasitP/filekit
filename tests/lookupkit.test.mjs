@@ -233,5 +233,19 @@ const AY4 = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.wid
   addon: { ...addon, tag: null, src: () => "16" } });
 ck("แถว Addon ได้ Yes และเลขแถวไฟล์รองที่มา", AY4.aoa[6].slice(4, 8), ["เพิ่มจากไฟล์รอง", null, "Yes", "16"]);
 
+console.log("\n━━ ⑯ คอลัมน์ผลเลือกได้ทีละตัว: ไม่ใส่ / คอลัมน์ใหม่ / คอลัมน์ที่มีอยู่แล้ว ━━");
+/* ‼️ 07/10/2026 พี่ปอนด์: ถ้าไม่อยากเพิ่ม หรือมีคอลัมน์นั้นอยู่แล้ว (ชื่อไม่เหมือน) ล่ะ
+   dest ต่อคอลัมน์: "new" = ใหม่ท้ายตาราง (ชื่อเดียวกันมีอยู่แล้วใช้ของเดิม) , "none" = ไม่ใส่ , เลข = ลงคอลัมน์นั้น */
+const AP = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }],
+  status: { ...ST4, dest: ["none", "none", "new", "none"] } });
+ck("เลือกเอาแค่ เติมแล้ว: ต่อคอลัมน์เดียว", [AP.aoa[1].slice(4), AP.statusCols], [["เติมแล้ว"], [null, null, 4, null]]);
+ck("แถวได้แค่ Yes/No ไม่มีคอลัมน์อื่นงอก", [AP.aoa[2].slice(4), AP.aoa[5].slice(4)], [["Yes"], ["No"]]);
+const AQ = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }],
+  status: { ...ST4, dest: ["none", "none", 2, "none"] } });
+ck("ลง Yes/No ในคอลัมน์ที่มีอยู่แล้ว (C Note) ไม่ต่อคอลัมน์ใหม่ ไม่เขียนหัว", [AQ.aoa[1].length, AQ.aoa[1][2], AQ.aoa[2][2], AQ.aoa[5][2]], [4, "Note", "Yes", "No"]);
+const AN0 = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }],
+  status: { ...ST4, dest: ["none", "none", "none", "none"] } });
+ck("ไม่ใส่ทั้งหมด = ไม่มีคอลัมน์ผลเลย", [AN0.aoa[1].length, AN0.edits.filter((e) => e.c >= 4).length], [4, 0]);
+
 console.log(`\n${F.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ ${F.length ? `ตก ${F.length} ข้อ` : ""}`);
 if (F.length) { console.log("\n" + F.join("\n") + "\n"); process.exit(1); }

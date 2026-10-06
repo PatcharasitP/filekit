@@ -171,16 +171,19 @@ export function addonKeyCells(mainKeyCols, secKeyCols, secRow) {
  *   dests     = ปลายทางเรียงตาม pullCols: { col: เลขคอลัมน์ในไฟล์หลัก } หรือ { col: null, name: "ชื่อคอลัมน์ใหม่" }
  *   fill      = "empty" เติมเฉพาะช่องที่ยังว่าง (ไม่ทับของเดิม) · "always" ทับเสมอ
  *   status    = ถ้าให้ { label(perRow) → ข้อความ, head: [ชื่อคอลัมน์ผล, ชื่อคอลัมน์จำนวนที่เจอ, (เติมแล้ว), (ค่ามาจากแถว)],
- *               src(perRow) → ข้อความเลขแถวไฟล์รอง } จะต่อคอลัมน์ผลท้ายตาราง
+ *               src(perRow) → ข้อความเลขแถวไฟล์รอง, dest: ปลายทางทีละคอลัมน์ } จะต่อคอลัมน์ผลท้ายตาราง
+ *               dest[i] = "new" ต่อท้าย (ชื่อเดียวกันมีอยู่แล้วใช้ของเดิม) , "none" ไม่ใส่ , เลข = ลงคอลัมน์นั้นของไฟล์หลัก (ไม่มี dest = new ทุกตัว)
  *               คอลัมน์ที่ 3 = Yes/No แถวนี้ได้ค่าจากไฟล์รองไหม (เขียนรอบนี้ หรือของเดิมเท่ากับค่าจากไฟล์รองอยู่แล้ว)
  *   addon     = เพิ่มแถวใหม่ท้ายตาราง (แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี)
  *               { at: ตำแหน่งแถวแรกใน aoa, rows: [{ keys: [[คอลัมน์, ค่า]], vals: ค่าเรียงตาม dests }],
  *                 tag: { col } | { col: null, name } พร้อม value = ป้ายเช่น "Addon 10/2026" (null = ไม่ใส่ป้าย),
  *                 label: (row) → ข้อความในคอลัมน์ผล }
  */
+const statusDest = (status, i) => (status.dest && status.dest[i] != null ? status.dest[i] : "new");
+
 export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill = "empty", status = null, addon = null }) {
   const out = aoa.map((r) => r.slice());
-  const need = width + dests.filter((d) => d.col == null).length + (status ? status.head.length : 0) + (addon && addon.tag && addon.tag.col == null ? 1 : 0);
+  const need = width + dests.filter((d) => d.col == null).length + (status ? status.head.filter((_, i) => statusDest(status, i) === "new").length : 0) + (addon && addon.tag && addon.tag.col == null ? 1 : 0);
   for (const r of out) while (r.length < need) r.push(null);
   // edits = ทุกช่องที่เปลี่ยนจริง (ตำแหน่งในตาราง เริ่ม 0) ไว้ให้ xlsxpatch แก้เฉพาะช่องเหล่านี้ในไฟล์ต้นฉบับ
   const edits = [];
@@ -199,7 +202,11 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
   if (status) {
     // ‼️ ถ้าไฟล์นี้เคยถูกเติมมาแล้ว (มีคอลัมน์ผลอยู่) ใช้ของเดิม ไม่ต่อซ้ำทุกครั้งที่ทำ
     // ‼️ ทีละคอลัมน์: ไฟล์ที่บันทึกจากรุ่นก่อนมีแค่ 2 คอลัมน์แรก ต่อเฉพาะคอลัมน์ที่ยังไม่มี ไม่ต่อซ้ำทั้งชุด
-    statusCols = status.head.map((h) => {
+    // ‼️ (07/10/2026) เลือกได้ทีละคอลัมน์ ไม่อยากได้ = ไม่ใส่ มีคอลัมน์ของตัวเองอยู่แล้ว = ลงคอลัมน์นั้น
+    statusCols = status.head.map((h, i) => {
+      const d = statusDest(status, i);
+      if (d === "none") return null;
+      if (d !== "new") return d;
       const at = out[headerIdx].findIndex((x) => normHead(x) === normHead(h));
       if (at >= 0) return at;
       put(headerIdx, next, h);
@@ -219,7 +226,9 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
   const stat = { filled: 0, keptOld: 0, keptOldDiff: 0, emptyFromSec: 0, cellsByCol: cols.map(() => 0), added: 0 };
   result.perRow.forEach((p, k) => {
     const row = out[rowIdx[k]];
-    if (statusCols) { put(rowIdx[k], statusCols[0], status.label(p)); put(rowIdx[k], statusCols[1], p.n); }
+    const S = statusCols || [];
+    if (S[0] != null) put(rowIdx[k], S[0], status.label(p));
+    if (S[1] != null) put(rowIdx[k], S[1], p.n);
     let got = 0;      // ช่องที่ได้ค่าจากไฟล์รอง (เขียนรอบนี้ หรือของเดิมเท่ากันอยู่แล้ว)
     if (p.vals) p.vals.forEach((v, j) => {
       if (v == null) { stat.emptyFromSec++; return; }
@@ -231,17 +240,18 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
       }
       put(rowIdx[k], c, v); stat.filled++; stat.cellsByCol[j]++; got++;
     });
-    if (statusCols && statusCols.length > 2) put(rowIdx[k], statusCols[2], got ? "Yes" : "No");
-    if (statusCols && statusCols.length > 3 && status.src) { const t = status.src(p); if (t) put(rowIdx[k], statusCols[3], t); }
+    if (S[2] != null) put(rowIdx[k], S[2], got ? "Yes" : "No");
+    if (S[3] != null && status.src) { const t = status.src(p); if (t) put(rowIdx[k], S[3], t); }
   });
   if (addon) {
     addon.rows.forEach((a, n) => {
       const i = addon.at + n;
       for (const [c, v] of a.keys) if (!isBlank(v)) put(i, c, v);
       a.vals.forEach((v, j) => { if (v != null && !isBlank(v)) put(i, cols[j], v); });
-      if (statusCols && addon.label) put(i, statusCols[0], addon.label(a));
-      if (statusCols && statusCols.length > 2) put(i, statusCols[2], "Yes");
-      if (statusCols && statusCols.length > 3 && addon.src) { const t = addon.src(a); if (t) put(i, statusCols[3], t); }
+      const S = statusCols || [];
+      if (S[0] != null && addon.label) put(i, S[0], addon.label(a));
+      if (S[2] != null) put(i, S[2], "Yes");
+      if (S[3] != null && addon.src) { const t = addon.src(a); if (t) put(i, S[3], t); }
       if (tagCol != null && !isBlank(addon.tag.value)) put(i, tagCol, addon.tag.value);
       stat.added++;
     });

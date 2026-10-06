@@ -262,7 +262,22 @@ export function mount(tool) {
     ["empty", tr("เติมเฉพาะช่องว่าง", "Only empty cells")],
     ["always", tr("ทับของเดิมด้วย", "Overwrite too")],
   ], "empty");
-  const statusSw = el("input", { type: "checkbox", checked: true, "aria-label": tr("เพิ่มคอลัมน์ผลการหาท้ายตาราง", "Add result columns at the end") });
+  /* ── คอลัมน์ผลการหา เลือกได้ทีละคอลัมน์ ─────────────────────────────────
+   * ‼️ (07/10/2026 พี่ปอนด์) เดิมเป็นสวิตช์เดียวเปิดปิดทั้งชุด อยากได้แค่บางคอลัมน์ไม่ได้
+   *    และถ้าไฟล์มีคอลัมน์ของตัวเองอยู่แล้วแต่ชื่อไม่ตรง จะได้คอลัมน์ใหม่ซ้อนขึ้นมา
+   *    ตอนนี้แต่ละคอลัมน์เลือก ไม่ใส่ / คอลัมน์ใหม่ / คอลัมน์ที่มีอยู่แล้ว ชื่อเหมือนหรือใกล้กันจับคู่ให้เอง */
+  const STATUS_HEAD = [tr("ผลการหา", "Lookup result"), tr("เจอในไฟล์รองกี่แถว", "Rows found in source"),
+    tr("เติมแล้ว", "Filled"), tr("ค่ามาจากแถวในไฟล์รอง", "Taken from source row")];
+  const STATUS_HINT = [tr("เจอ 1 แถว, ไม่เจอ, เจอ 2 แถว (ค่าต่างกัน)", "Found in 1 row, Not found, ..."), tr("ตัวเลข เช่น 0, 1, 2", "A number like 0, 1, 2"),
+    tr("Yes หรือ No ไว้กดฟิลเตอร์", "Yes or No, handy for filtering"), tr("เลขแถวตาม Excel เช่น 7, 8", "Excel row numbers like 7, 8")];
+  let userStatus = false;
+  const statusSel = STATUS_HEAD.map((h) => {
+    const s = select([["new", "-"]], "new");
+    s.onchange = () => { userStatus = true; refresh(); };
+    return s;
+  });
+  const setAllStatus = (v) => { userStatus = true; statusSel.forEach((s) => { s.value = v; }); refresh(); };
+  const statusBox = el("div", { class: "lk-keys" }, statusSel.map((s, i) => field(STATUS_HEAD[i], s, STATUS_HINT[i])));
 
   /* ── แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี → เพิ่มเป็นแถวใหม่ (Addon) ─────────────
    * ปิดไว้เป็นค่าเริ่มต้น เพราะการเพิ่มแถวลงไฟล์จริงของบริษัทต้องเป็นการตัดสินใจของคนใช้เอง */
@@ -309,8 +324,14 @@ export function mount(tool) {
     fillSel,
     el("p", { class: "lk-note" }, tr("ช่องที่มีแต่เว้นวรรคถือว่าว่าง เติมได้ ช่องที่เป็นสูตรไม่ถูกทับ",
       "Cells holding only spaces count as empty. Formula cells are never overwritten")),
-    sw(tr("เพิ่มคอลัมน์ผลการหาท้ายตาราง", "Add result columns at the end"), statusSw,
-      tr("บอกทุกแถวว่าเจอไหม เจอกี่แถว เติมแล้วไหม (Yes/No) และค่ามาจากแถวไหนของไฟล์รอง", "Says on every row whether it was found, in how many source rows, whether it was filled (Yes/No) and which source row the values came from")),
+    el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("คอลัมน์ผลการหา", "Result columns")),
+    el("p", { class: "lk-sub" }, tr("เลือกทีละคอลัมน์ ไม่ใส่ หรือต่อท้ายตาราง หรือลงคอลัมน์ที่มีอยู่แล้ว (ทับค่าเดิมทุกแถว)",
+      "Per column: leave out, add at the end, or write into an existing column (overwrites every row)")),
+    el("div", { class: "lk-mini" }, [
+      button(tr("ใส่ทั้งหมด", "Add all"), { ghost: true, onclick: () => setAllStatus("new") }),
+      button(tr("ไม่ใส่เลย", "None"), { ghost: true, onclick: () => setAllStatus("none") }),
+    ]),
+    statusBox,
     el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("แถวที่ไฟล์หลักยังไม่มี", "Rows the main file does not have yet")),
     addonInfo,
     sw(tr("เพิ่มเป็นแถวใหม่ท้ายไฟล์หลัก (Addon)", "Add them as new rows at the end (Addon)"), addonSw),
@@ -441,6 +462,17 @@ export function mount(tool) {
       ...(mt ? mt.header.map((h, c) => [String(c), `${colLetter(c)}: ${h}`]) : [])]
       .forEach(([v, t]) => tagCol.appendChild(el("option", { value: v }, t)));
     tagCol.value = [...tagCol.options].some((o) => o.value === keepTag) ? keepTag : "new";
+    // คอลัมน์ผล: ตัวเลือกตามหัวตารางไฟล์หลัก ค่าเริ่มต้น = คอลัมน์ชื่อเหมือนหรือใกล้กันถ้ามี ไม่มีก็คอลัมน์ใหม่
+    statusSel.forEach((sel, i) => {
+      const keep = sel.value;
+      sel.innerHTML = "";
+      [["new", tr("คอลัมน์ใหม่ท้ายตาราง", "New column at the end")], ["none", tr("ไม่ใส่", "Leave out")],
+        ...(mt ? mt.header.map((h, c) => [String(c), `${colLetter(c)}: ${h}`]) : [])]
+        .forEach(([v, t]) => sel.appendChild(el("option", { value: v }, t)));
+      const guess = mt ? bestDest(STATUS_HEAD[i], mt.header) : -1;
+      const want = userStatus ? keep : guess >= 0 ? String(guess) : "new";
+      sel.value = [...sel.options].some((o) => o.value === want) ? want : "new";
+    });
     if (mt && stt) buildPullList(reguess && !userPull);
     else { pullBox.innerHTML = ""; pullFind.hidden = true; }
     refresh();
@@ -507,7 +539,7 @@ export function mount(tool) {
     refresh();
   }
 
-  for (const c of [caseSw, zeroSw, statusSw]) c.onchange = refresh;
+  for (const c of [caseSw, zeroSw]) c.onchange = refresh;
   dupSel.onchange = () => { dupHint.textContent = DUP_HINT[dupSel.value] || ""; refresh(); };
   dupHint.textContent = DUP_HINT[dupSel.value];
   fillSel.onchange = refresh;
@@ -529,9 +561,16 @@ export function mount(tool) {
     return { mk, sk, pull };
   }
 
+  /** ปลายทางคอลัมน์ผลทีละคอลัมน์ "new" | "none" | เลขคอลัมน์ */
+  const statusDests = () => statusSel.map((s) => (s.value === "new" || s.value === "none" ? s.value : +s.value));
+
   function problemsOf({ mk, sk, pull }, addonOn) {
     const out = [];
     const dests = pull.filter((p) => p.dest !== "new").map((p) => +p.dest);
+    const sd = statusDests().filter((d) => typeof d === "number");
+    const tc = addonOn && tagCol.value !== "new" && tagCol.value !== "none" ? [+tagCol.value] : [];
+    if (new Set(sd).size !== sd.length || sd.some((d) => mk.includes(d) || dests.includes(d) || tc.includes(d)))
+      out.push(tr("คอลัมน์ผลการหาลงคอลัมน์ซ้ำกัน หรือชนกับคีย์ คอลัมน์ที่ดึงมา หรือป้าย Addon", "A result column shares a column with another result, a key, a brought column or the Addon label"));
     if (new Set(dests).size !== dests.length) out.push(tr("มีสองคอลัมน์ลงปลายทางเดียวกัน", "Two columns go to the same destination"));
     if (dests.some((d) => mk.includes(d))) out.push(tr("ปลายทางเป็นคอลัมน์คีย์ของไฟล์หลัก จะทำให้คีย์เปลี่ยน", "A destination is a key column of the main file, that would change the keys"));
     if (!pull.length) out.push(tr("ยังไม่ได้ติ๊กคอลัมน์ที่จะดึงมาเติม", "No column ticked to bring over yet"));
@@ -597,8 +636,7 @@ export function mount(tool) {
       fill = applyFill({
         aoa: M.aoa, headerIdx: M.headerIdx, rowIdx: M.table.rowIdx, width: M.table.width, result, dests,
         fill: fillSel.value, addon,
-        status: statusSw.checked ? { head: [tr("ผลการหา", "Lookup result"), tr("เจอในไฟล์รองกี่แถว", "Rows found in source"),
-          tr("เติมแล้ว", "Filled"), tr("ค่ามาจากแถวในไฟล์รอง", "Taken from source row")], label: stLabel, src: srcRowsText } : null,
+        status: statusDests().some((d) => d !== "none") ? { head: STATUS_HEAD, dest: statusDests(), label: stLabel, src: srcRowsText } : null,
       });
     }
     last = { sp, result, fill, problems, addon, keyOpts };

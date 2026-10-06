@@ -249,7 +249,8 @@ export function mount(tool) {
     first: tr("ใช้ค่าของแถวบนสุดที่เจอ เหมือน VLOOKUP", "Uses the topmost matching row, like VLOOKUP"),
     last: tr("ใช้ค่าของแถวล่างสุดที่เจอ เหมาะกับไฟล์ที่ต่อรายการใหม่ไว้ท้าย", "Uses the bottom matching row, good when new entries are added at the end"),
     blank: tr("แถวที่ซ้ำมีค่าไม่เหมือนกัน เว้นว่างไว้ให้ตรวจเอง ถ้าเหมือนกันยังเติมให้", "If the repeated rows disagree the cell stays empty for you to check. If they agree it is filled"),
-    join: tr("เอาทุกค่าที่ต่างกันมาต่อกันในช่องเดียว เช่น TX-001; TX-002", "Puts every different value into one cell, for example TX-001; TX-002"),
+    join: tr("คีย์เดียวเจอหลายแถว ค่าต่างกันจะต่อไว้ช่องเดียว เช่น TX-001; TX-002 ค่าเหมือนกันได้ค่าเดียว",
+      "When one key matches several rows, different values are joined in one cell, like TX-001; TX-002. Equal values stay single"),
   };
   const dupSel = select([
     ["first", tr("เอาแถวแรก (เหมือน VLOOKUP)", "Take the first row (like VLOOKUP)")],
@@ -681,7 +682,8 @@ export function mount(tool) {
     if (s.dupSame + s.dupDiff) opts.push(["multi", tr(`เจอหลายแถว ${n(s.dupSame + s.dupDiff)}`, `Found in several rows ${n(s.dupSame + s.dupDiff)}`)]);
     if (s.nokey) opts.push(["nokey", tr(`คีย์ว่าง ${n(s.nokey)}`, `Empty key ${n(s.nokey)}`)]);
     if (s.secOnly) opts.push(["secOnly", tr(`มีแต่ในไฟล์รอง ${n(s.secOnly)}`, `Only in source ${n(s.secOnly)}`)]);
-    if (s.secDupKeys) opts.push(["secDup", tr(`คีย์ซ้ำในไฟล์รอง ${n(s.secDupKeys)}`, `Repeated in source ${n(s.secDupKeys)}`)]);
+    // ‼️ (07/10/2026) ไม่มีแท็บ คีย์ซ้ำในไฟล์รอง แล้ว ซ้ำกับ เจอหลายแถว ที่มองจากไฟล์หลักและบอกแถวไฟล์รองครบ
+    //    คีย์ซ้ำที่ไฟล์หลักไม่ใช้ไม่มีผลกับการเติม ยังอยู่ในชีตของรายงานที่ดาวน์โหลด
     if (!opts.some(([v]) => v === view)) view = "found";
     const seg = segmented(opts, view);
     seg.classList.add("lk-tabs");
@@ -695,7 +697,6 @@ export function mount(tool) {
     if (!last) return;
     if (view === "found") return renderFound();
     if (view === "secOnly") return renderSecOnly();
-    if (view === "secDup") return renderDups();
     return renderList(view);
   }
 
@@ -772,25 +773,6 @@ export function mount(tool) {
     ]));
     if (list.length > REVIEW_MAX) note(tr(`แสดง ${REVIEW_MAX} จาก ${list.length.toLocaleString()} แถว`, `Showing ${REVIEW_MAX} of ${list.length.toLocaleString()}`));
     if (!added) note(tr("อยากเพิ่มแถวพวกนี้เข้าไฟล์หลัก เปิด “เพิ่มเป็นแถวใหม่ท้ายไฟล์หลัก” ด้านขวา", "To add these rows to the main file, turn on “Add them as new rows” on the right"));
-  }
-
-  function renderDups() {
-    const { result } = last;
-    const list = result.secDupKeys;
-    if (!list.length) { note(tr("ไฟล์รองไม่มีคีย์ซ้ำเลย", "The source has no repeated key")); return; }
-    const sorted = list.slice().sort((a, b) => (a.agree - b.agree) || (b.mainHits - a.mainHits));
-    viewBox.appendChild(el("table", { class: "xt lk-list" }, [
-      el("thead", {}, [el("tr", {}, [
-        el("th", {}, tr("คีย์", "Key")), el("th", {}, tr("แถวในไฟล์รอง", "Source rows")),
-        el("th", {}, tr("ค่าที่ดึง", "Values")), el("th", {}, tr("ไฟล์หลักใช้", "Used by main"))])]),
-      el("tbody", {}, sorted.slice(0, REVIEW_MAX).map((d) => el("tr", {}, [
-        el("td", { class: "old lk-mono" }, d.key),
-        el("td", { class: "old" }, d.rows.map((h) => S.table.rowIdx[h] + 1).join(", ")),
-        el("td", {}, [el("span", { class: "lk-badge " + (d.agree ? "dupSame" : "dupDiff") }, d.agree ? tr("เหมือนกัน", "Equal") : tr("ต่างกัน", "Different"))]),
-        el("td", { class: "num" }, d.mainHits.toLocaleString()),
-      ]))),
-    ]));
-    if (sorted.length > REVIEW_MAX) note(tr(`แสดง ${REVIEW_MAX} จาก ${sorted.length.toLocaleString()} ค่า`, `Showing ${REVIEW_MAX} of ${sorted.length.toLocaleString()}`));
   }
 
   // ── ผลลัพธ์เป็นไฟล์ ───────────────────────────────────────────────────────

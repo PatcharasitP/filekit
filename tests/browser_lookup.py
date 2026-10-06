@@ -222,8 +222,10 @@ def main():
         # ‼️ 06/10/2026 พี่ปอนด์: ตัวอย่างผลควรโชว์ที่เจอ (ไฟล์จริงเจอ 7 จาก 23,205 เดิมเห็นแต่ “ไม่เจอ”) และ “ต้องตรวจ” ไม่สื่อ
         tabs = pg.evaluate("() => [...document.querySelectorAll('.lk-tabs .seg-item')].map(x => x.textContent)")
         n_multi = CNT["dupSame"] + CNT["dupDiff"]
-        ck("แท็บพร้อมจำนวน ไม่มีคำว่าต้องตรวจ", tabs,
-           [f"เจอ {found}", f"ไม่เจอ {CNT['none']}", f"เจอหลายแถว {n_multi}", f"มีแต่ในไฟล์รอง {len(SEC_ONLY)}", f"คีย์ซ้ำในไฟล์รอง {dup_keys}"])
+        # ‼️ 07/10/2026 พี่ปอนด์ถามว่า เจอหลายแถว กับ คีย์ซ้ำในไฟล์รอง ซ้ำซ้อนไหม ฟ้าเคาะรวมเหลือแท็บเดียว
+        #    (คีย์ซ้ำที่ไฟล์หลักไม่ใช้ไม่มีผลกับการเติม ยังอยู่ในรายงานที่ดาวน์โหลด)
+        ck("แท็บพร้อมจำนวน ไม่มีคำว่าต้องตรวจ และไม่มีแท็บคีย์ซ้ำในไฟล์รองซ้อน", tabs,
+           [f"เจอ {found}", f"ไม่เจอ {CNT['none']}", f"เจอหลายแถว {n_multi}", f"มีแต่ในไฟล์รอง {len(SEC_ONLY)}"])
         table_rows = lambda: pg.evaluate("""() => [...document.querySelectorAll('.xt-wrap table tbody tr')].map(tr => [...tr.children].map(td => td.textContent))""")
         pg.locator(".lk-tabs .seg-item").filter(has_text="เจอ ").first.click()
         pg.wait_for_timeout(400)

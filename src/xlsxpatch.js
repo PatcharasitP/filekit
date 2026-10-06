@@ -233,7 +233,10 @@ export async function patchXlsx(JSZip, buf, sheetName, edits, opts = {}) {
       let s = old ? attr(old.open, "s") : null;
       let body;
       const v = e.v;
-      if (v instanceof Date) {
+      // ‼️ (07/10/2026) null = ล้างช่อง คงสไตล์เดิม (ใช้ล้างเลขแถวที่ค้างจากรอบก่อนในคอลัมน์ผล)
+      if (v == null) {
+        body = `<c r="${ref}"${s != null ? ` s="${s}"` : ""}/>`;
+      } else if (v instanceof Date) {
         if (Number.isNaN(v.getTime())) continue;
         if (styles) {
           if (s == null || !styles.isDate(+s)) { s = String(styles.dateStyleFor(s == null ? 0 : +s)); stat.dateStyles++; }

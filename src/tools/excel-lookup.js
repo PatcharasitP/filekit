@@ -281,7 +281,7 @@ export function mount(tool) {
     s.onchange = () => { userStatus = true; syncNames(); refresh(); };
     statusName[i].oninput = refresh;
   });
-  const setAllStatus = (v) => { userStatus = true; statusSel.forEach((s) => { s.value = v; }); syncNames(); refresh(); };
+  const setAllStatus = (v) => { userStatus = true; statusSel.forEach((s) => { s.value = v; }); pointToExisting(); syncNames(); refresh(); };
   const statusBox = el("div", { class: "lk-keys" }, statusSel.map((s, i) => el("div", {}, [
     field(STATUS_HEAD[i], s, STATUS_HINT[i]),
     field(tr("ชื่อคอลัมน์ใหม่", "New column name"), statusName[i]), statusNote[i],
@@ -485,6 +485,7 @@ export function mount(tool) {
       const want = userStatus ? keep : guess >= 0 ? String(guess) : "new";
       sel.value = [...sel.options].some((o) => o.value === want) ? want : "new";
     });
+    pointToExisting();
     syncNames();
     if (mt && stt) buildPullList(reguess && !userPull);
     else { pullBox.innerHTML = ""; pullFind.hidden = true; }
@@ -579,6 +580,21 @@ export function mount(tool) {
   const nameOf = (input, fallback) => input.value.trim() || fallback;
   /** คอลัมน์ของไฟล์หลักที่ชื่อนี้ (ตรงเป๊ะ ไม่สนตัวพิมพ์) ไม่มี = -1 */
   const headAt = (name) => (M.table ? M.table.header.findIndex((h) => normHead(h) === normHead(name)) : -1);
+
+  /** “คอลัมน์ใหม่” ที่ชื่อมีอยู่แล้วในไฟล์ = เปลี่ยนช่องเลือกให้ชี้คอลัมน์เดิมเลย
+   *  ‼️ (07/10/2026 ภาพจากพี่ปอนด์) เดิมช่องเลือกขึ้น “คอลัมน์ใหม่ท้ายตาราง” แต่ข้างล่างบอก “จะเขียนทับลง BT” ขัดกันเอง
+   *     เรียกตอนเปิดไฟล์และตอนกดใส่ทั้งหมด ไม่เรียกระหว่างพิมพ์ชื่อ (ไม่งั้นช่องที่กำลังพิมพ์หายกลางคัน) */
+  function pointToExisting() {
+    statusSel.forEach((s, i) => {
+      if (s.value !== "new") return;
+      const at = headAt(nameOf(statusName[i], STATUS_HEAD[i]));
+      if (at >= 0) s.value = String(at);
+    });
+    if (tagCol.value === "new") {
+      const at = headAt(nameOf(tagName, "Addon"));
+      if (at >= 0) tagCol.value = String(at);
+    }
+  }
 
   /** ช่องชื่อโผล่เฉพาะตอนเลือกคอลัมน์ใหม่ */
   function syncNames() {
@@ -714,12 +730,7 @@ export function mount(tool) {
     const lines = [];
     let cls = "";
     if (problems.length) { lines.push(...problems.map((p) => `<b>${esc(p)}</b>`)); cls = " bad"; }
-    if (s.secDupKeys) {
-      lines.push(tr(
-        `ไฟล์รองมีคีย์ซ้ำ <b>${s.secDupKeys.toLocaleString()}</b> ค่า ถูกไฟล์หลักใช้จริง <b>${s.secDupKeysHit.toLocaleString()}</b> ค่า`,
-        `The source repeats <b>${s.secDupKeys.toLocaleString()}</b> keys, <b>${s.secDupKeysHit.toLocaleString()}</b> of them are used by the main file`));
-      if (s.dupDiff) { lines.push(tr(`มี <b>${s.dupDiff.toLocaleString()}</b> แถวที่คีย์ซ้ำและข้อมูลที่ดึงไม่เหมือนกัน ดูแท็บ “เจอหลายแถว” ก่อนใช้`, `<b>${s.dupDiff.toLocaleString()}</b> rows have a repeated key with different data. Check the “Found in several rows” tab before using`)); cls = cls || " warn"; }
-    }
+    // ‼️ (07/10/2026 พี่ปอนด์สั่งเอาออก) ข้อความคีย์ซ้ำในไฟล์รองไม่ได้ใช้ ชิปเจอซ้ำกับแท็บเจอหลายแถวบอกครบแล้ว
     // ‼️ คีย์ว่างเกินครึ่ง: สาเหตุที่เจอจริงคือคีย์เป็นสูตรในไฟล์ที่ไม่เคยถูก Excel บันทึก (เช่นสร้างจากสคริปต์) สูตรจึงไม่มีค่าที่คำนวณไว้
     //    SheetJS ไม่สร้างเซลล์นั้นให้เลยจึงแยกไม่ได้ว่าเป็นสูตรหรือว่างจริง ต้องบอกสาเหตุที่เป็นไปได้ ไม่ใช่ให้ผู้ใช้เดาเอง
     if (s.total && s.nokey > s.total / 2) {
@@ -1022,8 +1033,9 @@ export function mount(tool) {
       lastSave = { orig, handle, meta: { size: back.size, lastModified: back.lastModified }, name: M.file.name };
       let msg = bad.length
         ? tr(`เขียนแล้ว แต่อ่านกลับมาไม่ตรง ${bad.length} ช่อง กดย้อนกลับได้`, `Written, but ${bad.length} cells read back different. You can undo`)
-        : tr(`บันทึกลง ${M.file.name} แล้ว เติม ${out.patch.stat.written.toLocaleString()} ช่อง อ่านกลับจากไฟล์แล้วตรงทุกช่อง`,
-             `Saved into ${M.file.name}, ${pl(out.patch.stat.written.toLocaleString(), "cell", "cells")} filled, all read back correctly from the file`);
+        // ‼️ (07/10/2026) นับเฉพาะช่องข้อมูลที่เติม ไม่นับคอลัมน์ผลที่เขียนทุกแถว (ไฟล์จริงเคยขึ้น 23,241 ทั้งที่เติม 28)
+        : tr(`บันทึกลง ${M.file.name} แล้ว เติม ${last.fill.stat.filled.toLocaleString()} ช่อง อ่านกลับจากไฟล์แล้วตรงทุกช่อง`,
+             `Saved into ${M.file.name}, ${pl(last.fill.stat.filled.toLocaleString(), "cell", "cells")} filled, all read back correctly from the file`);
       if (last.fill.stat.added) msg += tr(`, เพิ่มแถวใหม่ ${last.fill.stat.added.toLocaleString()} แถว`, `, ${pl(last.fill.stat.added.toLocaleString(), "new row", "new rows")} added`);
       if (out.patch.stat.skippedFormula) msg += tr(`, ข้าม ${out.patch.stat.skippedFormula.toLocaleString()} ช่องที่เป็นสูตร`, `, skipped ${pl(out.patch.stat.skippedFormula.toLocaleString(), "formula cell", "formula cells")}`);
       (bad.length ? st.err : st.ok)(msg);

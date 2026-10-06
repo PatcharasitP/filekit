@@ -255,7 +255,11 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
       put(rowIdx[k], c, v); stat.filled++; stat.cellsByCol[j]++; got++;
     });
     if (S[2] != null) put(rowIdx[k], S[2], got ? "Yes" : "No");
-    if (S[3] != null && status.src) { const t = status.src(p); if (t) put(rowIdx[k], S[3], t); }
+    if (S[3] != null && status.src) {
+      const t = status.src(p);
+      // ‼️ (07/10/2026) รอบนี้ไม่ได้ใช้แถวไหน แต่ช่องมีเลขแถวค้างจากรอบก่อน = ล้างออก ไม่งั้นบอกผิดว่าค่ามาจากแถวนั้น
+      if (t) put(rowIdx[k], S[3], t); else if (!isBlank(row[S[3]])) put(rowIdx[k], S[3], null);
+    }
   });
   if (addon) {
     addon.rows.forEach((a, n) => {

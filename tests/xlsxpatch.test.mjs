@@ -158,6 +158,13 @@ const gap = await patchXlsx(JSZip, orig, "2026", [{ r: 2, c: 19, v: "ห่า�
 const sgap = await (await JSZip.loadAsync(gap.bytes)).file("xl/worksheets/sheet1.xml").async("string");
 ck("หัวคอลัมน์ใหม่ที่ไม่ติดกัน (T2 เว้น R S) ฟิลเตอร์ไม่ขยับ", (sgap.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A2:Q20");
 
+// ‼️ 07/10/2026 ค่า null = ล้างช่อง (คงสไตล์เดิม) ใช้ล้างเลขแถวที่ค้างจากรอบก่อนในคอลัมน์ผล
+const cl = await patchXlsx(JSZip, orig, "2026", [{ r: 3, c: 0, v: null }, { r: 12, c: 14, v: null }]);
+const scl = await (await JSZip.loadAsync(cl.bytes)).file("xl/worksheets/sheet1.xml").async("string");
+const wcl = XLSX.read(cl.bytes, { type: "array" }).Sheets["2026"];
+ck("ค่า null ล้างช่อง A3 กับ O12 (OLD-001) ให้ว่าง", [wcl["A3"]?.v, wcl["O12"]?.v], [undefined, undefined]);
+ck("ช่องที่ล้างคงสไตล์เดิม (O12 s=5) และไม่มีค่า", /<c r="O12" s="5"\/>/.test(scl), true);
+
 console.log("\n━━ ⑦ ตาราง Excel (Format as Table) ต้องขยายตามแถวใหม่ ━━");
 const tb = readFileSync(join(ROOT, "tests/fixtures/lookup-table.xlsx"));
 const tp = await patchXlsx(JSZip, tb, "T", [{ r: 5, c: 0, v: "K9" }, { r: 5, c: 1, v: "TX-9" }], { appendFrom: 5, styleRow: 4 });

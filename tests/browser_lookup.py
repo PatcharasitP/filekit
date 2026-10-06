@@ -154,7 +154,9 @@ def main():
         ck("เจอซ้ำค่าต่างกัน", next((c for c in ch if "ค่าต่างกัน" in c), None), f"เจอซ้ำค่าต่างกัน {CNT['dupDiff']} แถว")
         banner = pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''")
         dup_keys = sum(1 for v in SRC_IDX.values() if len(v) > 1)
-        ck("ไฟล์รองมีคีย์ซ้ำกี่ค่า", f"คีย์ซ้ำ {dup_keys} ค่า" in banner.replace("ไฟล์รองมี", ""), True)
+        # ‼️ 07/10/2026 พี่ปอนด์สั่งเอาออก ข้อความคีย์ซ้ำในกล่องสรุปไม่ได้ใช้ (มีชิปเจอซ้ำกับแท็บเจอหลายแถวอยู่แล้ว)
+        ck("ข้อประชากร: ไฟล์ทดสอบมีคีย์ซ้ำจริง และชิปเจอซ้ำค่าต่างกันยังอยู่", [dup_keys > 0, any("ค่าต่างกัน" in c for c in ch)], [True, True])
+        ck("กล่องสรุปไม่มีข้อความคีย์ซ้ำทั้งสองบรรทัดแล้ว", ["คีย์ซ้ำ" in banner, "ดูแท็บ" in banner], [False, False])
         ck("บอกจำนวนแถวไฟล์รองที่คีย์ #N/A (ข้าม 2 แถว)", "2 แถว" in banner and "ข้าม" in banner, True)
 
         print("\n── ③ ไฟล์ที่ดาวน์โหลด: สิ่งที่ต้องอยู่ครบและสิ่งที่ต้องถูกเติม ──")
@@ -427,11 +429,14 @@ def main():
 
         # ปล่อยล็อก แล้วบันทึกจริง
         pg.evaluate("() => { window.__failClose = false; }")
+        will = next((c for c in chips(pg) if c.startswith("จะเติม")), "")
         click_btn(pg, "บันทึกลงไฟล์หลักเดิม")
         pg.locator("button:visible").filter(has_text="กดอีกครั้งเพื่อเขียนทับ").first.click()
         pg.wait_for_timeout(3500)
         msg = pg.evaluate("() => document.querySelector('.status')?.textContent || ''")
         ck("บันทึกสำเร็จและอ่านกลับจากไฟล์แล้วตรงทุกช่อง", "อ่านกลับจากไฟล์แล้วตรงทุกช่อง" in msg or msg, True)
+        # ‼️ 07/10/2026 ไฟล์จริงขึ้น “เติม 23,241 ช่อง” ทั้งที่ชิปบอกจะเติม 28 ช่อง (นับคอลัมน์ผลทุกแถวรวมไปด้วย)
+        ck("จำนวนช่องที่บอกหลังบันทึก ตรงกับชิป จะเติม N ช่อง", [bool(will), will.replace("จะเติม", "เติม") in msg], [True, True])
         saved = TMP / "saved-in-place.xlsx"
         saved.write_bytes(opfs_bytes())
         sf = openpyxl.load_workbook(saved)["2026"]
@@ -548,6 +553,30 @@ def main():
         p4.wait_for_timeout(1500)
         ck("ข้อประชากร: เจอ 8 แถวจริง", next((c for c in chips(p4) if c.startswith("เจอ ")), None), "เจอ 8 แถว")
         ck("ไม่ขึ้นเตือนเจอน้อย (เจอ 8 จาก 13 คีย์ของไฟล์รอง)", "เจอแค่" in p4.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"), False)
+
+        print("\n── ⑰ ไฟล์ที่มีคอลัมน์ผลอยู่แล้ว ช่องเลือกต้องชี้คอลัมน์เดิม ไม่ขึ้นว่าคอลัมน์ใหม่ ──")
+        # ‼️ 07/10/2026 ภาพจากพี่ปอนด์: ช่องเลือกบอก “คอลัมน์ใหม่ท้ายตาราง” แต่ข้างล่างบอก “จะเขียนทับลง BT” ขัดกันเอง
+        had = openpyxl.load_workbook(MAIN); hw = had["2026"]
+        hw["R2"] = "เติมแล้ว"; hw["S2"] = "Addon"
+        had.save(TMP / "main-had-cols.xlsx")
+        p5 = ctx2.new_page()
+        fkui.open_tool(p5, "excel-lookup", base)
+        p5.locator(".dz input[type=file]").nth(0).set_input_files(str(TMP / "main-had-cols.xlsx"))
+        p5.wait_for_timeout(1500)
+        p5.locator(".dz input[type=file]").nth(1).set_input_files(str(SRC))
+        p5.wait_for_timeout(1500)
+        rs = p5.locator(".lk-keys").nth(2).locator("select")
+        ck("ตอนเปิดไฟล์: เติมแล้ว ชี้คอลัมน์เดิม R", rs.nth(2).input_value(), "17")
+        p5.locator("button").filter(has_text="ไม่ใส่เลย").click()
+        p5.locator("button").filter(has_text="ใส่ทั้งหมด").click()
+        p5.wait_for_timeout(600)
+        ck("กดใส่ทั้งหมด: เติมแล้ว ยังชี้คอลัมน์เดิม R ช่องชื่อซ่อน ไม่มีข้อความทับคอลัมน์",
+           [rs.nth(2).input_value(), p5.locator(".lk-keys").nth(2).locator("input[type=text]").nth(2).is_visible(),
+            p5.evaluate("() => [...document.querySelectorAll('.lk-keys')[2].querySelectorAll('.lk-note')].some(n => !n.hidden)")],
+           ["17", False, False])
+        p5.locator(".lk-switch").filter(has_text="Addon").locator("input").check()
+        p5.wait_for_timeout(600)
+        ck("ป้าย Addon ชี้คอลัมน์ Addon เดิม (S) ไม่ขึ้นว่าคอลัมน์ใหม่", p5.locator(".lk-addon select").input_value(), "18")
         p3.bring_to_front()
 
         ck("ค้นไม่เจอบอกตรง ๆ","ไม่มีคอลัมน์ที่ชื่อมี" in p3.evaluate("() => [...document.querySelectorAll('.lk-note')].filter(n => !n.hidden).map(n => n.textContent).join(' ')"), True)

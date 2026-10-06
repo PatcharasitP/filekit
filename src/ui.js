@@ -1299,7 +1299,7 @@ export function dropzone(opts = {}) {
           title: tr("เลื่อนขึ้น", "Move up"), disabled: i === 0 || null, onclick: () => move(-1) }, "↑") : null,
         canReorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
           title: tr("เลื่อนลง", "Move down"), disabled: i === files.length - 1 || null, onclick: () => move(1) }, "↓") : null,
-        el("button", { class: "icon-btn danger", type: "button", title: tr("เอาออก", "Remove"),
+        el("button", { class: "icon-btn danger file-x", type: "button", title: tr("เอาออก", "Remove"),
           "aria-label": tr(`เอา ${f.name} ออก`, `Remove ${f.name}`), onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),
       ]);
       list.appendChild(row);

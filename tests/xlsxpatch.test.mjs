@@ -115,5 +115,44 @@ let same = true;
 for (const name of Object.keys(zo.files)) if (!zo.files[name].dir && (await zo.file(name).async("string")) !== (await zz.file(name).async("string"))) same = false;
 ck("ไม่มีคำสั่งแก้ ทุกไฟล์ใน zip เหมือนเดิม", same, true);
 
+/* ── รอบ 06/10/2026 เพิ่มแถวใหม่ท้ายตาราง (Addon) ──────────────────────────────
+   แถวใหม่ต้องหน้าตาเหมือนแถวข้อมูลแถวสุดท้าย (สไตล์วันที่ ตัวเลข) และต้องอยู่ในช่วงฟิลเตอร์
+   ไม่งั้นพี่กดฟิลเตอร์แล้วแถวใหม่ไม่ถูกกรอง (Excel กรองเฉพาะในช่วง ref) */
+console.log("\n━━ ⑥ ต่อแถวใหม่ท้ายตาราง ━━");
+const add = [
+  { r: 21, c: 6, v: "10682619999999" }, { r: 21, c: 13, v: D(2026, 10, 6) }, { r: 21, c: 14, v: "TX-NEW" },
+  { r: 22, c: 6, v: "10682619999998" },
+];
+const ap = await patchXlsx(JSZip, orig, "2026", add, { appendFrom: 21, styleRow: 20 });
+const za = await JSZip.loadAsync(ap.bytes);
+const sa = await za.file("xl/worksheets/sheet1.xml").async("string");
+const wa = XLSX.read(ap.bytes, { type: "array" }).Sheets["2026"];
+ck("ค่าในแถวใหม่อ่านกลับตรง", [wa["G21"]?.v, wa["N21"]?.v, wa["O21"]?.v, wa["G22"]?.v], ["10682619999999", 46301, "TX-NEW", "10682619999998"]);
+ck("ช่องวันที่ของแถวใหม่ได้สไตล์เดียวกับแถว 20 (s=3)", /<c r="N21" s="3"><v>/.test(sa), true);
+ck("ช่องที่ไม่ได้เขียนแต่แถว 20 มีสไตล์ ก็มีสไตล์ด้วย (C21 วันที่, K21 ตัวเลข) และไม่มีค่า", [/<c r="C21" s="3"\/>/.test(sa), /<c r="K21" s="4"\/>/.test(sa)], [true, true]);
+ck("ไม่ลอกสูตรจากแถวต้นแบบ (G21 เป็นค่า ไม่ใช่สูตร)", /<c r="G21"[^>]*>(?:(?!<\/c>).)*<f/.test(sa), false);
+ck("styles ไม่ถูกแตะ (ใช้สไตล์เดิมได้)", (await za.file("xl/styles.xml").async("string")) === (await zo.file("xl/styles.xml").async("string")), true);
+ck("ฟิลเตอร์ขยายครอบแถวใหม่", (sa.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A2:Q22");
+const wba = await za.file("xl/workbook.xml").async("string");
+ck("ชื่อช่วงฟิลเตอร์ที่ Excel ซ่อนไว้ขยายตาม", (wba.match(/_xlnm\._FilterDatabase"[^>]*>([^<]*)</) || [])[1], "'2026'!$A$2:$Q$22");
+ck("ขอบเขตชีตขยายถึงแถว 22", (sa.match(/<dimension ref="([^"]*)"/) || [])[1], "A1:Q22");
+ck("แถวใหม่ไม่ถูกซ่อน", /<row r="2[12]"[^>]*hidden/.test(sa), false);
+const plain = await patchXlsx(JSZip, orig, "2026", [{ r: 3, c: 14, v: "x" }]);
+const sp0 = await (await JSZip.loadAsync(plain.bytes)).file("xl/worksheets/sheet1.xml").async("string");
+ck("ไม่ได้ต่อแถว ฟิลเตอร์ไม่ขยับ", (sp0.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A2:Q20");
+
+// แถวต่อท้ายไปตกบนแถวที่มีอยู่แล้ว (ไฟล์จริงมีแถวว่างที่จัดรูปแบบรอไว้) ฟิลเตอร์ก็ต้องขยาย
+const pre = await patchXlsx(JSZip, orig, "2026", [{ r: 21, c: 13, v: "x" }]);              // ทำให้มีแถว 21 อยู่ก่อน
+const ov = await patchXlsx(JSZip, pre.bytes, "2026", [{ r: 21, c: 6, v: "K" }], { appendFrom: 21, styleRow: 20 });
+const sov = await (await JSZip.loadAsync(ov.bytes)).file("xl/worksheets/sheet1.xml").async("string");
+ck("แถวต่อท้ายที่มีอยู่แล้วในไฟล์ ฟิลเตอร์ก็ขยาย", (sov.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A2:Q21");
+
+console.log("\n━━ ⑦ ตาราง Excel (Format as Table) ต้องขยายตามแถวใหม่ ━━");
+const tb = readFileSync(join(ROOT, "tests/fixtures/lookup-table.xlsx"));
+const tp = await patchXlsx(JSZip, tb, "T", [{ r: 5, c: 0, v: "K9" }, { r: 5, c: 1, v: "TX-9" }], { appendFrom: 5, styleRow: 4 });
+const tx = await (await JSZip.loadAsync(tp.bytes)).file("xl/tables/table1.xml").async("string");
+ck("ช่วงตารางขยายจาก A1:C4 เป็น A1:C5", (tx.match(/<table\b[^>]*\sref="([^"]*)"/) || [])[1], "A1:C5");
+ck("ฟิลเตอร์ในตารางขยายตาม", (tx.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A1:C5");
+
 console.log(`\n${F.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ ${F.length ? `ตก ${F.length} ข้อ` : ""}`);
 if (F.length) { console.log("\n" + F.join("\n") + "\n"); process.exit(1); }

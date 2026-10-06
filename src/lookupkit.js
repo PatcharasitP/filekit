@@ -91,9 +91,11 @@ export function lookup({ mainRows, mainKeyCols, secRows, secKeyCols, pullCols, k
   const { map: idx, blank: secBlank } = buildIndex(secRows, secKeyCols, keyOpts);
   const stats = { total: mainRows.length, nokey: 0, none: 0, one: 0, dupSame: 0, dupDiff: 0, withheld: 0 };
   const mainHits = new Map();     // คีย์ → มีกี่แถวของไฟล์หลักมาใช้คีย์นี้
+  const mainKeys = new Set();     // ทุกคีย์ของไฟล์หลัก ไว้หาแถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี
   const perRow = mainRows.map((r) => {
     const key = keyOf(r, mainKeyCols, keyOpts);
     if (key == null) { stats.nokey++; return { status: "nokey", n: 0, hits: [], vals: null, key: null }; }
+    mainKeys.add(key);
     const hits = idx.get(key);
     if (!hits) { stats.none++; return { status: "none", n: 0, hits: [], vals: null, key }; }
     mainHits.set(key, (mainHits.get(key) || 0) + 1);
@@ -126,7 +128,36 @@ export function lookup({ mainRows, mainKeyCols, secRows, secKeyCols, pullCols, k
   stats.secBlankKeys = secBlank;
   stats.secDupKeys = secDupKeys.length;
   stats.secDupKeysHit = secDupKeys.filter((d) => d.mainHits > 0).length;
-  return { perRow, stats, secDupKeys };
+  // ‼️ (06/10/2026) แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี เช่นใบกำกับใหม่ พี่ปอนด์อยากเพิ่มเป็นแถว Addon ท้ายไฟล์หลัก
+  //    เก็บทุกแถว (คีย์ซ้ำในไฟล์รองก็ได้ครบทุกแถว เพราะเป็นคนละรายการกัน) คีย์ว่างหรือ error ไม่เอา
+  const secOnly = [];
+  const secOnlyKeys = new Set();
+  for (const [key, rows] of idx) {
+    if (mainKeys.has(key)) continue;
+    secOnlyKeys.add(key);
+    secOnly.push(...rows);
+  }
+  secOnly.sort((a, b) => a - b);
+  stats.secOnly = secOnly.length;
+  stats.secOnlyKeys = secOnlyKeys.size;
+  return { perRow, stats, secDupKeys, secOnly };
+}
+
+/** ค่าคีย์ของแถวใหม่ (Addon) ลงคอลัมน์คีย์ของไฟล์หลัก คืน [[คอลัมน์ไฟล์หลัก, ค่า]] หรือ null ถ้าแยกไม่ได้
+ *  จำนวนคอลัมน์เท่ากัน = จับคู่ทีละคอลัมน์ (เก็บค่าเดิม เลขยังเป็นเลข)
+ *  ไฟล์หลักมีคอลัมน์เดียว = ต่อค่าของไฟล์รองเป็นข้อความเดียว (เหมือนสูตร A&F)
+ *  ไฟล์หลักหลายคอลัมน์แต่ไฟล์รองน้อยกว่า = แยกข้อความที่ต่อกันแล้วกลับไม่ได้ */
+export function addonKeyCells(mainKeyCols, secKeyCols, secRow) {
+  if (mainKeyCols.length === secKeyCols.length) return mainKeyCols.map((c, i) => [c, secRow[secKeyCols[i]] ?? null]);
+  if (mainKeyCols.length !== 1) return null;
+  const text = secKeyCols.map((c) => {
+    const v = secRow[c];
+    if (v == null) return "";
+    if (typeof v === "number") return numText(v);
+    if (v instanceof Date) return normKey(v) ?? "";
+    return String(v).trim();
+  }).join("");
+  return [[mainKeyCols[0], text]];
 }
 
 /**
@@ -135,14 +166,22 @@ export function lookup({ mainRows, mainKeyCols, secRows, secKeyCols, pullCols, k
  *   dests     = ปลายทางเรียงตาม pullCols: { col: เลขคอลัมน์ในไฟล์หลัก } หรือ { col: null, name: "ชื่อคอลัมน์ใหม่" }
  *   fill      = "empty" เติมเฉพาะช่องที่ยังว่าง (ไม่ทับของเดิม) · "always" ทับเสมอ
  *   status    = ถ้าให้ { label(perRow) → ข้อความ, head: [ชื่อคอลัมน์ผล, ชื่อคอลัมน์จำนวนที่เจอ] } จะต่อคอลัมน์ผลท้ายตาราง
+ *   addon     = เพิ่มแถวใหม่ท้ายตาราง (แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี)
+ *               { at: ตำแหน่งแถวแรกใน aoa, rows: [{ keys: [[คอลัมน์, ค่า]], vals: ค่าเรียงตาม dests }],
+ *                 tag: { col } | { col: null, name } พร้อม value = ป้ายเช่น "Addon 10/2026" (null = ไม่ใส่ป้าย),
+ *                 label: (row) → ข้อความในคอลัมน์ผล }
  */
-export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill = "empty", status = null }) {
+export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill = "empty", status = null, addon = null }) {
   const out = aoa.map((r) => r.slice());
-  const need = width + dests.filter((d) => d.col == null).length + (status ? 2 : 0);
+  const need = width + dests.filter((d) => d.col == null).length + (status ? 2 : 0) + (addon && addon.tag && addon.tag.col == null ? 1 : 0);
   for (const r of out) while (r.length < need) r.push(null);
   // edits = ทุกช่องที่เปลี่ยนจริง (ตำแหน่งในตาราง เริ่ม 0) ไว้ให้ xlsxpatch แก้เฉพาะช่องเหล่านี้ในไฟล์ต้นฉบับ
   const edits = [];
-  const put = (i, c, v) => { out[i][c] = v; edits.push({ i, c, v }); };
+  const put = (i, c, v) => {
+    while (out.length <= i) out.push(new Array(need).fill(null));
+    while (out[i].length <= c) out[i].push(null);
+    out[i][c] = v; edits.push({ i, c, v });
+  };
   let next = width;
   const cols = dests.map((d) => {
     if (d.col != null) return d.col;
@@ -158,9 +197,20 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
       statusCols = [next, next + 1];
       put(headerIdx, next, status.head[0]);
       put(headerIdx, next + 1, status.head[1]);
+      next += 2;
     }
   }
-  const stat = { filled: 0, keptOld: 0, keptOldDiff: 0, emptyFromSec: 0, cellsByCol: cols.map(() => 0) };
+  let tagCol = null;
+  if (addon && addon.tag) {
+    if (addon.tag.col != null) tagCol = addon.tag.col;
+    else {
+      // ไฟล์ที่เคยเพิ่ม Addon มาแล้วมีคอลัมน์ป้ายอยู่ ใช้ของเดิม เหมือนคอลัมน์ผล
+      const at = out[headerIdx].findIndex((x) => normHead(x) === normHead(addon.tag.name));
+      if (at >= 0) tagCol = at;
+      else { tagCol = next++; put(headerIdx, tagCol, addon.tag.name); }
+    }
+  }
+  const stat = { filled: 0, keptOld: 0, keptOldDiff: 0, emptyFromSec: 0, cellsByCol: cols.map(() => 0), added: 0 };
   result.perRow.forEach((p, k) => {
     const row = out[rowIdx[k]];
     if (statusCols) { put(rowIdx[k], statusCols[0], status.label(p)); put(rowIdx[k], statusCols[1], p.n); }
@@ -176,7 +226,17 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
       put(rowIdx[k], c, v); stat.filled++; stat.cellsByCol[j]++;
     });
   });
-  return { aoa: out, stat, cols, statusCols, edits };
+  if (addon) {
+    addon.rows.forEach((a, n) => {
+      const i = addon.at + n;
+      for (const [c, v] of a.keys) if (!isBlank(v)) put(i, c, v);
+      a.vals.forEach((v, j) => { if (v != null && !isBlank(v)) put(i, cols[j], v); });
+      if (statusCols && addon.label) put(i, statusCols[0], addon.label(a));
+      if (tagCol != null && !isBlank(addon.tag.value)) put(i, tagCol, addon.tag.value);
+      stat.added++;
+    });
+  }
+  return { aoa: out, stat, cols, statusCols, tagCol, edits };
 }
 
 // ── ช่วยหน้าจอเดาค่าเริ่มต้น ─────────────────────────────────────────────────
@@ -189,6 +249,21 @@ export function colLetter(i) {
 }
 
 export const normHead = (h) => String(h ?? "").replace(INVISIBLE, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+/** ชื่อหัวแบบหลวม: ตัดจุด วงเล็บ ขีด เว้นวรรค เหลือแต่ตัวอักษรกับตัวเลข
+ *  ‼️ (06/10/2026) พี่ปอนด์ถามว่า "ถ้าสองไฟล์เขียนชื่อต่างกันล่ะ" เช่น Tax Inv. Date (SM) กับ Tax Inv Date SM
+ *  ‼️ ต้องเก็บ \p{M} ไว้ด้วย สระบนล่างและวรรณยุกต์ไทยเป็นเครื่องหมายกำกับ ถ้าตัดทิ้ง “วันที่” จะเหลือ “วนท” */
+export const looseHead = (h) => normHead(h).replace(/[^\p{L}\p{M}\p{N}]/gu, "");
+
+/** คอลัมน์ของไฟล์หลักที่ชื่อตรงกับ name: ตรงเป๊ะก่อน แล้วค่อยชื่อหลวม ไม่เจอ = -1 */
+export function bestDest(name, mainHead) {
+  const n = normHead(name);
+  if (!n) return -1;
+  const exact = mainHead.findIndex((h) => normHead(h) === n);
+  if (exact >= 0) return exact;
+  const l = looseHead(name);
+  return l ? mainHead.findIndex((h) => looseHead(h) === l) : -1;
+}
 
 /** เดาแถวหัวตาราง จากแถวบน ๆ ที่มีช่องข้อความมากที่สุด
  *  ‼️ ไฟล์จริงของพี่ปอนด์มีแถว 1 เป็นยอดรวม (ตัวเลข 18, 74,611.95) หัวตารางจริงอยู่แถว 2
@@ -224,9 +299,7 @@ export function guessPullCols(mainHead, mainRows, secHead, skipSecCols = [], emp
   const out = [];
   secHead.forEach((sh, j) => {
     if (skipSecCols.includes(j)) return;
-    const n = normHead(sh);
-    if (!n) return;
-    const c = mainHead.findIndex((mh) => normHead(mh) === n);
+    const c = bestDest(sh, mainHead);
     if (c < 0 || !mainRows.length) return;
     const blank = mainRows.filter((r) => isBlank(r[c])).length;
     if (blank / mainRows.length >= emptyRatio) out.push({ sec: j, main: c });

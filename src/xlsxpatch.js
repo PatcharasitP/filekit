@@ -86,22 +86,48 @@ function styleBook(xml) {
   };
 }
 
-/** หาไฟล์ XML ของชีตที่ชื่อนี้ผ่าน workbook.xml + rels (ไม่เดาจากเลขลำดับ เพราะชีตที่ถูกลบ/สลับที่ทำให้เลขไม่ตรง) */
+/** หาไฟล์ XML ของชีตที่ชื่อนี้ผ่าน workbook.xml + rels (ไม่เดาจากเลขลำดับ เพราะชีตที่ถูกลบ/สลับที่ทำให้เลขไม่ตรง)
+ *  คืน path ของชีต พร้อมลำดับชีต (localSheetId ของชื่อช่วงที่ผูกกับชีตนี้) */
 async function sheetPathOf(zip, sheetName) {
   const wbXml = await zip.file("xl/workbook.xml").async("string");
-  let rid = null;
+  let rid = null, index = -1, n = 0;
   for (const m of wbXml.matchAll(/<sheet\b[^>]*>/g)) {
-    if (attr(m[0], "name") === sheetName) { rid = (m[0].match(/\s[\w]*:?id="([^"]*)"/g) || []).map((x) => x.match(/"([^"]*)"/)[1]); break; }
+    if (attr(m[0], "name") === sheetName) { rid = (m[0].match(/\s[\w]*:?id="([^"]*)"/g) || []).map((x) => x.match(/"([^"]*)"/)[1]); index = n; break; }
+    n++;
   }
   if (!rid) throw new Error(`ไม่พบชีต “${sheetName}” ในไฟล์`);
   const rels = await zip.file("xl/_rels/workbook.xml.rels").async("string");
   for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) {
     if (rid.includes(attr(m[0], "Id"))) {
       const t = attr(m[0], "Target");
-      return t.startsWith("/") ? t.slice(1) : "xl/" + t.replace(/^\.\//, "");
+      return { path: resolvePart("xl/workbook.xml", t), index };
     }
   }
   throw new Error("หาไฟล์ของชีตไม่เจอ");
+}
+
+/** path เต็มใน zip ของเป้าหมายใน rels (เทียบกับโฟลเดอร์ของไฟล์ที่อ้าง รองรับ ../ และ path ที่ขึ้นต้นด้วย /) */
+function resolvePart(from, target) {
+  if (target.startsWith("/")) return target.slice(1);
+  const parts = from.split("/").slice(0, -1);
+  for (const seg of target.split("/")) {
+    if (seg === "..") parts.pop();
+    else if (seg && seg !== ".") parts.push(seg);
+  }
+  return parts.join("/");
+}
+
+const parseRef = (ref) => {
+  const m = String(ref).replace(/\$/g, "").match(/^([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/);
+  return m ? { c0: m[1], r0: +m[2], c1: m[3] || m[1], r1: +(m[4] || m[2]) } : null;
+};
+
+/** ขยายช่วง (ฟิลเตอร์ ตาราง) ให้ครอบแถวใหม่ เฉพาะช่วงที่เดิมจบตรงแถวข้อมูลสุดท้ายหรือเลยไปแล้ว
+ *  ช่วงที่จบก่อนนั้น (ตารางย่อยกลางชีต) ไม่ใช่ของตารางนี้ ไม่แตะ */
+function grownRef(ref, lastOld, newLast) {
+  const p = parseRef(ref);
+  if (!p || p.r1 < lastOld || p.r1 >= newLast) return null;
+  return `${p.c0}${p.r0}:${p.c1}${newLast}`;
 }
 
 function parseRows(xml, from, to) {
@@ -141,10 +167,14 @@ function parseCells(inner) {
  * edits = [{ r: แถว (เริ่ม 1 ตามเลขแถวใน Excel), c: คอลัมน์ (เริ่ม 0), v: ค่า }]
  * คืน { bytes, stat: { written, skippedFormula, dateStyles }, applied: [{r,c,v}], skipped: [{r,c}] }
  *   ช่องที่มีสูตรอยู่ ไม่ถูกทับเด็ดขาด (นับใน skippedFormula) เพราะช่องที่ "ดูว่าง" แต่ในสูตรคืนค่าว่างมีของอยู่จริง
+ * opts.appendFrom = แถวแรกที่เป็นแถวต่อท้ายใหม่ (เพิ่มแถว Addon) opts.styleRow = แถวต้นแบบ (แถวข้อมูลสุดท้าย)
+ *   แถวใหม่ได้สไตล์ทุกช่องจากแถวต้นแบบ (ไม่ลอกค่า ไม่ลอกสูตร ไม่ลอกการซ่อน)
+ *   และขยายช่วงฟิลเตอร์ ชื่อช่วงฟิลเตอร์ที่ Excel ซ่อนไว้ กับตาราง Excel ให้ครอบแถวใหม่
+ *   ‼️ ไม่ขยายช่วงพวกนี้ แถวใหม่จะหลุดจากฟิลเตอร์ กดกรองแล้วไม่ถูกกรอง (Excel กรองเฉพาะในช่วง ref)
  */
-export async function patchXlsx(JSZip, buf, sheetName, edits) {
+export async function patchXlsx(JSZip, buf, sheetName, edits, opts = {}) {
   const zip = await JSZip.loadAsync(buf);
-  const path = await sheetPathOf(zip, sheetName);
+  const { path, index: sheetIndex } = await sheetPathOf(zip, sheetName);
   const xml = await zip.file(path).async("string");
   const wbXml = await zip.file("xl/workbook.xml").async("string");
   const date1904 = /<workbookPr\b[^>]*\sdate1904="(1|true)"/.test(wbXml);
@@ -177,10 +207,25 @@ export async function patchXlsx(JSZip, buf, sheetName, edits) {
   let maxR = 0, maxC = 0;
 
   const rowMap = new Map(rows.map((r) => [r.num, r]));
+  const { appendFrom = 0, styleRow = 0 } = opts;
+  const tpl = appendFrom && styleRow && rowMap.get(styleRow)
+    ? parseCells(rowMap.get(styleRow).inner || "").map((c) => ({ col: c.col, s: attr(c.open, "s") })).filter((c) => c.s != null)
+    : [];
+  let lastNew = 0;
   for (const [num, list] of byRow) {
     let row = rowMap.get(num);
+    const fresh = !row;
     if (!row) { row = { num, open: `<row r="${num}">`, inner: "", raw: null, isNew: true }; rowMap.set(num, row); }
     const cells = parseCells(row.inner || "");
+    if (fresh && appendFrom && num >= appendFrom) {
+      // แถวใหม่ท้ายตาราง: ช่องว่างที่มีสไตล์ตามแถวต้นแบบ แล้วช่องที่เขียนจะคงสไตล์นั้นต่อเอง (เหมือนช่องที่มีอยู่แล้ว)
+      for (const t of tpl) cells.push({ col: t.col, open: `<c s="${t.s}"/>`, xml: `<c r="${colLetter(t.col)}${num}" s="${t.s}"/>` });
+      maxR = Math.max(maxR, num);
+      if (tpl.length) maxC = Math.max(maxC, ...tpl.map((t) => t.col));
+    }
+    // ‼️ นับแถวต่อท้ายทุกแถว ไม่ใช่เฉพาะแถวที่สร้างใหม่ ไฟล์จริงมักมีแถวว่างที่จัดรูปแบบรอไว้ใต้ตาราง
+    //    แถวใหม่ไปตกบนแถวพวกนั้น ถ้าไม่นับ ฟิลเตอร์จะไม่ขยาย
+    if (appendFrom && num >= appendFrom) lastNew = Math.max(lastNew, num);
     for (const e of list) {
       const ref = `${colLetter(e.c)}${num}`;
       const old = cells.find((x) => x.col === e.c);
@@ -225,6 +270,48 @@ export async function patchXlsx(JSZip, buf, sheetName, edits) {
       const c1 = lettersToCol(m[3] || m[1]), r1 = +(m[4] || m[2]);
       const nc = Math.max(c1, maxC), nr = Math.max(r1, maxR);
       if (nc !== c1 || nr !== r1) out = out.replace(dim[0], dim[0].replace(dim[1], `${c0}${r0}:${colLetter(nc)}${nr}`));
+    }
+  }
+
+  // ขยายฟิลเตอร์ ชื่อช่วงฟิลเตอร์ และตาราง Excel ให้ครอบแถวใหม่
+  if (lastNew) {
+    const lastOld = appendFrom - 1;
+    out = out.replace(/<autoFilter\b[^>]*\sref="([^"]*)"/, (m, ref) => {
+      const g = grownRef(ref, lastOld, lastNew);
+      return g ? m.replace(`ref="${ref}"`, `ref="${g}"`) : m;
+    });
+    const wbPath = "xl/workbook.xml";
+    const wbx = await zip.file(wbPath).async("string");
+    const wbNew = wbx.replace(/(<definedName\b[^>]*name="_xlnm\._FilterDatabase"[^>]*>)([^<]*)(<\/definedName>)/g, (m, open, body, close) => {
+      if (+attr(open, "localSheetId") !== sheetIndex) return m;
+      const bang = body.lastIndexOf("!");
+      if (bang < 0) return m;
+      const g = grownRef(body.slice(bang + 1), lastOld, lastNew);
+      if (!g) return m;
+      const abs = g.replace(/([A-Z]+)(\d+)/g, "$$$1$$$2");
+      return open + body.slice(0, bang + 1) + abs + close;
+    });
+    if (wbNew !== wbx) zip.file(wbPath, wbNew, { createFolders: false });
+    const relsPath = path.replace(/([^/]+)$/, "_rels/$1.rels");
+    const relsFile = zip.file(relsPath);
+    if (relsFile) {
+      const rels = await relsFile.async("string");
+      for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) {
+        if (!/\/table"?$/.test(attr(m[0], "Type") || "")) continue;
+        const tPath = resolvePart(path, attr(m[0], "Target"));
+        const tf = zip.file(tPath);
+        if (!tf) continue;
+        const tx = await tf.async("string");
+        const open = (tx.match(/<table\b[^>]*>/) || [])[0];
+        // ตารางที่มีแถวผลรวมท้ายตาราง ต่อแถวหลังแถวผลรวมไม่ได้ ไม่แตะ
+        if (!open || +(attr(open, "totalsRowCount") || 0) > 0) continue;
+        const g = grownRef(attr(open, "ref"), lastOld, lastNew);
+        if (!g) continue;
+        const old = attr(open, "ref");
+        const tNew = tx.replace(open, open.replace(`ref="${old}"`, `ref="${g}"`))
+          .replace(/(<autoFilter\b[^>]*\sref=")([^"]*)(")/, (mm, a, ref, b) => a + (grownRef(ref, lastOld, lastNew) || ref) + b);
+        zip.file(tPath, tNew, { createFolders: false });
+      }
     }
   }
 

@@ -1,4 +1,9 @@
-import { normKey, keyOf, lookup, applyFill, colLetter, guessHeaderRow, guessKeyPair, guessPullCols, tableFromAoa, numText } from "../src/lookupkit.js";
+import * as LK from "../src/lookupkit.js";
+const { normKey, keyOf, lookup, applyFill, colLetter, guessHeaderRow, guessKeyPair, guessPullCols, tableFromAoa, numText } = LK;
+// ฟังก์ชันรอบ 06/10 ดึงแบบนี้ เพื่อให้รุ่นที่ยังไม่มีฟังก์ชันล้มเป็นข้อ ❌ ทีละข้อ ไม่ใช่ล้มทั้งไฟล์
+const missing = (name) => () => `(ยังไม่มี ${name})`;
+const looseHead = LK.looseHead || missing("looseHead"), bestDest = LK.bestDest || missing("bestDest");
+const addonKeyCells = LK.addonKeyCells || missing("addonKeyCells");
 
 let pass = 0; const F = [];
 const ck = (name, got, want) => {
@@ -134,6 +139,70 @@ const mainRows = [
 ];
 ck("ติ๊กเฉพาะคอลัมน์ที่ไฟล์หลักว่างรอเติม ไม่ติ๊ก Company Code ที่มีข้อมูลเต็ม",
   guessPullCols(mh, mainRows, sh, [1]).map((x) => [x.sec, x.main]), [[2, 5], [3, 4], [4, 6]]);
+
+/* ── รอบ 06/10/2026 พี่ปอนด์ลองกับไฟล์จริงแล้วขอเพิ่ม ─────────────────────────
+   คีย์ต่อได้มากกว่า 2 คอลัมน์, ชื่อหัวสองไฟล์เขียนไม่เหมือนกันเป๊ะ, ช่องที่มีแต่เว้นวรรค,
+   แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี ให้เพิ่มเป็นแถวใหม่ท้ายไฟล์หลักพร้อมป้าย Addon */
+
+console.log("\n━━ ⑨ ชื่อหัวไม่ตรงเป๊ะ (จุด วงเล็บ เว้นวรรค ตัวพิมพ์) ━━");
+ck("Tax Inv. Date (SM) = tax inv date sm", looseHead("Tax Inv. Date (SM)"), looseHead("tax inv date sm"));
+ck("สระและวรรณยุกต์ไทยไม่ถูกตัดทิ้ง", looseHead("วันที่ ใบกำกับ"), "วันที่ใบกำกับ");
+ck("ชื่อต่างกันจริงยังต่างกัน", looseHead("Tax Inv. Date") === looseHead("Tax Inv. No"), false);
+ck("หาปลายทาง: ชื่อหลวมตรงกัน", bestDest("Tax.Inv.No (SM)", mh), 5);
+ck("หาปลายทาง: ชื่อตรงเป๊ะมาก่อนชื่อหลวม", bestDest("Doc. No.", ["DocNo", "Doc. No."]), 1);
+ck("หาปลายทาง: ไม่มีชื่อใกล้เลย = -1", bestDest("Remark", mh), -1);
+ck("เดาคอลัมน์ที่จะดึงก็ใช้ชื่อหลวมด้วย",
+  guessPullCols(mh, mainRows, ["Mapping", "tax inv no sm"], [0]).map((x) => [x.sec, x.main]), [[1, 5]]);
+
+console.log("\n━━ ⑩ คีย์ต่อกันได้มากกว่า 2 คอลัมน์ ━━");
+const R10 = lookup({ mainRows: [[1068, "A", 5], [1068, "A", 6]], mainKeyCols: [0, 1, 2],
+  secRows: [["1068a5", "X"]], secKeyCols: [0], pullCols: [1] });
+ck("รหัส+ตัวอักษร+เลข 3 คอลัมน์ ต่อกันแล้วจับคู่ได้", R10.perRow.map((p) => p.status), ["one", "none"]);
+
+console.log("\n━━ ⑪ แถวที่มีในไฟล์รองแต่ไม่มีในไฟล์หลัก ━━");
+ck("ไฟล์รองแถว 7 (10682619070000) ไม่มีในไฟล์หลัก (#N/A ไม่นับ)", R.secOnly, [6]);
+ck("นับแถวและนับคีย์", [R.stats.secOnly, R.stats.secOnlyKeys], [1, 1]);
+const R11 = lookup({ mainRows: [["k1"]], mainKeyCols: [0], secRows: [["k1", "a"], ["x", "b"], ["x", "c"], [null, "d"]], secKeyCols: [0], pullCols: [1] });
+ck("คีย์เดียวกันสองแถวในไฟล์รอง ได้ทั้งสองแถว คีย์ว่างไม่เอา", [R11.secOnly, R11.stats.secOnlyKeys], [[1, 2], 1]);
+
+console.log("\n━━ ⑫ คีย์ของแถวใหม่ลงคอลัมน์ไหน ━━");
+ck("คีย์เดียวต่อคีย์เดียว เก็บค่าเดิม (เลขยังเป็นเลข)", addonKeyCells([0], [0], [10682619070000, "TX"]), [[0, 10682619070000]]);
+ck("จำนวนเท่ากัน จับคู่ทีละคอลัมน์", addonKeyCells([0, 5], [1, 2], ["x", 1068, 2619]), [[0, 1068], [5, 2619]]);
+ck("ไฟล์หลักคีย์เดียว ไฟล์รองหลายคอลัมน์ = ต่อกันเป็นข้อความ", addonKeyCells([6], [0, 1], [1068, 2619062802]), [[6, "10682619062802"]]);
+ck("ไฟล์หลักหลายคอลัมน์ ไฟล์รองคอลัมน์เดียว แยกไม่ได้ = null", addonKeyCells([0, 1], [0], ["10682619"]), null);
+
+console.log("\n━━ ⑬ เพิ่มแถวใหม่ท้ายไฟล์หลัก (Addon) ━━");
+const addon = {
+  at: 6,
+  rows: [{ keys: [[0, "10682619070000"]], vals: ["TX-099"] }, { keys: [[0, "10682619070001"]], vals: [null] }],
+  tag: { col: null, name: "Addon", value: "Addon 10/2026" },
+  label: () => "เพิ่มจากไฟล์รอง",
+};
+const AD = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF,
+  dests: [{ col: 1 }], fill: "empty", status: { head: ["ผล", "เจอกี่แถว"], label }, addon });
+ck("แถวใหม่ต่อท้าย 2 แถว", AD.aoa.length, sheet.length + 2);
+ck("แถวใหม่แรก: คีย์ ค่าที่ดึง ผล ป้าย", [AD.aoa[6][0], AD.aoa[6][1], AD.aoa[6][4], AD.aoa[6][5], AD.aoa[6][6]],
+  ["10682619070000", "TX-099", "เพิ่มจากไฟล์รอง", null, "Addon 10/2026"]);
+ck("ค่าว่างจากไฟล์รองไม่ถูกเขียน", AD.aoa[7][1], null);
+ck("หัวคอลัมน์ป้ายต่อหลังคอลัมน์ผล", AD.aoa[1].slice(4, 7), ["ผล", "เจอกี่แถว", "Addon"]);
+ck("แถวเดิมไม่ได้ป้าย", AD.aoa[2][6], null);
+ck("สถิติเพิ่ม 2 แถว", AD.stat.added, 2);
+ck("ทุกช่องของแถวใหม่อยู่ในรายการแก้ (คีย์ 2 + ค่า 1 + ผล 2 + ป้าย 2)", AD.edits.filter((e) => e.i >= 6).length, 7);
+const AD2 = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }],
+  addon: { ...addon, tag: { col: 2, value: "Addon 06/10/2026" } } });
+ck("ป้ายลงคอลัมน์ที่มีอยู่แล้ว ไม่ต่อคอลัมน์ใหม่", [AD2.aoa[6][2], AD2.aoa[1].length], ["Addon 06/10/2026", 4]);
+const sheetA = sheet.map((r, i) => [...r, i === 1 ? "Addon" : null]);
+const AD3 = applyFill({ aoa: sheetA, headerIdx: 1, rowIdx: T.rowIdx, width: 5, result: RF, dests: [{ col: 1 }], addon });
+ck("ไฟล์ที่เคยมีคอลัมน์ Addon แล้ว ใช้คอลัมน์เดิม ไม่เขียนหัวคอลัมน์ใหม่", [AD3.aoa[6][4], AD3.edits.filter((e) => e.i === 1).length], ["Addon 10/2026", 0]);
+const AD4 = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }], addon: { ...addon, tag: null } });
+ck("ไม่ใส่ป้ายก็ได้", [AD4.aoa[6][0], AD4.aoa[1].length], ["10682619070000", 4]);
+
+console.log("\n━━ ⑭ ช่องที่มีแต่เว้นวรรค (กด Spacebar ค้างไว้) นับเป็นช่องว่าง ━━");
+const sp = [["Mapping", "No"], ["10682619062802", "   "], ["10682619062803", " "]];
+const TS = tableFromAoa(sp, 0);
+const RS = lookup({ mainRows: TS.rows, mainKeyCols: [0], secRows: sec, secKeyCols: [0], pullCols: [1] });
+const AS = applyFill({ aoa: sp, headerIdx: 0, rowIdx: TS.rowIdx, width: TS.width, result: RS, dests: [{ col: 1 }], fill: "empty" });
+ck("เว้นวรรคธรรมดาและเว้นวรรคแบบ nbsp ถูกเติมทับ", [AS.aoa[1][1], AS.aoa[2][1], AS.stat.filled, AS.stat.keptOld], ["TX-001", "TX-002", 2, 0]);
 
 console.log(`\n${F.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ ${F.length ? `ตก ${F.length} ข้อ` : ""}`);
 if (F.length) { console.log("\n" + F.join("\n") + "\n"); process.exit(1); }

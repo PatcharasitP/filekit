@@ -10,6 +10,7 @@
 # ถ้าผิดจะรู้ได้ยังไง: ทุกข้อเทียบกับค่าที่คำนวณอิสระ ข้อ ⑥ ⑦ ⑧ มีเคสของเสียที่ต้องแดงถ้ากันไม่ได้
 #
 # รัน: tests/run.sh browser_lookup
+import datetime
 import hashlib
 import os
 import pathlib
@@ -67,6 +68,32 @@ def expected():
 
 
 MAIN_ROWS, SRC_IDX, PER = expected()
+
+
+def sec_only(path):
+    """แถวของไฟล์รองที่คีย์ไม่อยู่ในไฟล์หลัก (src_row, คีย์, วันที่, เลขใบกำกับ, เลขส่งทีมภาษี) คำนวณอิสระ"""
+    keys = {k for _, k in MAIN_ROWS}
+    sw = openpyxl.load_workbook(path, data_only=True).worksheets[0]
+    out = []
+    for r in range(2, sw.max_row + 1):
+        k = sw.cell(r, 1).value
+        if k is None or str(k).startswith("#"):
+            continue
+        k = str(int(k)) if isinstance(k, (int, float)) else str(k).strip()
+        if k not in keys:
+            out.append((r, k, sw.cell(r, 2).value, sw.cell(r, 3).value, sw.cell(r, 4).value))
+    return out
+
+
+SEC_ONLY = sec_only(SRC)
+# ไฟล์รองที่มีแถวใหม่เพิ่ม 2 แถว (คีย์เป็นเลขหนึ่งแถว เป็นข้อความไม่มีวันที่อีกแถว) ไว้ทดสอบ Addon หลายแถว
+_w = openpyxl.load_workbook(SRC)
+_s = _w.worksheets[0]
+_s.append([10682619999901, datetime.datetime(2026, 6, 1), "TX-ADD1", "TT-A1", None])
+_s.append(["10682619999902", None, "TX-ADD2", None, None])
+SRC_ADD = TMP / "lookup-source-addon.xlsx"
+_w.save(SRC_ADD)
+SEC_ONLY_ADD = sec_only(SRC_ADD)
 CNT = {s: sum(1 for v in PER.values() if v[0] == s) for s in ("none", "one", "dupSame", "dupDiff")}
 
 
@@ -185,18 +212,87 @@ def main():
         pg.locator(".seg-item").filter(has_text="เติมเฉพาะช่องว่าง").click()
         pg.wait_for_timeout(500)
 
-        print("\n── ⑤ แท็บต้องตรวจ บอกเลขแถวที่ตรงกับ Excel ──")
-        pg.locator(".seg-item").filter(has_text="ต้องตรวจ").click()
-        pg.wait_for_timeout(500)
-        rows = pg.evaluate("""() => [...document.querySelectorAll('.lk-list tbody tr')].map(tr => [...tr.children].map(td => td.textContent))""")
-        want_rows = sorted(r for r, v in PER.items() if v[0] != "one")
-        ck("รายการที่ต้องตรวจ = ไม่เจอ + เจอซ้ำ ทุกแถว เลขแถวตรง Excel", sorted(int(r[0]) for r in rows), want_rows)
+        print("\n── ⑤ แท็บผลแยกกลุ่มพร้อมจำนวน แท็บแรกเป็นแถวที่เจอ เลขแถวตรง Excel ──")
+        # ‼️ 06/10/2026 พี่ปอนด์: ตัวอย่างผลควรโชว์ที่เจอ (ไฟล์จริงเจอ 7 จาก 23,205 เดิมเห็นแต่ “ไม่เจอ”) และ “ต้องตรวจ” ไม่สื่อ
+        tabs = pg.evaluate("() => [...document.querySelectorAll('.lk-tabs .seg-item')].map(x => x.textContent)")
+        n_multi = CNT["dupSame"] + CNT["dupDiff"]
+        ck("แท็บพร้อมจำนวน ไม่มีคำว่าต้องตรวจ", tabs,
+           [f"เจอ {found}", f"ไม่เจอ {CNT['none']}", f"เจอหลายแถว {n_multi}", f"มีแต่ในไฟล์รอง {len(SEC_ONLY)}", f"คีย์ซ้ำในไฟล์รอง {dup_keys}"])
+        table_rows = lambda: pg.evaluate("""() => [...document.querySelectorAll('.xt-wrap table tbody tr')].map(tr => [...tr.children].map(td => td.textContent))""")
+        pg.locator(".lk-tabs .seg-item").filter(has_text="เจอ ").first.click()
+        pg.wait_for_timeout(400)
+        ck("แท็บเจอ (ค่าเริ่มต้น) มีเฉพาะแถวที่เจอ ครบทุกแถว", sorted(int(r[0]) for r in table_rows()), sorted(r for r, v in PER.items() if v[0] != "none"))
+        pg.locator(".lk-tabs .seg-item").filter(has_text="ไม่เจอ").click()
+        pg.wait_for_timeout(400)
+        ck("แท็บไม่เจอ ครบทุกแถว", sorted(int(r[0]) for r in table_rows()), sorted(r for r, v in PER.items() if v[0] == "none"))
+        pg.locator(".lk-tabs .seg-item").filter(has_text="เจอหลายแถว").click()
+        pg.wait_for_timeout(400)
+        rows = table_rows()
+        ck("แท็บเจอหลายแถว ครบทุกแถว", sorted(int(r[0]) for r in rows), sorted(r for r, v in PER.items() if v[0] in ("dupSame", "dupDiff")))
         dr = next(r for r in rows if int(r[0]) in dd)
         ck("แถวซ้ำบอกเลขแถวของไฟล์รองที่เจอ", dr[3], ", ".join(str(h[0]) for h in PER[int(dr[0])][1]))
+        pg.locator(".lk-tabs .seg-item").filter(has_text="มีแต่ในไฟล์รอง").click()
+        pg.wait_for_timeout(400)
+        ck("แท็บมีแต่ในไฟล์รอง บอกเลขแถวของไฟล์รอง", [int(r[0]) for r in table_rows()], [s[0] for s in SEC_ONLY])
+        want_rows = sorted(r for r, v in PER.items() if v[0] != "one")
         rep = download(pg, "ดาวน์โหลดรายงาน")
         rw = openpyxl.load_workbook(rep)
-        ck("รายงานมีชีตสรุป ต้องตรวจ คีย์ซ้ำ", rw.sheetnames, ["สรุป", "ต้องตรวจ", "คีย์ซ้ำในไฟล์รอง"])
-        ck("ชีตต้องตรวจ มีครบทุกรายการ", rw["ต้องตรวจ"].max_row - 1, len(want_rows))
+        ck("รายงานมีชีตสรุป ไม่เจอและเจอหลายแถว คีย์ซ้ำ มีแต่ในไฟล์รอง", rw.sheetnames, ["สรุป", "ไม่เจอและเจอหลายแถว", "คีย์ซ้ำในไฟล์รอง", "มีแต่ในไฟล์รอง"])
+        ck("ชีตไม่เจอและเจอหลายแถว มีครบทุกรายการ", rw["ไม่เจอและเจอหลายแถว"].max_row - 1, len(want_rows))
+
+        print("\n── ⑪ เพิ่มแถวที่ไฟล์หลักไม่มีเป็นแถวใหม่ (Addon) ──")
+        pg.locator(".dz input[type=file]").nth(1).set_input_files(str(SRC_ADD))
+        pg.wait_for_timeout(1800)
+        ck("ก่อนเปิด: บอกว่ามีแต่ในไฟล์รองกี่แถว ยังไม่เพิ่ม", next((c for c in chips(pg) if "ไฟล์รอง" in c and "แถว" in c), None), f"มีแต่ในไฟล์รอง {len(SEC_ONLY_ADD)} แถว")
+        pg.locator(".lk-switch").filter(has_text="Addon").locator("input").check()
+        pg.locator(".lk-addon button").filter(has_text="วันนี้").click()
+        pg.wait_for_timeout(700)
+        ck("เปิดแล้ว: จะเพิ่มแถวใหม่ตามจำนวนที่คำนวณอิสระ", next((c for c in chips(pg) if "จะเพิ่มแถวใหม่" in c), None), f"จะเพิ่มแถวใหม่ {len(SEC_ONLY_ADD)} แถว")
+        tag = "Addon " + datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).strftime("%d/%m/%Y")
+        ck("ปุ่มวันนี้ใส่ป้ายวันที่วันนี้", pg.locator(".lk-addon input[type=text]").input_value(), tag)
+        pa = download(pg, "ดาวน์โหลดไฟล์ที่เติมแล้ว")
+        af = openpyxl.load_workbook(pa)["2026"]
+        av = openpyxl.load_workbook(pa, data_only=True)["2026"]
+        last_main = max(PER)
+        head2 = [av.cell(2, c).value for c in range(1, af.max_column + 1)]
+        tcol = head2.index("Addon") + 1 if "Addon" in head2 else None
+        scol = head2.index("ผลการหา") + 1 if "ผลการหา" in head2 else None
+        ck("มีคอลัมน์ป้าย Addon และคอลัมน์ผล", [tcol is not None, scol is not None], [True, True])
+        got = []
+        for i, (sr, key, d, no, send) in enumerate(SEC_ONLY_ADD):
+            r = last_main + 1 + i
+            dv = av.cell(r, 14).value
+            got.append((str(av.cell(r, 7).value).strip(), dv.date() if dv else None, av.cell(r, 15).value, av.cell(r, 16).value,
+                        av.cell(r, tcol).value if tcol else None, av.cell(r, scol).value if scol else None))
+        want = [(key, d.date() if d else None, no, send, tag, f"เพิ่มจากไฟล์รอง แถว {sr}") for sr, key, d, no, send in SEC_ONLY_ADD]
+        ck("แถวใหม่ต่อท้ายตาราง: คีย์ วันที่ เลขใบกำกับ เลขส่งทีมภาษี ป้าย ผล ตรงกับไฟล์รองทุกแถว", got, want)
+        ck("ไม่มีแถวเกินมา", av.max_row, last_main + len(SEC_ONLY_ADD))
+        ck("ฟิลเตอร์ขยายครอบแถวใหม่", af.auto_filter.ref, f"A2:Q{last_main + len(SEC_ONLY_ADD)}")
+        ck("ช่องวันที่ของแถวใหม่ใช้รูปแบบเดียวกับแถวบน", af.cell(last_main + 1, 14).number_format, af.cell(last_main, 14).number_format)
+        ck("สูตร Mapping ของแถวเดิมยังเป็นสูตร", str(af["G3"].value), "=A3&F3")
+        pg.locator(".lk-switch").filter(has_text="Addon").locator("input").uncheck()
+        pg.locator(".dz input[type=file]").nth(1).set_input_files(str(SRC))
+        pg.wait_for_timeout(1800)
+
+        print("\n── ⑫ คีย์ต่อกันได้หลายคอลัมน์ (เดิมตายตัว 2) ──")
+        add = pg.locator(".lk-keys").first.locator("button").filter(has_text="ต่ออีกคอลัมน์")
+        add.click(); pg.wait_for_timeout(300)
+        add = pg.locator(".lk-keys").first.locator("button").filter(has_text="ต่ออีกคอลัมน์")
+        add.click(); pg.wait_for_timeout(300)
+        ck("กดต่ออีกคอลัมน์สองครั้ง ได้ 3 ช่องคีย์", pg.locator(".lk-keys").first.locator("select").count(), 3)
+        sels = pg.locator(".lk-keys").first.locator("select")
+        sels.nth(0).select_option("0"); sels.nth(1).select_option("5")     # Company Code + Doc. No.
+        pg.locator(".lk-keys").first.locator(".lk-key button").last.click()   # เอาช่องที่ 3 ออก
+        pg.wait_for_timeout(700)
+        ck("รหัสบริษัท+เลขเอกสาร (A+F) เจอเท่ากับใช้ Mapping", chips(pg)[1], f"เจอ {found} แถว")
+        pg.locator(".lk-keys").first.locator(".lk-key button").last.click()
+        pg.locator(".lk-keys").first.locator("select").first.select_option("5")   # Doc. No. อย่างเดียว เทียบกับ Mapping ไม่มีทางเจอ
+        pg.wait_for_timeout(700)
+        bn = pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''")
+        ck("เจอน้อยผิดปกติ: โชว์หน้าตาคีย์สองฝั่งให้เทียบเอง", ["เจอแค่ 0" in bn, "2619062802" in bn, "10682619062802" in bn], [True, True, True])
+        pg.locator(".lk-keys").first.locator("select").first.select_option("6")
+        pg.wait_for_timeout(700)
+        ck("กลับมาใช้ Mapping แล้วไม่มีคำเตือนเจอน้อย", "เจอแค่" in pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"), False)
 
         print("\n── ⑥ เขียนกลับทับไฟล์เดิม (มือจับจำลองบน OPFS) ──")
         b.close()
@@ -238,7 +334,9 @@ def main():
         # โหลดไฟล์รองก่อน แล้วเปิดไฟล์หลักผ่านปุ่มแก้ตรง
         pg.locator(".dz input[type=file]").nth(1).set_input_files(str(SRC))
         pg.wait_for_timeout(1200)
-        click_btn(pg, "เปิดไฟล์หลักแบบแก้ตรง")
+        # ‼️ 06/10/2026 เลือกไฟล์หลักรอบเดียว: กดกล่องไฟล์หลักตามปกติก็ได้มือจับ ไม่มีปุ่มแยกให้เลือกซ้ำแล้ว
+        ck("ไม่มีปุ่มเลือกไฟล์หลักซ้ำอีกรอบ", pg.locator("button").filter(has_text="เปิดไฟล์หลักแบบแก้ตรง").count(), 0)
+        pg.locator(".dz-wrap").first.locator(".dz").click()      # กล่องย่อเป็นแถบเดียวในสถานะทำงาน คนจริงกดแถบนี้
         pg.wait_for_timeout(2200)
         note = pg.evaluate("() => document.querySelector('.lk-inplace')?.textContent || ''")
         ck("รู้ว่าแก้ตรงในไฟล์ได้ และเตือนเรื่อง Excel ล็อกไฟล์", "แก้ตรงในไฟล์นี้ได้" in note and "Excel" in note, True)
@@ -329,6 +427,37 @@ def main():
         bn = p2.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''")
         ck("คีย์ว่างเกินครึ่ง: บอกให้เปิดใน Excel บันทึกก่อนถ้าเป็นสูตร", "ว่างเกินครึ่ง" in bn and "เปิดไฟล์ใน Excel แล้วกดบันทึก" in bn, True)
         ck("ไฟล์ปกติที่ Excel บันทึกแล้วไม่ขึ้นคำเตือนนี้", "ว่างเกินครึ่ง" in banner, False)
+
+        print("\n── ⑬ ไฟล์รองคอลัมน์เยอะ: ค้นหาคอลัมน์ได้ และชื่อหัวไม่ตรงเป๊ะก็จับคู่ปลายทางให้ ──")
+        # ‼️ 06/10/2026 พี่ปอนด์: ควรมีให้ค้นหาไหม และถ้าสองไฟล์เขียนชื่อต่างกันจะรู้ได้ไงว่าลงคอลัมน์ไหน
+        wide = openpyxl.Workbook(); w = wide.active; w.title = "W"
+        w.append(["Mapping", "tax inv date sm", "Tax.Inv.No (SM)"] + [f"Extra {i}" for i in range(1, 7)])
+        w.append(["10682619062802", datetime.datetime(2026, 3, 27), "TX-W1"] + [i for i in range(1, 7)])
+        wide.save(TMP / "wide-src.xlsx")
+        p3 = ctx2.new_page()
+        fkui.open_tool(p3, "excel-lookup", base)
+        p3.locator(".dz input[type=file]").nth(0).set_input_files(str(MAIN))
+        p3.wait_for_timeout(1500)
+        p3.locator(".dz input[type=file]").nth(1).set_input_files(str(TMP / "wide-src.xlsx"))
+        p3.wait_for_timeout(1500)
+        rows3 = p3.evaluate("""() => [...document.querySelectorAll('.lk-pr')].map(r => ({ nm: r.querySelector('.nm').textContent,
+            on: r.classList.contains('on'), dest: r.querySelector('select').value, hint: r.querySelector('.lk-hint').textContent }))""")
+        ck("ชื่อหลวม: tax inv date sm ลง N และ Tax.Inv.No (SM) ลง O ติ๊กให้แล้ว",
+           [(r["nm"], r["on"], r["dest"]) for r in rows3[:2]], [("B: tax inv date sm", True, "13"), ("C: Tax.Inv.No (SM)", True, "14")])
+        ck("ชื่อหลวมบอกให้ตรวจอีกที", "ชื่อใกล้กัน" in rows3[0]["hint"], True)
+        ck("คอลัมน์ที่ไม่มีชื่อตรง บอกว่าจะเป็นคอลัมน์ใหม่เมื่อติ๊ก", (rows3[2]["dest"], "ไม่มีชื่อตรง" in rows3[2]["hint"]), ("new", True))
+        ck("คอลัมน์เกิน 6 มีช่องค้นหา", p3.locator(".lk-find").is_visible(), True)
+        p3.locator(".lk-find").fill("extra 4")
+        p3.wait_for_timeout(300)
+        vis = p3.evaluate("() => [...document.querySelectorAll('.lk-pr')].filter(r => !r.hidden).map(r => r.querySelector('.nm').textContent)")
+        ck("ค้นหา extra 4 เหลือแถวเดียว", vis, ["G: Extra 4"])
+        p3.locator("button").filter(has_text="ติ๊กทั้งหมด").click()
+        p3.wait_for_timeout(300)
+        on = p3.evaluate("() => [...document.querySelectorAll('.lk-pr.on .nm')].map(n => n.textContent)")
+        ck("ติ๊กทั้งหมดระหว่างค้นหา ติ๊กเฉพาะที่เห็น (ของเดิมยังติ๊ก)", on, ["B: tax inv date sm", "C: Tax.Inv.No (SM)", "G: Extra 4"])
+        p3.locator(".lk-find").fill("ไม่มีแน่นอน")
+        p3.wait_for_timeout(300)
+        ck("ค้นไม่เจอบอกตรง ๆ", "ไม่มีคอลัมน์ที่ชื่อมี" in p3.evaluate("() => [...document.querySelectorAll('.lk-note')].filter(n => !n.hidden).map(n => n.textContent).join(' ')"), True)
         b.close()
 
     ck("ไม่มี error ใน console", errs, [])

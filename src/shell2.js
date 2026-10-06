@@ -643,8 +643,11 @@ export function toolShell2(tool, cfg = {}) {
     setState((input && input.length) || tool.startsEmpty || pasting() ? "work" : "landing");
   }
   function hardReset() {
-    /* กดปุ่มลบของกล่องรับไฟล์ทุกใบ = กลับไปสถานะเริ่มต้นโดยไม่ต้องรีเฟรชหน้า */
-    for (const x of wrap.querySelectorAll(".dz-wrap .file-x, .dz-wrap .files .x")) x.click();
+    /* กดปุ่มลบของกล่องรับไฟล์ทุกใบ = กลับไปสถานะเริ่มต้นโดยไม่ต้องรีเฟรชหน้า
+     * ‼️ (แก้ 06/10/2026) เดิมหาด้วย .files .x ซึ่งไม่ใช่ชื่อปุ่มจริง เจอ 0 ปุ่ม กดเริ่มใหม่แล้วไฟล์ค้างทุกเครื่องมือ
+     *    และต้องหาใหม่ทุกรอบ เพราะกดลบแล้วกล่องวาดแถวใหม่ ปุ่มที่จับไว้ก่อนชี้เลขแถวเก่า (กล่องหลายไฟล์จะลบไม่ครบ)
+     *    tests/browser_restart.py */
+    for (let n = 0, x; n < 500 && (x = wrap.querySelector(".dz-wrap .file-x")); n++) x.click();
     leavePaste();
     manualBack = false; domResultShown = false;
     resultHost.replaceChildren();

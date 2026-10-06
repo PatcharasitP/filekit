@@ -4,7 +4,7 @@ import { tr, pl } from "../i18n.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, tablesToBlob, cellText } from "../sheetpick.js";
 import { lookup, applyFill, tableFromAoa, guessHeaderRow, guessKeyPair, guessPullCols,
-         colLetter, normHead, isBlank } from "../lookupkit.js";
+         colLetter, normHead, isBlank, bestDest, addonKeyCells, keyOf } from "../lookupkit.js";
 import { patchXlsx } from "../xlsxpatch.js";
 import { watchDrops, handleOf, pickWritable, askWrite, writeBack, canWriteInPlace } from "../fshandle.js";
 
@@ -18,6 +18,11 @@ import { watchDrops, handleOf, pickWritable, askWrite, writeBack, canWriteInPlac
  *    เช่นคอลัมน์ Mapping ที่เป็นสูตร =A&F จะกลายเป็นตัวเลขตายตัว) แต่แก้เฉพาะช่องปลายทางใน XML ของชีต
  *    (src/xlsxpatch.js) ที่เหลือคงไบต์เดิม พิสูจน์แล้วด้วย Excel จริง ดู tests/xlsxpatch.test.mjs
  * ‼️ Excel ที่เปิดไฟล์อยู่ล็อกไฟล์ เขียนทับไม่ได้ (พิสูจน์แล้ว) หน้านี้บอกให้ปิดใน Excel ก่อน และมีปุ่มดาวน์โหลดสำรองเสมอ
+ *
+ * ‼️ รอบ 06/10/2026 พี่ปอนด์ลองกับไฟล์จริงแล้วขอ
+ *    คีย์ต่อได้กี่คอลัมน์ก็ได้ (เดิมตายตัว 2), ค้นหาคอลัมน์ในรายการดึง, บอกชัดว่าแต่ละคอลัมน์ลงที่ไหนเมื่อชื่อไม่ตรงกัน,
+ *    เลือกไฟล์หลักรอบเดียวก็เขียนทับได้ (เดิมต้องเลือกซ้ำด้วยปุ่มแก้ตรง), แท็บผลแยกตามกลุ่มชัด ๆ แทนคำว่า “ต้องตรวจ”,
+ *    และแถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี เพิ่มเป็นแถวใหม่ท้ายไฟล์หลักพร้อมป้าย Addon เดือนหรือวัน
  */
 
 const STYLE = `
@@ -39,13 +44,31 @@ const STYLE = `
 .lk-pull{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:2px}
 .lk-pr{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;padding:7px 9px;
   border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-soft)}
+.lk-pr[hidden]{display:none}
 .lk-pr.on{border-color:var(--g-data,var(--brand))}
 .lk-pr input[type=checkbox]{width:18px;height:18px}
 .lk-pr .nm{font-size:13px;color:var(--text);word-break:break-word}
-.lk-pr select{grid-column:2;min-height:32px;font-size:12.5px}
-.lk-pr:not(.on) select{display:none}
-.lk-mini{display:flex;gap:8px}
+.lk-dest{grid-column:2;display:flex;align-items:center;gap:6px;min-width:0}
+.lk-dest > span{font-size:12px;color:var(--text-mute);white-space:nowrap}
+.lk-dest select{flex:1;min-width:0;min-height:32px;font-size:12.5px;font-family:inherit;padding:4px 8px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card,var(--bg-soft));color:var(--text)}
+.lk-dest select:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.lk-pr:not(.on) .lk-dest{display:none}
+.lk-pr .lk-hint{grid-column:2;font-size:11.5px;color:var(--text-mute);line-height:1.5}
+.lk-pr.on .lk-hint{display:none}
+.lk-find{width:100%;min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--bg-soft);color:var(--text);font-size:13px}
+.lk-find:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.lk-mini{display:flex;gap:8px;flex-wrap:wrap}
 .lk-mini .btn{font-size:12px;padding:4px 10px}
+.lk-keys{display:flex;flex-direction:column;gap:6px}
+.lk-key{display:flex;align-items:flex-end;gap:6px}
+.lk-key .field{flex:1;min-width:0;margin:0}
+.lk-key .btn{flex:none;min-height:36px;padding:4px 8px}
+.lk-add{align-self:flex-start;font-size:12px;padding:4px 10px}
+.lk-note{font-size:12px;color:var(--text-mute);line-height:1.6;margin:-2px 0 0}
+.lk-addon{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:var(--r-sm)}
+.lk-addon[hidden]{display:none}
 .lk-banner{border:1px solid var(--line);border-left:3px solid var(--g-data,var(--brand));border-radius:var(--r-sm);
   background:var(--bg-soft);padding:10px 13px;font-size:13px;line-height:1.75;color:var(--text);margin:0 0 12px}
 .lk-banner.warn{border-left-color:var(--warn,#d99a00)}
@@ -56,7 +79,8 @@ const STYLE = `
 .lk-badge.dupSame{border-color:#b8860b}
 .lk-badge.dupDiff,.lk-badge.none{border-color:var(--bad,#d64545);color:var(--bad,#d64545)}
 .lk-badge.nokey{color:var(--text-mute)}
-.lk-tabs{margin-bottom:12px}
+.lk-tabs{margin-bottom:12px;flex-wrap:wrap}
+.lk-tabs .seg-item{flex:0 1 auto}
 td.lk-chg{font-weight:700;background:color-mix(in srgb,var(--g-data,var(--brand)) 14%,transparent)}
 td.lk-mono{font-variant-numeric:tabular-nums;white-space:nowrap}
 .lk-list td small{color:var(--text-mute);display:block}
@@ -138,8 +162,23 @@ export function mount(tool) {
   mainSheetF.hidden = secSheetF.hidden = mainHeadF.hidden = secHeadF.hidden = true;
 
   const inplaceBox = el("div", { class: "lk-inplace", hidden: true });
-  const pickBtn = button(tr("เปิดไฟล์หลักแบบแก้ตรงในไฟล์ได้", "Open the main file for direct editing"), { icon: "upload", ghost: true, onclick: pickMain });
-  pickBtn.hidden = !canWriteInPlace();
+  /* ‼️ เลือกไฟล์หลักรอบเดียวก็เขียนทับได้ (พี่ปอนด์ 06/10/2026 “ทำให้ต้องเลือกไฟล์ 2 รอบ”)
+   *    กล่องรับไฟล์กลางเปิดหน้าต่างเลือกไฟล์แบบเก่า (input type=file) ซึ่งไม่ให้มือจับไฟล์ เขียนกลับไม่ได้
+   *    เดิมจึงมีปุ่มแยก “เปิดไฟล์หลักแบบแก้ตรง” ให้เลือกซ้ำอีกรอบ
+   *    ตอนนี้ดักการกดกล่องของไฟล์หลักตั้งแต่ชั้น capture แล้วเปิดตัวเลือกที่ให้มือจับแทน (เฉพาะ Chrome และ Edge บนคอม)
+   *    ชุดชนิดไฟล์กว้างเท่ากล่องเดิม จะเลือก CSV ก็ได้ เพียงแต่ไฟล์ชนิดนั้นเขียนกลับไม่ได้ */
+  const PICK_TYPES = [{ description: "Excel / CSV", accept: {
+    [XLSX_MIME]: [".xlsx"], [XLSM_MIME]: [".xlsm"], "application/vnd.ms-excel": [".xls"], "text/csv": [".csv"], "text/plain": [".txt"],
+  } }];
+  if (canWriteInPlace()) {
+    const zone = mainDz.container.querySelector(".dz");
+    const grab = (e) => {
+      if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      pickMain();
+    };
+    if (zone) { zone.addEventListener("click", grab, true); zone.addEventListener("keydown", grab, true); }
+  }
   const mainInfo = el("div", { class: "lk-sub" });
   const secInfo = el("div", { class: "lk-sub" });
 
@@ -147,7 +186,7 @@ export function mount(tool) {
     el("div", { class: "lk-side" }, [
       el("h3", { class: "lk-h" }, tr("1. ไฟล์หลัก", "1. Main file")),
       el("p", { class: "lk-sub" }, tr("ไฟล์ที่มีคอลัมน์ว่างรอเติม เช่น Pending VAT", "The file with empty columns waiting to be filled")),
-      mainDz.container, pickBtn, mainInfo, mainSheetF, mainHeadF, inplaceBox,
+      mainDz.container, mainInfo, mainSheetF, mainHeadF, inplaceBox,
     ]),
     el("div", { class: "lk-side" }, [
       el("h3", { class: "lk-h" }, tr("2. ไฟล์รอง", "2. Source file")),
@@ -157,8 +196,40 @@ export function mount(tool) {
   ]);
 
   // ── แผงขวา: เงื่อนไข ─────────────────────────────────────────────────────
-  const keyM1 = select([["0", "-"]], "0"), keyM2 = select([["-1", "-"]], "-1");
-  const keyS1 = select([["0", "-"]], "0"), keyS2 = select([["-1", "-"]], "-1");
+  /* ‼️ คีย์ต่อกันได้กี่คอลัมน์ก็ได้ (พี่ปอนด์ 06/10/2026 “เหมือนฟิกว่าได้แค่ 2”)
+   *    เก็บเป็นรายการเลขคอลัมน์ต่อฝั่ง แล้ววาดช่องเลือกใหม่จากรายการทุกครั้ง ช่องแรกเอาออกไม่ได้ */
+  const MAX_KEYS = 8;
+  const keyVals = { main: [0], sec: [0] };
+  const keyBox = { main: el("div", { class: "lk-keys" }), sec: el("div", { class: "lk-keys" }) };
+  function renderKeys(which) {
+    const t = sideOf(which).table;
+    const box = keyBox[which];
+    box.innerHTML = "";
+    const opts = t ? t.header.map((h, c) => [String(c), `${colLetter(c)}: ${h}`]) : [["0", "-"]];
+    keyVals[which].forEach((v, i) => {
+      const s = select(opts, String(v));
+      s.onchange = () => { keyVals[which][i] = +s.value; userKey = true; afterKeyChange(); };
+      const label = i === 0
+        ? (which === "main" ? tr("ไฟล์หลัก คอลัมน์คีย์", "Main file key") : tr("ไฟล์รอง คอลัมน์คีย์", "Source file key"))
+        : tr(`ต่อด้วย (ลำดับ ${i + 1})`, `Then (part ${i + 1})`);
+      const rm = i === 0 ? null : button("", { icon: "close", ghost: true,
+        label: tr(`เอาคีย์ลำดับ ${i + 1} ออก`, `Remove key part ${i + 1}`),
+        onclick: () => { keyVals[which].splice(i, 1); userKey = true; renderKeys(which); afterKeyChange(); } });
+      box.appendChild(el("div", { class: "lk-key" }, [field(label, s), rm]));
+    });
+    if (t && keyVals[which].length < Math.min(MAX_KEYS, t.width)) {
+      const add = button(tr("+ ต่ออีกคอลัมน์", "+ Join another column"), { ghost: true, onclick: () => {
+        const used = new Set(keyVals[which]);
+        let c = 0; while (used.has(c) && c < t.width - 1) c++;
+        keyVals[which].push(c); userKey = true; renderKeys(which); afterKeyChange();
+        const sels = keyBox[which].querySelectorAll("select");
+        sels[sels.length - 1].focus();
+      } });
+      add.classList.add("lk-add");
+      box.appendChild(add);
+    }
+  }
+  const afterKeyChange = () => { if (M.table && S.table) buildPullList(false); refresh(); };
   const caseSw = el("input", { type: "checkbox", checked: true, "aria-label": tr("ไม่สนตัวพิมพ์ใหญ่เล็ก", "Ignore upper and lower case") });
   const zeroSw = el("input", { type: "checkbox", "aria-label": tr("มองว่า 0012 กับ 12 เป็นค่าเดียวกัน", "Treat 0012 and 12 as the same") });
   const sw = (label, input, hint) => el("div", {}, [
@@ -168,6 +239,18 @@ export function mount(tool) {
   const pullBox = el("div", { class: "lk-pull" });
   const pullAll = button(tr("ติ๊กทั้งหมด", "Tick all"), { ghost: true, onclick: () => setAllPull(true) });
   const pullNone = button(tr("ล้าง", "Clear"), { ghost: true, onclick: () => setAllPull(false) });
+  // ค้นหาคอลัมน์ในรายการดึง โผล่เมื่อไฟล์รองมีคอลัมน์มากพอให้หาไม่เจอ
+  const pullFind = el("input", { class: "lk-find", type: "search", placeholder: tr("ค้นหาคอลัมน์ของไฟล์รอง", "Find a source column"),
+    "aria-label": tr("ค้นหาคอลัมน์ที่จะดึงมาเติม", "Find a column to bring over") });
+  const pullEmpty = el("p", { class: "lk-note", hidden: true });
+  pullFind.oninput = filterPull;
+  const dupHint = el("p", { class: "lk-note" });
+  const DUP_HINT = {
+    first: tr("ใช้ค่าของแถวบนสุดที่เจอ เหมือน VLOOKUP", "Uses the topmost matching row, like VLOOKUP"),
+    last: tr("ใช้ค่าของแถวล่างสุดที่เจอ เหมาะกับไฟล์ที่ต่อรายการใหม่ไว้ท้าย", "Uses the bottom matching row, good when new entries are added at the end"),
+    blank: tr("แถวที่ซ้ำมีค่าไม่เหมือนกัน เว้นว่างไว้ให้ตรวจเอง ถ้าเหมือนกันยังเติมให้", "If the repeated rows disagree the cell stays empty for you to check. If they agree it is filled"),
+    join: tr("เอาทุกค่าที่ต่างกันมาต่อกันในช่องเดียว เช่น TX-001; TX-002", "Puts every different value into one cell, for example TX-001; TX-002"),
+  };
   const dupSel = select([
     ["first", tr("เอาแถวแรก (เหมือน VLOOKUP)", "Take the first row (like VLOOKUP)")],
     ["last", tr("เอาแถวสุดท้าย", "Take the last row")],
@@ -180,48 +263,69 @@ export function mount(tool) {
   ], "empty");
   const statusSw = el("input", { type: "checkbox", checked: true, "aria-label": tr("เพิ่มคอลัมน์ผลการหาท้ายตาราง", "Add result columns at the end") });
 
+  /* ── แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี → เพิ่มเป็นแถวใหม่ (Addon) ─────────────
+   * ปิดไว้เป็นค่าเริ่มต้น เพราะการเพิ่มแถวลงไฟล์จริงของบริษัทต้องเป็นการตัดสินใจของคนใช้เอง */
+  const pad = (n) => String(n).padStart(2, "0");
+  const monthTag = () => { const d = new Date(); return `Addon ${pad(d.getMonth() + 1)}/${d.getFullYear()}`; };
+  const dayTag = () => { const d = new Date(); return `Addon ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; };
+  const addonSw = el("input", { type: "checkbox", "aria-label": tr("เพิ่มเป็นแถวใหม่ท้ายไฟล์หลัก", "Add them as new rows at the end of the main file") });
+  const addonInfo = el("p", { class: "lk-sub" });
+  const tagIn = el("input", { class: "lk-num", type: "text", value: monthTag(), "aria-label": tr("ป้ายของแถวใหม่", "Label for the new rows") });
+  const tagCol = select([["new", tr("คอลัมน์ใหม่ชื่อ Addon", "New column named Addon")], ["none", tr("ไม่ใส่ป้าย", "No label")]], "new");
+  const setTag = (v) => { tagIn.value = v; refresh(); };
+  const addonBox = el("div", { class: "lk-addon", hidden: true }, [
+    field(tr("ป้ายบอกว่าเป็นแถวเพิ่ม", "Label for the added rows"), tagIn),
+    el("div", { class: "lk-mini" }, [
+      button(tr("เดือนนี้", "This month"), { ghost: true, onclick: () => setTag(monthTag()) }),
+      button(tr("วันนี้", "Today"), { ghost: true, onclick: () => setTag(dayTag()) }),
+    ]),
+    field(tr("ใส่ป้ายที่คอลัมน์", "Put the label in"), tagCol),
+    el("p", { class: "lk-note" }, tr("แถวใหม่ได้คีย์ กับคอลัมน์ที่ติ๊กไว้ด้านบน ลงคอลัมน์ตามที่เลือกไว้",
+      "New rows get the key and the ticked columns above, in the destinations you chose")),
+  ]);
+  addonSw.onchange = () => { addonBox.hidden = !addonSw.checked; refresh(); };
+  tagIn.oninput = refresh;
+  tagCol.onchange = refresh;
+
   const right = el("div", {}, [
     el("h3", { class: "lk-h" }, tr("คีย์ที่ใช้จับคู่", "Match on")),
-    el("p", { class: "lk-sub" }, tr("เลือกคอลัมน์ที่ค่าตรงกันทั้งสองไฟล์ ถ้าต้องต่อหลายคอลัมน์ ให้เพิ่มคอลัมน์ที่สอง จะต่อกันตรง ๆ",
-      "Pick the column whose values agree in both files, like Mapping. To join several columns (company code and document number) add a second one. They are glued together like the formula A&F")),
-    el("div", { class: "lk-two" }, [
-      el("div", {}, [field(tr("ไฟล์หลัก คอลัมน์คีย์", "Main file key"), keyM1), field(tr("ต่อด้วย (ถ้ามี)", "Then (optional)"), keyM2)]),
-      el("div", {}, [field(tr("ไฟล์รอง คอลัมน์คีย์", "Source file key"), keyS1), field(tr("ต่อด้วย (ถ้ามี)", "Then (optional)"), keyS2)]),
-    ]),
+    el("p", { class: "lk-sub" }, tr("เลือกคอลัมน์ที่ค่าตรงกันทั้งสองไฟล์ ต่อหลายคอลัมน์ได้ จะต่อกันตรง ๆ เหมือนสูตร A&F",
+      "Pick the column whose values agree in both files, like Mapping. Several columns are glued together like the formula A&F")),
+    el("div", { class: "lk-two" }, [keyBox.main, keyBox.sec]),
     sw(tr("ไม่สนตัวพิมพ์ใหญ่เล็ก", "Ignore upper and lower case"), caseSw),
     sw(tr("มองว่า 0012 กับ 12 เป็นค่าเดียวกัน", "Treat 0012 and 12 as the same"), zeroSw,
       tr("ปิดไว้ดีกว่าถ้าคีย์เป็นรหัสที่ขึ้นต้นด้วย 0", "Better off when keys are codes that start with 0")),
     el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("คอลัมน์ที่จะดึงมาเติม", "Columns to bring over")),
-    el("p", { class: "lk-sub" }, tr("ติ๊กคอลัมน์ของไฟล์รอง แล้วเลือกว่าจะลงคอลัมน์ไหนของไฟล์หลัก ชื่อตรงกันเลือกให้แล้ว",
-      "Tick columns of the source file and choose where each goes in the main file. Same names are already paired")),
+    el("p", { class: "lk-sub" }, tr("ติ๊กคอลัมน์ของไฟล์รอง แล้วเลือกว่าลงคอลัมน์ไหนของไฟล์หลัก ชื่อเหมือนหรือใกล้กันจับคู่ให้แล้ว",
+      "Tick source columns and choose where each goes in the main file. Same or similar names are paired for you")),
+    pullFind,
     el("div", { class: "lk-mini" }, [pullAll, pullNone]),
-    pullBox,
+    pullBox, pullEmpty,
     el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("ถ้าไฟล์รองมีคีย์ซ้ำ", "If the source repeats a key")),
     field(tr("เลือกค่าจากแถวไหน", "Which row to take from"), dupSel),
+    dupHint,
     el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("ช่องปลายทางที่มีข้อมูลอยู่แล้ว", "Destination cells that already have data")),
     fillSel,
+    el("p", { class: "lk-note" }, tr("ช่องที่มีแต่เว้นวรรคถือว่าว่าง เติมได้ ช่องที่เป็นสูตรไม่ถูกทับ",
+      "Cells holding only spaces count as empty. Formula cells are never overwritten")),
     sw(tr("เพิ่มคอลัมน์ผลการหาท้ายตาราง", "Add result columns at the end"), statusSw,
       tr("บอกในแต่ละแถวว่าเจอหรือไม่ และเจอกี่แถวในไฟล์รอง", "Says on every row whether it was found and in how many source rows")),
+    el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("แถวที่ไฟล์หลักยังไม่มี", "Rows the main file does not have yet")),
+    addonInfo,
+    sw(tr("เพิ่มเป็นแถวใหม่ท้ายไฟล์หลัก (Addon)", "Add them as new rows at the end (Addon)"), addonSw),
+    addonBox,
   ]);
 
   // ── ตรงกลาง: ผล ──────────────────────────────────────────────────────────
   const chips = el("div", { class: "stats" });
   const banner = el("div", { class: "lk-banner", hidden: true });
-  const viewTabs = segmented([
-    ["preview", tr("ตัวอย่างผล", "Preview")],
-    ["review", tr("ต้องตรวจ", "To check")],
-    ["dups", tr("คีย์ซ้ำในไฟล์รอง", "Repeated keys in source")],
-  ], "preview");
-  viewTabs.classList.add("lk-tabs");
-  const reviewFilter = select([
-    ["all", tr("ทุกรายการที่ต้องตรวจ", "Everything to check")],
-    ["none", tr("ไม่เจอในไฟล์รอง", "Not found in source")],
-    ["dupDiff", tr("เจอซ้ำและค่าต่างกัน", "Repeated with different values")],
-    ["dupSame", tr("เจอซ้ำแต่ค่าเหมือนกัน", "Repeated with equal values")],
-    ["nokey", tr("คีย์ว่าง", "Empty key")],
-  ], "all");
+  /* ‼️ แท็บผลแยกตามกลุ่ม พร้อมจำนวน (พี่ปอนด์ 06/10/2026: ตัวอย่างผลควรโชว์ที่เจอ และ “ต้องตรวจ” ไม่สื่อ)
+   *    เดิมตัวอย่างผลโชว์ 40 แถวแรกของไฟล์ ไฟล์จริง 23,212 แถวเจอแค่ 7 จึงเห็นแต่ “ไม่เจอ” ทั้งจอ
+   *    แท็บแรกจึงเป็นแถวที่เจอเสมอ แท็บที่ไม่มีรายการไม่โชว์ */
+  const tabsHost = el("div");
+  let view = "found";
   const viewBox = el("div", { class: "xt-wrap" });
-  const centerNode = el("div", {}, [chips, banner, viewTabs, viewBox]);
+  const centerNode = el("div", {}, [chips, banner, tabsHost, viewBox]);
 
   // ── ปุ่มล่าง ─────────────────────────────────────────────────────────────
   const saveBtn = button(tr("บันทึกลงไฟล์หลักเดิม", "Save into the main file"), { icon: "check", onclick: onSaveClick });
@@ -249,6 +353,10 @@ export function mount(tool) {
   async function onFile(which) {
     const f = dzOf(which).files[0];
     const side = sideOf(which);
+    // ไฟล์ใหม่หรือเอาไฟล์ออก (รวมปุ่มเริ่มใหม่) = เดาคีย์และคอลัมน์ที่จะดึงใหม่ ไม่ยึดค่าที่ตั้งกับไฟล์เก่า
+    userKey = false; userPull = false; pullState = new Map(); pullFind.value = "";
+    keyVals[which] = [0];
+    if (which === "main") { lastSave = null; undoBtn.hidden = true; }
     if (!f) { Object.assign(side, newSide()); afterTables(true); return; }
     await loadSide(which, f, null, false);
   }
@@ -308,38 +416,38 @@ export function mount(tool) {
   secHead.onchange = onHead("sec", secHead);
 
   // ── หลังตารางเปลี่ยน: เติมตัวเลือก เดาค่าเริ่มต้น ─────────────────────────
-  const fillSel_ = (sel, opts, value) => {
-    sel.innerHTML = "";
-    opts.forEach(([v, t]) => sel.appendChild(el("option", { value: v }, t)));
-    if (value != null && opts.some(([v]) => v === String(value))) sel.value = String(value);
-  };
-  const colOpts = (t, none) => [
-    ...(none ? [["-1", tr("ไม่ใช้", "None")]] : []),
-    ...t.header.map((h, c) => [String(c), `${colLetter(c)}: ${h}`]),
-  ];
-
   function afterTables(reguess) {
     const mt = M.table, stt = S.table;
     mainInfo.textContent = mt ? tr(`${mt.rows.length.toLocaleString()} แถวข้อมูล ${mt.width} คอลัมน์`, `${pl(mt.rows.length.toLocaleString(), "data row", "data rows")}, ${pl(mt.width, "column", "columns")}`) : "";
     secInfo.textContent = stt ? tr(`${stt.rows.length.toLocaleString()} แถวข้อมูล ${stt.width} คอลัมน์`, `${pl(stt.rows.length.toLocaleString(), "data row", "data rows")}, ${pl(stt.width, "column", "columns")}`) : "";
     renderInplace();
-    if (mt) { fillSel_(keyM1, colOpts(mt, false), keyM1.value); fillSel_(keyM2, colOpts(mt, true), keyM2.value); }
-    if (stt) { fillSel_(keyS1, colOpts(stt, false), keyS1.value); fillSel_(keyS2, colOpts(stt, true), keyS2.value); }
-    if (mt && stt && (reguess || !userKey)) {
-      if (!userKey) {
-        const g = guessKeyPair(mt.header, stt.header);
-        if (g) { keyM1.value = String(g.main); keyS1.value = String(g.sec); }
-        keyM2.value = "-1"; keyS2.value = "-1";
-      }
+    // คอลัมน์คีย์ที่เกินความกว้างของตารางใหม่ (เปลี่ยนชีตหรือแถวหัว) ตัดทิ้ง
+    for (const w of ["main", "sec"]) {
+      const t = sideOf(w).table;
+      if (!t) { keyVals[w] = [0]; continue; }
+      keyVals[w] = keyVals[w].filter((c) => c < t.width);
+      if (!keyVals[w].length) keyVals[w] = [0];
     }
+    if (mt && stt && !userKey) {
+      const g = guessKeyPair(mt.header, stt.header);
+      keyVals.main = [g ? g.main : 0]; keyVals.sec = [g ? g.sec : 0];
+    }
+    renderKeys("main"); renderKeys("sec");
+    // ป้ายแถวใหม่ลงคอลัมน์ที่มีอยู่แล้วได้ ตัวเลือกตามหัวตารางไฟล์หลัก
+    const keepTag = tagCol.value;
+    tagCol.innerHTML = "";
+    [["new", tr("คอลัมน์ใหม่ชื่อ Addon", "New column named Addon")], ["none", tr("ไม่ใส่ป้าย", "No label")],
+      ...(mt ? mt.header.map((h, c) => [String(c), `${colLetter(c)}: ${h}`]) : [])]
+      .forEach(([v, t]) => tagCol.appendChild(el("option", { value: v }, t)));
+    tagCol.value = [...tagCol.options].some((o) => o.value === keepTag) ? keepTag : "new";
     if (mt && stt) buildPullList(reguess && !userPull);
-    else pullBox.innerHTML = "";
+    else { pullBox.innerHTML = ""; pullFind.hidden = true; }
     refresh();
   }
 
   function buildPullList(guess) {
     const mt = M.table, stt = S.table;
-    const skip = [+keyS1.value, +keyS2.value].filter((c) => c >= 0);
+    const skip = keyVals.sec;
     const old = pullState;
     pullState = new Map();
     const guessed = new Map(guess ? guessPullCols(mt.header, mt.rows, stt.header, skip).map((g) => [g.sec, g.main]) : []);
@@ -347,35 +455,61 @@ export function mount(tool) {
     stt.header.forEach((h, j) => {
       if (skip.includes(j)) return;
       if (isBlank(h) || /^\([A-Z]+\)$/.test(h)) return;       // คอลัมน์ไม่มีหัว ไม่มีอะไรให้เลือกด้วยชื่อ
-      const sameName = mt.header.findIndex((mh) => normHead(mh) === normHead(h));
+      // ‼️ ชื่อไม่ตรงเป๊ะก็จับคู่ให้ (Tax Inv. Date (SM) กับ Tax Inv Date SM) ไม่เจอเลย = คอลัมน์ใหม่ท้ายตาราง
+      const match = bestDest(h, mt.header);
+      const exact = match >= 0 && normHead(mt.header[match]) === normHead(h);
       const prev = old.get(j);
-      const st0 = prev && !guess ? prev : { on: guessed.has(j), dest: sameName >= 0 ? String(sameName) : "new" };
+      const st0 = prev && !guess ? prev : { on: guessed.has(j), dest: match >= 0 ? String(match) : "new" };
       pullState.set(j, st0);
+      const name = `${colLetter(j)}: ${h}`;
       const cb = el("input", { type: "checkbox", checked: st0.on || null, "aria-label": tr(`ดึงคอลัมน์ ${h}`, `Bring the column ${h}`) });
       const dest = select([["new", tr("คอลัมน์ใหม่ท้ายตาราง", "New column at the end")],
         ...mt.header.map((mh, c) => [String(c), `${colLetter(c)}: ${mh}`])], st0.dest);
       dest.setAttribute("aria-label", tr(`ปลายทางของ ${h}`, `Destination for ${h}`));
-      const row = el("div", { class: "lk-pr" + (st0.on ? " on" : "") }, [cb, el("span", { class: "nm" }, `${colLetter(j)}: ${h}`), dest]);
+      // ‼️ บอกให้เห็นตั้งแต่ยังไม่ติ๊ก ว่าคอลัมน์นี้จะลงที่ไหน (พี่ถาม “มันรู้ได้ไงว่าต้องเอาไปเติมที่คอลัมน์ไหน”)
+      const hint = el("small", { class: "lk-hint" }, match < 0
+        ? tr("ไม่มีชื่อตรงในไฟล์หลัก ติ๊กแล้วเลือกปลายทางเองได้", "No matching name in the main file. Tick it to pick a destination")
+        : exact ? tr(`จะลง ${colLetter(match)}: ${mt.header[match]} (ชื่อตรงกัน)`, `Goes to ${colLetter(match)}: ${mt.header[match]} (same name)`)
+          : tr(`จะลง ${colLetter(match)}: ${mt.header[match]} (ชื่อใกล้กัน ตรวจอีกที)`, `Goes to ${colLetter(match)}: ${mt.header[match]} (similar name, check it)`));
+      const row = el("div", { class: "lk-pr" + (st0.on ? " on" : ""), "data-q": `${name} ${normHead(h)}`.toLowerCase() }, [
+        cb, el("span", { class: "nm" }, name),
+        el("div", { class: "lk-dest" }, [el("span", {}, tr("ลงที่", "Goes to")), dest]), hint,
+      ]);
       cb.onchange = () => { st0.on = cb.checked; row.classList.toggle("on", cb.checked); userPull = true; refresh(); };
       dest.onchange = () => { st0.dest = dest.value; userPull = true; refresh(); };
       pullBox.appendChild(row);
     });
+    pullFind.hidden = pullBox.children.length <= 6;
+    filterPull();
   }
 
+  function filterPull() {
+    const q = pullFind.value.trim().toLowerCase();
+    let shown = 0;
+    for (const row of pullBox.children) {
+      row.hidden = !!q && !row.dataset.q.includes(q);
+      if (!row.hidden) shown++;
+    }
+    pullEmpty.hidden = !q || shown > 0;
+    pullEmpty.textContent = tr(`ไม่มีคอลัมน์ที่ชื่อมี “${pullFind.value.trim()}”`, `No column name contains “${pullFind.value.trim()}”`);
+  }
+
+  /** ติ๊กหรือล้าง เฉพาะแถวที่เห็นอยู่ (กำลังค้นหาอยู่ = ทำกับผลค้นหาเท่านั้น) */
   function setAllPull(on) {
     userPull = true;
-    for (const [, v] of pullState) v.on = on;
+    const cols = [...pullState.keys()];
     [...pullBox.children].forEach((row, i) => {
+      if (row.hidden) return;
+      pullState.get(cols[i]).on = on;
       const cb = row.querySelector("input"); cb.checked = on; row.classList.toggle("on", on);
     });
     refresh();
   }
 
-  for (const c of [keyM1, keyM2, keyS1, keyS2]) c.onchange = () => { userKey = true; if (M.table && S.table) buildPullList(false); refresh(); };
-  for (const c of [caseSw, zeroSw, dupSel, statusSw]) c.onchange = refresh;
+  for (const c of [caseSw, zeroSw, statusSw]) c.onchange = refresh;
+  dupSel.onchange = () => { dupHint.textContent = DUP_HINT[dupSel.value] || ""; refresh(); };
+  dupHint.textContent = DUP_HINT[dupSel.value];
   fillSel.onchange = refresh;
-  viewTabs.onchange = renderView;
-  reviewFilter.onchange = renderView;
 
   // ── คำนวณ ─────────────────────────────────────────────────────────────────
   const stLabel = (p) => {
@@ -389,18 +523,24 @@ export function mount(tool) {
   };
 
   function spec() {
-    const mk = [+keyM1.value, +keyM2.value].filter((c) => c >= 0);
-    const sk = [+keyS1.value, +keyS2.value].filter((c) => c >= 0);
+    const mk = keyVals.main.slice(), sk = keyVals.sec.slice();
     const pull = [...pullState].filter(([, v]) => v.on).map(([j, v]) => ({ sec: j, dest: v.dest }));
     return { mk, sk, pull };
   }
 
-  function problemsOf({ mk, sk, pull }) {
+  function problemsOf({ mk, sk, pull }, addonOn) {
     const out = [];
     const dests = pull.filter((p) => p.dest !== "new").map((p) => +p.dest);
     if (new Set(dests).size !== dests.length) out.push(tr("มีสองคอลัมน์ลงปลายทางเดียวกัน", "Two columns go to the same destination"));
     if (dests.some((d) => mk.includes(d))) out.push(tr("ปลายทางเป็นคอลัมน์คีย์ของไฟล์หลัก จะทำให้คีย์เปลี่ยน", "A destination is a key column of the main file, that would change the keys"));
     if (!pull.length) out.push(tr("ยังไม่ได้ติ๊กคอลัมน์ที่จะดึงมาเติม", "No column ticked to bring over yet"));
+    if (addonOn) {
+      if (addonKeyCells(mk, sk, []) == null) out.push(tr("แถวใหม่: แยกคีย์ไฟล์รองลงหลายคอลัมน์ไม่ได้ ให้คีย์ไฟล์หลักเหลือคอลัมน์เดียว",
+        "New rows: the source key cannot be split into several main columns. Use one main key column"));
+      const tc = tagCol.value;
+      if (tc !== "new" && tc !== "none" && (mk.includes(+tc) || dests.includes(+tc)))
+        out.push(tr("ป้าย Addon ลงคอลัมน์เดียวกับคีย์หรือคอลัมน์ที่ดึงมา เลือกคอลัมน์อื่น", "The Addon label shares a column with a key or a brought column. Pick another one"));
+    }
     return out;
   }
 
@@ -410,18 +550,27 @@ export function mount(tool) {
     timer = setTimeout(compute, 40);
   }
 
+  /** แถวสุดท้ายที่มีข้อมูลของไฟล์หลัก (ตำแหน่งใน aoa) แถวใหม่ต่อจากตรงนี้ */
+  const lastDataIdx = () => (M.table.rowIdx.length ? M.table.rowIdx[M.table.rowIdx.length - 1] : M.headerIdx);
+
   function compute() {
     last = null; setActions(false);
     confirmReset();
-    if (!M.table || !S.table) { ws.showCanvas(false); return; }
+    if (!M.table || !S.table) { ws.showCanvas(false); addonInfo.textContent = ""; return; }
     const sp = spec();
     const keyOpts = { ignoreCase: caseSw.checked, ignoreZeros: zeroSw.checked };
     const result = lookup({
       mainRows: M.table.rows, mainKeyCols: sp.mk, secRows: S.table.rows, secKeyCols: sp.sk,
       pullCols: sp.pull.map((p) => p.sec), keyOpts, dup: dupSel.value,
     });
-    const problems = problemsOf(sp);
-    let fill = null;
+    const s = result.stats;
+    addonInfo.textContent = s.secOnly
+      ? tr(`ไฟล์รองมี ${s.secOnly.toLocaleString()} แถวที่คีย์ไม่อยู่ในไฟล์หลัก ดูได้ที่แท็บ “มีแต่ในไฟล์รอง”`,
+           `The source has ${pl(s.secOnly.toLocaleString(), "row", "rows")} whose key is not in the main file. See the “Only in source” tab`)
+      : tr("ทุกคีย์ของไฟล์รองมีอยู่ในไฟล์หลักแล้ว ไม่มีแถวให้เพิ่ม", "Every source key is already in the main file. Nothing to add");
+    const addonOn = addonSw.checked && s.secOnly > 0;
+    const problems = problemsOf(sp, addonOn);
+    let fill = null, addon = null;
     if (!problems.length) {
       // ‼️ ปลายทาง “คอลัมน์ใหม่” แต่ในไฟล์หลักมีคอลัมน์ชื่อเดียวกันอยู่แล้ว (เช่นทำซ้ำบนไฟล์ที่เพิ่งบันทึก) ใช้ของเดิม ไม่ต่อซ้ำ
       const existing = (name) => M.table.header.findIndex((h) => normHead(h) === normHead(name));
@@ -430,22 +579,33 @@ export function mount(tool) {
         const at = existing(S.table.header[p.sec]);
         return at >= 0 ? { col: at } : { col: null, name: S.table.header[p.sec] };
       });
+      if (addonOn) {
+        const tc = tagCol.value, value = tagIn.value.trim();
+        addon = {
+          at: lastDataIdx() + 1,
+          rows: result.secOnly.map((h) => ({ src: h, keys: addonKeyCells(sp.mk, sp.sk, S.table.rows[h]),
+            vals: sp.pull.map((p) => S.table.rows[h][p.sec] ?? null) })),
+          tag: tc === "none" || !value ? null : tc === "new" ? { col: null, name: "Addon", value } : { col: +tc, value },
+          label: (a) => tr(`เพิ่มจากไฟล์รอง แถว ${S.table.rowIdx[a.src] + 1}`, `Added from source row ${S.table.rowIdx[a.src] + 1}`),
+        };
+      }
       fill = applyFill({
         aoa: M.aoa, headerIdx: M.headerIdx, rowIdx: M.table.rowIdx, width: M.table.width, result, dests,
-        fill: fillSel.value,
+        fill: fillSel.value, addon,
         status: statusSw.checked ? { head: [tr("ผลการหา", "Lookup result"), tr("เจอในไฟล์รองกี่แถว", "Rows found in source")], label: stLabel } : null,
       });
     }
-    last = { sp, result, fill, problems };
+    last = { sp, result, fill, problems, addon, keyOpts };
     ws.showCanvas(true);
     renderChips();
+    renderTabs();
     renderView();
     setActions(!problems.length && !!fill);
     renderInplace();
   }
 
   function renderChips() {
-    const { result, fill, problems } = last;
+    const { result, fill, problems, addon, sp, keyOpts } = last;
     const s = result.stats;
     chips.innerHTML = "";
     const chip = (cls, text) => chips.appendChild(el("span", { class: "stat " + cls }, text));
@@ -457,6 +617,8 @@ export function mount(tool) {
     if (s.nokey) chip("dim", tr(`คีย์ว่าง ${s.nokey.toLocaleString()} แถว`, `${s.nokey.toLocaleString()} empty keys`));
     if (fill) chip("ok", tr(`จะเติม ${fill.stat.filled.toLocaleString()} ช่อง`, `${pl(fill.stat.filled.toLocaleString(), "cell", "cells")} to fill`));
     if (fill && fill.stat.keptOld) chip("dim", tr(`ไม่ทับของเดิม ${fill.stat.keptOld.toLocaleString()} ช่อง`, `${pl(fill.stat.keptOld.toLocaleString(), "cell", "cells")} kept as is`));
+    if (fill && fill.stat.added) chip("ok", tr(`จะเพิ่มแถวใหม่ ${fill.stat.added.toLocaleString()} แถว`, `${pl(fill.stat.added.toLocaleString(), "new row", "new rows")} to add`));
+    else if (s.secOnly) chip("dim", tr(`มีแต่ในไฟล์รอง ${s.secOnly.toLocaleString()} แถว`, `${s.secOnly.toLocaleString()} only in source`));
 
     const lines = [];
     let cls = "";
@@ -465,7 +627,7 @@ export function mount(tool) {
       lines.push(tr(
         `ไฟล์รองมีคีย์ซ้ำ <b>${s.secDupKeys.toLocaleString()}</b> ค่า ถูกไฟล์หลักใช้จริง <b>${s.secDupKeysHit.toLocaleString()}</b> ค่า`,
         `The source repeats <b>${s.secDupKeys.toLocaleString()}</b> keys, <b>${s.secDupKeysHit.toLocaleString()}</b> of them are used by the main file`));
-      if (s.dupDiff) { lines.push(tr(`มี <b>${s.dupDiff.toLocaleString()}</b> แถวที่คีย์ซ้ำและข้อมูลที่ดึงไม่เหมือนกัน ดูแท็บ “ต้องตรวจ” ก่อนใช้`, `<b>${s.dupDiff.toLocaleString()}</b> rows have a repeated key with different data. Check the “To check” tab before using`)); cls = cls || " warn"; }
+      if (s.dupDiff) { lines.push(tr(`มี <b>${s.dupDiff.toLocaleString()}</b> แถวที่คีย์ซ้ำและข้อมูลที่ดึงไม่เหมือนกัน ดูแท็บ “เจอหลายแถว” ก่อนใช้`, `<b>${s.dupDiff.toLocaleString()}</b> rows have a repeated key with different data. Check the “Found in several rows” tab before using`)); cls = cls || " warn"; }
     }
     // ‼️ คีย์ว่างเกินครึ่ง: สาเหตุที่เจอจริงคือคีย์เป็นสูตรในไฟล์ที่ไม่เคยถูก Excel บันทึก (เช่นสร้างจากสคริปต์) สูตรจึงไม่มีค่าที่คำนวณไว้
     //    SheetJS ไม่สร้างเซลล์นั้นให้เลยจึงแยกไม่ได้ว่าเป็นสูตรหรือว่างจริง ต้องบอกสาเหตุที่เป็นไปได้ ไม่ใช่ให้ผู้ใช้เดาเอง
@@ -474,7 +636,28 @@ export function mount(tool) {
         `The main file's key is empty on over half the rows (${s.nokey.toLocaleString()} of ${s.total.toLocaleString()}). If it is a formula, open the file in Excel and save once`))}</b>`);
       cls = " bad";
     }
+    /* ‼️ เจอน้อยผิดปกติ (ไฟล์จริงของพี่ 06/10/2026 เจอ 7 จาก 23,205) โชว์หน้าตาคีย์ที่เอามาเทียบจริงสองฝั่ง
+     *    ให้เห็นเองว่าต่างกันตรงไหน (คนละคอลัมน์ ศูนย์นำหน้า มีขีด) แทนการเดาสาเหตุ */
+    const keyed = s.total - s.nokey;
+    if (keyed >= 10 && s.found / keyed < 0.05) {
+      const mainSample = result.perRow.filter((p) => p.key != null).slice(0, 3).map((p) => p.key);
+      const secSample = [];
+      for (const r of S.table.rows) { const k = keyOf(r, sp.sk, keyOpts); if (k != null) secSample.push(k); if (secSample.length >= 3) break; }
+      lines.push(tr(`เจอแค่ <b>${s.found.toLocaleString()}</b> จาก ${keyed.toLocaleString()} แถว ลองเทียบหน้าตาคีย์ที่เอามาเทียบกัน`,
+        `Only <b>${s.found.toLocaleString()}</b> of ${pl(keyed.toLocaleString(), "row", "rows")} matched. Compare how the keys look`));
+      lines.push(`${esc(tr("ไฟล์หลัก", "Main"))}: <b>${mainSample.map(esc).join(", ")}</b>`);
+      lines.push(`${esc(tr("ไฟล์รอง", "Source"))}: <b>${secSample.map(esc).join(", ")}</b>`);
+      cls = cls || " warn";
+      // ‼️ คีย์ผิดคอลัมน์ = ทุกแถวของไฟล์รองดูเหมือน “ไม่มีในไฟล์หลัก” เปิด Addon ไว้จะเพิ่มแถวซ้ำทั้งไฟล์
+      if (fill && fill.stat.added) {
+        lines.push(`<b>${esc(tr(`ระวัง จะเพิ่ม ${fill.stat.added.toLocaleString()} แถว ทั้งที่อาจมีอยู่แล้วแต่คีย์หน้าตาไม่ตรง ตรวจคีย์ก่อนบันทึก`,
+          `Careful: ${pl(fill.stat.added.toLocaleString(), "row", "rows")} would be added though they may already exist with differently shaped keys. Check the keys before saving`))}</b>`);
+        cls = " bad";
+      }
+    }
     if (s.secBlankKeys) lines.push(tr(`ไฟล์รองมี ${s.secBlankKeys.toLocaleString()} แถวที่คีย์ว่างหรือเป็น error (ข้ามไป)`, `${pl(s.secBlankKeys.toLocaleString(), "source row has", "source rows have")} an empty or error key (skipped)`));
+    if (addon && fill && fill.stat.added) lines.push(tr(`แถวใหม่ต่อท้ายตั้งแต่แถว <b>${addon.at + 1}</b> สูตรยอดรวมที่อ้างช่วงเดิมจะไม่นับแถวใหม่`,
+      `New rows start at row <b>${addon.at + 1}</b>. Total formulas that point at the old range will not count them`));
     banner.className = "lk-banner" + cls;
     banner.hidden = !lines.length;
     banner.innerHTML = lines.join("<br>");
@@ -483,25 +666,49 @@ export function mount(tool) {
   const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
   const keyText = (row, cols) => cols.map((c) => cellText(row[c])).filter(Boolean).join(" ");
   const badge = (p) => el("span", { class: "lk-badge " + p.status }, stLabel(p));
+  const FOUND = new Set(["one", "dupSame", "dupDiff"]);
+
+  function renderTabs() {
+    const s = last.result.stats;
+    const n = (x) => x.toLocaleString();
+    const opts = [["found", tr(`เจอ ${n(s.found)}`, `Found ${n(s.found)}`)]];
+    if (s.none) opts.push(["none", tr(`ไม่เจอ ${n(s.none)}`, `Not found ${n(s.none)}`)]);
+    if (s.dupSame + s.dupDiff) opts.push(["multi", tr(`เจอหลายแถว ${n(s.dupSame + s.dupDiff)}`, `Found in several rows ${n(s.dupSame + s.dupDiff)}`)]);
+    if (s.nokey) opts.push(["nokey", tr(`คีย์ว่าง ${n(s.nokey)}`, `Empty key ${n(s.nokey)}`)]);
+    if (s.secOnly) opts.push(["secOnly", tr(`มีแต่ในไฟล์รอง ${n(s.secOnly)}`, `Only in source ${n(s.secOnly)}`)]);
+    if (s.secDupKeys) opts.push(["secDup", tr(`คีย์ซ้ำในไฟล์รอง ${n(s.secDupKeys)}`, `Repeated in source ${n(s.secDupKeys)}`)]);
+    if (!opts.some(([v]) => v === view)) view = "found";
+    const seg = segmented(opts, view);
+    seg.classList.add("lk-tabs");
+    seg.setAttribute("aria-label", tr("กลุ่มผลการจับคู่", "Match result groups"));
+    seg.onchange = () => { view = seg.value; renderView(); };
+    tabsHost.replaceChildren(seg);
+  }
 
   function renderView() {
     viewBox.innerHTML = "";
     if (!last) return;
-    const v = viewTabs.value;
-    if (v === "preview") return renderPreview();
-    if (v === "review") return renderReview();
-    return renderDups();
+    if (view === "found") return renderFound();
+    if (view === "secOnly") return renderSecOnly();
+    if (view === "secDup") return renderDups();
+    return renderList(view);
   }
 
-  function renderPreview() {
+  const note = (t) => viewBox.appendChild(el("div", { class: "note" }, t));
+
+  function renderFound() {
     const { sp, result, fill } = last;
-    if (!fill) { viewBox.appendChild(el("div", { class: "note" }, tr("แก้ข้อความสีแดงด้านบนก่อน จึงจะเห็นตัวอย่างผล", "Fix the notice above first to see a preview"))); return; }
+    if (!fill) { note(tr("แก้ข้อความสีแดงด้านบนก่อน จึงจะเห็นตัวอย่างผล", "Fix the notice above first to see a preview")); return; }
+    const rows = [];
+    result.perRow.forEach((p, k) => { if (FOUND.has(p.status)) rows.push(k); });
+    if (!rows.length) { note(tr("ยังไม่เจอเลยสักแถว ดูแท็บ “ไม่เจอ” แล้วลองเปลี่ยนคอลัมน์คีย์", "Nothing matched yet. See the “Not found” tab and try other key columns")); return; }
     const cols = fill.cols;
     const head = cols.map((c) => fill.aoa[M.headerIdx][c]);
-    const n = Math.min(PREVIEW, result.perRow.length);
+    const shown = rows.slice(0, PREVIEW);
     viewBox.appendChild(el("table", { class: "xt" }, [
       el("thead", {}, [el("tr", {}, [el("th", {}, tr("แถว", "Row")), el("th", {}, tr("คีย์", "Key")), ...head.map((h) => el("th", {}, String(h ?? ""))), el("th", {}, tr("ผล", "Result"))])]),
-      el("tbody", {}, result.perRow.slice(0, n).map((p, k) => {
+      el("tbody", {}, shown.map((k) => {
+        const p = result.perRow[k];
         const i = M.table.rowIdx[k];
         return el("tr", {}, [
           el("td", { class: "num" }, String(i + 1)),
@@ -515,48 +722,56 @@ export function mount(tool) {
         ]);
       })),
     ]));
-    viewBox.appendChild(el("div", { class: "note" }, tr(
-      `แสดง ${n} จาก ${result.perRow.length.toLocaleString()} แถว ช่องที่ถูกเติมใหม่ตัวหนาและมีสีรอง ไฟล์ที่ได้มีครบทุกแถว`,
-      `Showing ${n} of ${pl(result.perRow.length.toLocaleString(), "row", "rows")}. Newly filled cells are bold and tinted. The file has every row`)));
+    note(tr(`แสดง ${shown.length.toLocaleString()} จาก ${rows.length.toLocaleString()} แถวที่เจอ ช่องที่จะถูกเติมตัวหนาและมีสีรอง`,
+      `Showing ${shown.length.toLocaleString()} of ${pl(rows.length.toLocaleString(), "matched row", "matched rows")}. Cells to be filled are bold and tinted`));
   }
 
-  function reviewRows() {
+  function renderList(group) {
     const { sp, result } = last;
-    const f = reviewFilter.value;
-    const out = [];
-    result.perRow.forEach((p, k) => {
-      if (p.status === "one") return;
-      if (f !== "all" && p.status !== f) return;
-      out.push({ p, k });
-    });
-    return out;
-  }
-
-  function renderReview() {
-    const { sp } = last;
-    viewBox.appendChild(el("div", { class: "lk-two", style: "margin-bottom:10px" }, [field(tr("แสดง", "Show"), reviewFilter)]));
-    const rows = reviewRows();
-    if (!rows.length) { viewBox.appendChild(el("div", { class: "note" }, tr("ไม่มีรายการในกลุ่มนี้", "Nothing in this group"))); return; }
+    const want = group === "multi" ? (p) => p.status === "dupSame" || p.status === "dupDiff" : (p) => p.status === group;
+    const rows = [];
+    result.perRow.forEach((p, k) => { if (want(p)) rows.push({ p, k }); });
+    const withSrc = group === "multi";
     viewBox.appendChild(el("table", { class: "xt lk-list" }, [
       el("thead", {}, [el("tr", {}, [
-        el("th", {}, tr("แถวในไฟล์หลัก", "Main row")), el("th", {}, tr("คีย์", "Key")),
-        el("th", {}, tr("ผล", "Result")), el("th", {}, tr("แถวในไฟล์รอง", "Source rows"))])]),
+        el("th", {}, tr("แถวในไฟล์หลัก", "Main row")), el("th", {}, tr("คีย์", "Key")), el("th", {}, tr("ผล", "Result")),
+        withSrc ? el("th", {}, tr("แถวในไฟล์รอง", "Source rows")) : null])]),
       el("tbody", {}, rows.slice(0, REVIEW_MAX).map(({ p, k }) => el("tr", {}, [
         el("td", { class: "num" }, String(M.table.rowIdx[k] + 1)),
         el("td", { class: "old lk-mono" }, keyText(M.table.rows[k], sp.mk)),
         el("td", {}, [badge(p)]),
-        el("td", { class: "old" }, p.hits.map((h) => S.table.rowIdx[h] + 1).join(", ")),
+        withSrc ? el("td", { class: "old" }, p.hits.map((h) => S.table.rowIdx[h] + 1).join(", ")) : null,
       ]))),
     ]));
-    if (rows.length > REVIEW_MAX) viewBox.appendChild(el("div", { class: "note" }, tr(
-      `แสดง ${REVIEW_MAX} จาก ${rows.length.toLocaleString()} รายการ รายงานที่ดาวน์โหลดมีครบ`,
-      `Showing ${REVIEW_MAX} of ${pl(rows.length.toLocaleString(), "item", "items")}. The downloadable report has all of them`)));
+    if (rows.length > REVIEW_MAX) note(tr(`แสดง ${REVIEW_MAX} จาก ${rows.length.toLocaleString()} รายการ รายงานที่ดาวน์โหลดมีครบ`,
+      `Showing ${REVIEW_MAX} of ${pl(rows.length.toLocaleString(), "item", "items")}. The downloadable report has all of them`));
+  }
+
+  /** แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี ถ้าเปิดเพิ่มแถวใหม่ บอกด้วยว่าจะไปเป็นแถวไหนของไฟล์หลัก */
+  function renderSecOnly() {
+    const { sp, result, addon, fill } = last;
+    const list = result.secOnly;
+    const added = addon && fill && fill.stat.added;
+    viewBox.appendChild(el("table", { class: "xt lk-list" }, [
+      el("thead", {}, [el("tr", {}, [
+        el("th", {}, tr("แถวในไฟล์รอง", "Source row")), el("th", {}, tr("คีย์", "Key")),
+        ...sp.pull.map((p) => el("th", {}, S.table.header[p.sec])),
+        added ? el("th", {}, tr("จะเป็นแถวในไฟล์หลัก", "Becomes main row")) : null])]),
+      el("tbody", {}, list.slice(0, REVIEW_MAX).map((h, n) => el("tr", {}, [
+        el("td", { class: "num" }, String(S.table.rowIdx[h] + 1)),
+        el("td", { class: "old lk-mono" }, keyText(S.table.rows[h], sp.sk)),
+        ...sp.pull.map((p) => el("td", { class: "old" }, cellText(S.table.rows[h][p.sec]))),
+        added ? el("td", { class: "new lk-chg num" }, String(addon.at + n + 1)) : null,
+      ]))),
+    ]));
+    if (list.length > REVIEW_MAX) note(tr(`แสดง ${REVIEW_MAX} จาก ${list.length.toLocaleString()} แถว`, `Showing ${REVIEW_MAX} of ${list.length.toLocaleString()}`));
+    if (!added) note(tr("อยากเพิ่มแถวพวกนี้เข้าไฟล์หลัก เปิด “เพิ่มเป็นแถวใหม่ท้ายไฟล์หลัก” ด้านขวา", "To add these rows to the main file, turn on “Add them as new rows” on the right"));
   }
 
   function renderDups() {
     const { result } = last;
     const list = result.secDupKeys;
-    if (!list.length) { viewBox.appendChild(el("div", { class: "note" }, tr("ไฟล์รองไม่มีคีย์ซ้ำเลย", "The source has no repeated key"))); return; }
+    if (!list.length) { note(tr("ไฟล์รองไม่มีคีย์ซ้ำเลย", "The source has no repeated key")); return; }
     const sorted = list.slice().sort((a, b) => (a.agree - b.agree) || (b.mainHits - a.mainHits));
     viewBox.appendChild(el("table", { class: "xt lk-list" }, [
       el("thead", {}, [el("tr", {}, [
@@ -569,7 +784,7 @@ export function mount(tool) {
         el("td", { class: "num" }, d.mainHits.toLocaleString()),
       ]))),
     ]));
-    if (sorted.length > REVIEW_MAX) viewBox.appendChild(el("div", { class: "note" }, tr(`แสดง ${REVIEW_MAX} จาก ${sorted.length.toLocaleString()} ค่า`, `Showing ${REVIEW_MAX} of ${sorted.length.toLocaleString()}`)));
+    if (sorted.length > REVIEW_MAX) note(tr(`แสดง ${REVIEW_MAX} จาก ${sorted.length.toLocaleString()} ค่า`, `Showing ${REVIEW_MAX} of ${sorted.length.toLocaleString()}`));
   }
 
   // ── ผลลัพธ์เป็นไฟล์ ───────────────────────────────────────────────────────
@@ -580,7 +795,9 @@ export function mount(tool) {
     const { fill } = last;
     if (isXlsx()) {
       const edits = fill.edits.map((e) => ({ r: e.i + 1, c: e.c, v: e.v }));
-      const out = await patchXlsx(window.JSZip, M.bytes, M.sheetNames[M.sheetIdx], edits);
+      // แถวใหม่ (Addon) ลอกสไตล์จากแถวข้อมูลสุดท้าย และขยายฟิลเตอร์กับตาราง Excel ให้ครอบแถวใหม่
+      const opts = fill.stat.added ? { appendFrom: last.addon.at + 1, styleRow: lastDataIdx() + 1 } : {};
+      const out = await patchXlsx(window.JSZip, M.bytes, M.sheetNames[M.sheetIdx], edits, opts);
       return { bytes: out.bytes, patch: out, ext: M.ext };
     }
     const wsx = XLSX.utils.aoa_to_sheet(fill.aoa, { cellDates: true, dateNF: "dd/mm/yyyy" });
@@ -607,6 +824,7 @@ export function mount(tool) {
   function doneText(out, head) {
     const f = last.fill.stat;
     let t = tr(`${head} เติม ${f.filled.toLocaleString()} ช่อง`, `${head}, filled ${pl(f.filled.toLocaleString(), "cell", "cells")}`);
+    if (f.added) t += tr(`, เพิ่มแถวใหม่ ${f.added.toLocaleString()} แถว`, `, added ${pl(f.added.toLocaleString(), "new row", "new rows")}`);
     if (out.patch && out.patch.stat.skippedFormula)
       t += tr(`, ข้าม ${out.patch.stat.skippedFormula.toLocaleString()} ช่องที่เป็นสูตร (ไม่ทับสูตร)`, `, skipped ${pl(out.patch.stat.skippedFormula.toLocaleString(), "formula cell", "formula cells")} (formulas are never overwritten)`);
     if (!isXlsx()) t += tr(" (ไฟล์ชนิดนี้สร้างเป็น .xlsx ใหม่ สไตล์เดิมไม่ติดมา)", " (this file type is rebuilt as .xlsx, original styling does not carry over)");
@@ -626,14 +844,19 @@ export function mount(tool) {
       [tr("เจอซ้ำ ค่าต่างกัน", "Repeated, different values"), s.dupDiff], [tr("ไม่เจอ", "Not found"), s.none],
       [tr("คีย์ว่าง", "Empty key"), s.nokey], [tr("คีย์ซ้ำในไฟล์รอง (ค่า)", "Repeated keys in source"), s.secDupKeys],
       [tr("ในนั้นไฟล์หลักใช้จริง", "Of which used by the main file"), s.secDupKeysHit],
+      [tr("มีแต่ในไฟล์รอง (แถว)", "Only in source (rows)"), s.secOnly],
+      [tr("เพิ่มเป็นแถวใหม่ (แถว)", "Added as new rows"), last.fill ? last.fill.stat.added : 0],
     ] };
     const check = { header: [tr("แถวในไฟล์หลัก", "Main row"), tr("คีย์", "Key"), tr("ผล", "Result"), tr("เจอกี่แถว", "Rows found"), tr("แถวในไฟล์รอง", "Source rows")],
       rows: result.perRow.map((p, k) => [p, k]).filter(([p]) => p.status !== "one")
         .map(([p, k]) => [M.table.rowIdx[k] + 1, keyText(M.table.rows[k], sp.mk), stLabel(p), p.n, p.hits.map((h) => S.table.rowIdx[h] + 1).join(", ")]) };
     const dups = { header: [tr("คีย์", "Key"), tr("แถวในไฟล์รอง", "Source rows"), tr("ค่าที่ดึง", "Values"), tr("ไฟล์หลักใช้กี่แถว", "Main rows using it")],
       rows: result.secDupKeys.map((d) => [d.key, d.rows.map((h) => S.table.rowIdx[h] + 1).join(", "), d.agree ? tr("เหมือนกัน", "Equal") : tr("ต่างกัน", "Different"), d.mainHits]) };
-    const sheets = [[tr("สรุป", "Summary"), summary], [tr("ต้องตรวจ", "To check"), check]];
+    const only = { header: [tr("แถวในไฟล์รอง", "Source row"), tr("คีย์", "Key")],
+      rows: result.secOnly.map((h) => [S.table.rowIdx[h] + 1, keyText(S.table.rows[h], sp.sk)]) };
+    const sheets = [[tr("สรุป", "Summary"), summary], [tr("ไม่เจอและเจอหลายแถว", "Not found or repeated"), check]];
     if (dups.rows.length) sheets.push([tr("คีย์ซ้ำในไฟล์รอง", "Repeated in source"), dups]);
+    if (only.rows.length) sheets.push([tr("มีแต่ในไฟล์รอง", "Only in source"), only]);
     saveFile(tablesToBlob(sheets), `${stemOf(M.file.name)}${tr("-รายงานการจับคู่.xlsx", "-lookup-report.xlsx")}`);
     st.ok(tr("ดาวน์โหลดรายงานแล้ว", "Report downloaded"));
   }
@@ -650,11 +873,11 @@ export function mount(tool) {
     } else if (!isXlsx()) {
       inplaceBox.textContent = tr("แก้ตรงในไฟล์ได้เฉพาะ .xlsx และ .xlsm ไฟล์ชนิดนี้ให้ดาวน์โหลดแทน", "Direct editing works for .xlsx and .xlsm only. Download this one instead");
     } else if (!M.handle) {
-      inplaceBox.textContent = tr("ไฟล์ที่เลือกด้วยปุ่ม “เลือกไฟล์” เขียนกลับไม่ได้ ให้ลากไฟล์มาวาง หรือใช้ปุ่มแก้ตรงด้านบน",
-        "A file chosen with the Choose button cannot be written back. To edit in place, drag the file in or use the “Open the main file for direct editing” button above");
+      inplaceBox.textContent = tr("ไฟล์นี้เปิดแบบอ่านอย่างเดียว เขียนทับไม่ได้ กดกล่องไฟล์หลักเลือกใหม่ หรือใช้ปุ่มดาวน์โหลด",
+        "This file was opened read only and cannot be written back. Click the main file box and choose the file again, or use the download button");
     } else {
       inplaceBox.classList.add("ok");
-      inplaceBox.textContent = tr("แก้ตรงในไฟล์นี้ได้ ต้องปิดไฟล์ใน Excel ก่อนกดบันทึก เพราะ Excel ล็อกไฟล์ที่เปิดอยู่",
+      inplaceBox.textContent = tr("แก้ตรงในไฟล์นี้ได้ กดบันทึกแล้วเขียนทับเลย ต้องปิดไฟล์ใน Excel ก่อน เพราะ Excel ล็อกไฟล์ที่เปิดอยู่",
         "This file can be edited in place. Close it in Excel before saving, because Excel locks an open file and it cannot be overwritten (the original stays safe)");
       saveBtn.hidden = false;
     }
@@ -662,7 +885,7 @@ export function mount(tool) {
 
   async function pickMain() {
     try {
-      const r = await pickWritable();
+      const r = await pickWritable(PICK_TYPES);
       if (!r) return;
       // ส่งไฟล์เข้ากล่องหย่อนของไฟล์หลักให้ทำงานเหมือนลากมาวาง แล้วผูกมือจับให้
       const input = mainDz.container.querySelector("input[type=file]");
@@ -684,8 +907,9 @@ export function mount(tool) {
   function onSaveClick() {
     if (!last || !last.fill || !M.handle) return;
     if (!confirmTimer) {
-      const n = last.fill.stat.filled;
-      saveBtn.querySelector("span").textContent = tr(`กดอีกครั้งเพื่อเขียนทับ ${M.file.name} (${n.toLocaleString()} ช่อง)`, `Press again to overwrite ${M.file.name} (${pl(n.toLocaleString(), "cell", "cells")})`);
+      const n = last.fill.stat.filled, a = last.fill.stat.added;
+      const more = a ? tr(` เพิ่ม ${a.toLocaleString()} แถว`, `, ${pl(a.toLocaleString(), "new row", "new rows")}`) : "";
+      saveBtn.querySelector("span").textContent = tr(`กดอีกครั้งเพื่อเขียนทับ ${M.file.name} (${n.toLocaleString()} ช่อง${more})`, `Press again to overwrite ${M.file.name} (${pl(n.toLocaleString(), "cell", "cells")}${more})`);
       saveBtn.classList.add("danger");
       confirmTimer = setTimeout(confirmReset, 5000);
       return;
@@ -725,6 +949,7 @@ export function mount(tool) {
         ? tr(`เขียนแล้ว แต่อ่านกลับมาไม่ตรง ${bad.length} ช่อง กดย้อนกลับได้`, `Written, but ${bad.length} cells read back different. You can undo`)
         : tr(`บันทึกลง ${M.file.name} แล้ว เติม ${out.patch.stat.written.toLocaleString()} ช่อง อ่านกลับจากไฟล์แล้วตรงทุกช่อง`,
              `Saved into ${M.file.name}, ${pl(out.patch.stat.written.toLocaleString(), "cell", "cells")} filled, all read back correctly from the file`);
+      if (last.fill.stat.added) msg += tr(`, เพิ่มแถวใหม่ ${last.fill.stat.added.toLocaleString()} แถว`, `, ${pl(last.fill.stat.added.toLocaleString(), "new row", "new rows")} added`);
       if (out.patch.stat.skippedFormula) msg += tr(`, ข้าม ${out.patch.stat.skippedFormula.toLocaleString()} ช่องที่เป็นสูตร`, `, skipped ${pl(out.patch.stat.skippedFormula.toLocaleString(), "formula cell", "formula cells")}`);
       (bad.length ? st.err : st.ok)(msg);
       undoBtn.hidden = false;

@@ -44,19 +44,19 @@ export async function handleOf(file) {
   return p ? await p : null;
 }
 
-/** เปิดหน้าต่างเลือกไฟล์แบบได้มือจับ ผู้ใช้กดยกเลิก = null */
-export async function pickWritable() {
+const EXCEL_TYPES = [{
+  description: "Excel",
+  accept: {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+    "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"],
+  },
+}];
+
+/** เปิดหน้าต่างเลือกไฟล์แบบได้มือจับ ผู้ใช้กดยกเลิก = null
+ *  types = ชนิดไฟล์ที่ให้เลือก (ค่าเริ่มต้น .xlsx .xlsm) ช่อง "ไฟล์ทั้งหมด" ยังเลือกได้เสมอ */
+export async function pickWritable(types = EXCEL_TYPES) {
   try {
-    const [h] = await window.showOpenFilePicker({
-      multiple: false,
-      types: [{
-        description: "Excel",
-        accept: {
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-          "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"],
-        },
-      }],
-    });
+    const [h] = await window.showOpenFilePicker({ multiple: false, types });
     const file = await h.getFile();
     handles.set(keyOf(file), Promise.resolve(h));
     return { handle: h, file };

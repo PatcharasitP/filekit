@@ -802,11 +802,11 @@ export function mount(tool) {
 
   function renderFound() {
     const { sp, result, fill } = last;
-    if (!fill) { note(tr("แก้ข้อความสีแดงด้านบนก่อน จึงจะเห็นตัวอย่างผล", "Fix the notice above first to see a preview")); return; }
+    // ‼️ (07/10/2026 พี่ปอนด์) แถวที่เจอรู้ได้ตั้งแต่เลือกคีย์ ยังไม่ติ๊กคอลัมน์ก็โชว์ได้ แค่ยังไม่มีคอลัมน์ค่าที่จะเติม
     const rows = [];
     result.perRow.forEach((p, k) => { if (FOUND.has(p.status)) rows.push(k); });
     if (!rows.length) { note(tr("ยังไม่เจอเลยสักแถว ดูแท็บ “ไม่เจอ” แล้วลองเปลี่ยนคอลัมน์คีย์", "Nothing matched yet. See the “Not found” tab and try other key columns")); return; }
-    const cols = fill.cols;
+    const cols = fill ? fill.cols : [];
     const head = cols.map((c) => fill.aoa[M.headerIdx][c]);
     const shown = rows.slice(0, PREVIEW);
     viewBox.appendChild(el("table", { class: "xt" }, [
@@ -827,6 +827,12 @@ export function mount(tool) {
         ]);
       })),
     ]));
+    if (!fill) {
+      note(!sp.pull.length
+        ? tr("ติ๊กคอลัมน์ที่จะดึงมาเติมด้านขวา จะเห็นค่าที่จะเติมในตารางนี้", "Tick the columns to bring over on the right to see the values here")
+        : tr("แก้ข้อความสีแดงด้านบนก่อน จึงจะเห็นค่าที่จะเติม", "Fix the notice above first to see the values to fill"));
+      return;
+    }
     note(tr(`แสดง ${shown.length.toLocaleString()} จาก ${rows.length.toLocaleString()} แถวที่เจอ ช่องที่จะถูกเติมตัวหนาและมีสีรอง`,
       `Showing ${shown.length.toLocaleString()} of ${pl(rows.length.toLocaleString(), "matched row", "matched rows")}. Cells to be filled are bold and tinted`));
   }

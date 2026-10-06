@@ -553,6 +553,12 @@ def main():
         p4.wait_for_timeout(1500)
         ck("ข้อประชากร: เจอ 8 แถวจริง", next((c for c in chips(p4) if c.startswith("เจอ ")), None), "เจอ 8 แถว")
         ck("ไม่ขึ้นเตือนเจอน้อย (เจอ 8 จาก 13 คีย์ของไฟล์รอง)", "เจอแค่" in p4.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"), False)
+        # ‼️ 07/10/2026 พี่ปอนด์: ควรเห็นแถวที่เจอแม้ยังไม่ได้ติ๊กคอลัมน์ (เดิมขึ้นแค่ “แก้ข้อความสีแดงด้านบนก่อน”)
+        p4.locator("button").filter(has_text="ล้าง").first.click()
+        p4.wait_for_timeout(700)
+        rows4 = p4.evaluate("() => [...document.querySelectorAll('.xt-wrap table tbody tr')].map(tr => [...tr.children].map(td => td.textContent))")
+        ck("ยังไม่ติ๊กคอลัมน์: แท็บเจอยังโชว์ครบ 8 แถว พร้อมแถวในไฟล์รอง", [len(rows4), rows4[0][-1] if rows4 else None], [8, "2"])
+        ck("บอกว่าต้องติ๊กคอลัมน์ก่อนจึงเห็นค่าที่จะเติม", "ติ๊กคอลัมน์ที่จะดึงมาเติม" in p4.evaluate("() => document.querySelector('.xt-wrap')?.textContent || ''"), True)
 
         print("\n── ⑰ ไฟล์ที่มีคอลัมน์ผลอยู่แล้ว ช่องเลือกต้องชี้คอลัมน์เดิม ไม่ขึ้นว่าคอลัมน์ใหม่ ──")
         # ‼️ 07/10/2026 ภาพจากพี่ปอนด์: ช่องเลือกบอก “คอลัมน์ใหม่ท้ายตาราง” แต่ข้างล่างบอก “จะเขียนทับลง BT” ขัดกันเอง

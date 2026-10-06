@@ -257,15 +257,19 @@ def main():
         pg.wait_for_timeout(700)
         ck("เปิดแล้ว: จะเพิ่มแถวใหม่ตามจำนวนที่คำนวณอิสระ", next((c for c in chips(pg) if "จะเพิ่มแถวใหม่" in c), None), f"จะเพิ่มแถวใหม่ {len(SEC_ONLY_ADD)} แถว")
         tag = "Addon " + datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).strftime("%d/%m/%Y")
-        ck("ปุ่มวันนี้ใส่ป้ายวันที่วันนี้", pg.locator(".lk-addon input[type=text]").input_value(), tag)
+        ck("ปุ่มวันนี้ใส่ป้ายวันที่วันนี้", pg.locator(".lk-addon input[type=text]").first.input_value(), tag)
+        # ‼️ 07/10/2026 ชื่อคอลัมน์ป้ายตั้งเองได้ (ค่าเริ่มต้น Addon)
+        ck("ชื่อคอลัมน์ป้ายค่าเริ่มต้นเป็น Addon", pg.get_by_label("ชื่อคอลัมน์ป้าย").input_value(), "Addon")
+        pg.get_by_label("ชื่อคอลัมน์ป้าย").fill("ล็อตเพิ่ม")
+        pg.wait_for_timeout(600)
         pa = download(pg, "ดาวน์โหลดไฟล์ที่เติมแล้ว")
         af = openpyxl.load_workbook(pa)["2026"]
         av = openpyxl.load_workbook(pa, data_only=True)["2026"]
         last_main = max(PER)
         head2 = [av.cell(2, c).value for c in range(1, af.max_column + 1)]
-        tcol = head2.index("Addon") + 1 if "Addon" in head2 else None
+        tcol = head2.index("ล็อตเพิ่ม") + 1 if "ล็อตเพิ่ม" in head2 else None
         scol = head2.index("ผลการหา") + 1 if "ผลการหา" in head2 else None
-        ck("มีคอลัมน์ป้าย Addon และคอลัมน์ผล", [tcol is not None, scol is not None], [True, True])
+        ck("คอลัมน์ป้ายใช้ชื่อที่ตั้งเอง (ล็อตเพิ่ม) และมีคอลัมน์ผล", [tcol is not None, "Addon" in head2, scol is not None], [True, False, True])
         got = []
         for i, (sr, key, d, no, send) in enumerate(SEC_ONLY_ADD):
             r = last_main + 1 + i
@@ -281,6 +285,7 @@ def main():
         ck("ฟิลเตอร์ขยายครอบแถวใหม่และคอลัมน์ผลกับป้าย Addon", af.auto_filter.ref, f"A2:V{last_main + len(SEC_ONLY_ADD)}")
         ck("ช่องวันที่ของแถวใหม่ใช้รูปแบบเดียวกับแถวบน", af.cell(last_main + 1, 14).number_format, af.cell(last_main, 14).number_format)
         ck("สูตร Mapping ของแถวเดิมยังเป็นสูตร", str(af["G3"].value), "=A3&F3")
+        pg.get_by_label("ชื่อคอลัมน์ป้าย").fill("Addon")
         pg.locator(".lk-switch").filter(has_text="Addon").locator("input").uncheck()
         pg.locator(".dz input[type=file]").nth(1).set_input_files(str(SRC))
         pg.wait_for_timeout(1800)
@@ -326,8 +331,37 @@ def main():
         res.nth(0).select_option("6")        # ชนคอลัมน์คีย์ G Mapping
         pg.wait_for_timeout(600)
         ck("คอลัมน์ผลชนคอลัมน์คีย์ ขึ้นเตือนและปิดปุ่มดาวน์โหลด",
-           ["คอลัมน์ผลการหาลงคอลัมน์ซ้ำกัน" in pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"),
+           ["ลงคอลัมน์เดียวกัน: คีย์ G กับ ผลการหา (G)" in pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"),
             pg.locator("button").filter(has_text="ดาวน์โหลดไฟล์ที่เติมแล้ว").first.is_disabled()], [True, True])
+        pg.locator("button").filter(has_text="ใส่ทั้งหมด").click()
+        pg.wait_for_timeout(600)
+
+        print("\n── ⑯ ชื่อคอลัมน์ผลตั้งเองได้ ชื่อชนคอลัมน์เดิมบอกก่อน ชื่อชนกันเองห้ามบันทึก ──")
+        # ‼️ 07/10/2026 พี่ปอนด์: ควรตั้งชื่อเองได้ และถ้าชื่อตรงกับคอลัมน์ที่มีอยู่จะเกิดอะไร
+        names = pg.locator(".lk-keys").nth(2).locator("input[type=text]")
+        ck("ช่องชื่อ 4 ช่อง ค่าเริ่มต้นเป็นชื่อเดิม", [names.nth(i).input_value() for i in range(names.count())],
+           ["ผลการหา", "เจอในไฟล์รองกี่แถว", "เติมแล้ว", "ค่ามาจากแถวในไฟล์รอง"])
+        pg.locator("button").filter(has_text="ไม่ใส่เลย").click()
+        res.nth(2).select_option("new")
+        ck("เลือกไม่ใส่ ช่องชื่อซ่อน เลือกคอลัมน์ใหม่ ช่องชื่อโผล่", [names.nth(0).is_visible(), names.nth(2).is_visible()], [False, True])
+        names.nth(2).fill("Filled?")
+        pg.wait_for_timeout(600)
+        q1 = download(pg, "ดาวน์โหลดไฟล์ที่เติมแล้ว")
+        x1 = openpyxl.load_workbook(q1, data_only=True)["2026"]
+        ck("ตั้งชื่อเอง: หัวคอลัมน์ใหม่เป็น Filled?", [x1["R2"].value, x1["S2"].value], ["Filled?", None])
+        names.nth(2).fill("Clearing Doc.")
+        pg.wait_for_timeout(600)
+        note = pg.evaluate("() => [...document.querySelectorAll('.lk-keys')[2].querySelectorAll('.lk-note')].filter(n => !n.hidden).map(n => n.textContent).join(' ')")
+        ck("ชื่อตรงกับคอลัมน์ที่มีอยู่ บอกก่อนว่าจะเขียนทับคอลัมน์ Q", "มีคอลัมน์ชื่อนี้แล้ว (Q)" in note, True)
+        q2 = download(pg, "ดาวน์โหลดไฟล์ที่เติมแล้ว")
+        x2 = openpyxl.load_workbook(q2, data_only=True)["2026"]
+        ck("ชื่อตรงคอลัมน์เดิม: เขียน Yes/No ลง Q ไม่ต่อคอลัมน์ใหม่", [x2["R2"].value, x2.cell(3, 17).value], [None, "Yes"])
+        names.nth(2).fill("Tax Inv. No (SM)")      # ชนกับคอลัมน์ที่ดึงมาลง O
+        pg.wait_for_timeout(600)
+        bn = pg.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''")
+        ck("ชื่อชนกับคอลัมน์ที่ดึงมา: เตือนและห้ามดาวน์โหลด",
+           ["ลงคอลัมน์เดียวกัน: Tax Inv. No (SM) กับ Tax Inv. No (SM) (O)" in bn, pg.locator("button").filter(has_text="ดาวน์โหลดไฟล์ที่เติมแล้ว").first.is_disabled()], [True, True])
+        names.nth(2).fill("เติมแล้ว")
         pg.locator("button").filter(has_text="ใส่ทั้งหมด").click()
         pg.wait_for_timeout(600)
 

@@ -271,13 +271,21 @@ export function mount(tool) {
   const STATUS_HINT = [tr("เจอ 1 แถว, ไม่เจอ, เจอ 2 แถว (ค่าต่างกัน)", "Found in 1 row, Not found, ..."), tr("ตัวเลข เช่น 0, 1, 2", "A number like 0, 1, 2"),
     tr("Yes หรือ No ไว้กดฟิลเตอร์", "Yes or No, handy for filtering"), tr("เลขแถวตาม Excel เช่น 7, 8", "Excel row numbers like 7, 8")];
   let userStatus = false;
-  const statusSel = STATUS_HEAD.map((h) => {
-    const s = select([["new", "-"]], "new");
-    s.onchange = () => { userStatus = true; refresh(); };
-    return s;
+  /* ‼️ (07/10/2026 พี่ปอนด์) ชื่อคอลัมน์ใหม่ตั้งเองได้ ค่าเริ่มต้นเป็นชื่อเดิม
+   *    ชื่อที่ตรงกับคอลัมน์ที่มีอยู่แล้ว = เขียนลงคอลัมน์นั้น (ทับทุกแถว) บอกใต้ช่องชื่อให้เห็นก่อนบันทึก */
+  const nameIn = (value, label) => el("input", { class: "lk-num", type: "text", value, "aria-label": label });
+  const statusSel = STATUS_HEAD.map(() => select([["new", "-"]], "new"));
+  const statusName = STATUS_HEAD.map((h) => nameIn(h, tr(`ชื่อคอลัมน์ใหม่ของ ${h}`, `New column name for ${h}`)));
+  const statusNote = STATUS_HEAD.map(() => el("p", { class: "lk-note", hidden: true }));
+  statusSel.forEach((s, i) => {
+    s.onchange = () => { userStatus = true; syncNames(); refresh(); };
+    statusName[i].oninput = refresh;
   });
-  const setAllStatus = (v) => { userStatus = true; statusSel.forEach((s) => { s.value = v; }); refresh(); };
-  const statusBox = el("div", { class: "lk-keys" }, statusSel.map((s, i) => field(STATUS_HEAD[i], s, STATUS_HINT[i])));
+  const setAllStatus = (v) => { userStatus = true; statusSel.forEach((s) => { s.value = v; }); syncNames(); refresh(); };
+  const statusBox = el("div", { class: "lk-keys" }, statusSel.map((s, i) => el("div", {}, [
+    field(STATUS_HEAD[i], s, STATUS_HINT[i]),
+    field(tr("ชื่อคอลัมน์ใหม่", "New column name"), statusName[i]), statusNote[i],
+  ])));
 
   /* ── แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี → เพิ่มเป็นแถวใหม่ (Addon) ─────────────
    * ปิดไว้เป็นค่าเริ่มต้น เพราะการเพิ่มแถวลงไฟล์จริงของบริษัทต้องเป็นการตัดสินใจของคนใช้เอง */
@@ -287,7 +295,10 @@ export function mount(tool) {
   const addonSw = el("input", { type: "checkbox", "aria-label": tr("เพิ่มเป็นแถวใหม่ท้ายไฟล์หลัก", "Add them as new rows at the end of the main file") });
   const addonInfo = el("p", { class: "lk-sub" });
   const tagIn = el("input", { class: "lk-num", type: "text", value: monthTag(), "aria-label": tr("ป้ายของแถวใหม่", "Label for the new rows") });
-  const tagCol = select([["new", tr("คอลัมน์ใหม่ชื่อ Addon", "New column named Addon")], ["none", tr("ไม่ใส่ป้าย", "No label")]], "new");
+  const tagCol = select([["new", tr("คอลัมน์ใหม่ท้ายตาราง", "New column at the end")], ["none", tr("ไม่ใส่ป้าย", "No label")]], "new");
+  const tagName = nameIn("Addon", tr("ชื่อคอลัมน์ป้าย", "Label column name"));
+  const tagNameF = field(tr("ชื่อคอลัมน์ป้าย", "Label column name"), tagName);
+  const tagNote = el("p", { class: "lk-note", hidden: true });
   const setTag = (v) => { tagIn.value = v; refresh(); };
   const addonBox = el("div", { class: "lk-addon", hidden: true }, [
     field(tr("ป้ายบอกว่าเป็นแถวเพิ่ม", "Label for the added rows"), tagIn),
@@ -295,13 +306,14 @@ export function mount(tool) {
       button(tr("เดือนนี้", "This month"), { ghost: true, onclick: () => setTag(monthTag()) }),
       button(tr("วันนี้", "Today"), { ghost: true, onclick: () => setTag(dayTag()) }),
     ]),
-    field(tr("ใส่ป้ายที่คอลัมน์", "Put the label in"), tagCol),
+    field(tr("ใส่ป้ายที่คอลัมน์", "Put the label in"), tagCol), tagNameF, tagNote,
     el("p", { class: "lk-note" }, tr("แถวใหม่ได้คีย์ กับคอลัมน์ที่ติ๊กไว้ด้านบน ลงคอลัมน์ตามที่เลือกไว้",
       "New rows get the key and the ticked columns above, in the destinations you chose")),
   ]);
   addonSw.onchange = () => { addonBox.hidden = !addonSw.checked; refresh(); };
   tagIn.oninput = refresh;
-  tagCol.onchange = refresh;
+  tagCol.onchange = () => { syncNames(); refresh(); };
+  tagName.oninput = refresh;
 
   const right = el("div", {}, [
     el("h3", { class: "lk-h" }, tr("คีย์ที่ใช้จับคู่", "Match on")),
@@ -458,7 +470,7 @@ export function mount(tool) {
     // ป้ายแถวใหม่ลงคอลัมน์ที่มีอยู่แล้วได้ ตัวเลือกตามหัวตารางไฟล์หลัก
     const keepTag = tagCol.value;
     tagCol.innerHTML = "";
-    [["new", tr("คอลัมน์ใหม่ชื่อ Addon", "New column named Addon")], ["none", tr("ไม่ใส่ป้าย", "No label")],
+    [["new", tr("คอลัมน์ใหม่ท้ายตาราง", "New column at the end")], ["none", tr("ไม่ใส่ป้าย", "No label")],
       ...(mt ? mt.header.map((h, c) => [String(c), `${colLetter(c)}: ${h}`]) : [])]
       .forEach(([v, t]) => tagCol.appendChild(el("option", { value: v }, t)));
     tagCol.value = [...tagCol.options].some((o) => o.value === keepTag) ? keepTag : "new";
@@ -473,6 +485,7 @@ export function mount(tool) {
       const want = userStatus ? keep : guess >= 0 ? String(guess) : "new";
       sel.value = [...sel.options].some((o) => o.value === want) ? want : "new";
     });
+    syncNames();
     if (mt && stt) buildPullList(reguess && !userPull);
     else { pullBox.innerHTML = ""; pullFind.hidden = true; }
     refresh();
@@ -563,23 +576,55 @@ export function mount(tool) {
 
   /** ปลายทางคอลัมน์ผลทีละคอลัมน์ "new" | "none" | เลขคอลัมน์ */
   const statusDests = () => statusSel.map((s) => (s.value === "new" || s.value === "none" ? s.value : +s.value));
+  const nameOf = (input, fallback) => input.value.trim() || fallback;
+  /** คอลัมน์ของไฟล์หลักที่ชื่อนี้ (ตรงเป๊ะ ไม่สนตัวพิมพ์) ไม่มี = -1 */
+  const headAt = (name) => (M.table ? M.table.header.findIndex((h) => normHead(h) === normHead(name)) : -1);
+
+  /** ช่องชื่อโผล่เฉพาะตอนเลือกคอลัมน์ใหม่ */
+  function syncNames() {
+    statusSel.forEach((s, i) => { statusName[i].closest(".field").hidden = s.value !== "new"; });
+    tagNameF.hidden = tagCol.value !== "new";
+  }
+
+  /** ชื่อคอลัมน์ใหม่ที่ตรงกับคอลัมน์ที่มีอยู่ = จะเขียนทับลงคอลัมน์นั้น บอกใต้ช่องชื่อ */
+  function renderNameNotes() {
+    const tell = (note, on, name) => {
+      const at = on ? headAt(name) : -1;
+      note.hidden = at < 0;
+      if (at >= 0) note.textContent = tr(`มีคอลัมน์ชื่อนี้แล้ว (${colLetter(at)}) จะเขียนทับลงคอลัมน์นั้น`,
+        `A column with this name exists (${colLetter(at)}). It will be overwritten`);
+    };
+    statusSel.forEach((s, i) => tell(statusNote[i], s.value === "new", nameOf(statusName[i], STATUS_HEAD[i])));
+    tell(tagNote, tagCol.value === "new" && addonSw.checked, nameOf(tagName, "Addon"));
+  }
+
+  /* ‼️ (07/10/2026) ทุกอย่างที่จะเขียนลงคอลัมน์ ต้องไม่ลงที่เดียวกัน คีย์ คอลัมน์ที่ดึง คอลัมน์ผล ป้าย Addon
+   *    ชื่อคอลัมน์ใหม่ที่ตั้งเองอาจไปตรงกับคอลัมน์ที่มีอยู่ หรือตรงกันเอง ค่าจะทับกันโดยไม่มีใครรู้ */
+  function clashOf({ mk, pull }, addonOn) {
+    const where = [];       // [ชื่อสิ่งที่เขียน, ที่ลง]
+    const at = (d, name) => (d === "new" ? (headAt(name) >= 0 ? headAt(name) : "n:" + normHead(name)) : +d);
+    mk.forEach((c) => where.push([tr(`คีย์ ${colLetter(c)}`, `key ${colLetter(c)}`), c]));
+    pull.forEach((p) => where.push([S.table.header[p.sec], at(p.dest, S.table.header[p.sec])]));
+    statusDests().forEach((d, i) => { if (d !== "none") where.push([nameOf(statusName[i], STATUS_HEAD[i]), at(d, nameOf(statusName[i], STATUS_HEAD[i]))]); });
+    if (addonOn && tagCol.value !== "none") where.push([tr("ป้าย Addon", "Addon label"), at(tagCol.value, nameOf(tagName, "Addon"))]);
+    const seen = new Map();
+    for (const [who, w] of where) {
+      if (seen.has(w)) return [seen.get(w), who, typeof w === "number" ? colLetter(w) : w.slice(2)];
+      seen.set(w, who);
+    }
+    return null;
+  }
 
   function problemsOf({ mk, sk, pull }, addonOn) {
     const out = [];
     const dests = pull.filter((p) => p.dest !== "new").map((p) => +p.dest);
-    const sd = statusDests().filter((d) => typeof d === "number");
-    const tc = addonOn && tagCol.value !== "new" && tagCol.value !== "none" ? [+tagCol.value] : [];
-    if (new Set(sd).size !== sd.length || sd.some((d) => mk.includes(d) || dests.includes(d) || tc.includes(d)))
-      out.push(tr("คอลัมน์ผลการหาลงคอลัมน์ซ้ำกัน หรือชนกับคีย์ คอลัมน์ที่ดึงมา หรือป้าย Addon", "A result column shares a column with another result, a key, a brought column or the Addon label"));
-    if (new Set(dests).size !== dests.length) out.push(tr("มีสองคอลัมน์ลงปลายทางเดียวกัน", "Two columns go to the same destination"));
-    if (dests.some((d) => mk.includes(d))) out.push(tr("ปลายทางเป็นคอลัมน์คีย์ของไฟล์หลัก จะทำให้คีย์เปลี่ยน", "A destination is a key column of the main file, that would change the keys"));
+    const clash = clashOf({ mk, pull }, addonOn);
+    if (clash) out.push(tr(`ลงคอลัมน์เดียวกัน: ${clash[0]} กับ ${clash[1]} (${clash[2]}) เปลี่ยนปลายทางหรือชื่ออย่างใดอย่างหนึ่ง`,
+      `Same column: ${clash[0]} and ${clash[1]} (${clash[2]}). Change one destination or name`));
     if (!pull.length) out.push(tr("ยังไม่ได้ติ๊กคอลัมน์ที่จะดึงมาเติม", "No column ticked to bring over yet"));
     if (addonOn) {
       if (addonKeyCells(mk, sk, []) == null) out.push(tr("แถวใหม่: แยกคีย์ไฟล์รองลงหลายคอลัมน์ไม่ได้ ให้คีย์ไฟล์หลักเหลือคอลัมน์เดียว",
         "New rows: the source key cannot be split into several main columns. Use one main key column"));
-      const tc = tagCol.value;
-      if (tc !== "new" && tc !== "none" && (mk.includes(+tc) || dests.includes(+tc)))
-        out.push(tr("ป้าย Addon ลงคอลัมน์เดียวกับคีย์หรือคอลัมน์ที่ดึงมา เลือกคอลัมน์อื่น", "The Addon label shares a column with a key or a brought column. Pick another one"));
     }
     return out;
   }
@@ -628,7 +673,7 @@ export function mount(tool) {
           at: lastDataIdx() + 1,
           rows: result.secOnly.map((h) => ({ src: h, keys: addonKeyCells(sp.mk, sp.sk, S.table.rows[h]),
             vals: sp.pull.map((p) => S.table.rows[h][p.sec] ?? null) })),
-          tag: tc === "none" || !value ? null : tc === "new" ? { col: null, name: "Addon", value } : { col: +tc, value },
+          tag: tc === "none" || !value ? null : tc === "new" ? { col: null, name: nameOf(tagName, "Addon"), value } : { col: +tc, value },
           label: (a) => tr(`เพิ่มจากไฟล์รอง แถว ${S.table.rowIdx[a.src] + 1}`, `Added from source row ${S.table.rowIdx[a.src] + 1}`),
           src: (a) => String(S.table.rowIdx[a.src] + 1),
         };
@@ -636,10 +681,12 @@ export function mount(tool) {
       fill = applyFill({
         aoa: M.aoa, headerIdx: M.headerIdx, rowIdx: M.table.rowIdx, width: M.table.width, result, dests,
         fill: fillSel.value, addon,
-        status: statusDests().some((d) => d !== "none") ? { head: STATUS_HEAD, dest: statusDests(), label: stLabel, src: srcRowsText } : null,
+        status: statusDests().some((d) => d !== "none")
+          ? { head: STATUS_HEAD.map((h, i) => nameOf(statusName[i], h)), dest: statusDests(), label: stLabel, src: srcRowsText } : null,
       });
     }
     last = { sp, result, fill, problems, addon, keyOpts };
+    renderNameNotes();
     ws.showCanvas(true);
     renderChips();
     renderTabs();

@@ -164,7 +164,7 @@ def main():
         ck("คอลัมน์ Mapping ยังเป็นสูตร (ไม่กลายเป็นตัวเลขตาย)", [str(wf["G3"].value), str(wf["G4"].value), str(wf["G20"].value)],
            ["=A3&F3", "=A4&F4", "=A20&F20"])
         ck("ยอดรวมแถว 1 ยังเป็นสูตร", str(wf["K1"].value), "=SUBTOTAL(9,K3:K20)")
-        ck("ฟิลเตอร์ยังอยู่", wf.auto_filter.ref, "A2:Q20")
+        ck("ฟิลเตอร์ยังอยู่ และครอบคอลัมน์ผลที่ต่อท้าย (R S) ให้กรองได้", wf.auto_filter.ref, "A2:S20")
         ck("แช่แข็งหัวตารางยังอยู่", wf.freeze_panes, "C3")
         ck("แถวที่ซ่อนตามฟิลเตอร์ยังซ่อน", [wf.row_dimensions[r].hidden for r in (4, 6, 9, 13)], [True] * 4)
         ck("ช่องสูตร ='' (P5) ไม่ถูกทับ", str(wf["P5"].value), '=""')
@@ -267,7 +267,7 @@ def main():
         want = [(key, d.date() if d else None, no, send, tag, f"เพิ่มจากไฟล์รอง แถว {sr}") for sr, key, d, no, send in SEC_ONLY_ADD]
         ck("แถวใหม่ต่อท้ายตาราง: คีย์ วันที่ เลขใบกำกับ เลขส่งทีมภาษี ป้าย ผล ตรงกับไฟล์รองทุกแถว", got, want)
         ck("ไม่มีแถวเกินมา", av.max_row, last_main + len(SEC_ONLY_ADD))
-        ck("ฟิลเตอร์ขยายครอบแถวใหม่", af.auto_filter.ref, f"A2:Q{last_main + len(SEC_ONLY_ADD)}")
+        ck("ฟิลเตอร์ขยายครอบแถวใหม่และคอลัมน์ผลกับป้าย Addon", af.auto_filter.ref, f"A2:T{last_main + len(SEC_ONLY_ADD)}")
         ck("ช่องวันที่ของแถวใหม่ใช้รูปแบบเดียวกับแถวบน", af.cell(last_main + 1, 14).number_format, af.cell(last_main, 14).number_format)
         ck("สูตร Mapping ของแถวเดิมยังเป็นสูตร", str(af["G3"].value), "=A3&F3")
         pg.locator(".lk-switch").filter(has_text="Addon").locator("input").uncheck()
@@ -365,7 +365,7 @@ def main():
         saved.write_bytes(opfs_bytes())
         sf = openpyxl.load_workbook(saved)["2026"]
         sv = openpyxl.load_workbook(saved, data_only=True)["2026"]
-        ck("ไฟล์บนดิสก์: Mapping ยังเป็นสูตร ฟิลเตอร์ยังอยู่", [str(sf["G3"].value), sf.auto_filter.ref], ["=A3&F3", "A2:Q20"])
+        ck("ไฟล์บนดิสก์: Mapping ยังเป็นสูตร ฟิลเตอร์ยังอยู่", [str(sf["G3"].value), sf.auto_filter.ref], ["=A3&F3", "A2:S20"])
         ck("ไฟล์บนดิสก์: ถูกเติมตรงกับที่คำนวณอิสระ", [sv.cell(r, 15).value for r in sorted(PER)],
            [("OLD-001" if r == 12 else (PER[r][1][0][2] if PER[r][1] else None)) for r in sorted(PER)])
         ck("ไฟล์บนดิสก์ต่างจากเดิม (เขียนจริง)", hashlib.sha256(opfs_bytes()).hexdigest() != sha0, True)

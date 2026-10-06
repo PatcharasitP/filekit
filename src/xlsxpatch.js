@@ -273,25 +273,42 @@ export async function patchXlsx(JSZip, buf, sheetName, edits, opts = {}) {
     }
   }
 
-  // ขยายฟิลเตอร์ ชื่อช่วงฟิลเตอร์ และตาราง Excel ให้ครอบแถวใหม่
-  if (lastNew) {
-    const lastOld = appendFrom - 1;
-    out = out.replace(/<autoFilter\b[^>]*\sref="([^"]*)"/, (m, ref) => {
-      const g = grownRef(ref, lastOld, lastNew);
-      return g ? m.replace(`ref="${ref}"`, `ref="${g}"`) : m;
-    });
+  /* ขยายฟิลเตอร์กับชื่อช่วงฟิลเตอร์ที่ Excel ซ่อนไว้
+   *   แถว: ให้ครอบแถวใหม่ท้ายตาราง (Addon)
+   *   คอลัมน์: ให้ครอบคอลัมน์ใหม่ที่เขียนหัวต่อติดขวาสุดของฟิลเตอร์ (ผลการหา ป้าย Addon)
+   * ‼️ (06/10/2026 เปิดด้วย Excel ตัวจริง) คอลัมน์ใหม่อยู่นอกช่วงฟิลเตอร์ = ไม่มีปุ่มฟิลเตอร์ให้กด
+   *    สั่งกรองคอลัมน์ Addon แล้ว Excel ฟ้อง Unable to get the AutoFilter property */
+  const wrote = new Set(applied.map((a) => `${a.r}:${a.c}`));
+  const lastOld = appendFrom ? appendFrom - 1 : 0;
+  const growFilter = (ref) => {
+    const p = parseRef(ref);
+    if (!p) return null;
+    let c1 = lettersToCol(p.c1);
+    const c0 = c1;
+    while (wrote.has(`${p.r0}:${c1 + 1}`)) c1++;
+    const r1 = lastNew && p.r1 >= lastOld && p.r1 < lastNew ? lastNew : p.r1;
+    return c1 === c0 && r1 === p.r1 ? null : `${p.c0}${p.r0}:${colLetter(c1)}${r1}`;
+  };
+  out = out.replace(/<autoFilter\b[^>]*\sref="([^"]*)"/, (m, ref) => {
+    const g = growFilter(ref);
+    return g ? m.replace(`ref="${ref}"`, `ref="${g}"`) : m;
+  });
+  {
     const wbPath = "xl/workbook.xml";
     const wbx = await zip.file(wbPath).async("string");
     const wbNew = wbx.replace(/(<definedName\b[^>]*name="_xlnm\._FilterDatabase"[^>]*>)([^<]*)(<\/definedName>)/g, (m, open, body, close) => {
       if (+attr(open, "localSheetId") !== sheetIndex) return m;
       const bang = body.lastIndexOf("!");
       if (bang < 0) return m;
-      const g = grownRef(body.slice(bang + 1), lastOld, lastNew);
+      const g = growFilter(body.slice(bang + 1));
       if (!g) return m;
       const abs = g.replace(/([A-Z]+)(\d+)/g, "$$$1$$$2");
       return open + body.slice(0, bang + 1) + abs + close;
     });
     if (wbNew !== wbx) zip.file(wbPath, wbNew, { createFolders: false });
+  }
+  // ตาราง Excel ขยายเฉพาะแถว (คอลัมน์ใหม่ของตารางต้องมีนิยาม tableColumn จึงไม่แตะ)
+  if (lastNew) {
     const relsPath = path.replace(/([^/]+)$/, "_rels/$1.rels");
     const relsFile = zip.file(relsPath);
     if (relsFile) {

@@ -59,7 +59,10 @@ for (const name of Object.keys(zo.files)) {
   const a = await zo.file(name).async("string"), b = await zn.file(name).async("string");
   if (a !== b) changed.push(name);
 }
-ck("ไฟล์ที่ถูกแก้มีแค่ชีตเดียว (และ styles ถ้าต้องเพิ่มสไตล์)", changed.filter((n) => n !== "xl/styles.xml"), ["xl/worksheets/sheet1.xml"]);
+// workbook.xml เปลี่ยนเพราะ R2 เป็นหัวคอลัมน์ใหม่ติดขวาฟิลเตอร์ ชื่อช่วงฟิลเตอร์ที่ซ่อนไว้จึงขยายตาม (06/10/2026)
+ck("ไฟล์ที่ถูกแก้มีแค่ชีตเดียวกับ workbook.xml (และ styles ถ้าต้องเพิ่มสไตล์)", changed.filter((n) => n !== "xl/styles.xml"), ["xl/workbook.xml", "xl/worksheets/sheet1.xml"]);
+const wbChanged = await zn.file("xl/workbook.xml").async("string"), wbOrig = await zo.file("xl/workbook.xml").async("string");
+ck("workbook.xml ต่างเฉพาะชื่อช่วงฟิลเตอร์", wbChanged.replace("$R$20", "$Q$20"), wbOrig);
 ck("styles ไม่ถูกแตะ เมื่อช่องปลายทางมีสไตล์วันที่อยู่แล้ว (N3 s=3) แต่ N4 ก็ s=3 เช่นกัน", changed.includes("xl/styles.xml"), false);
 
 const cellsOf = (xml) => {
@@ -77,7 +80,7 @@ ck("จำนวนช่องที่เพิ่ม = 5 (R2 R3 R4 A1 N1)", c
 const head = (x) => x.slice(0, x.indexOf("<sheetData"));
 ck("ส่วนหัวชีต (view, pane, cols) เหมือนเดิม ยกเว้น dimension", head(sn).replace(/<dimension[^>]*>/, ""), head(so).replace(/<dimension[^>]*>/, ""));
 const tailOf = (x) => x.slice(x.indexOf("</sheetData>"));
-ck("ส่วนท้ายชีต (autoFilter, pageMargins) เหมือนเดิม", tailOf(sn), tailOf(so));
+ck("ส่วนท้ายชีตเหมือนเดิม ยกเว้นฟิลเตอร์ขยายครอบหัวคอลัมน์ใหม่ R2 (A2:Q20 เป็น A2:R20)", tailOf(sn), tailOf(so).replace('ref="A2:Q20"', 'ref="A2:R20"'));
 ck("แถวที่ซ่อนยังซ่อนอยู่", /<row r="4"[^>]*hidden="1"/.test(sn), true);
 ck("แถวที่ไม่ได้แตะเหมือนเดิมทั้งแถว (แถว 7)", sn.match(/<row r="7"[\s\S]*?<\/row>/)[0], so.match(/<row r="7"[\s\S]*?<\/row>/)[0]);
 ck("สูตร shared ของ G ยังอยู่ครบ", (sn.match(/<f t="shared"/g) || []).length, (so.match(/<f t="shared"/g) || []).length);
@@ -146,6 +149,14 @@ const pre = await patchXlsx(JSZip, orig, "2026", [{ r: 21, c: 13, v: "x" }]);   
 const ov = await patchXlsx(JSZip, pre.bytes, "2026", [{ r: 21, c: 6, v: "K" }], { appendFrom: 21, styleRow: 20 });
 const sov = await (await JSZip.loadAsync(ov.bytes)).file("xl/worksheets/sheet1.xml").async("string");
 ck("แถวต่อท้ายที่มีอยู่แล้วในไฟล์ ฟิลเตอร์ก็ขยาย", (sov.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A2:Q21");
+
+// คอลัมน์ใหม่ต่อติดขวาฟิลเตอร์ (ผลการหา ป้าย Addon) ฟิลเตอร์ต้องครอบด้วย ไม่งั้นไม่มีปุ่มกรองให้กด (เจอใน Excel ตัวจริง 06/10/2026)
+const wc = await patchXlsx(JSZip, orig, "2026", [...add, { r: 2, c: 17, v: "ผลการหา" }, { r: 2, c: 18, v: "Addon" }, { r: 21, c: 18, v: "Addon 10/2026" }], { appendFrom: 21, styleRow: 20 });
+const swc = await (await JSZip.loadAsync(wc.bytes)).file("xl/worksheets/sheet1.xml").async("string");
+ck("หัวคอลัมน์ใหม่ R2 S2 ติดกัน ฟิลเตอร์ขยายเป็น A2:S22", (swc.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A2:S22");
+const gap = await patchXlsx(JSZip, orig, "2026", [{ r: 2, c: 19, v: "ห่าง" }]);
+const sgap = await (await JSZip.loadAsync(gap.bytes)).file("xl/worksheets/sheet1.xml").async("string");
+ck("หัวคอลัมน์ใหม่ที่ไม่ติดกัน (T2 เว้น R S) ฟิลเตอร์ไม่ขยับ", (sgap.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A2:Q20");
 
 console.log("\n━━ ⑦ ตาราง Excel (Format as Table) ต้องขยายตามแถวใหม่ ━━");
 const tb = readFileSync(join(ROOT, "tests/fixtures/lookup-table.xlsx"));

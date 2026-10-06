@@ -94,27 +94,29 @@ export function lookup({ mainRows, mainKeyCols, secRows, secKeyCols, pullCols, k
   const mainKeys = new Set();     // ทุกคีย์ของไฟล์หลัก ไว้หาแถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี
   const perRow = mainRows.map((r) => {
     const key = keyOf(r, mainKeyCols, keyOpts);
-    if (key == null) { stats.nokey++; return { status: "nokey", n: 0, hits: [], vals: null, key: null }; }
+    if (key == null) { stats.nokey++; return { status: "nokey", n: 0, hits: [], vals: null, key: null, used: [] }; }
     mainKeys.add(key);
     const hits = idx.get(key);
-    if (!hits) { stats.none++; return { status: "none", n: 0, hits: [], vals: null, key }; }
+    if (!hits) { stats.none++; return { status: "none", n: 0, hits: [], vals: null, key, used: [] }; }
     mainHits.set(key, (mainHits.get(key) || 0) + 1);
     const all = hits.map((h) => pullCols.map((c) => (isBlank(secRows[h][c]) ? null : secRows[h][c])));
     const agree = all.every((v) => sameVals(v, all[0]));
     const status = hits.length === 1 ? "one" : agree ? "dupSame" : "dupDiff";
     stats[status]++;
-    let vals;
-    if (agree || dup === "first") vals = all[0];
-    else if (dup === "last") vals = all[all.length - 1];
-    else if (dup === "blank") vals = null;
+    // used = แถวของไฟล์รองที่ค่าถูกหยิบมาใช้จริง (คอลัมน์ "ค่ามาจากแถวในไฟล์รอง" 06/10/2026)
+    let vals, used;
+    if (agree || dup === "first") { vals = all[0]; used = [hits[0]]; }
+    else if (dup === "last") { vals = all[all.length - 1]; used = [hits[hits.length - 1]]; }
+    else if (dup === "blank") { vals = null; used = []; }
     else vals = pullCols.map((_, j) => {
       const seen = [];
       for (const v of all) if (v[j] != null && !seen.some((x) => sig(x) === sig(v[j]))) seen.push(v[j]);
       return seen.length <= 1 ? (seen[0] ?? null) : seen.map(sig).join("; ");
     });
+    if (!used) used = hits.filter((h, i) => all[i].some((v) => v != null));
     const withheld = vals == null;
     if (withheld) stats.withheld++;
-    return { status, n: hits.length, hits, vals, key, withheld };
+    return { status, n: hits.length, hits, vals, key, withheld, used };
   });
 
   const secDupKeys = [];
@@ -165,7 +167,9 @@ export function addonKeyCells(mainKeyCols, secKeyCols, secRow) {
  *   aoa       = ตารางทั้งแผ่นดั้งเดิม (รวมแถวเหนือหัวตาราง)  rowIdx[k] = ตำแหน่งใน aoa ของแถวข้อมูลลำดับ k
  *   dests     = ปลายทางเรียงตาม pullCols: { col: เลขคอลัมน์ในไฟล์หลัก } หรือ { col: null, name: "ชื่อคอลัมน์ใหม่" }
  *   fill      = "empty" เติมเฉพาะช่องที่ยังว่าง (ไม่ทับของเดิม) · "always" ทับเสมอ
- *   status    = ถ้าให้ { label(perRow) → ข้อความ, head: [ชื่อคอลัมน์ผล, ชื่อคอลัมน์จำนวนที่เจอ] } จะต่อคอลัมน์ผลท้ายตาราง
+ *   status    = ถ้าให้ { label(perRow) → ข้อความ, head: [ชื่อคอลัมน์ผล, ชื่อคอลัมน์จำนวนที่เจอ, (เติมแล้ว), (ค่ามาจากแถว)],
+ *               src(perRow) → ข้อความเลขแถวไฟล์รอง } จะต่อคอลัมน์ผลท้ายตาราง
+ *               คอลัมน์ที่ 3 = Yes/No แถวนี้ได้ค่าจากไฟล์รองไหม (เขียนรอบนี้ หรือของเดิมเท่ากับค่าจากไฟล์รองอยู่แล้ว)
  *   addon     = เพิ่มแถวใหม่ท้ายตาราง (แถวที่ไฟล์รองมีแต่ไฟล์หลักไม่มี)
  *               { at: ตำแหน่งแถวแรกใน aoa, rows: [{ keys: [[คอลัมน์, ค่า]], vals: ค่าเรียงตาม dests }],
  *                 tag: { col } | { col: null, name } พร้อม value = ป้ายเช่น "Addon 10/2026" (null = ไม่ใส่ป้าย),
@@ -173,7 +177,7 @@ export function addonKeyCells(mainKeyCols, secKeyCols, secRow) {
  */
 export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill = "empty", status = null, addon = null }) {
   const out = aoa.map((r) => r.slice());
-  const need = width + dests.filter((d) => d.col == null).length + (status ? 2 : 0) + (addon && addon.tag && addon.tag.col == null ? 1 : 0);
+  const need = width + dests.filter((d) => d.col == null).length + (status ? status.head.length : 0) + (addon && addon.tag && addon.tag.col == null ? 1 : 0);
   for (const r of out) while (r.length < need) r.push(null);
   // edits = ทุกช่องที่เปลี่ยนจริง (ตำแหน่งในตาราง เริ่ม 0) ไว้ให้ xlsxpatch แก้เฉพาะช่องเหล่านี้ในไฟล์ต้นฉบับ
   const edits = [];
@@ -191,14 +195,13 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
   let statusCols = null;
   if (status) {
     // ‼️ ถ้าไฟล์นี้เคยถูกเติมมาแล้ว (มีคอลัมน์ผลอยู่) ใช้ของเดิม ไม่ต่อซ้ำทุกครั้งที่ทำ
-    const at = status.head.map((h) => out[headerIdx].findIndex((x) => normHead(x) === normHead(h)));
-    if (at[0] >= 0 && at[1] >= 0) statusCols = at;
-    else {
-      statusCols = [next, next + 1];
-      put(headerIdx, next, status.head[0]);
-      put(headerIdx, next + 1, status.head[1]);
-      next += 2;
-    }
+    // ‼️ ทีละคอลัมน์: ไฟล์ที่บันทึกจากรุ่นก่อนมีแค่ 2 คอลัมน์แรก ต่อเฉพาะคอลัมน์ที่ยังไม่มี ไม่ต่อซ้ำทั้งชุด
+    statusCols = status.head.map((h) => {
+      const at = out[headerIdx].findIndex((x) => normHead(x) === normHead(h));
+      if (at >= 0) return at;
+      put(headerIdx, next, h);
+      return next++;
+    });
   }
   let tagCol = null;
   if (addon && addon.tag) {
@@ -214,17 +217,19 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
   result.perRow.forEach((p, k) => {
     const row = out[rowIdx[k]];
     if (statusCols) { put(rowIdx[k], statusCols[0], status.label(p)); put(rowIdx[k], statusCols[1], p.n); }
-    if (!p.vals) return;
-    p.vals.forEach((v, j) => {
+    let got = 0;      // ช่องที่ได้ค่าจากไฟล์รอง (เขียนรอบนี้ หรือของเดิมเท่ากันอยู่แล้ว)
+    if (p.vals) p.vals.forEach((v, j) => {
       if (v == null) { stat.emptyFromSec++; return; }
       const c = cols[j];
       if (fill === "empty" && !isBlank(row[c])) {
         stat.keptOld++;
-        if (sig(row[c]) !== sig(v)) stat.keptOldDiff++;
+        if (sig(row[c]) !== sig(v)) stat.keptOldDiff++; else got++;
         return;
       }
-      put(rowIdx[k], c, v); stat.filled++; stat.cellsByCol[j]++;
+      put(rowIdx[k], c, v); stat.filled++; stat.cellsByCol[j]++; got++;
     });
+    if (statusCols && statusCols.length > 2) put(rowIdx[k], statusCols[2], got ? "Yes" : "No");
+    if (statusCols && statusCols.length > 3 && status.src) { const t = status.src(p); if (t) put(rowIdx[k], statusCols[3], t); }
   });
   if (addon) {
     addon.rows.forEach((a, n) => {
@@ -232,6 +237,8 @@ export function applyFill({ aoa, headerIdx, rowIdx, width, result, dests, fill =
       for (const [c, v] of a.keys) if (!isBlank(v)) put(i, c, v);
       a.vals.forEach((v, j) => { if (v != null && !isBlank(v)) put(i, cols[j], v); });
       if (statusCols && addon.label) put(i, statusCols[0], addon.label(a));
+      if (statusCols && statusCols.length > 2) put(i, statusCols[2], "Yes");
+      if (statusCols && statusCols.length > 3 && addon.src) { const t = addon.src(a); if (t) put(i, statusCols[3], t); }
       if (tagCol != null && !isBlank(addon.tag.value)) put(i, tagCol, addon.tag.value);
       stat.added++;
     });

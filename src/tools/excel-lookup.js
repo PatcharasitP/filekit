@@ -309,7 +309,7 @@ export function mount(tool) {
     el("p", { class: "lk-note" }, tr("ช่องที่มีแต่เว้นวรรคถือว่าว่าง เติมได้ ช่องที่เป็นสูตรไม่ถูกทับ",
       "Cells holding only spaces count as empty. Formula cells are never overwritten")),
     sw(tr("เพิ่มคอลัมน์ผลการหาท้ายตาราง", "Add result columns at the end"), statusSw,
-      tr("บอกในแต่ละแถวว่าเจอหรือไม่ และเจอกี่แถวในไฟล์รอง", "Says on every row whether it was found and in how many source rows")),
+      tr("บอกทุกแถวว่าเจอไหม เจอกี่แถว เติมแล้วไหม (Yes/No) และค่ามาจากแถวไหนของไฟล์รอง", "Says on every row whether it was found, in how many source rows, whether it was filled (Yes/No) and which source row the values came from")),
     el("h3", { class: "lk-h", style: "margin-top:18px" }, tr("แถวที่ไฟล์หลักยังไม่มี", "Rows the main file does not have yet")),
     addonInfo,
     sw(tr("เพิ่มเป็นแถวใหม่ท้ายไฟล์หลัก (Addon)", "Add them as new rows at the end (Addon)"), addonSw),
@@ -550,6 +550,9 @@ export function mount(tool) {
     timer = setTimeout(compute, 40);
   }
 
+  /** เลขแถว (ตาม Excel) ของไฟล์รองที่ค่าถูกหยิบมาใช้จริง เช่น "5" หรือ "5, 6" ตอนรวมค่า */
+  const srcRowsText = (p) => (p.used || []).map((h) => S.table.rowIdx[h] + 1).join(", ");
+
   /** แถวสุดท้ายที่มีข้อมูลของไฟล์หลัก (ตำแหน่งใน aoa) แถวใหม่ต่อจากตรงนี้ */
   const lastDataIdx = () => (M.table.rowIdx.length ? M.table.rowIdx[M.table.rowIdx.length - 1] : M.headerIdx);
 
@@ -587,12 +590,14 @@ export function mount(tool) {
             vals: sp.pull.map((p) => S.table.rows[h][p.sec] ?? null) })),
           tag: tc === "none" || !value ? null : tc === "new" ? { col: null, name: "Addon", value } : { col: +tc, value },
           label: (a) => tr(`เพิ่มจากไฟล์รอง แถว ${S.table.rowIdx[a.src] + 1}`, `Added from source row ${S.table.rowIdx[a.src] + 1}`),
+          src: (a) => String(S.table.rowIdx[a.src] + 1),
         };
       }
       fill = applyFill({
         aoa: M.aoa, headerIdx: M.headerIdx, rowIdx: M.table.rowIdx, width: M.table.width, result, dests,
         fill: fillSel.value, addon,
-        status: statusSw.checked ? { head: [tr("ผลการหา", "Lookup result"), tr("เจอในไฟล์รองกี่แถว", "Rows found in source")], label: stLabel } : null,
+        status: statusSw.checked ? { head: [tr("ผลการหา", "Lookup result"), tr("เจอในไฟล์รองกี่แถว", "Rows found in source"),
+          tr("เติมแล้ว", "Filled"), tr("ค่ามาจากแถวในไฟล์รอง", "Taken from source row")], label: stLabel, src: srcRowsText } : null,
       });
     }
     last = { sp, result, fill, problems, addon, keyOpts };
@@ -706,7 +711,7 @@ export function mount(tool) {
     const head = cols.map((c) => fill.aoa[M.headerIdx][c]);
     const shown = rows.slice(0, PREVIEW);
     viewBox.appendChild(el("table", { class: "xt" }, [
-      el("thead", {}, [el("tr", {}, [el("th", {}, tr("แถว", "Row")), el("th", {}, tr("คีย์", "Key")), ...head.map((h) => el("th", {}, String(h ?? ""))), el("th", {}, tr("ผล", "Result"))])]),
+      el("thead", {}, [el("tr", {}, [el("th", {}, tr("แถว", "Row")), el("th", {}, tr("คีย์", "Key")), ...head.map((h) => el("th", {}, String(h ?? ""))), el("th", {}, tr("ผล", "Result")), el("th", {}, tr("จากแถวในไฟล์รอง", "From source row"))])]),
       el("tbody", {}, shown.map((k) => {
         const p = result.perRow[k];
         const i = M.table.rowIdx[k];
@@ -719,6 +724,7 @@ export function mount(tool) {
             return el("td", { class: (changed ? "new lk-chg" : "old") }, cellText(after));
           }),
           el("td", {}, [badge(p)]),
+          el("td", { class: "old num" }, srcRowsText(p)),
         ]);
       })),
     ]));

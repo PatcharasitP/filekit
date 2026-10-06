@@ -204,5 +204,29 @@ const RS = lookup({ mainRows: TS.rows, mainKeyCols: [0], secRows: sec, secKeyCol
 const AS = applyFill({ aoa: sp, headerIdx: 0, rowIdx: TS.rowIdx, width: TS.width, result: RS, dests: [{ col: 1 }], fill: "empty" });
 ck("เว้นวรรคธรรมดาและเว้นวรรคแบบ nbsp ถูกเติมทับ", [AS.aoa[1][1], AS.aoa[2][1], AS.stat.filled, AS.stat.keptOld], ["TX-001", "TX-002", 2, 0]);
 
+console.log("\n━━ ⑮ คอลัมน์ เติมแล้ว (Yes/No) กับ ค่ามาจากแถวในไฟล์รอง ━━");
+/* ‼️ 06/10/2026 พี่ปอนด์: อยากรู้ว่าแถวไหนถูกเติม แบบ yes no และค่ามาจากแถวไหนของไฟล์รอง
+   Yes = แถวนี้ได้ค่าจากไฟล์รองอย่างน้อย 1 ช่อง (เขียนรอบนี้ หรือของเดิมเท่ากับค่าจากไฟล์รองอยู่แล้ว) */
+ck("แถวที่ใช้: first เอาแถวแรก", pol("first").used, [4]);
+ck("แถวที่ใช้: last เอาแถวสุดท้าย", pol("last").used, [5]);
+ck("แถวที่ใช้: blank ค่าต่างกันไม่ได้ใช้แถวไหนเลย", pol("blank").used, []);
+ck("แถวที่ใช้: join ใช้ทุกแถวที่มีค่า", pol("join").used, [4, 5]);
+ck("แถวที่ใช้: ซ้ำค่าเหมือนกันนับแถวแรก, ไม่เจอว่าง", [R.perRow[1].used, R.perRow[3].used], [[1], []]);
+const ST4 = { head: ["ผล", "เจอกี่แถว", "เติมแล้ว", "จากแถว"], label, src: (p) => p.used.map((h) => h + 1).join(", ") };
+const AY = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }], fill: "empty", status: ST4 });
+ck("หัวคอลัมน์ผล 4 คอลัมน์", AY.aoa[1].slice(4, 8), ["ผล", "เจอกี่แถว", "เติมแล้ว", "จากแถว"]);
+ck("แถวที่เติมได้ Yes จากแถว 1", AY.aoa[2].slice(6, 8), ["Yes", "1"]);
+ck("แถวที่ไม่ทับของเดิม (ค่าไม่ตรง) ได้ No แต่ยังบอกแถวที่เจอ", AY.aoa[4].slice(6, 8), ["No", "2"]);
+ck("แถวที่ไม่เจอได้ No และไม่มีเลขแถว", AY.aoa[5].slice(6, 8), ["No", null]);
+const sheetSame = sheet.map((r, i) => (i === 4 ? ["10682619062803", "TX-002", null, 2] : r));
+const AY2 = applyFill({ aoa: sheetSame, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }], fill: "empty", status: ST4 });
+ck("ของเดิมเท่ากับค่าจากไฟล์รองอยู่แล้ว (เติมรอบก่อน) ยังได้ Yes", AY2.aoa[4][6], "Yes");
+const sheetOld2 = sheet.map((r, i) => (i === 1 ? [...r, "ผล", "เจอกี่แถว"] : [...r, null, null]));
+const AY3 = applyFill({ aoa: sheetOld2, headerIdx: 1, rowIdx: T.rowIdx, width: 6, result: RF, dests: [{ col: 1 }], status: ST4 });
+ck("ไฟล์ที่เคยมีคอลัมน์ผล 2 คอลัมน์ ใช้ของเดิม ต่อเฉพาะ 2 คอลัมน์ใหม่", AY3.aoa[1].slice(4, 8), ["ผล", "เจอกี่แถว", "เติมแล้ว", "จากแถว"]);
+const AY4 = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.width, result: RF, dests: [{ col: 1 }], status: ST4,
+  addon: { ...addon, tag: null, src: () => "16" } });
+ck("แถว Addon ได้ Yes และเลขแถวไฟล์รองที่มา", AY4.aoa[6].slice(4, 8), ["เพิ่มจากไฟล์รอง", null, "Yes", "16"]);
+
 console.log(`\n${F.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ ${F.length ? `ตก ${F.length} ข้อ` : ""}`);
 if (F.length) { console.log("\n" + F.join("\n") + "\n"); process.exit(1); }

@@ -164,7 +164,7 @@ def main():
         ck("คอลัมน์ Mapping ยังเป็นสูตร (ไม่กลายเป็นตัวเลขตาย)", [str(wf["G3"].value), str(wf["G4"].value), str(wf["G20"].value)],
            ["=A3&F3", "=A4&F4", "=A20&F20"])
         ck("ยอดรวมแถว 1 ยังเป็นสูตร", str(wf["K1"].value), "=SUBTOTAL(9,K3:K20)")
-        ck("ฟิลเตอร์ยังอยู่ และครอบคอลัมน์ผลที่ต่อท้าย (R S) ให้กรองได้", wf.auto_filter.ref, "A2:S20")
+        ck("ฟิลเตอร์ยังอยู่ และครอบคอลัมน์ผลที่ต่อท้าย (R ถึง U) ให้กรองได้", wf.auto_filter.ref, "A2:U20")
         ck("แช่แข็งหัวตารางยังอยู่", wf.freeze_panes, "C3")
         ck("แถวที่ซ่อนตามฟิลเตอร์ยังซ่อน", [wf.row_dimensions[r].hidden for r in (4, 6, 9, 13)], [True] * 4)
         ck("ช่องสูตร ='' (P5) ไม่ถูกทับ", str(wf["P5"].value), '=""')
@@ -184,8 +184,13 @@ def main():
         ck("แถว 12 คงค่าเดิม OLD-001 (โหมดเติมเฉพาะช่องว่าง)", wv["O12"].value, "OLD-001")
         ck("ช่องที่ไม่เจอเว้นว่าง (ยกเว้นแถว 12 ที่มีของเดิม)", [wv.cell(r, 15).value for r, v in PER.items() if v[0] == "none"],
            ["OLD-001" if r == 12 else None for r, v in PER.items() if v[0] == "none"])
-        head = [wv.cell(2, c).value for c in (18, 19)]
-        ck("มีคอลัมน์ผลการหาท้ายตาราง", head, ["ผลการหา", "เจอในไฟล์รองกี่แถว"])
+        head = [wv.cell(2, c).value for c in (18, 19, 20, 21)]
+        ck("มีคอลัมน์ผลการหาท้ายตาราง 4 คอลัมน์", head, ["ผลการหา", "เจอในไฟล์รองกี่แถว", "เติมแล้ว", "ค่ามาจากแถวในไฟล์รอง"])
+        # ‼️ 06/10/2026 พี่ปอนด์ขอ Yes/No ว่าแถวไหนถูกเติม และค่ามาจากแถวไหนของไฟล์รอง (โหมดเอาแถวแรก = แถวแรกที่เจอ)
+        ck("เติมแล้ว Yes ทุกแถวที่เจอ No ทุกแถวที่ไม่เจอ", [wv.cell(r, 20).value for r in sorted(PER)],
+           ["No" if PER[r][0] == "none" else "Yes" for r in sorted(PER)])
+        ck("ค่ามาจากแถวในไฟล์รอง = แถวแรกที่เจอ (ไม่เจอเว้นว่าง)", [wv.cell(r, 21).value for r in sorted(PER)],
+           [str(PER[r][1][0][0]) if PER[r][1] else None for r in sorted(PER)])
         ck("จำนวนที่เจอตรงกับไฟล์รองทุกแถว", [wv.cell(r, 19).value for r in sorted(PER)], [len(PER[r][1]) for r in sorted(PER)])
         ck("ข้อความผลของแถวที่ซ้ำค่าต่างกัน", [wv.cell(r, 18).value for r, v in PER.items() if v[0] == "dupDiff"],
            [f"เจอ {len(v[1])} แถว (ค่าต่างกัน)" for r, v in PER.items() if v[0] == "dupDiff"])
@@ -198,6 +203,7 @@ def main():
         w2 = openpyxl.load_workbook(path2, data_only=True)["2026"]
         dd = [r for r, v in PER.items() if v[0] == "dupDiff"]
         ck("โหมด ‘ไม่เติมถ้าแถวซ้ำมีค่าต่างกัน’ แถวซ้ำค่าต่างกันเว้นว่าง", [w2.cell(r, 15).value for r in dd], [None] * len(dd))
+        ck("โหมดไม่เติม: แถวซ้ำค่าต่างกันได้ เติมแล้ว No และไม่มีเลขแถวไฟล์รอง", [(w2.cell(r, 20).value, w2.cell(r, 21).value) for r in dd], [("No", None)] * len(dd))
         ds = [r for r, v in PER.items() if v[0] == "dupSame"]
         ck("แต่แถวซ้ำที่ค่าเหมือนกันยังเติม (ไม่กำกวม)", [w2.cell(r, 15).value for r in ds], [PER[r][1][0][2] for r in ds])
         ck("ข้อความผลบอกว่าไม่ได้เติม", w2.cell(dd[0], 18).value, f"เจอ {len(PER[dd[0]][1])} แถว (ค่าต่างกัน ไม่ได้เติม)")
@@ -267,7 +273,10 @@ def main():
         want = [(key, d.date() if d else None, no, send, tag, f"เพิ่มจากไฟล์รอง แถว {sr}") for sr, key, d, no, send in SEC_ONLY_ADD]
         ck("แถวใหม่ต่อท้ายตาราง: คีย์ วันที่ เลขใบกำกับ เลขส่งทีมภาษี ป้าย ผล ตรงกับไฟล์รองทุกแถว", got, want)
         ck("ไม่มีแถวเกินมา", av.max_row, last_main + len(SEC_ONLY_ADD))
-        ck("ฟิลเตอร์ขยายครอบแถวใหม่และคอลัมน์ผลกับป้าย Addon", af.auto_filter.ref, f"A2:T{last_main + len(SEC_ONLY_ADD)}")
+        ck("แถว Addon: เติมแล้ว Yes และค่ามาจากแถวของไฟล์รองที่ถูกต้อง",
+           [(av.cell(last_main + 1 + i, 20).value, av.cell(last_main + 1 + i, 21).value) for i in range(len(SEC_ONLY_ADD))],
+           [("Yes", str(sr)) for sr, *_ in SEC_ONLY_ADD])
+        ck("ฟิลเตอร์ขยายครอบแถวใหม่และคอลัมน์ผลกับป้าย Addon", af.auto_filter.ref, f"A2:V{last_main + len(SEC_ONLY_ADD)}")
         ck("ช่องวันที่ของแถวใหม่ใช้รูปแบบเดียวกับแถวบน", af.cell(last_main + 1, 14).number_format, af.cell(last_main, 14).number_format)
         ck("สูตร Mapping ของแถวเดิมยังเป็นสูตร", str(af["G3"].value), "=A3&F3")
         pg.locator(".lk-switch").filter(has_text="Addon").locator("input").uncheck()
@@ -365,7 +374,7 @@ def main():
         saved.write_bytes(opfs_bytes())
         sf = openpyxl.load_workbook(saved)["2026"]
         sv = openpyxl.load_workbook(saved, data_only=True)["2026"]
-        ck("ไฟล์บนดิสก์: Mapping ยังเป็นสูตร ฟิลเตอร์ยังอยู่", [str(sf["G3"].value), sf.auto_filter.ref], ["=A3&F3", "A2:S20"])
+        ck("ไฟล์บนดิสก์: Mapping ยังเป็นสูตร ฟิลเตอร์ยังอยู่", [str(sf["G3"].value), sf.auto_filter.ref], ["=A3&F3", "A2:U20"])
         ck("ไฟล์บนดิสก์: ถูกเติมตรงกับที่คำนวณอิสระ", [sv.cell(r, 15).value for r in sorted(PER)],
            [("OLD-001" if r == 12 else (PER[r][1][0][2] if PER[r][1] else None)) for r in sorted(PER)])
         ck("ไฟล์บนดิสก์ต่างจากเดิม (เขียนจริง)", hashlib.sha256(opfs_bytes()).hexdigest() != sha0, True)

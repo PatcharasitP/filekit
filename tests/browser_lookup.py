@@ -494,7 +494,29 @@ def main():
         ck("ติ๊กทั้งหมดระหว่างค้นหา ติ๊กเฉพาะที่เห็น (ของเดิมยังติ๊ก)", on, ["B: tax inv date sm", "C: Tax.Inv.No (SM)", "G: Extra 4"])
         p3.locator(".lk-find").fill("ไม่มีแน่นอน")
         p3.wait_for_timeout(300)
-        ck("ค้นไม่เจอบอกตรง ๆ", "ไม่มีคอลัมน์ที่ชื่อมี" in p3.evaluate("() => [...document.querySelectorAll('.lk-note')].filter(n => !n.hidden).map(n => n.textContent).join(' ')"), True)
+        print("\n── ⑮ ไฟล์หลักใหญ่ ไฟล์รองเล็ก ต้องไม่ขึ้นเตือนเจอน้อย ──")
+        # ‼️ 07/10/2026 เคสจริงพี่ปอนด์: ไฟล์หลัก 23,213 แถว ไฟล์รอง 13 คีย์ เจอ 8 แต่ขึ้นเตือน “เจอแค่ 8 จาก 23,213”
+        big = openpyxl.Workbook(); w = big.active; w.title = "B"
+        w.append(["Mapping", "Tax Inv. No (SM)"])
+        for i in range(200):
+            w.append([str(10682619000000 + i), None])
+        big.save(TMP / "big-main.xlsx")
+        small = openpyxl.Workbook(); w = small.active; w.title = "S"
+        w.append(["Mapping", "Tax Inv. No (SM)"])
+        for i in range(13):
+            w.append([str(10682619000000 + i if i < 8 else 10682619900000 + i), f"TX-{i}"])
+        small.save(TMP / "small-src.xlsx")
+        p4 = ctx2.new_page()
+        fkui.open_tool(p4, "excel-lookup", base)
+        p4.locator(".dz input[type=file]").nth(0).set_input_files(str(TMP / "big-main.xlsx"))
+        p4.wait_for_timeout(1500)
+        p4.locator(".dz input[type=file]").nth(1).set_input_files(str(TMP / "small-src.xlsx"))
+        p4.wait_for_timeout(1500)
+        ck("ข้อประชากร: เจอ 8 แถวจริง", next((c for c in chips(p4) if c.startswith("เจอ ")), None), "เจอ 8 แถว")
+        ck("ไม่ขึ้นเตือนเจอน้อย (เจอ 8 จาก 13 คีย์ของไฟล์รอง)", "เจอแค่" in p4.evaluate("() => document.querySelector('.lk-banner')?.textContent || ''"), False)
+        p3.bring_to_front()
+
+        ck("ค้นไม่เจอบอกตรง ๆ","ไม่มีคอลัมน์ที่ชื่อมี" in p3.evaluate("() => [...document.querySelectorAll('.lk-note')].filter(n => !n.hidden).map(n => n.textContent).join(' ')"), True)
         b.close()
 
     ck("ไม่มี error ใน console", errs, [])

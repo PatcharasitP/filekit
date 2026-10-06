@@ -145,7 +145,21 @@ export function lookup({ mainRows, mainKeyCols, secRows, secKeyCols, pullCols, k
   secOnly.sort((a, b) => a - b);
   stats.secOnly = secOnly.length;
   stats.secOnlyKeys = secOnlyKeys.size;
+  stats.mainKeys = mainKeys.size;                       // คีย์ไม่ซ้ำของไฟล์หลัก
+  stats.matchedKeys = idx.size - secOnlyKeys.size;      // คีย์ไม่ซ้ำที่มีทั้งสองไฟล์
   return { perRow, stats, secDupKeys, secOnly };
+}
+
+/** เจอน้อยผิดปกติไหม เทียบคีย์ที่จับคู่ได้กับฝั่งที่มีคีย์น้อยกว่า คืน null = ปกติ , { samples } = ควรเตือน
+ *  ‼️ (07/10/2026) เดิมเทียบกับจำนวนแถวไฟล์หลัก ไฟล์จริง 23,213 แถวกับไฟล์รอง 13 คีย์ เจอ 8 ก็ขึ้นเตือนทั้งที่ปกติ
+ *  samples = หน้าตาคีย์สองฝั่งต่างกัน (ตัวเลขเป็น 9 ตัวอักษรเป็น A แล้วเทียบ) ควรโชว์ตัวอย่างให้เห็น
+ *            หน้าตาเหมือนกันแค่ค่าไม่ตรง โชว์ตัวอย่างไปก็ไม่ช่วยอะไร */
+export function lowMatch(stats, mainSample = [], secSample = []) {
+  const base = Math.min(stats.mainKeys, stats.secKeys);
+  if (!(base >= 10) || stats.matchedKeys / base >= 0.05) return null;
+  const shape = (k) => String(k).replace(/[0-9]/g, "9").replace(/\p{L}/gu, "A");
+  const ms = new Set(mainSample.map(shape));
+  return { samples: !secSample.some((k) => ms.has(shape(k))) };
 }
 
 /** ค่าคีย์ของแถวใหม่ (Addon) ลงคอลัมน์คีย์ของไฟล์หลัก คืน [[คอลัมน์ไฟล์หลัก, ค่า]] หรือ null ถ้าแยกไม่ได้

@@ -4,7 +4,7 @@ import { tr, pl } from "../i18n.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, tablesToBlob, cellText } from "../sheetpick.js";
 import { lookup, applyFill, tableFromAoa, guessHeaderRow, guessKeyPair, guessPullCols,
-         colLetter, normHead, isBlank, bestDest, addonKeyCells, keyOf } from "../lookupkit.js";
+         colLetter, normHead, isBlank, bestDest, addonKeyCells, keyOf, lowMatch } from "../lookupkit.js";
 import { patchXlsx } from "../xlsxpatch.js";
 import { watchDrops, handleOf, pickWritable, askWrite, writeBack, canWriteInPlace } from "../fshandle.js";
 
@@ -682,15 +682,17 @@ export function mount(tool) {
     }
     /* ‼️ เจอน้อยผิดปกติ (ไฟล์จริงของพี่ 06/10/2026 เจอ 7 จาก 23,205) โชว์หน้าตาคีย์ที่เอามาเทียบจริงสองฝั่ง
      *    ให้เห็นเองว่าต่างกันตรงไหน (คนละคอลัมน์ ศูนย์นำหน้า มีขีด) แทนการเดาสาเหตุ */
-    const keyed = s.total - s.nokey;
-    if (keyed >= 10 && s.found / keyed < 0.05) {
-      const mainSample = result.perRow.filter((p) => p.key != null).slice(0, 3).map((p) => p.key);
-      const secSample = [];
-      for (const r of S.table.rows) { const k = keyOf(r, sp.sk, keyOpts); if (k != null) secSample.push(k); if (secSample.length >= 3) break; }
-      lines.push(tr(`เจอแค่ <b>${s.found.toLocaleString()}</b> จาก ${keyed.toLocaleString()} แถว ลองเทียบหน้าตาคีย์ที่เอามาเทียบกัน`,
-        `Only <b>${s.found.toLocaleString()}</b> of ${pl(keyed.toLocaleString(), "row", "rows")} matched. Compare how the keys look`));
-      lines.push(`${esc(tr("ไฟล์หลัก", "Main"))}: <b>${mainSample.map(esc).join(", ")}</b>`);
-      lines.push(`${esc(tr("ไฟล์รอง", "Source"))}: <b>${secSample.map(esc).join(", ")}</b>`);
+    // ‼️ (07/10/2026) เทียบกับฝั่งที่มีคีย์น้อยกว่า และพูดบรรทัดเดียว ตัวอย่างคีย์โชว์เฉพาะตอนหน้าตาสองฝั่งต่างกันจริง
+    const mainSample = result.perRow.filter((p) => p.key != null).slice(0, 3).map((p) => p.key);
+    const secSample = [];
+    for (const r of S.table.rows) { const k = keyOf(r, sp.sk, keyOpts); if (k != null) secSample.push(k); if (secSample.length >= 3) break; }
+    const lm = lowMatch(s, mainSample, secSample);
+    if (lm) {
+      const of = Math.min(s.mainKeys, s.secKeys).toLocaleString(), got = s.matchedKeys.toLocaleString();
+      lines.push(lm.samples
+        ? tr(`เจอแค่ <b>${got}</b> จาก ${of} คีย์ หน้าตาคีย์ต่างกัน ไฟล์หลัก <b>${esc(mainSample[0])}</b> ไฟล์รอง <b>${esc(secSample[0])}</b>`,
+             `Only <b>${got}</b> of ${of} keys matched. They look different: main <b>${esc(mainSample[0])}</b>, source <b>${esc(secSample[0])}</b>`)
+        : tr(`เจอแค่ <b>${got}</b> จาก ${of} คีย์ ตรวจว่าเลือกคีย์และไฟล์ถูกคู่`, `Only <b>${got}</b> of ${of} keys matched. Check the key columns and files`));
       cls = cls || " warn";
       // ‼️ คีย์ผิดคอลัมน์ = ทุกแถวของไฟล์รองดูเหมือน “ไม่มีในไฟล์หลัก” เปิด Addon ไว้จะเพิ่มแถวซ้ำทั้งไฟล์
       if (fill && fill.stat.added) {

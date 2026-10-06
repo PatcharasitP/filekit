@@ -247,5 +247,17 @@ const AN0 = applyFill({ aoa: sheet, headerIdx: 1, rowIdx: T.rowIdx, width: T.wid
   status: { ...ST4, dest: ["none", "none", "none", "none"] } });
 ck("ไม่ใส่ทั้งหมด = ไม่มีคอลัมน์ผลเลย", [AN0.aoa[1].length, AN0.edits.filter((e) => e.c >= 4).length], [4, 0]);
 
+console.log("\n━━ ⑰ เตือนเจอน้อยผิดปกติ เทียบกับฝั่งที่เล็กกว่า ━━");
+/* ‼️ 07/10/2026 ไฟล์จริงพี่ปอนด์ 23,213 แถว กับไฟล์รอง 13 คีย์ เจอ 8 แต่ขึ้นเตือน "เจอแค่ 8 จาก 23,213"
+   ทั้งที่เจอเกินครึ่งของที่หาได้ ต้องเทียบกับฝั่งที่เล็กกว่า และโชว์ตัวอย่างคีย์เฉพาะตอนหน้าตาต่างกันจริง */
+const lowMatch = LK.lowMatch || missing("lowMatch");
+ck("ไฟล์รองเล็ก เจอเกินครึ่ง = ไม่เตือน", lowMatch({ mainKeys: 23213, secKeys: 13, matchedKeys: 8 }, ["10682619122441"], ["10682619062802"]), null);
+ck("เลือกคีย์ผิดคอลัมน์ หน้าตาต่างกัน (10 กับ 14 หลัก) = เตือนพร้อมตัวอย่าง",
+  lowMatch({ mainKeys: 18, secKeys: 13, matchedKeys: 0 }, ["2619062802"], ["10682619062802"]), { samples: true });
+ck("หน้าตาเหมือนกันแต่ไม่ค่อยตรง = เตือนโดยไม่ต้องมีตัวอย่าง",
+  lowMatch({ mainKeys: 500, secKeys: 400, matchedKeys: 3 }, ["10682619122441"], ["10682619062802"]), { samples: false });
+ck("คีย์น้อยกว่า 10 ไม่ตัดสิน", lowMatch({ mainKeys: 5, secKeys: 5, matchedKeys: 0 }, ["a"], ["1"]), null);
+ck("สถิติคีย์ไม่ซ้ำของสองฝั่ง และคีย์ที่จับคู่ได้", [R.stats.mainKeys, R.stats.secKeys, R.stats.matchedKeys], [4, 4, 3]);
+
 console.log(`\n${F.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ ${F.length ? `ตก ${F.length} ข้อ` : ""}`);
 if (F.length) { console.log("\n" + F.join("\n") + "\n"); process.exit(1); }

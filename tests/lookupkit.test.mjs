@@ -204,6 +204,11 @@ const RS = lookup({ mainRows: TS.rows, mainKeyCols: [0], secRows: sec, secKeyCol
 const AS = applyFill({ aoa: sp, headerIdx: 0, rowIdx: TS.rowIdx, width: TS.width, result: RS, dests: [{ col: 1 }], fill: "empty" });
 ck("เว้นวรรคธรรมดาและเว้นวรรคแบบ nbsp ถูกเติมทับ", [AS.aoa[1][1], AS.aoa[2][1], AS.stat.filled, AS.stat.keptOld], ["TX-001", "TX-002", 2, 0]);
 
+// ‼️ 07/10/2026 เห็นในภาพเว็บจริง: รวมวันที่ได้ 2026-04-02; 2026-04-09 ต้องเป็นแบบที่คนไทยอ่าน (เหมือนช่องอื่นบนจอ)
+const RJ = lookup({ mainRows: [["k"]], mainKeyCols: [0], secRows: [["k", new Date(2026, 3, 2), 1068], ["k", new Date(2026, 3, 9), 1069]],
+  secKeyCols: [0], pullCols: [1, 2], dup: "join" });
+ck("รวมวันที่เป็น วว/ดด/ปปปป และเลขไม่มีทศนิยมลอย", RJ.perRow[0].vals, ["02/04/2026; 09/04/2026", "1068; 1069"]);
+
 console.log("\n━━ ⑮ คอลัมน์ เติมแล้ว (Yes/No) กับ ค่ามาจากแถวในไฟล์รอง ━━");
 /* ‼️ 06/10/2026 พี่ปอนด์: อยากรู้ว่าแถวไหนถูกเติม แบบ yes no และค่ามาจากแถวไหนของไฟล์รอง
    Yes = แถวนี้ได้ค่าจากไฟล์รองอย่างน้อย 1 ช่อง (เขียนรอบนี้ หรือของเดิมเท่ากับค่าจากไฟล์รองอยู่แล้ว) */

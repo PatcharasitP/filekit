@@ -70,6 +70,9 @@ function sig(v) {
   return String(v).replace(INVISIBLE, " ").replace(/\s+/g, " ").trim();
 }
 const sameVals = (a, b) => a.every((v, i) => sig(v) === sig(b[i]));
+/** ข้อความของค่าตอนรวมหลายค่าเป็นช่องเดียว
+ *  ‼️ (07/10/2026) วันที่ต้องเป็น วว/ดด/ปปปป แบบที่บนจอและใน Excel ไทยเห็น ไม่ใช่ ISO ของ sig() ที่ใช้เทียบค่า */
+const joinText = (v) => (v instanceof Date ? `${pad2(v.getDate())}/${pad2(v.getMonth() + 1)}/${v.getFullYear()}` : sig(v));
 
 export const DUP_POLICIES = ["first", "last", "blank", "join"];
 
@@ -111,7 +114,7 @@ export function lookup({ mainRows, mainKeyCols, secRows, secKeyCols, pullCols, k
     else vals = pullCols.map((_, j) => {
       const seen = [];
       for (const v of all) if (v[j] != null && !seen.some((x) => sig(x) === sig(v[j]))) seen.push(v[j]);
-      return seen.length <= 1 ? (seen[0] ?? null) : seen.map(sig).join("; ");
+      return seen.length <= 1 ? (seen[0] ?? null) : seen.map(joinText).join("; ");
     });
     if (!used) used = hits.filter((h, i) => all[i].some((v) => v != null));
     const withheld = vals == null;

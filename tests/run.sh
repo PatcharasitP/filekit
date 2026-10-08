@@ -28,7 +28,7 @@ for _ in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:$PORT/" && break
 want=$(grep -m1 -o 'filekit-v[0-9]*' sw.js); got=$(curl -s "http://127.0.0.1:$PORT/sw.js" | grep -m1 -o 'filekit-v[0-9]*')
 if [ "$want" != "$got" ]; then echo "❌ เซิร์ฟเวอร์เสิร์ฟคนละชุด (ไฟล์ $want แต่ได้ $got) หยุด"; exit 2; fi
 echo "▶ พอร์ต $PORT เสิร์ฟ $got"
-if [ "${1:-}" = "all" ]; then set -- $(ls tests/browser_*.py tests/css_contract.py | sed 's#tests/##; s#\.py$##'); fi
+if [ "${1:-}" = "all" ]; then set -- $(ls tests/browser_*.py tests/css_contract.py tests/pdf_middot.py tests/theme_schema.py | sed 's#tests/##; s#\.py$##'); fi
 fail=0
 for t in "$@"; do
   echo "##### $t"

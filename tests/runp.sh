@@ -50,8 +50,9 @@ fi
 #    เดิมตัวรันนี้รู้จักแค่เทสเบราว์เซอร์ เทส node 22 ไฟล์จึงตกค้างอยู่ 3 ไฟล์โดยไม่มีใครเห็น
 #    (พหูพจน์อังกฤษ, แถวผลลัพธ์ไม่บอกขนาด, ลำดับผลค้นหา)
 # ‼️ contract = เทสของ FlowKit กับ FileKit ชุดนี้ (tests/contract.sh) อยู่ใน all ด้วย ปล่อย FileKit ทุกครั้งต้องผ่าน (แผนเว็บ FlowKit แยก 6.3)
+# ‼️ pdf_middot กับ theme_schema ชื่อไม่ขึ้นต้นด้วย browser_ ต้องใส่ชื่อเอง tests/runner_coverage.test.mjs เฝ้าไว้ (08/10/2026)
 if [ "${1:-}" = "all" ]; then
-  set -- $(ls tests/browser_*.py tests/css_contract.py | sed 's#tests/##; s#\.py$##') \
+  set -- $(ls tests/browser_*.py tests/css_contract.py tests/pdf_middot.py tests/theme_schema.py | sed 's#tests/##; s#\.py$##') \
          $(ls tests/*.test.mjs | sed 's#tests/##') contract
 fi
 rm -rf "$OUT"; mkdir -p "$OUT"

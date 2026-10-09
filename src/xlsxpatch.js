@@ -340,3 +340,24 @@ export async function patchXlsx(JSZip, buf, sheetName, edits, opts = {}) {
   const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
   return { bytes, stat, applied, skipped };
 }
+
+/** รหัสเนื้อข้อมูลของไฟล์ .xlsx ไว้ตัดสินว่า "มีคนแก้ไฟล์หลังจากที่เปิดเข้ามาไหม" อ่านไม่ได้ = null (ชั้นบนต้องถือว่าเปลี่ยน)
+ *
+ *  ‼️ ทำไมไม่ดูขนาดกับเวลาแก้ไข (ทดสอบจริง 09/10/2026 บนทีม Data ของบัญชี 65)
+ *     ไฟล์ในโฟลเดอร์ทีมที่ shortcut ลง OneDrive: หลังบันทึก 1 วินาที SharePoint เติม customXml, docProps/custom.xml
+ *     แก้ [Content_Types].xml, _rels/.rels, docProps/core.xml, xl/_rels/workbook.xml.rels แล้ว OneDrive ดึงกลับมาทับ
+ *     ขนาด 7,316 เป็น 15,139 ไบต์ ทั้งที่ชีต สไตล์ ธีม workbook.xml ไบต์เดิมทุกตัว ตัวกันเดิมจึงไม่ยอมย้อนกลับและไม่ยอมบันทึกซ้ำ
+ *  นับเฉพาะส่วนใต้ xl/ ที่ไม่ใช่ไฟล์ความสัมพันธ์ (_rels/) คนแก้ข้อมูลจริงต้องแตะชีต ตารางข้อความ สไตล์ หรือ workbook.xml เสมอ */
+export async function contentKey(JSZip, buf) {
+  try {
+    const z = await JSZip.loadAsync(buf);
+    const names = Object.keys(z.files).filter((n) => n.startsWith("xl/") && !n.includes("_rels/") && !z.files[n].dir).sort();
+    if (!names.length) return null;
+    const enc = new TextEncoder(), parts = [];
+    for (const n of names) parts.push(enc.encode(n + "\0"), await z.file(n).async("uint8array"));
+    const all = new Uint8Array(parts.reduce((a, p) => a + p.length, 0));
+    let o = 0; for (const p of parts) { all.set(p, o); o += p.length; }
+    const h = new Uint8Array(await crypto.subtle.digest("SHA-256", all));
+    return [...h].map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch { return null; }
+}

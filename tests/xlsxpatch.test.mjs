@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { patchXlsx, serialOf } from "../src/xlsxpatch.js";
+import { patchXlsx, serialOf, contentKey } from "../src/xlsxpatch.js";
+import { spRoundtrip, editContent } from "./sp_roundtrip.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
@@ -171,6 +172,19 @@ const tp = await patchXlsx(JSZip, tb, "T", [{ r: 5, c: 0, v: "K9" }, { r: 5, c: 
 const tx = await (await JSZip.loadAsync(tp.bytes)).file("xl/tables/table1.xml").async("string");
 ck("ช่วงตารางขยายจาก A1:C4 เป็น A1:C5", (tx.match(/<table\b[^>]*\sref="([^"]*)"/) || [])[1], "A1:C5");
 ck("ฟิลเตอร์ในตารางขยายตาม", (tx.match(/<autoFilter ref="([^"]*)"/) || [])[1], "A1:C5");
+
+// ‼️ 09/10/2026 ไฟล์ในโฟลเดอร์ทีมที่ shortcut ลง OneDrive: SharePoint เติม customXml กับ docProps หลังบันทึก
+//    แล้ว OneDrive ดึงกลับมาทับ ขนาดกับเวลาแก้ไขเปลี่ยน แต่ข้อมูลไม่เปลี่ยน ตัวกันไฟล์ถูกเปลี่ยนต้องดูที่เนื้อ
+console.log("\n━━ ⑧ เทียบเนื้อไฟล์: SharePoint เติมข้อมูลเองไม่นับว่าแก้ คนแก้ข้อมูลจริงต้องนับ ━━");
+const k0 = await contentKey(JSZip, orig);
+ck("อ่านเนื้อไฟล์จริงได้ (ได้รหัสยาว 64 ตัว)", typeof k0 === "string" && k0.length, 64);
+const sp = await spRoundtrip(JSZip, orig);
+ck("ไฟล์หลัง SharePoint เติมข้อมูลไม่ใช่ไฟล์เดิม (ขนาดต่าง)", sp.length !== orig.length, true);
+ck("SharePoint เติมข้อมูล: เนื้อเท่าเดิม", await contentKey(JSZip, sp), k0);
+ck("คนอื่นแก้ข้อความในชีต: เนื้อต่าง", (await contentKey(JSZip, await editContent(JSZip, orig))) !== k0, true);
+ck("คนอื่นแก้หลัง SharePoint เติม: เนื้อต่าง", (await contentKey(JSZip, await editContent(JSZip, sp))) !== k0, true);
+ck("ช่องที่เครื่องมือเติมเอง: เนื้อต่าง", (await contentKey(JSZip, bytes)) !== k0, true);
+ck("ไฟล์เสียอ่านไม่ได้: ได้ null (ให้ชั้นบนถือว่าเปลี่ยน)", await contentKey(JSZip, new Uint8Array([1, 2, 3])), null);
 
 console.log(`\n${F.length ? "❌" : "✅"} ผ่าน ${pass} ข้อ ${F.length ? `ตก ${F.length} ข้อ` : ""}`);
 if (F.length) { console.log("\n" + F.join("\n") + "\n"); process.exit(1); }

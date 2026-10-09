@@ -5,7 +5,7 @@ import { loadLibs } from "../loader.js";
 import { readWorkbook, tablesToBlob, cellText } from "../sheetpick.js";
 import { lookup, applyFill, tableFromAoa, guessHeaderRow, guessKeyPair, guessPullCols,
          colLetter, normHead, isBlank, bestDest, addonKeyCells, keyOf, lowMatch } from "../lookupkit.js";
-import { patchXlsx } from "../xlsxpatch.js";
+import { patchXlsx, contentKey } from "../xlsxpatch.js";
 import { watchDrops, handleOf, pickWritable, askWrite, writeBack, canWriteInPlace } from "../fshandle.js";
 
 /* ‼️ ทำไมต้องมีเครื่องมือนี้ (พี่ปอนด์ 30/09/2026)
@@ -408,7 +408,7 @@ export function mount(tool) {
       const names = wb.SheetNames.filter((n) => wb.Sheets[n]);
       if (!names.length) throw new Error(tr("ไม่พบชีตในไฟล์นี้", "No sheets in this file"));
       side.file = file; side.bytes = bytes; side.ext = extOf(file.name); side.wb = wb; side.sheetNames = names;
-      side.meta = { size: file.size, lastModified: file.lastModified };
+      side.meta = { size: file.size, lastModified: file.lastModified, key: which === "main" ? await contentKey(window.JSZip, bytes) : null };
       if (which === "main") side.handle = handle || await handleOf(file);
       const sel = which === "main" ? mainSheet : secSheet;
       sel.innerHTML = "";
@@ -1010,6 +1010,14 @@ export function mount(tool) {
     saveInPlace();
   }
 
+  /** ไฟล์บนดิสก์ยังเป็นงานเดียวกับที่เรารู้จักไหม ขนาดกับเวลาเท่าเดิม = ใช่ ถ้าไม่เท่า ดูที่เนื้อข้อมูล
+   *  ‼️ ไฟล์ในโฟลเดอร์ทีมที่ shortcut ลง OneDrive ถูก SharePoint เติมข้อมูลแล้วดึงกลับมาทับหลังบันทึก 1 วินาที (ดู contentKey) */
+  async function sameFile(cur, meta) {
+    if (cur.size === meta.size && cur.lastModified === meta.lastModified) return true;
+    if (!meta.key) return false;
+    return (await contentKey(window.JSZip, new Uint8Array(await cur.arrayBuffer()))) === meta.key;
+  }
+
   async function saveInPlace() {
     const handle = M.handle;
     setActions(false); undoBtn.hidden = true;
@@ -1017,8 +1025,7 @@ export function mount(tool) {
       st.info(tr("กำลังตรวจสอบก่อนเขียนทับ…", "Checking before overwriting…"));
       if (!(await askWrite(handle))) throw Object.assign(new Error(tr("ไม่ได้รับอนุญาตให้เขียนไฟล์นี้", "Permission to write this file was not given")), { soft: true });
       // ‼️ กันเขียนทับงานที่ใครบันทึกทับไปหลังเปิดเข้ามา (เช่นพี่แก้ใน Excel แล้วเซฟระหว่างที่หน้านี้เปิดอยู่)
-      const cur = await handle.getFile();
-      if (cur.size !== M.meta.size || cur.lastModified !== M.meta.lastModified)
+      if (!(await sameFile(await handle.getFile(), M.meta)))
         throw Object.assign(new Error(tr("ไฟล์ถูกเปลี่ยนหลังจากที่เปิดเข้ามา จึงไม่เขียนทับ ให้ลากไฟล์เข้ามาใหม่แล้วทำอีกครั้ง",
           "The file changed after it was opened here, so it was not overwritten. Drop the file in again and repeat")), { soft: true });
       const out = await buildFilled();
@@ -1036,7 +1043,7 @@ export function mount(tool) {
       const { wb } = await readWorkbook(back);
       const aoa = sheetAoa(wb.Sheets[M.sheetNames[M.sheetIdx]]);
       const bad = out.patch.applied.filter((a) => !sameCell(a.v, (aoa[a.r - 1] || [])[a.c]));
-      lastSave = { orig, handle, meta: { size: back.size, lastModified: back.lastModified }, name: M.file.name };
+      lastSave = { orig, handle, meta: { size: back.size, lastModified: back.lastModified, key: await contentKey(window.JSZip, out.bytes) }, name: M.file.name };
       let msg = bad.length
         ? tr(`เขียนแล้ว แต่อ่านกลับมาไม่ตรง ${bad.length} ช่อง กดย้อนกลับได้`, `Written, but ${bad.length} cells read back different. You can undo`)
         // ‼️ (07/10/2026) นับเฉพาะช่องข้อมูลที่เติม ไม่นับคอลัมน์ผลที่เขียนทุกแถว (ไฟล์จริงเคยขึ้น 23,241 ทั้งที่เติม 28)
@@ -1056,8 +1063,7 @@ export function mount(tool) {
     if (!lastSave) return;
     const { orig, handle, meta } = lastSave;
     try {
-      const cur = await handle.getFile();
-      if (cur.size !== meta.size || cur.lastModified !== meta.lastModified)
+      if (!(await sameFile(await handle.getFile(), meta)))
         throw new Error(tr("ไฟล์ถูกเปลี่ยนหลังจากที่บันทึกไว้ จึงไม่ย้อนกลับให้ กันทับงานใหม่", "The file changed after the save, so it will not be rolled back over newer work"));
       await writeBack(handle, orig);
       const back = await handle.getFile();

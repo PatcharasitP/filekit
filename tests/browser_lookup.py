@@ -374,6 +374,15 @@ def main():
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
         main_bytes = list(MAIN.read_bytes())
+        # ตัวจำลอง SharePoint เติมข้อมูลหลังบันทึก กับคนอื่นแก้ข้อมูลจริง (ใช้ร่วมกับเทส node ดู tests/sp_roundtrip.js)
+        pg.add_init_script((ROOT / "tests" / "sp_roundtrip.js").read_text(encoding="utf-8").replace("export async function", "async function") + """
+          window.spRoundtrip = spRoundtrip; window.editContent = editContent;   // สคริปต์ฉีดไม่ได้อยู่ขอบเขตส่วนกลาง
+          window.__rewrite = async (fn) => {
+            const f = await window.__opfs.getFile();
+            const out = await fn(window.JSZip, new Uint8Array(await f.arrayBuffer()));
+            const w = await window.__opfs.createWritable(); await w.write(out); await w.close();
+          };
+        """)
         pg.add_init_script("""
           window.__opfs = null;
           window.__failClose = false;
@@ -454,10 +463,37 @@ def main():
         pg.wait_for_timeout(2500)
         ck("ย้อนกลับแล้วไฟล์เหมือนเดิมทุกไบต์ (sha256)", hashlib.sha256(opfs_bytes()).hexdigest(), sha0)
 
+        print("\n── ⑦ข SharePoint เติมข้อมูลเองหลังบันทึก (ไฟล์ในโฟลเดอร์ทีมที่ shortcut ลง OneDrive) ──")
+        # ‼️ 09/10/2026 ทดสอบจริงบนทีม Data ของ 65: หลังบันทึก 1 วินาที OneDrive ดึงรุ่นที่ SharePoint เติม customXml กลับมาทับ
+        #    ขนาดกับเวลาแก้ไขเปลี่ยน ข้อมูลเท่าเดิม ตัวกันเดิมดูแค่ขนาดกับเวลา จึงไม่ยอมย้อนกลับและไม่ยอมบันทึกซ้ำ
+        def status():
+            return pg.evaluate("() => document.querySelector('.status')?.textContent || ''")
+        click_btn(pg, "บันทึกลงไฟล์หลักเดิม")
+        pg.locator("button:visible").filter(has_text="กดอีกครั้งเพื่อเขียนทับ").first.click()
+        pg.wait_for_timeout(3500)
+        ck("ประชากร: บันทึกสำเร็จก่อนจำลอง SharePoint", "อ่านกลับจากไฟล์แล้วตรงทุกช่อง" in status(), True)
+        sha_saved = hashlib.sha256(opfs_bytes()).hexdigest()
+        pg.evaluate("() => window.__rewrite(spRoundtrip)")
+        ck("ประชากร: ไฟล์ถูก SharePoint เติมจริง (ไบต์เปลี่ยน)", hashlib.sha256(opfs_bytes()).hexdigest() != sha_saved, True)
+        click_btn(pg, "ย้อนกลับ")
+        pg.wait_for_timeout(2500)
+        ck("ย้อนกลับได้แม้ SharePoint เติมข้อมูลไปแล้ว", "ย้อนกลับแล้ว" in status(), True)
+        ck("ย้อนกลับแล้วไฟล์เหมือนก่อนบันทึกทุกไบต์", hashlib.sha256(opfs_bytes()).hexdigest(), sha0)
+        pg.evaluate("() => window.__rewrite(spRoundtrip)")
+        click_btn(pg, "บันทึกลงไฟล์หลักเดิม")
+        pg.locator("button:visible").filter(has_text="กดอีกครั้งเพื่อเขียนทับ").first.click()
+        pg.wait_for_timeout(3500)
+        ck("บันทึกซ้ำได้หลัง SharePoint เติมข้อมูล โดยไม่ต้องเปิดไฟล์ใหม่", "อ่านกลับจากไฟล์แล้วตรงทุกช่อง" in status(), True)
+        pg.evaluate("() => window.__rewrite(spRoundtrip)")
+        click_btn(pg, "ย้อนกลับ")
+        pg.wait_for_timeout(2500)
+        ck("ย้อนกลับรอบสองได้ ไฟล์กลับเป็นเดิม", ["ย้อนกลับแล้ว" in status(), hashlib.sha256(opfs_bytes()).hexdigest()], [True, sha0])
+
         print("\n── ⑧ กันเขียนทับงานที่ใครแก้ไปหลังเปิดเข้ามา ──")
         click_btn(pg, "บันทึกลงไฟล์หลักเดิม")
-        # มีคนแก้ไฟล์ระหว่างที่หน้านี้เปิดอยู่ (ขนาดไม่เท่าเดิม)
-        pg.evaluate("async () => { const w = await window.__opfs.createWritable(); await w.write(new Uint8Array(await (await window.__opfs.getFile()).arrayBuffer())); await w.write(new Uint8Array([0])); await w.close(); }")
+        # มีคนแก้ข้อมูลในไฟล์ระหว่างที่หน้านี้เปิดอยู่ (เดิมจำลองด้วยการต่อไบต์ท้ายไฟล์ ซึ่งไม่ใช่การแก้ข้อมูล
+        # ตั้งแต่ 09/10/2026 ตัวกันดูที่เนื้อข้อมูล จึงจำลองเป็นการแก้ข้อความในชีตจริง)
+        pg.evaluate("() => window.__rewrite(editContent)")
         sha_changed = hashlib.sha256(opfs_bytes()).hexdigest()
         pg.locator("button:visible").filter(has_text="กดอีกครั้งเพื่อเขียนทับ").first.click()
         pg.wait_for_timeout(2000)

@@ -82,7 +82,7 @@ async function main([cmd, slug, url, flag]) {
     writeFileSync(join(DATA_DIR, 'l', id + '.json'), JSON.stringify(entry) + '\n');
     reg[slug] = { url, id, added: new Date().toISOString().slice(0, 10) };
     saveReg(reg);
-    publish(existed ? 'แก้ลิงก์' : 'เพิ่มลิงก์');
+    publish(existed ? 'chore(golink): แก้ลิงก์' : 'chore(golink): เพิ่มลิงก์');
     console.log(`${SITE}?${slug}  ->  ${url}`);
   } else if (cmd === 'rm') {
     const e = reg[slug];
@@ -91,7 +91,7 @@ async function main([cmd, slug, url, flag]) {
     const f = join(DATA_DIR, 'l', e.id + '.json');
     if (existsSync(f)) unlinkSync(f);
     delete reg[slug]; saveReg(reg);
-    publish('ลบลิงก์');
+    publish('chore(golink): ลบลิงก์');
     console.log(`ลบ ${slug} แล้ว`);
   } else if (cmd === 'list') {
     for (const [s, e] of Object.entries(reg).sort()) console.log(`${SITE}?${s}  ->  ${e.url}`);

@@ -44,6 +44,7 @@ const DATASETS_URL = "samples/powerbi/bar-datasets.json";
    เทส tests/browser_powerbi.py เทียบค่าในไฟล์กับ JSON ทุกแถว ไม่ตรง = แดง */
 const XLSX_SAMPLE_URL = "samples/powerbi/pbi-bar-samples.xlsx";
 const XLSX_SAMPLE_NAME = "pbi-bar-samples.xlsx";
+const HEADLINE_DAX_URL = "samples/powerbi/headline-title.dax";
 
 // ‼️ ฝัง <style> ในโมดูลนี้ตรง ๆ ห้ามแก้ assets/css/tool.css
 const STYLE = `
@@ -931,18 +932,37 @@ export function mount(tool) {
       },
     ];
 
-    const card = (m) => el("div", { class: "pbib-m" }, [
-      el("div", { class: "pbib-m-head" }, [
-        el("span", { class: "pbib-m-name" }, m.name),
-        button(tr("คัดลอก", "Copy"), { icon: "copy", ghost: true, onclick: () => copyText(m.dax) }),
-      ]),
-      el("p", { class: "pbib-m-why" }, m.why),
-      el("pre", {}, [el("code", {}, m.dax)]),
-    ]);
+    /* หัวกราฟเล่าเรื่องแบบ measure ข้อความเดียวกับกล่องสรุปใต้กราฟ (src/insightkit.js)
+       ‼️ สูตรอยู่ไฟล์เดียวที่ samples/powerbi/headline-title.dax ซึ่งพิสูจน์ใน Desktop แล้ว 21 เคส
+       ห้ามคัดสูตรมาฝังที่นี่ ไม่งั้นสองที่เพี้ยนกันเงียบ (หลักฐาน .claude/evidence/2026-10-28-dax-headline) */
+    items.push({
+      name: tr("หัวกราฟเล่าเรื่องสำหรับช่อง Title", "A storytelling headline for the Title"),
+      why: tr("ข้อความเดียวกับกล่องสรุปจากข้อมูลนี้ เปลี่ยนตามตัวกรอง ผูกที่ Title แบบ fx ข้อความออกมาเป็นภาษาไทย",
+              "The same sentence as the summary box under the chart, and it follows your filters. Bind it to the Title with fx. The text comes out in Thai"),
+      src: HEADLINE_DAX_URL, dax: "",
+    });
+
+    const card = (m) => {
+      const code = el("code", {}, m.src ? tr("กำลังโหลดสูตร…", "Loading the formula…") : m.dax);
+      if (m.src) {
+        fetch(m.src).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
+          .then((t) => { m.dax = t; code.textContent = t; })
+          .catch(() => { code.textContent = tr("โหลดสูตรไม่สำเร็จ ลองเปิดหน้าใหม่", "Couldn't load the formula, try reloading the page"); });
+      }
+      return el("div", { class: "pbib-m" }, [
+        el("div", { class: "pbib-m-head" }, [
+          el("span", { class: "pbib-m-name" }, m.name),
+          button(tr("คัดลอก", "Copy"), { icon: "copy", ghost: true,
+            onclick: () => (m.dax ? copyText(m.dax) : st.err(tr("สูตรยังโหลดไม่เสร็จ", "The formula hasn't loaded yet"))) }),
+        ]),
+        el("p", { class: "pbib-m-why" }, m.why),
+        el("pre", {}, [code]),
+      ]);
+    };
 
     ws.body.appendChild(el("details", { class: "pbib-learn" }, [
-      el("summary", {}, tr("ตัวอย่างการเขียน measure สำหรับช่อง Value และ Target",
-                           "Measure examples for the Value and Target fields")),
+      el("summary", {}, tr("ตัวอย่างการเขียน measure สำหรับช่อง Value, Target และหัวกราฟ",
+                           "Measure examples for the Value and Target fields and the Title")),
       el("div", { class: "pbib-learn-body" }, [
         el("p", { class: "pbib-learn-lead" }, tr(
           "กราฟรับ Category กับ Value เป็นช่องบังคับ Target ไม่บังคับ ช่อง Value ใส่คอลัมน์หรือ measure ก็ได้",

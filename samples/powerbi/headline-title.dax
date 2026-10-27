@@ -1,0 +1,69 @@
+// หัวกราฟเล่าเรื่อง ข้อความเดียวกับกล่อง "สรุปจากข้อมูลนี้" ของเครื่องมือกราฟแท่งใน FileKit
+// พิสูจน์ใน Power BI Desktop 2.159 วันที่ 28/10/2026 ตรงทุกตัวอักษร 21 เคส (มีเป้า, ไม่มีเป้า, ค่าติดลบ, เสมอกัน, หลักล้าน)
+// ใช้: เปลี่ยน Data[Category] Data[Value] Data[Target] ให้เป็นตารางและคอลัมน์ของคุณ
+//   แล้วที่วิชวล Format > General > Title > Text > fx > Format style = Field value เลือก measure นี้
+หัวกราฟ =
+VAR _eps = 0.000000001
+// กลุ่ม = Category ที่ไม่ซ้ำ รวมยอดชื่อซ้ำแล้ว ตัดกลุ่มที่ Value ว่าง
+VAR _g =
+    FILTER (
+        ADDCOLUMNS (
+            VALUES ( Data[Category] ),
+            "v", CALCULATE ( SUM ( Data[Value] ) ),
+            "t", CALCULATE ( SUM ( Data[Target] ) )
+        ),
+        NOT ISBLANK ( [v] )
+    )
+VAR _n = COUNTROWS ( _g )
+// ฝั่งเป้า
+VAR _gt = FILTER ( _g, NOT ISBLANK ( [t] ) )
+VAR _cnt = COUNTROWS ( _gt ) + 0
+VAR _hit = COUNTROWS ( FILTER ( _gt, [v] >= [t] - _eps ) ) + 0
+VAR _sv = SUMX ( _gt, [v] )
+VAR _st = SUMX ( _gt, [t] )
+VAR _ach = IF ( _st > 0, DIVIDE ( _sv, _st ) )
+VAR _p1s = FORMAT ( ROUND ( _ach * 100, 1 ), "0.0", "en-US" )
+VAR _achTxt =
+    IF (
+        ISBLANK ( _ach ),
+        "",
+        " รวมได้ " & IF ( RIGHT ( _p1s, 2 ) = ".0", LEFT ( _p1s, LEN ( _p1s ) - 2 ), _p1s ) & "% ของเป้า"
+    )
+// ฝั่งอันดับ 1
+VAR _tot = SUMX ( _g, [v] )
+VAR _neg = COUNTROWS ( FILTER ( _g, [v] < 0 ) ) + 0
+VAR _top = MAXX ( _g, [v] )
+VAR _topRows = FILTER ( _g, ABS ( [v] - _top ) < _eps )
+VAR _tie = COUNTROWS ( _topRows ) + 0
+VAR _topName = CONCATENATEX ( _topRows, Data[Category], "", Data[Category], ASC )
+VAR _big = ABS ( _top ) >= 1000000
+VAR _x = FORMAT ( IF ( _big, ROUND ( _top / 1000000, 2 ), ROUND ( _top, 2 ) ), "#,0.00", "en-US" )
+VAR _xs =
+    IF (
+        RIGHT ( _x, 3 ) = ".00",
+        LEFT ( _x, LEN ( _x ) - 3 ),
+        IF ( RIGHT ( _x, 1 ) = "0", LEFT ( _x, LEN ( _x ) - 1 ), _x )
+    )
+VAR _topTxt = _xs & IF ( _big, " ล้าน", "" )
+VAR _shareOk = _neg = 0 && _tot > 0
+VAR _shs = FORMAT ( ROUND ( DIVIDE ( _top, _tot ) * 100, 1 ), "0.0", "en-US" )
+VAR _shTxt =
+    IF (
+        _shareOk,
+        " คิดเป็น " & IF ( RIGHT ( _shs, 2 ) = ".0", LEFT ( _shs, LEN ( _shs ) - 2 ), _shs ) & "% ของทั้งหมด",
+        ""
+    )
+RETURN
+    IF (
+        _n = 0,
+        BLANK (),
+        IF (
+            _cnt > 0,
+            "ถึงเป้า " & _hit & " จาก " & _cnt & " กลุ่ม" & _achTxt,
+            IF (
+                _tie > 1,
+                _tie & " กลุ่มเท่ากันที่อันดับ 1 คือ " & _topTxt,
+                "สูงสุดคือ " & _topName & " ที่ " & _topTxt & _shTxt
+            )
+        )
+    )

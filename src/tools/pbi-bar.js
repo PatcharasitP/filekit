@@ -129,7 +129,7 @@ ${INSIGHT_CSS}
 .pbib-m-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .pbib-m-name{font-weight:700;font-size:13px;color:var(--text)}
 .pbib-m-why{font-size:12.5px;color:var(--text-mute);margin:5px 0 9px;line-height:1.7}
-.pbib-m pre{margin:0;overflow-x:auto;background:var(--bg-soft);border-radius:6px;padding:9px 11px}
+.pbib-m pre{margin:0;overflow:auto;max-height:340px;background:var(--bg-soft);border-radius:6px;padding:9px 11px}
 .pbib-m code{font-size:12.5px;line-height:1.65;color:var(--text);white-space:pre}
 `;
 
@@ -956,7 +956,8 @@ export function mount(tool) {
             onclick: () => (m.dax ? copyText(m.dax) : st.err(tr("สูตรยังโหลดไม่เสร็จ", "The formula hasn't loaded yet"))) }),
         ]),
         el("p", { class: "pbib-m-why" }, m.why),
-        el("pre", {}, [code]),
+        // กล่องที่เลื่อนในตัวต้องโฟกัสด้วยคีย์บอร์ดได้ คนไม่ใช้เมาส์ถึงเลื่อนอ่านสูตรยาวได้
+        el("pre", m.src ? { tabindex: "0", "aria-label": m.name } : {}, [code]),
       ]);
     };
 

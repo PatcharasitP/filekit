@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v201";
+const VERSION = "filekit-v202";
 const SHELL = `${VERSION}-shell`;
 /* เพดานเวลารอเครือข่ายตอนเปิดหน้าเว็บ ครบเวลาแล้วใช้แคชทันที */
 const NAV_NET_TIMEOUT_MS = 1200;
@@ -63,6 +63,7 @@ const PRECACHE = [
      ทั้งที่หน้าอื่นใช้ได้ปกติ ผู้ใช้จะเห็นเป็น "บางเครื่องมือพัง" ซึ่งงงกว่าเว็บล่มทั้งเว็บ
      tests/browser_offline.py ข้อ ① จับข้อนี้ได้ ให้รันทุกครั้งที่เพิ่มโมดูลใหม่ */
   "src/binkit.js",       /* number-bins */
+  "src/insightkit.js",   /* pbi-bar กล่องสรุปจากข้อมูล */
   "src/geokit.js",       /* map-relocate, map-coverage */
   "src/tools/map-coverage.js",
   "src/pdfimpose.js", /* pdf-nup, pdf-resize */

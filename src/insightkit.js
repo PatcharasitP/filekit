@@ -77,11 +77,19 @@ export function summarize(input) {
 }
 
 export function sentences(s, en = false) {
+  return build(s, en).out;
+}
+
+/* ‼️ หัวกราฟหยิบจากประโยคที่สร้างที่นี่เท่านั้น ห้ามเขียนถ้อยคำแยก
+   เคยเขียนแยกแล้วหัวกราฟกับประโยคแรกพูด 45.5% ซ้ำกันบนจอจริง (28/10/2026) */
+function build(s, en) {
   const N = (v) => fmtNum(v, en);
   const out = [];
+  let lead = -1, goal = -1;
   out.push(en ? `${s.n} groups, total ${N(s.total)}` : `${s.n} กลุ่ม รวม ${N(s.total)}`);
 
   const { top } = s;
+  lead = out.length;
   if (top.tie > 1) {
     out.push(en ? `${top.tie} groups share first place at ${N(top.value)}`
                 : `${top.tie} กลุ่มเท่ากันที่อันดับ 1 คือ ${N(top.value)}`);
@@ -114,6 +122,7 @@ export function sentences(s, en = false) {
   if (s.target) {
     const t = s.target;
     const ach = t.achieved !== null ? (en ? `, ${fmtPct(t.achieved)} of target overall` : ` รวมได้ ${fmtPct(t.achieved)} ของเป้า`) : "";
+    goal = out.length;
     out.push(en ? `${t.hit} of ${t.count} groups hit target${ach}` : `ถึงเป้า ${t.hit} จาก ${t.count} กลุ่ม${ach}`);
     if (t.gap < 0) {
       out.push(en ? `Short by ${N(-t.gap)}, furthest behind is ${t.worst.name}` : `ขาดอีก ${N(-t.gap)} ห่างเป้ามากสุดคือ ${t.worst.name}`);
@@ -121,26 +130,19 @@ export function sentences(s, en = false) {
       out.push(en ? `Above target by ${N(t.gap)}` : `เกินเป้า ${N(t.gap)}`);
     }
   }
-  return out;
+  return { out, lead, goal };
 }
 
 /* หัวกราฟแบบเล่าเรื่อง 1 บรรทัด ให้คนอ่านรู้ข้อสรุปก่อนดูกราฟ
-   มีเป้า = พูดเรื่องเป้า เพราะเป็นคำถามแรกของผู้บริหารเสมอ ไม่มีเป้า = พูดเรื่องอันดับ 1 */
+   มีเป้า = ประโยคเรื่องเป้า เพราะเป็นคำถามแรกของผู้บริหารเสมอ ไม่มีเป้า = ประโยคอันดับ 1 */
 export function headline(s, en = false) {
-  if (s.target) {
-    const { hit, count, achieved } = s.target;
-    // ‼️ ถ้อยคำต้องตรงกับประโยคเป้าใน sentences() ทุกตัวอักษร details() ถึงตัดซ้ำออกได้
-    const a = achieved !== null ? (en ? `, ${fmtPct(achieved)} of target overall` : ` รวมได้ ${fmtPct(achieved)} ของเป้า`) : "";
-    return en ? `${hit} of ${count} groups hit target${a}` : `ถึงเป้า ${hit} จาก ${count} กลุ่ม${a}`;
-  }
-  const t = s.top;
-  if (t.tie > 1) return en ? `${t.tie} groups tied at the top` : `${t.tie} กลุ่มเท่ากันที่อันดับ 1`;
-  if (t.share !== null) return en ? `${t.name} leads with ${fmtPct(t.share)} of the total` : `${t.name} มากสุด คิดเป็น ${fmtPct(t.share)} ของทั้งหมด`;
-  return en ? `${t.name} is highest at ${fmtNum(t.value, true)}` : `${t.name} สูงสุดที่ ${fmtNum(t.value)}`;
+  const { out, lead, goal } = build(s, en);
+  return out[goal >= 0 ? goal : lead];
 }
 
-/* ประโยครองใต้หัวกราฟ ตัดประโยคที่หัวกราฟพูดไปแล้วออก (เห็นซ้ำบนจอจริง 27/10/2026) */
+/* ประโยครองใต้หัวกราฟ ตัดประโยคที่ขึ้นเป็นหัวกราฟออกพอดี 1 ประโยค */
 export function details(s, en = false) {
-  const h = headline(s, en);
-  return sentences(s, en).filter((x) => x !== h);
+  const { out, lead, goal } = build(s, en);
+  const pick = goal >= 0 ? goal : lead;
+  return out.filter((_, i) => i !== pick);
 }

@@ -70,15 +70,17 @@ for (const [name, s] of [["กระจุก", s2], ["เสมอ", s3], ["ต
   ck(h.length > 0 && h.length <= 80 && !BANNED.test(h), `${name} หัวกราฟ 1 บรรทัดไม่เกิน 80 ตัว "${h}"`);
 }
 ck(s5 && /ถึงเป้า 2 จาก 4/.test(headline(s5)), "มีเป้า หัวกราฟพูดเรื่องเป้า");
-ck(s2 && /^A /.test(headline(s2)) && /50%/.test(headline(s2)), "ไม่มีเป้า หัวกราฟขึ้นต้นด้วยอันดับ 1 และบอก %");
+ck(s2 && /^สูงสุดคือ A /.test(headline(s2)) && /50%/.test(headline(s2)), "ไม่มีเป้า หัวกราฟพูดถึงอันดับ 1 และบอก %");
 ck(s2 && sentences(s2).some((x) => /2 จาก 5 กลุ่ม/.test(x)), "ประโยค Pareto บอก 2 จาก 5 กลุ่ม");
 
-console.log("\n⑥ข ประโยครองไม่พูดซ้ำหัวกราฟ (เห็นซ้ำบนจอจริง 27/10)");
-for (const [name, s] of [["กระจุก", s2], ["เป้า", s5]]) for (const en of [false, true]) {
-  const h = s ? headline(s, en) : "", d = s ? details(s, en) : [];
+/* ‼️ หัวกราฟต้องเป็นประโยคหนึ่งใน sentences() เป๊ะทุกกรณี แล้ว details ตัดออกพอดี 1
+   เคยผ่านแค่ชุดมีเป้า ชุดไม่มีเป้า (โดนัท) หัวกราฟกับประโยคแรกพูด 45.5% ซ้ำกัน เห็นบนจอจริง 28/10 */
+console.log("\n⑥ข ประโยครองไม่พูดซ้ำหัวกราฟ (เห็นซ้ำบนจอจริง 27/10 และ 28/10)");
+for (const [name, s] of [["กระจุก", s2], ["เสมอ", s3], ["ติดลบ", s4], ["เป้า", s5]]) for (const en of [false, true]) {
+  const h = s ? headline(s, en) : "", d = s ? details(s, en) : [], all = s ? sentences(s, en) : [];
   ck(d.length > 0 && !d.includes(h), `${name} ${en ? "อังกฤษ" : "ไทย"} ประโยครองไม่มีหัวกราฟซ้ำ`);
+  ck(all.includes(h) && d.length === all.length - 1, `${name} ${en ? "อังกฤษ" : "ไทย"} หัวกราฟคือหนึ่งประโยค ตัดออกพอดี 1`);
 }
-ck(s5 && details(s5).length === sentences(s5).length - 1, "ชุดมีเป้า ตัดออกพอดี 1 ประโยค ไม่ตัดเกิน");
 
 console.log("\n⑦ ชุดตัวอย่างจริงของ pbi-bar (เทียบกับตัวคำนวณดิบคนละวิธี)");
 const ds = JSON.parse(readFileSync(new URL("../samples/powerbi/bar-datasets.json", import.meta.url), "utf8"));

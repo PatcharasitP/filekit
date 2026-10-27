@@ -9,7 +9,7 @@ import { codeView, CODEVIEW_CSS } from "../codeview.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
-import { summarize, details, headline } from "../insightkit.js";
+import { insightBox, INSIGHT_CSS } from "../insightbox.js";
 
 /* ‼️ รายชื่อตัวปรับที่ผู้ใช้แตะได้ เป็น "ผู้สมัคร" ไม่ใช่รายการตายตัว
    ตัวไหนไม่มีอยู่จริงใน spec.params ที่โหลดมา ปุ่มของตัวนั้นจะไม่ถูกสร้างเลย
@@ -72,11 +72,6 @@ const STYLE = `
 .pbib-note{border:1px solid var(--line);border-left:3px solid var(--g-powerbi,var(--brand));
   border-radius:var(--r-sm);background:var(--bg-soft);padding:9px 11px;font-size:12.5px;
   color:var(--text);line-height:1.7;margin-top:10px}
-.pbib-insight{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
-.pbib-insight-h{margin:0 0 6px;font-size:12px;font-weight:700;color:var(--text-mute)}
-.pbib-insight-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
-.pbib-insight-title{flex:1 1 220px;font-size:14.5px;font-weight:700;color:var(--text);line-height:1.6}
-.pbib-insight-list{margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.75;color:var(--text)}
 .pbib-chart-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   color:var(--text-mute);font-size:13.5px;text-align:center;padding:20px;line-height:1.7}
 
@@ -110,6 +105,7 @@ ${PRESETS_CSS}
 ${CFGSEARCH_CSS}
 ${DIRTYMARK_CSS}
 ${CODEVIEW_CSS}
+${INSIGHT_CSS}
 
 .pbib-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
 .pbib-own-title{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
@@ -163,17 +159,9 @@ export function mount(tool) {
   const chartEl = el("div", { class: "pbib-chart", id: "pbib-chart" });
   const chartMsg = el("div", { class: "pbib-chart-msg" }, tr("กำลังเตรียมกราฟ…", "Preparing the chart…"));
   const chartBox = el("div", { class: "pbib-chart-box" }, [chartMsg, chartEl]);
-  /* กล่อง "สรุปจากข้อมูลนี้" ใต้กราฟ (ไอเดียจาก dash-man.com ศึกษา 27/10/2026)
-     หัวกราฟแบบเล่าเรื่องคัดลอกไปเป็น Title ของวิชวลได้ ตรรกะอยู่ src/insightkit.js */
-  const insightTitle = el("div", { class: "pbib-insight-title" });
-  const insightList = el("ul", { class: "pbib-insight-list" });
-  const insightCopy = button(tr("คัดลอกหัวกราฟ", "Copy headline"), { icon: "copy", ghost: true, onclick: onCopyHeadline });
-  const insightEl = el("section", { class: "pbib-insight", hidden: true, "aria-label": tr("สรุปจากข้อมูลนี้", "What this data says") }, [
-    el("h3", { class: "pbib-insight-h" }, tr("สรุปจากข้อมูลนี้", "What this data says")),
-    el("div", { class: "pbib-insight-head" }, [insightTitle, insightCopy]),
-    insightList,
-  ]);
-  const centerWrap = el("div", {}, [chartBox, noteEl, insightEl]);
+  // กล่อง "สรุปจากข้อมูลนี้" ใต้กราฟ ใช้ร่วมกับ pbi-donut (src/insightbox.js)
+  const insight = insightBox(st);
+  const centerWrap = el("div", {}, [chartBox, noteEl, insight.node]);
 
   /* ชุดพร้อมใช้เขียนเฉพาะค่าที่ต่างจากค่าเริ่มต้น ตัวไหนที่สเปกไม่มีจะถูกข้ามเอง */
   const PRESETS = [
@@ -411,19 +399,7 @@ export function mount(tool) {
 
   function renderInsight() {
     const rows = datasets?.[currentKey]?.rows;
-    const s = rows ? summarize(withRuntimeFields(rows)) : null;
-    insightEl.hidden = !s;
-    if (!s) return;
-    insightTitle.textContent = headline(s, IS_EN);
-    insightList.replaceChildren(...details(s, IS_EN).map((x) => el("li", {}, x)));
-  }
-  async function onCopyHeadline() {
-    try {
-      await navigator.clipboard.writeText(insightTitle.textContent);
-      st.ok(tr("คัดลอกหัวกราฟแล้ว วางในช่อง Title ของวิชวลได้เลย", "Headline copied. Paste it into the visual's Title"));
-    } catch {
-      st.err(tr("คัดลอกไม่ได้ ลองเลือกข้อความแล้วคัดลอกเอง", "Couldn't copy, select the text and copy it yourself"));
-    }
+    insight.update(rows ? withRuntimeFields(rows) : null);
   }
 
   /* ── บอกผู้ใช้เมื่อกราฟตัดสินใจเองแทน ──────────────────────────────

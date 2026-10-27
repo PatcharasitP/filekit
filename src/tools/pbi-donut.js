@@ -9,6 +9,7 @@ import { codeView, CODEVIEW_CSS } from "../codeview.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
 import { loadLibs } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
+import { insightBox, INSIGHT_CSS } from "../insightbox.js";
 
 // ‼️ รายชื่อตัวปรับที่ผู้ใช้แตะได้ — เป็น "ผู้สมัคร" ไม่ใช่รายการตายตัว
 // ตัวไหนไม่มีอยู่จริงใน spec.params ที่โหลดมา ปุ่มของตัวนั้นจะไม่ถูกสร้างเลย
@@ -106,6 +107,7 @@ ${PRESETS_CSS}
 ${CFGSEARCH_CSS}
 ${DIRTYMARK_CSS}
 ${CODEVIEW_CSS}
+${INSIGHT_CSS}
 
 .pbid-own{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
 .pbid-own-title{margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text-mute)}
@@ -174,7 +176,9 @@ export function mount(tool) {
   const chartEl = el("div", { class: "pbid-chart", id: "pbid-chart" });
   const chartMsg = el("div", { class: "pbid-chart-msg" }, tr("กำลังเตรียมกราฟ…", "Preparing the chart…"));
   const chartBox = el("div", { class: "pbid-chart-box" }, [chartMsg, chartEl]);
-  const centerWrap = el("div", {}, [chartBox, collapseNote]);
+  // กล่อง "สรุปจากข้อมูลนี้" ใต้กราฟ ใช้ร่วมกับ pbi-bar (src/insightbox.js)
+  const insight = insightBox(st);
+  const centerWrap = el("div", {}, [chartBox, collapseNote, insight.node]);
 
   const presets = presetBar(PRESETS, applyPreset);
   let cfgSearch = null;   // ช่องค้นหาในแผงตั้งค่า สร้างหลังแผงมีเนื้อหาแล้ว
@@ -366,6 +370,12 @@ export function mount(tool) {
     });
     view = result.view;
     updateCollapseNote();
+    renderInsight();
+  }
+
+  function renderInsight() {
+    const rows = datasets?.[currentKey]?.rows;
+    insight.update(rows ? withRuntimeFields(rows) : null);
   }
 
   /* ── บอกผู้ใช้เมื่อกราฟยุบคำอธิบายเองเพราะที่ไม่พอ ─────────────────
@@ -472,6 +482,7 @@ export function mount(tool) {
     const cs = window.vega.changeset().remove(() => true).insert(rows);
     view.change("dataset", cs).signal("centerCaption", paramValues.centerCaption).run();
     updateCollapseNote();
+    renderInsight();
   }
 
   /* ── แผงซ้าย: เลือกชุดข้อมูล ─────────────────────────────────────── */

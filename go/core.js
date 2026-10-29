@@ -62,12 +62,13 @@ export const isHttps = (u) => !!checkUrl(u);
 // ปลายทางอื่นทุกอันต้องโชว์ชื่อโดเมนให้คนกดเองก่อน ลิงก์ phishing ที่คนถือ token ที่รั่วสร้างจึงไม่พาไปเงียบ ๆ
 // ‼️ ใส่เฉพาะโฮสต์ที่คนนอกสร้างเนื้อหาไม่ได้ ห้ามใส่ *.github.io ทั้งหมด forms.office.com docs.google.com หรือ SharePoint ของ tenant อื่น
 // ‼️ ห้ามย้ายรายการนี้ไปไว้ในรีโป golinks (token ของหน้าสร้างลิงก์เขียนรีโปนั้นได้)
-// รายการตอนนี้ 4 โฮสต์: example.com (ใช้ในเทส), เว็บ GitHub Pages ของพี่ปอนด์เอง, environment Dynamics ของบริษัท 2 ตัว (SA, true-prod ของ Data Request 16/10/2026)
+// รายการตอนนี้ 5 โฮสต์: example.com (ใช้ในเทส), เว็บ GitHub Pages ของพี่ปอนด์เอง, environment Dynamics ของบริษัท 3 ตัว (SA, true-prod ของ Data Request 16/10/2026, sm-prod ของ Log Electric Desk 30/10/2026)
 export const TRUSTED = [
   '00dbd1b292f6bf571074fe5b646405420e37b58946c5231190ba11c6cb7692c1',
   'b184fae5c04001c79a22020ec7e12713c54890e475a9890c752d86ff7a31f926',
   'b2fc70b45e16bc23fd7c3c28cda097a0f5ea18613b0a625f736e3a817e4c311a',
   '97f920beb57427662b62f3e2ad3d86a1e4dff5bfc225edcffef81ca3da4e0329',
+  'daef494abb032f3773a442068f1f1ce2b82884ff57593aeb3854c0a47ae2858f',
 ];
 export async function hostHash(host) {
   return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('pond-go-host:' + host.toLowerCase()))));

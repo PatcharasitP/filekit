@@ -47,7 +47,10 @@ export function mount(tool) {
   const nameCol = el("select", {});
   const go = button(tr("สร้างเอกสารทั้งชุด", "Generate all documents"), { onclick: run });
   go.disabled = true;
-  let step3, step4, wait3, wait4, nameField;
+  let step3, step4, wait3, wait4, nameField, longField;
+  // พี่ปอนด์ 05/11/2026 "เคสแปลก ๆ ให้เลือกว่าจะคงตามแถว Excel หรือเอาไปอยู่หน้าท้าย ๆ รวมกัน"
+  const longSel = select([["keep", tr("ไว้ที่เดิมตามลำดับ Excel", "Keep in Excel order")], ["end", tr("ย้ายไปรวมไว้หน้าท้าย", "Move to the last pages")]], "keep");
+  longSel.id = "mm-long";
 
   // ขั้นที่ยังทำอะไรไม่ได้ต้องบอกให้รู้ว่ารออะไรอยู่ ไม่ใช่โชว์หัวข้อลอย ๆ แล้วปล่อยให้เดา
   // ‼️ แถบลงมือทำต้องรวม "ปุ่ม + สถานะ" ไว้ก้อนเดียวและเป็นลูกคนสุดท้ายของแผง
@@ -84,6 +87,7 @@ export function mount(tool) {
           field(tr("รูปแบบเอกสาร", "Document mode"), modeSel),
           groupField, loopField,
           nameField = field(tr("ตั้งชื่อไฟล์จากคอลัมน์", "Name files from column"), nameCol, tr("เว้นไว้ = ตั้งชื่อตามลำดับ", "Leave blank = name by sequence")),
+          longField = field(tr("แถวที่ยาวเกินช่อง", "Rows too long for a label"), longSel, tr("ย่อถึง 10pt แล้วยังไม่พอดี", "Still too long at 10pt")),
         ])])]),
     // ‼️ ปุ่มลงมือต้องเป็นลูกตรงของ .panel ไม่ใช่ซ้อนอยู่ในขั้นที่ 4
     //    position:sticky ลอยได้แค่ในกรอบของพ่อตัวเอง — ตอนอยู่ในขั้นที่ 4 มันลอยไม่พ้นขั้นนั้น
@@ -320,6 +324,7 @@ export function mount(tool) {
     groupField.style.display = grouped ? "" : "none";
     loopField.style.display = grouped ? "" : "none";
     nameField.style.display = modeSel.value === "labels" ? "none" : "";   // ฉลากได้ไฟล์เดียว ไม่ต้องตั้งชื่อรายไฟล์
+    longField.style.display = modeSel.value === "labels" ? "" : "none";
     renderPreview();
   }
   modeSel.addEventListener("change", () => { syncMode(); renderUnmatched(); refresh(); });
@@ -357,9 +362,19 @@ export function mount(tool) {
 
       if (modeSel.value === "labels") {
         const records = buildRecords(rows, { mode: "row", mapping });
-        const { blob, pages, perPage, overflow } = await mergeLabels(tplFile, records, {
-          onProgress: ({ done, total }) => st.progress((done / total) * 100, `(${done}/${total})`),
-        });
+        const onProgress = ({ done, total }) => st.progress((done / total) * 100, `(${done}/${total})`);
+        let res = await mergeLabels(tplFile, records, { onProgress });
+        let order = records.map((_, i) => i), moved = 0;
+        if (longSel.value === "end" && res.overflow.length) {
+          // รอบแรกรู้แล้วว่าแถวไหนยาวเกิน จัดลำดับใหม่ แถวปกติก่อนตามลำดับเดิม แถวยาวเกินไปรวมท้าย แล้วสร้างใหม่
+          const bad = new Set(res.overflow);
+          order = [...order.filter((i) => !bad.has(i)), ...order.filter((i) => bad.has(i))];
+          moved = bad.size;
+          st.info(tr(`ย้าย ${moved} แถวที่ยาวเกินไปไว้หน้าท้าย กำลังสร้างใหม่…`, `Moving ${pl(moved, "long row", "long rows")} to the end, generating again…`));
+          res = await mergeLabels(tplFile, order.map((i) => records[i]), { onProgress });
+        }
+        const { blob, pages, perPage } = res;
+        const overflow = res.overflow.map((j) => order[j]).sort((a, b) => a - b);   // กลับเป็นเลขแถวเดิมใน Excel
         st.progress(null);
         const name = tr(`${base}-ฉลาก ${rows.length} แถว ${pages} หน้า.docx`, `${base}-labels ${pl(rows.length, "row", "rows")} ${pl(pages, "page", "pages")}.docx`);
         download(blob, name);
@@ -374,9 +389,15 @@ export function mount(tool) {
         if (overflow.length) {
           const xl = overflow.map((i) => i + 2);                         // แถว 1 ของ Excel เป็นหัวตาราง
           const shown = xl.slice(0, 10).join(", ") + (xl.length > 10 ? tr(` และอีก ${xl.length - 10} แถว`, ` and ${xl.length - 10} more`) : "");
-          results.appendChild(el("div", { class: "status show err", "data-warn": "overflow", "data-rows": xl.join(",") },
+          results.appendChild(el("div", { class: "note warn", "data-warn": "overflow", "data-rows": xl.join(",") },
             tr(`ยาวเกินช่องแม้ย่อเหลือ 10pt แถว Excel ที่ ${shown} ตัดข้อความแล้วสร้างใหม่`,
                `Too long for the label even at 10pt, Excel rows ${shown}. Shorten the text and generate again`)));
+        }
+        if (moved) {
+          const from = Math.floor((records.length - moved) / perPage) + 1;
+          results.appendChild(el("div", { class: "note", "data-moved": `${from}-${pages}` },
+            tr(`แถวที่ยาวเกินอยู่รวมกันหน้า ${from} ถึง ${pages} แยกแก้หรือแยกพิมพ์ได้`,
+               `Long rows are grouped on pages ${from} to ${pages}, fix or print them separately`)));
         }
         return;
       }

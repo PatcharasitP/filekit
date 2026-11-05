@@ -71,6 +71,11 @@ with sync_playwright() as p:
         ck("ไม่มีตัวยึดค้าง", "{{" in xml, False)
         ck("ทุกช่องตารางมีย่อหน้าอย่างน้อย 1 ตัว (Word ไม่ฟ้องไฟล์เสีย)", [i for t in tbls for i, tc in enumerate(t.iter(W + "tc")) if tc.find(W + "p") is None], [])
         ck("Site ของคนที่ 13 อยู่หน้า 2 ช่องแรก", "Site : TRG0013" in cells[1][0], True)
+        # พี่ปอนด์ใช้จริง 05/11/2026: Site ยาวติดกันไม่มีเว้นวรรค Word AutoFit ขยายคอลัมน์นั้นบีบอีกคอลัมน์ทั้งหน้า ต้องล็อกความกว้าง
+        lays = [t.find(W + "tblPr").find(W + "tblLayout") for t in tbls]
+        ck("ตารางฉลากทุกหน้าล็อกความกว้างคอลัมน์ (tblLayout fixed)", [l.get(W + "type") if l is not None else None for l in lays], ["fixed"] * len(tbls))
+        order = [c.tag.split("}")[1] for c in tbls[0].find(W + "tblPr")]
+        ck("tblLayout อยู่ก่อน tblLook ตามลำดับ schema", "tblLayout" in order and ("tblLook" not in order or order.index("tblLayout") < order.index("tblLook")), True)
     # ── ตัวยึดครบทุกช่อง ระบบเลือกโหมดฉลากให้เอง ──
     load(allcells / "ตัวอย่าง-ฉลากชื่อที่อยู่-ครบทุกช่อง.docx", S / "ตัวอย่าง-ข้อมูลฉลาก.xlsx")
     ck("ตัวยึดซ้ำครบทุกช่อง ระบบเลือกโหมดฉลากให้เอง", mode().input_value() if mode().count() else None, "labels")
@@ -87,7 +92,8 @@ with sync_playwright() as p:
     wb = Workbook(); ws = wb.active; ws.append(["Site", "ชื่อ", "ที่อยู่จัดส่งเอกสาร"])
     for i in range(1, 13):
         addr = (base_addr + " " + base_addr) if i == 3 else base_addr if i == 5 else (base_addr + " ") * 8 if i == 7 else f"{i * 7} หมู่ 2 ถนนพหลโยธิน จังหวัดนนทบุรี 10001"
-        ws.append([f"TRG{i:04d}", f"คุณทดสอบ ตัวอย่างที่{i}", addr])
+        site = ",".join(f"{p}{n:04d}" for p, n in zip(["PTN", "RYG", "CMI", "BRM", "SNK", "NSN", "KBI", "PKN", "BKK", "SNI", "NRT", "UTT", "KKN"] * 2, range(38, 64))) if i == 9 else f"TRG{i:04d}"
+        ws.append([site, f"คุณทดสอบ ตัวอย่างที่{i}", addr])
     longx = allcells / "ข้อมูลที่อยู่ยาว.xlsx"; wb.save(longx)
     load(jit, longx)
     mode().select_option("labels"); pg.wait_for_timeout(500)
@@ -99,13 +105,43 @@ with sync_playwright() as p:
     lcells = list(lroot.find(W + "body").find(W + "tbl").iter(W + "tc"))
     def sizes(tc):
         return sorted({int(e.get(W + "val")) for e in tc.iter() if e.tag in (W + "sz", W + "szCs")})
+    # พี่ปอนด์ใช้จริง 05/11/2026 เทมเพลตแถว At least ที่อยู่ยาวเป็นสิบที่ แถวยืดล้นไปอีกหน้า ฉลากหลังจากนั้นเลื่อนทั้งไฟล์ ต้องบังคับ Exactly
+    rules = [tr.find(W + "trPr").find(W + "trHeight").get(W + "hRule") for tr in lroot.find(W + "body").find(W + "tbl").findall(W + "tr")]
+    ck("เทมเพลตแถว At least ผลลัพธ์ทุกแถวเป็น Exactly ฉลากไม่เลื่อน", rules, ["exact"] * len(rules))
     ck("ช่องที่อยู่สั้นขนาดตัวอักษรเดิม 14pt", sizes(lcells[0]), [28])
+    # Site ยาวไม่เว้นวรรค (คนที่ 9) Word ขึ้นบรรทัดใหม่ก่อนตัดกลางคำ Word จริงยืนยัน 12pt ยังล้นครึ่งบรรทัด (real30/word/zoom5c-1.png)
+    ck("Site ยาวไม่เว้นวรรคถูกย่อเล็กกว่า 12pt หรือถูกเตือน", max(sizes(lcells[8]) or [99]) < 24 or "10" in (pg.locator("[data-warn=overflow]").first.get_attribute("data-rows") or "").split(","), True)
     ck("ช่องที่อยู่ยาว 2 เท่าถูกย่อตัวอักษร", max(sizes(lcells[2]) or [99]) < 28, True)
     ck("ช่องที่อยู่ยาวถูกย่อตัวอักษร", max(sizes(lcells[4]) or [99]) < 28, True)
     ck("ยาวกว่าย่อเล็กกว่า", max(sizes(lcells[2])) <= max(sizes(lcells[4])), True)
     ck("ย่อไม่เล็กกว่า 10pt", min(min(sizes(c) or [99]) for c in lcells), 20)
     warn = pg.locator("[data-warn=overflow]")
     ck("ยาวเกินแม้ย่อเหลือ 10pt เตือนแถว Excel ที่ 8 (คนที่ 7)", warn.get_attribute("data-rows") if warn.count() else None, "8")
+    # ‼️ หน้าเสร็จงานของ FileKit ซ่อนฟอร์มทั้งหมด ดึงไปแสดงเฉพาะ .results > .note คำเตือนต้องมองเห็นจริง ไม่ใช่แค่มีในหน้า (พี่ใช้จริง 2,885 แถวไม่เห็นคำเตือน)
+    ck("คำเตือนแถวยาวเกินมองเห็นบนหน้าเสร็จงาน", warn.count() == 1 and warn.is_visible(), True)
+    # ── เลือกย้ายแถวที่ยาวเกินไปรวมหน้าท้าย (พี่ปอนด์ 05/11/2026 "เอาแปลก ๆ ไปอยู่หน้าท้าย ๆ รวมกัน") ──
+    back = pg.locator("button:visible", has_text="กลับไปแก้")
+    if back.count(): back.first.click(); pg.wait_for_timeout(400)
+    longsel = pg.locator("#mm-long")
+    ck("โหมดฉลากมีช่องเลือกแถวที่ยาวเกินช่อง", longsel.count() == 1 and longsel.is_visible(), True)
+    if longsel.count():
+        longsel.select_option("end"); pg.wait_for_timeout(300)
+        with pg.expect_download(timeout=60000) as dl:
+            pg.locator("button.btn:visible", has_text="สร้าง").first.click()
+        mp = os.path.join(tempfile.mkdtemp(), dl.value.suggested_filename); dl.value.save_as(mp)
+        _, mroot = read_doc(mp)
+        mcells = [cell_text(tc) for tc in mroot.find(W + "body").find(W + "tbl").iter(W + "tc")]
+        names_m = [c.split("\n")[1] if c.count("\n") else "" for c in mcells]
+        ck("คนที่ 7 ที่ยาวเกินย้ายไปช่องสุดท้าย คนที่ 8 เลื่อนขึ้นมาแทน", (names_m[-1], names_m[6]), ("คุณทดสอบ ตัวอย่างที่7", "คุณทดสอบ ตัวอย่างที่8"))
+        ck("แถวปกติยังเรียงตามลำดับ Excel", names_m[:6], [f"คุณทดสอบ ตัวอย่างที่{i}" for i in range(1, 7)])
+        pg.wait_for_timeout(300)
+        # หลังกด กลับไปแก้ แล้วสร้างใหม่ คำเตือนรอบแรกค้างในแผงผลลัพธ์ที่ซ่อนอยู่ นับเฉพาะที่ตาเห็น ต้องเห็นอันเดียว
+        w2 = pg.locator("[data-warn=overflow]:visible")
+        ck("คำเตือนที่มองเห็นมีอันเดียว ไม่ซ้อนกับรอบก่อน", w2.count(), 1)
+        ck("คำเตือนยังบอกเลขแถว Excel เดิม (8) ไม่ใช่ตำแหน่งใหม่", w2.first.get_attribute("data-rows") if w2.count() else None, "8")
+        mv = pg.locator("[data-moved]:visible")
+        ck("บอกว่าแถวที่ยาวเกินอยู่หน้าไหน", mv.get_attribute("data-moved") if mv.count() else None, "1-1")
+        ck("ข้อความบอกหน้าของแถวที่ย้าย มองเห็นบนหน้าเสร็จงาน", mv.count() == 1 and mv.is_visible(), True)
     ck("ไม่มี error", [e for e in errs if "favicon" not in e.lower()], [])
     b.close()
 print(f"\nผ่าน {P} ตก {len(F)}")

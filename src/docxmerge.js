@@ -245,6 +245,7 @@ export async function mergeLabels(file, records, { onProgress } = {}) {
       src.forEach((c) => tc.appendChild(c.cloneNode(true)));
     }
   }
+  fixLayout(slots[0].parentNode.parentNode);
   slots.forEach((tc, k) => tc.setAttribute("fk-slot", String(k + 1)));
   const body = doc.getElementsByTagNameNS(WNS, "body")[0];
   const finalSect = kids(body, "sectPr").pop() || null;
@@ -365,17 +366,32 @@ function cellNeed(tc, usable, def, f) {
     const line = sp && sp.hasAttribute("w:line") ? num(sp, "w:line") : def.line;
     const rule = sp && sp.hasAttribute("w:line") ? (sp.getAttribute("w:lineRule") || "auto") : def.rule;
     let width = 0, maxPt = 0, font = def.font;
+    const toks = [];                                                     // คำทีละคำไว้จำลองตัดบรรทัด [กว้าง, ตัดกลางคำได้ไหม]
     for (const r of p.getElementsByTagNameNS(WNS, "r")) {
       const text = [...r.getElementsByTagNameNS(WNS, "t")].map((t) => t.textContent).join("");
       const half = num(first(r, ["rPr", "szCs"])) || num(first(r, ["rPr", "sz"])) || def.half;
       const pt = scaled(half, f) / 2;
       const rf = first(r, ["rPr", "rFonts"]);
       const rfont = (rf && (rf.getAttribute("w:cs") || rf.getAttribute("w:ascii"))) || def.font;
-      if (text) { width += widthPt(text, rfont, pt); font = rfont; }
+      if (text) {
+        width += widthPt(text, rfont, pt); font = rfont;
+        for (const w of text.split(/(?<= )/)) if (w) toks.push([widthPt(w, rfont, pt), /[\u0E00-\u0E7F]/.test(w)]);
+      }
       maxPt = Math.max(maxPt, pt);
     }
     if (!maxPt) maxPt = scaled(num(first(p, ["pPr", "rPr", "szCs"])) || num(first(p, ["pPr", "rPr", "sz"])) || def.half, f) / 2;
-    const lines = Math.max(1, Math.ceil(width / (usable * 0.93)));         // ตัดบรรทัดตามคำ บรรทัดจริงเต็มเฉลี่ย 93% (Word จริง 05/11/2026: 373 ตัว 14pt 7 บรรทัด 10pt 5 บรรทัด , 186 ตัว 14pt 4 บรรทัด)
+    // ‼️ คำที่ไม่มีอักษรไทยและไม่มีเว้นวรรค (Site ยาว PTN0038,RYG0010,...) Word ไม่ตัดต่อท้ายบรรทัดเดิม แต่ขึ้นบรรทัดใหม่ก่อน
+    //    บรรทัด "Site :" จึงเสียที่ว่างเกือบทั้งบรรทัด ค่าเฉลี่ย 93% นับไม่ถึง ล้นครึ่งบรรทัดโดยไม่เตือน (Word จริง real30/word/zoom5c-1.png)
+    //    จำลองตัดทีละคำ คำไทยตัดกลางคำได้ (Word ตัดตามพจนานุกรม) แล้วใช้ค่าที่มากกว่าระหว่างสองวิธี
+    let sim = 1, cur = 0;
+    for (const [w, thai] of toks) {
+      if (cur + w <= usable) { cur += w; continue; }
+      if (thai) { const left = cur + w - usable; sim += Math.ceil(left / usable); cur = left % usable || usable; continue; }
+      if (w <= usable) { sim++; cur = w; continue; }
+      if (cur > 0) sim++;
+      sim += Math.ceil(w / usable) - 1; cur = w % usable || usable;
+    }
+    const lines = Math.max(1, sim, Math.ceil(width / (usable * 0.93)));         // ตัดบรรทัดตามคำ บรรทัดจริงเต็มเฉลี่ย 93% (Word จริง 05/11/2026: 373 ตัว 14pt 7 บรรทัด 10pt 5 บรรทัด , 186 ตัว 14pt 4 บรรทัด)
     const lh = rule === "auto" ? maxPt * lineFactor(font) * (line / 240) : Math.max(line / 20, rule === "atLeast" ? maxPt * lineFactor(font) : 0);
     total += before / 20 + after / 20 + lines * lh;
   }
@@ -419,4 +435,29 @@ async function fitCells({ zip, doc }) {
     if (cellNeed(tc, usable, def, Math.max(f, 0.3)) > avail) over.push(rec);
   }
   return over;
+}
+
+// ── ล็อกความกว้างคอลัมน์ตารางฉลาก ────────────────────────────────────────────
+// พี่ปอนด์ใช้จริง 05/11/2026 (2,885 แถว) ช่องที่มี Site ยาวติดกันไม่มีเว้นวรรค (PTN0038,RYG0010,...) Word ปรับคอลัมน์ตามเนื้อหา (AutoFit)
+// ขยายคอลัมน์นั้นจนเกือบเต็มหน้า อีกคอลัมน์ถูกบีบตกบรรทัดทีละคำหรือตกขอบกระดาษ ทั้งหน้าเพี้ยน และได้ 306 หน้าแทน 241
+// Word จริงยืนยัน: ใส่ w:tblLayout fixed แล้วทุกแถวกว้างตามเทมเพลต ข้อความยาวตัดบรรทัดอยู่ในช่องของตัวเอง (autofit/ กับ autofit2/)
+// ลำดับลูกใน tblPr ตาม schema: tblLayout อยู่ก่อน tblCellMar tblLook tblCaption tblDescription tblPrChange
+function fixLayout(tbl) {
+  if (!tbl || tbl.localName !== "tbl") return;
+  const doc = tbl.ownerDocument;
+  let pr = kids(tbl, "tblPr")[0];
+  if (!pr) { pr = doc.createElementNS(WNS, "w:tblPr"); tbl.insertBefore(pr, tbl.firstChild); }
+  let lay = kids(pr, "tblLayout")[0];
+  if (!lay) {
+    lay = doc.createElementNS(WNS, "w:tblLayout");
+    const after = kids(pr).find((c) => ["tblCellMar", "tblLook", "tblCaption", "tblDescription", "tblPrChange"].includes(c.localName));
+    pr.insertBefore(lay, after || null);
+  }
+  lay.setAttribute("w:type", "fixed");
+  // พี่ปอนด์ใช้จริง 05/11/2026 เทมเพลตแถว At least ที่อยู่ยาวเป็นสิบที่ แถวยืดล้นไปอีกหน้า ฉลากทุกช่องหลังจากนั้นเลื่อนไม่ตรงสติกเกอร์
+  // แถวที่ตั้งความสูงไว้บังคับเป็น Exactly ตำแหน่งฉลากต้องตรงกระดาษก่อน ข้อความที่ยังเกินหลังย่อถึง 10pt เครื่องมือเตือนแถว Excel ให้ไปแก้
+  for (const tr of kids(tbl, "tr")) {
+    const h = kids(kids(tr, "trPr")[0] || tr, "trHeight")[0];
+    if (h && Number(h.getAttribute("w:val")) > 0) h.setAttribute("w:hRule", "exact");
+  }
 }

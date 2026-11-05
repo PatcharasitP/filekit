@@ -160,7 +160,11 @@ export async function clean(file, options = {}) {
     }
     if (metadata && name === "docProps/app.xml") {
       let app = await entry.async("string");
-      app = app.replace(/<(Company|Manager|TotalTime|LastPrinted)>[^<]*<\/\1>/g, "<$1></$1>");
+      // ‼️ ช่องข้อความว่างได้ แต่ TotalTime เป็นตัวเลข LastPrinted เป็นวันเวลา ทิ้งว่างแล้ว Word เปิดไม่ได้
+      //    ขึ้น "The file appears to be corrupted" (Word COM จริง 05/11/2026 ไฟล์จดหมายเวียนทุกไฟล์โดน)
+      app = app.replace(/<(Company|Manager)>[^<]*<\/\1>/g, "<$1></$1>")
+        .replace(/<TotalTime>[^<]*<\/TotalTime>/g, "<TotalTime>0</TotalTime>")
+        .replace(/<LastPrinted>[^<]*<\/LastPrinted>|<LastPrinted\/>/g, "");
       out.file(name, app);
       continue;
     }

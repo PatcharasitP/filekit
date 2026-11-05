@@ -141,6 +141,10 @@ def make_docx_with_traces(path, body_paragraphs, comment_target, comment_author,
     assert "<Company/>" in app and "<Manager/>" in app, "แม่แบบ python-docx เปลี่ยนไป — ไม่มี <Company/>/<Manager/> ว่างให้แทรก"
     app = app.replace("<Company/>", f"<Company>{company}</Company>")
     app = app.replace("<Manager/>", f"<Manager>{manager}</Manager>")
+    # เวลาที่ใช้ทำกับวันพิมพ์ล่าสุด แบบไฟล์ที่ Word บันทึกจริง (05/11/2026 ตัวล้างเคยทิ้ง <TotalTime></TotalTime> ว่าง Word ฟ้องไฟล์เสีย)
+    assert "<TotalTime>" in app, "แม่แบบ python-docx เปลี่ยนไป ไม่มี TotalTime"
+    app = __import__("re").sub(r"<TotalTime>[^<]*</TotalTime>", "<TotalTime>37</TotalTime>", app)
+    app = app.replace("</Properties>", "<LastPrinted>2026-10-01T09:00:00Z</LastPrinted></Properties>")
     parts["docProps/app.xml"] = app.encode("utf-8")
 
     # 2) document.xml: ครอบ paragraph เป้าหมายด้วยเครื่องหมายคอมเมนต์
@@ -322,6 +326,11 @@ def test_word_clean(pg):
     app = zf.read("docProps/app.xml").decode("utf-8")
     ck(tool, "ชื่อบริษัทถูกล้างจาก app.xml", f"“{company}” ยังอยู่ใน app.xml ไหม", company in app, False)
     ck(tool, "ชื่อผู้จัดการถูกล้างจาก app.xml", f"“{manager}” ยังอยู่ใน app.xml ไหม", manager in app, False)
+    # ‼️ ช่องชนิดตัวเลขหรือวันที่ห้ามว่าง Word เปิดไม่ได้ ขึ้น The file appears to be corrupted (Word COM จริง 05/11/2026)
+    import re as _re
+    ck(tool, "เวลาที่ใช้ทำถูกล้างเป็น 0 ไม่ใช่ช่องว่าง (Word ฟ้องไฟล์เสีย)", "TotalTime ในผลลัพธ์",
+       _re.findall(r"<TotalTime>([^<]*)</TotalTime>", app), ["0"])
+    ck(tool, "วันพิมพ์ล่าสุดถูกเอาออกทั้งช่อง ไม่เหลือช่องว่าง", "LastPrinted ในผลลัพธ์", "LastPrinted" in app, False)
 
     text = read_docx_text(raw)
     ck(tool, "เนื้อหาย่อหน้าทั้ง 3 ยังอยู่ครบเหมือนเดิม (ล้างแค่ร่องรอย ไม่ใช่เนื้อหา)", "พบครบทั้ง 3 ย่อหน้าในผลลัพธ์",

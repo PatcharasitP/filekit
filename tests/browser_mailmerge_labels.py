@@ -116,7 +116,12 @@ with sync_playwright() as p:
     ck("ช่องที่อยู่ยาว 2 เท่าถูกย่อตัวอักษร", max(sizes(lcells[2]) or [99]) < 28, True)
     ck("ช่องที่อยู่ยาวถูกย่อตัวอักษร", max(sizes(lcells[4]) or [99]) < 28, True)
     ck("ยาวกว่าย่อเล็กกว่า", max(sizes(lcells[2])) <= max(sizes(lcells[4])), True)
-    ck("ย่อไม่เล็กกว่า 10pt", min(min(sizes(c) or [99]) for c in lcells), 20)
+    ck("ช่องปกติย่อไม่เล็กกว่า 10pt", min(min(sizes(c) or [99]) for i, c in enumerate(lcells) if i not in (6, 10)), 20)
+    # พี่ปอนด์ 05/11/2026 "ไม่เอาตัด ... มันควรเล็กสิถ้ามันเยอะ ... ให้มัน dynamic" ยาวผิดปกติย่อทั้งช่องรวม Site ต่อจนพอดี ข้อความครบ
+    t7 = cell_text(lcells[6])
+    ck("ช่องยาวมาก (คนที่ 7) ข้อความครบ ไม่ถูกตัด ไม่มี …", (t7.count("ถนนพหลโยธิน"), "…" in t7, "Site : TRG0007" in t7), (8, False, True))
+    ck("ช่องยาวมากย่อทุกบรรทัดรวม Site เล็กกว่า 10pt", max(sizes(lcells[6]) or [99]) < 20 and max(sizes(lcells[10]) or [99]) < 20, True)
+    ck("ช่องยาวมากไม่เล็กกว่า 3pt", min(sizes(lcells[6]) + sizes(lcells[10]) or [0]) >= 6, True)
     warn = pg.locator("[data-warn=overflow]")
     ck("ยาวเกินแม้ย่อเหลือ 10pt เตือนแถว Excel ที่ 9 (คนที่ 7 หลังแถวว่าง) กับ 13 (คนที่ 11 ขึ้นบรรทัด 8 บรรทัด)", warn.get_attribute("data-rows") if warn.count() else None, "9,13")
     # ‼️ หน้าเสร็จงานของ FileKit ซ่อนฟอร์มทั้งหมด ดึงไปแสดงเฉพาะ .results > .note คำเตือนต้องมองเห็นจริง ไม่ใช่แค่มีในหน้า (พี่ใช้จริง 2,885 แถวไม่เห็นคำเตือน)
@@ -140,14 +145,30 @@ with sync_playwright() as p:
         ck("แถวยาวเกิน (คนที่ 7 กับ 11) เริ่มหน้าใหม่ หน้า 2", [nm(c) for c in mpages[1][:2]] if len(mpages) > 1 else None, ["คุณทดสอบ ตัวอย่างที่7", "คุณทดสอบ ตัวอย่างที่11"])
         # พี่ปอนด์ "SiteCode หายไปเลยทั้งที่ใน Excel มีทุกบรรทัด" ยาวเกินแม้ย่อสุด ตัดท้ายที่อยู่ใส่ … บรรทัด Site ต้องยังอยู่
         c7 = mpages[1][0] if len(mpages) > 1 else ""
-        ck("ช่องที่ยาวเกินยังมีบรรทัด Site : TRG0007 และถูกตัดท้ายด้วย …", ("Site : TRG0007" in c7, "…" in c7), (True, True))
+        ck("ช่องที่ยาวเกินย้ายมาแล้วข้อความครบ มี Site : TRG0007 ไม่มี …", ("Site : TRG0007" in c7, "…" in c7, c7.count("ถนนพหลโยธิน")), (True, False, 8))
+        # พี่ปอนด์ 05/11/2026 "ถ้าอันไหนมันเยอะเกินกล่อง เราขยายไปเลยความยาวกล่อง แล้วย้ายมันไปอยู่ล่างสุดรวม ๆ"
+        hr = lambda t: [tr.find(W + "trPr").find(W + "trHeight").get(W + "hRule") for tr in t.findall(W + "tr")]
+        ck("หน้าแถวปกติกล่องสูงคงที่ (Exactly) หน้าแถวยาวกล่องสูงตามข้อความ (At least)", (set(hr(mtbls[0])), set(hr(mtbls[1])) if len(mtbls) > 1 else None), ({"exact"}, {"atLeast"}))
+        ck("หน้าแถวยาวฉลากหนึ่งช่องไม่แยกข้ามหน้า (cantSplit ทุกแถว)", all(tr.find(W + "trPr").find(W + "cantSplit") is not None for tr in mtbls[1].findall(W + "tr")) if len(mtbls) > 1 else False, True)
+        mc = list(mtbls[1].iter(W + "tc")) if len(mtbls) > 1 else []
+        # Word จริง 05/11/2026 กล่องขยายรวมกล่องว่างที่เหลือดันย่อหน้าท้ายไปเกิดหน้าว่าง (word2/grow-5.png) หน้าแถวยาวเก็บเฉพาะแถวที่มีฉลาก
+        ck("หน้าแถวยาวไม่มีแถวกล่องว่าง (2 ฉลากเหลือ 1 แถว)", len(mtbls[1].findall(W + "tr")) if len(mtbls) > 1 else None, 1)
+        ck("หน้าแถวยาวไม่ย่อจิ๋ว ตัวอักษรไม่เล็กกว่า 10pt", min(sizes(mc[0]) + sizes(mc[1]) or [0]) >= 20 if mc else False, True)
+        ck("ชื่อไฟล์ไม่บอกจำนวนหน้า (กล่องขยาย Word นับหน้าเอง)", dl.value.suggested_filename.endswith("แถว.docx"), True)
+        # พี่ปอนด์ 05/11/2026 "ต้องเอาตาม Layout ของเขา อย่าง Site เราไปเปลี่ยนตำแหน่งเอง มันไม่ถูก" เทมเพลต: 4 ย่อหน้า Site ย่อหน้าสุดท้ายชิดขวา
+        def layout(tc):
+            ps = tc.findall(W + "p"); last = ps[-1] if ps else None
+            jc = last.find(W + "pPr/" + W + "jc") if last is not None else None
+            return (len(ps), "Site :" in "".join(t.text or "" for t in last.iter(W + "t")) if last is not None else False, jc.get(W + "val") if jc is not None else None)
+        filled = [tc for t in mtbls for tc in t.iter(W + "tc") if cell_text(tc)]
+        ck("ทุกช่อง (ปกติ ถูกย่อ และกล่องขยาย) Site อยู่ย่อหน้าสุดท้ายชิดขวาเหมือนเทมเพลต", sorted({layout(tc) for tc in filled}), [(4, True, "right")])
         pg.wait_for_timeout(300)
         # หลังกด กลับไปแก้ แล้วสร้างใหม่ คำเตือนรอบแรกค้างในแผงผลลัพธ์ที่ซ่อนอยู่ นับเฉพาะที่ตาเห็น ต้องเห็นอันเดียว
         w2 = pg.locator("[data-warn=overflow]:visible")
         ck("คำเตือนที่มองเห็นมีอันเดียว ไม่ซ้อนกับรอบก่อน", w2.count(), 1)
         ck("คำเตือนยังบอกเลขแถว Excel เดิม (9,13) ไม่ใช่ตำแหน่งใหม่", w2.first.get_attribute("data-rows") if w2.count() else None, "9,13")
         mv = pg.locator("[data-moved]:visible")
-        ck("บอกว่าแถวที่ยาวเกินอยู่หน้าไหน", mv.get_attribute("data-moved") if mv.count() else None, "2-2")
+        ck("บอกว่าแถวที่ยาวเกินเริ่มหน้าไหน", mv.get_attribute("data-moved") if mv.count() else None, "2")
         ck("ข้อความบอกหน้าของแถวที่ย้าย มองเห็นบนหน้าเสร็จงาน", mv.count() == 1 and mv.is_visible(), True)
     # ── รีวิว 05/11/2026 ข้อ 1: ตัวยึดอยู่ช่องที่สอง ช่องแรกเป็นข้อความเก่า ต้องได้ฉลากครบ ไม่ใช่ฉลากเปล่าทั้งไฟล์ ──
     subprocess.run([sys.executable, str(ROOT / "tools/build_label_samples.py"), str(allcells), "--second"], check=True, capture_output=True)

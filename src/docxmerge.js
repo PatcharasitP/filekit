@@ -232,7 +232,7 @@ function run(doc, text) {
 }
 
 /** เติมข้อมูลลงช่องฉลากทีละช่องตามลำดับแถว เต็มหน้าแล้วขึ้นหน้าใหม่ คืน { blob, pages, perPage } */
-export async function mergeLabels(file, records, { onProgress } = {}) {
+export async function mergeLabels(file, records, { onProgress, growFrom = 0 } = {}) {
   if (!records.length) throw new Error(tr("ไม่มีแถวข้อมูลให้ทำฉลาก", "No data rows to make labels"));
   const { zip, doc } = await openDoc(file);
   const info = findLabelTable(doc);
@@ -281,6 +281,22 @@ export async function mergeLabels(file, records, { onProgress } = {}) {
       kids(sect, "type").forEach((t) => t.setAttribute("w:val", "nextPage"));
       pPr.appendChild(sect);
     }
+    // หน้าท้ายที่รวมแถวยาว (พี่ปอนด์ 05/11/2026 "ขยายไปเลยความยาวกล่อง แล้วย้ายไปอยู่ล่างสุดรวม ๆ") แถวสูงตามข้อความ ไม่ย่อจิ๋ว ไม่ตัด
+    // At least แทน Exactly ฉลากหนึ่งช่องไม่แยกข้ามหน้า (cantSplit) หน้าพวกนี้ไม่ตรงกระดาษสติกเกอร์อยู่แล้ว
+    if (growFrom && pg >= growFrom) {
+      for (const tc of mine) if (tc.hasAttribute("fk-rec")) tc.setAttribute("fk-grow", "1");
+      // แถวที่ไม่มีฉลากเลยตัดทิ้ง กล่องที่สูงขึ้นรวมกับกล่องว่างดันย่อหน้าท้ายไปเป็นหน้าว่าง (Word จริง word2/grow-5.png 05/11/2026)
+      for (const tr of clones.flatMap((c) => [...c.getElementsByTagNameNS(WNS, "tr")])) {
+        const cells = kids(tr, "tc");
+        if (cells.some((tc) => mine.includes(tc)) && !cells.some((tc) => tc.hasAttribute("fk-rec")) && kids(tr.parentNode, "tr").length > 1) tr.parentNode.removeChild(tr);
+      }
+      for (const tr of clones.flatMap((c) => [...c.getElementsByTagNameNS(WNS, "tr")])) {
+        let trPr = kids(tr, "trPr")[0];
+        if (!trPr) { trPr = doc.createElementNS(WNS, "w:trPr"); tr.insertBefore(trPr, kids(tr, "tblPrEx")[0]?.nextSibling || tr.firstChild); }
+        kids(trPr, "trHeight").forEach((x) => x.setAttribute("w:hRule", "atLeast"));
+        if (!kids(trPr, "cantSplit").length) trPr.insertBefore(doc.createElementNS(WNS, "w:cantSplit"), trPr.firstChild);
+      }
+    }
     onProgress?.({ done: pg, total: pages + 1 });
   }
   const h = await handler();
@@ -299,11 +315,13 @@ export async function mergeLabels(file, records, { onProgress } = {}) {
 // ── ย่อตัวอักษรช่องฉลากที่ข้อความยาวเกินความสูงแถว ─────────────────────────
 // พี่ปอนด์ 05/11/2026 "ที่อยู่ยาวมาก ๆ มันจะเลยความกว้างไหม" Word ตัดบรรทัดให้เอง ไม่เลยความกว้าง แต่เลยความสูง
 // แถว Exactly ข้อความเกินถูกตัดหายเงียบ แถว At least แถวยืดจนตารางดันฉลากที่เหลือเลื่อนไม่ตรงสติกเกอร์ (Word COM จริง)
-// วิธี: ประเมินบรรทัดของแต่ละช่องหลังเติม ถ้าเกินความสูงแถว ย่อทุก run ในช่องลงทีละ 5% ไม่ต่ำกว่า 10pt
+// วิธี: ประเมินบรรทัดของแต่ละช่องหลังเติม ถ้าเกินความสูงแถว ย่อทุก run ในช่องลงทีละ 5% ปกติไม่ต่ำกว่า 10pt ยาวผิดปกติย่อต่อถึง 3pt
 // ค่าสำรองตอนเบราว์เซอร์ไม่มีฟอนต์ วัดจาก Word จริงที่ไม่มี TH Sarabun New เลยแทนด้วย Cordia New: ระยะบรรทัดของฟอนต์ 1.2 เท่า ตัวที่กินที่กว้าง 0.36 เท่า
 const COMBINING = /[ัิ-ฺ็-๎]/g;           // สระบนล่างวรรณยุกต์ไม่กินที่ในบรรทัด
 const NARROW = /^(th |angsana|cordia|browallia|eucrosia|freesia|iris|jasmine|kodchiang|lily|dillenia)/i;
-const MIN_HALF_PT = 20;                                            // 10pt
+const MIN_HALF_PT = 20;                                            // 10pt ขนาดเล็กสุดของช่องปกติ
+const TINY_HALF_PT = 6;                                            // 3pt ช่องที่ยาวมาก ย่อต่อจนพอดี (พี่ปอนด์ 05/11/2026 "ไม่เอาตัด ... มันควรเล็กสิถ้ามันเยอะ")
+let floorHalf = MIN_HALF_PT;
 let mctx = null;
 const fontSeen = new Map();
 function canvasCtx() { if (!mctx) mctx = document.createElement("canvas").getContext("2d"); return mctx; }
@@ -426,36 +444,7 @@ function paraNeed(p, usable, def, f) {
 function cellNeed(tc, usable, def, f) {
   return kids(tc, "p").reduce((sum, p) => sum + paraNeed(p, usable, def, f), 0);
 }
-/** ย่อสุดแล้วยังเกิน ตัดท้ายย่อหน้าที่ยาวที่สุดใส่ … ให้ย่อหน้าอื่น (Site) ยังเห็น
- *  พี่ปอนด์ใช้จริง 05/11/2026 "SiteCode หายไปเลยทั้งที่ใน Excel มีทุกบรรทัด" บรรทัด Site อยู่ล่างสุด Word ตัดทิ้งพร้อมส่วนที่ล้น */
-function truncateCell(tc, usable, def, f, avail) {
-  const ps = kids(tc, "p");
-  if (!ps.length) return;
-  const p = ps.reduce((a, b) => (paraNeed(b, usable, def, f) > paraNeed(a, usable, def, f) ? b : a));
-  const doc = tc.ownerDocument, pieces = [];
-  for (const r of p.getElementsByTagNameNS(WNS, "r")) for (const c of kids(r)) {
-    if (c.localName === "t") pieces.push({ t: c, text: c.textContent });
-    else if (c.localName === "br" && c.getAttribute("w:type") !== "page") pieces.push({ br: c, ph: doc.createElementNS(WNS, "w:t") });
-  }
-  const total = pieces.reduce((n, x) => n + (x.t ? x.text.length : 1), 0);
-  const apply = (k) => {
-    let left = k, last = null;
-    for (const x of pieces) {
-      if (x.t) { const keep = Math.max(0, Math.min(x.text.length, left)); x.t.textContent = x.text.slice(0, keep); left -= x.text.length; if (keep) last = x.t; }
-      else if (left > 0) { if (x.ph.parentNode) x.ph.parentNode.replaceChild(x.br, x.ph); left -= 1; }
-      else if (x.br.parentNode) x.br.parentNode.replaceChild(x.ph, x.br);
-    }
-    if (k < total && last) { last.textContent = last.textContent.replace(/[\s,]+$/, "") + "…"; last.setAttribute("xml:space", "preserve"); }
-  };
-  let lo = 0, hi = total;
-  while (lo < hi) {                                                      // หาความยาวมากสุดที่ยังพอดีช่อง
-    const mid = Math.ceil((lo + hi) / 2);
-    apply(mid);
-    if (cellNeed(tc, usable, def, f) <= avail) lo = mid; else hi = mid - 1;
-  }
-  apply(lo);
-}
-function scaled(half, f) { return half <= MIN_HALF_PT ? half : Math.max(MIN_HALF_PT, Math.round(half * f)); }
+function scaled(half, f) { return half <= floorHalf ? half : Math.max(floorHalf, Math.round(half * f)); }
 function setSizes(tc, f, def) {
   const doc = tc.ownerDocument;
   const targets = [...tc.getElementsByTagNameNS(WNS, "r")];
@@ -473,7 +462,7 @@ function setSizes(tc, f, def) {
     }
   }
 }
-/** ย่อช่องที่ล้น คืนเลขแถวข้อมูล (นับจาก 0) ที่ย่อถึง 10pt แล้วยังเกิน */
+/** ย่อช่องที่ล้น คืนเลขแถวข้อมูล (นับจาก 0) ที่ต้องย่อเล็กกว่า 10pt ถึงจะพอดี */
 /** ความกว้างช่อง (twip) จากเส้นตาราง tblGrid ตามตำแหน่งคอลัมน์จริง
  *  พี่ปอนด์ใช้จริง 05/11/2026 เลือกย้ายแถวยาวไปหน้าท้ายแล้วไม่ย้าย ฉลากไม่ถูกย่อเลย หรือแถวปกติไปปนท้าย
  *  เทมเพลตที่ tcW เป็น auto หรือไม่มี tcW เดิมได้ 0 ข้ามทั้งไฟล์ , แบบ pct (ห้าสิบเท่าของร้อยละ) เดิมอ่านเป็น twip ช่องแคบผิดจริง
@@ -502,6 +491,7 @@ async function fitCells({ zip, doc }) {
   for (const tc of [...doc.getElementsByTagNameNS(WNS, "tc")]) {
     if (!tc.hasAttribute("fk-rec")) continue;
     const rec = Number(tc.getAttribute("fk-rec")); tc.removeAttribute("fk-rec");
+    const grow = tc.hasAttribute("fk-grow"); tc.removeAttribute("fk-grow");
     const tr = tc.parentNode, h = first(tr, ["trPr", "trHeight"]);
     const avail = num(h) / 20;                                            // ไม่ได้ตั้งความสูงแถว = แถวยืดได้ ไม่ต้องย่อ
     const w = colWidth(tc) / 20;
@@ -509,13 +499,16 @@ async function fitCells({ zip, doc }) {
     const mar = first(tc, ["tcPr", "tcMar"]);
     const side = mar ? (num(first(mar, ["left"]), "w:w") || 108) + (num(first(mar, ["right"]), "w:w") || 108) : 216;
     const usable = w - side / 20;
-    let f = 1;
-    // ลดจนทุก run ถึง 10pt (รีวิวข้อ 7: เดิมหยุดที่ f 0.3 ตัวใหญ่ 48pt ลงไม่ถึง 10pt แต่เตือนว่าย่อถึง 10pt แล้ว)
-    while (cellNeed(tc, usable, def, f) > avail && f > 0.05) f -= 0.05;
-    f = Math.max(f, 0.05);
+    // ลดทุก run ในช่องพร้อมกันตามสัดส่วนเดิม (บรรทัด Site เล็กลงด้วย) ทีละ 5% ปกติไม่ต่ำกว่า 10pt
+    // ถึง 10pt แล้วยังไม่พอดี = แถวยาวผิดปกติ ย่อต่อถึง 3pt จนพอดีช่อง ไม่ตัดข้อความทิ้ง แล้วนับเป็นแถวที่ยาวเกิน (เตือนและย้ายไปท้ายได้)
+    // เดิม 05/11/2026 v208 ตัดท้ายใส่ … พี่ปอนด์ "ไม่เอาตัด อันนี้แก้แล้วแย่กว่าเดิม" และ Site ตัวใหญ่ข้างที่อยู่ตัวจิ๋ว
+    const shrink = () => { let f = 1; while (cellNeed(tc, usable, def, f) > avail && f > 0.05) f -= 0.05; return Math.max(f, 0.05); };
+    floorHalf = MIN_HALF_PT;
+    let f = shrink();
+    const long = cellNeed(tc, usable, def, f) > avail;
+    if (long) { over.push(rec); if (!grow) { floorHalf = TINY_HALF_PT; f = shrink(); } } // หน้าท้ายแถวยาว ย่อถึง 10pt แล้วให้กล่องสูงขึ้นเอง
     if (f < 1) setSizes(tc, f, def);
-    // ขนาดเขียนลงไฟล์แล้ว ประเมินต่อที่ f 1 (ค่าในไฟล์คือขนาดจริง)
-    if (cellNeed(tc, usable, def, 1) > avail) { truncateCell(tc, usable, def, 1, avail); over.push(rec); }
+    floorHalf = MIN_HALF_PT;
   }
   return over;
 }

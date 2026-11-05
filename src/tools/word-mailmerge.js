@@ -87,7 +87,7 @@ export function mount(tool) {
           field(tr("รูปแบบเอกสาร", "Document mode"), modeSel),
           groupField, loopField,
           nameField = field(tr("ตั้งชื่อไฟล์จากคอลัมน์", "Name files from column"), nameCol, tr("เว้นไว้ = ตั้งชื่อตามลำดับ", "Leave blank = name by sequence")),
-          longField = field(tr("แถวที่ยาวเกินช่อง", "Rows too long for a label"), longSel, tr("ย่อถึง 10pt แล้วยังไม่พอดี", "Still too long at 10pt")),
+          longField = field(tr("แถวที่ยาวเกินช่อง", "Rows too long for a label"), longSel, tr("ต้องย่อเล็กกว่า 10pt ถึงจะพอดีช่อง", "Need smaller than 10pt to fit")),
         ])])]),
     // ‼️ ปุ่มลงมือต้องเป็นลูกตรงของ .panel ไม่ใช่ซ้อนอยู่ในขั้นที่ 4
     //    position:sticky ลอยได้แค่ในกรอบของพ่อตัวเอง — ตอนอยู่ในขั้นที่ 4 มันลอยไม่พ้นขั้นนั้น
@@ -374,12 +374,14 @@ export function mount(tool) {
           order = [...ok, ...Array(pad).fill(-1), ...order.filter((i) => bad.has(i))];
           moved = bad.size;
           st.info(tr(`ย้าย ${moved} แถวที่ยาวเกินไปไว้หน้าท้าย กำลังสร้างใหม่…`, `Moving ${pl(moved, "long row", "long rows")} to the end, generating again…`));
-          res = await mergeLabels(tplFile, order.map((i) => (i < 0 ? null : records[i])), { onProgress });
+          res = await mergeLabels(tplFile, order.map((i) => (i < 0 ? null : records[i])), { onProgress, growFrom: (ok.length + pad) / res.perPage + 1 });
         }
         const { blob, pages, perPage } = res;
         const overflow = res.overflow.map((j) => order[j]).sort((a, b) => a - b);   // กลับเป็นเลขแถวเดิมใน Excel
         st.progress(null);
-        const name = tr(`${base}-ฉลาก ${rows.length} แถว ${pages} หน้า.docx`, `${base}-labels ${pl(rows.length, "row", "rows")} ${pl(pages, "page", "pages")}.docx`);
+        // แถวยาวรวมท้ายกล่องสูงตามข้อความ Word จะได้หน้ามากกว่าที่นับ ชื่อไฟล์ไม่บอกจำนวนหน้า
+        const name = moved ? tr(`${base}-ฉลาก ${rows.length} แถว.docx`, `${base}-labels ${pl(rows.length, "row", "rows")}.docx`)
+          : tr(`${base}-ฉลาก ${rows.length} แถว ${pages} หน้า.docx`, `${base}-labels ${pl(rows.length, "row", "rows")} ${pl(pages, "page", "pages")}.docx`);
         download(blob, name);
         st.ok(tr(`สร้างฉลากแล้ว ${rows.length.toLocaleString("th-TH")} แถว หน้าละ ${perPage} ช่อง รวม ${pages} หน้า (${fmtBytes(blob.size)})`,
           `Labels done, ${pl(rows.length.toLocaleString("en-US"), "row", "rows")}, ${perPage} per page, ${pl(pages, "page", "pages")} (${fmtBytes(blob.size)})`));
@@ -388,20 +390,20 @@ export function mount(tool) {
           el("span", { class: "r-size" }, fmtBytes(blob.size)),
           button(tr("ดาวน์โหลด", "Download"), { icon: "download", label: tr("ดาวน์โหลด", "Download"), onclick: () => download(blob, name) }),
         ]));
-        // ช่องที่ย่อถึง 10pt แล้วยังยาวเกินความสูงแถว ข้อความจะถูกตัดหรือดันฉลากเลื่อน ต้องบอกแถวให้ไปแก้ใน Excel
+        // ช่องที่ต้องย่อเล็กกว่า 10pt ถึงจะพอดี ตัวอักษรเล็กมาก บอกแถว Excel ให้ตรวจก่อนพิมพ์
         if (overflow.length) {
           // เลขแถวจริงใน Excel (SheetJS ข้ามแถวว่าง ลำดับใน rows จึงคลาดจากเลขแถวเมื่อมีแถวว่างคั่น รีวิวข้อ 4) แถว 1 เป็นหัวตาราง
           const xl = overflow.map((i) => (Number.isInteger(rows[i]?.__rowNum__) ? rows[i].__rowNum__ + 1 : i + 2));
           const shown = xl.slice(0, 10).join(", ") + (xl.length > 10 ? tr(` และอีก ${xl.length - 10} แถว`, ` and ${xl.length - 10} more`) : "");
           results.appendChild(el("div", { class: "note warn", "data-warn": "overflow", "data-rows": xl.join(",") },
-            tr(`ยาวเกินช่องแม้ย่อเหลือ 10pt แถว Excel ที่ ${shown} ตัดท้ายข้อความใส่ … ให้บรรทัดอื่นยังเห็น ตรวจก่อนพิมพ์`,
-               `Too long even at 10pt, Excel rows ${shown}. The end was cut with … so other lines still show. Check before printing`)));
+            moved ? tr(`ข้อความยาวเกินกล่อง แถว Excel ที่ ${shown} ขยายกล่องไว้หน้าท้าย`, `Too long for a label, Excel rows ${shown}. Taller boxes on the last pages`)
+              : tr(`ข้อความยาวมาก ย่อตัวอักษรเล็กกว่า 10pt ให้พอดีช่อง แถว Excel ที่ ${shown} ตรวจก่อนพิมพ์`, `Very long text shrunk below 10pt to fit, Excel rows ${shown}. Check before printing`)));
         }
         if (moved) {
           const from = Math.ceil((records.length - moved) / perPage) + 1;   // แถวยาวเริ่มหน้าใหม่เสมอ
-          results.appendChild(el("div", { class: "note", "data-moved": `${from}-${pages}` },
-            tr(`แถวที่ยาวเกินอยู่รวมกันหน้า ${from} ถึง ${pages} แยกแก้หรือแยกพิมพ์ได้`,
-               `Long rows are grouped on pages ${from} to ${pages}, fix or print them separately`)));
+          results.appendChild(el("div", { class: "note", "data-moved": String(from) },
+            tr(`แถวที่ยาวเกินอยู่รวมกันตั้งแต่หน้า ${from} ถึงท้ายไฟล์ กล่องสูงตามข้อความ แยกพิมพ์ได้`,
+               `Long rows start on page ${from} to the end, in taller boxes. Print them separately`)));
         }
         return;
       }

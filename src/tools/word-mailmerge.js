@@ -461,8 +461,8 @@ export function mount(tool) {
           // หน้าที่มีแถวยาวแถวแรก สูตรเดียวกับ growFrom (06/11/2026 เลิกเติมช่องว่าง แถวยาวไม่เริ่มหน้าใหม่แล้ว ปัดขึ้นจะบอกเกินไป 1 หน้า)
           const from = Math.floor((records.length - moved) / perPage) + 1;
           results.appendChild(el("div", { class: "note", "data-moved": String(from) },
-            tr(`แถวที่ยาวเกินอยู่รวมกันตั้งแต่หน้า ${from} ถึงท้ายไฟล์ กล่องสูงตามข้อความ แยกพิมพ์ได้`,
-               `Long rows start on page ${from} to the end, in taller boxes. Print them separately`)));
+            tr(`แถวที่ยาวเกินต่อท้ายแถวปกติ เริ่มหน้า ${from} ถึงท้ายไฟล์ กล่องสูงตามข้อความ`,
+               `Long rows follow the normal ones from page ${from} to the end, in taller boxes`)));
         }
         return;
       }

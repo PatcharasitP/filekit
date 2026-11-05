@@ -368,10 +368,13 @@ export function mount(tool) {
         if (longSel.value === "end" && res.overflow.length) {
           // รอบแรกรู้แล้วว่าแถวไหนยาวเกิน จัดลำดับใหม่ แถวปกติก่อนตามลำดับเดิม แถวยาวเกินไปรวมท้าย แล้วสร้างใหม่
           const bad = new Set(res.overflow);
-          order = [...order.filter((i) => !bad.has(i)), ...order.filter((i) => bad.has(i))];
+          const ok = order.filter((i) => !bad.has(i));
+          // พี่ปอนด์ใช้จริง 05/11/2026 "ของดีปนมาด้วย" แถวยาวต้องเริ่มหน้าใหม่ เติมช่องว่าง (-1) ให้หน้าสุดท้ายของแถวปกติเต็มก่อน
+          const pad = (res.perPage - (ok.length % res.perPage)) % res.perPage;
+          order = [...ok, ...Array(pad).fill(-1), ...order.filter((i) => bad.has(i))];
           moved = bad.size;
           st.info(tr(`ย้าย ${moved} แถวที่ยาวเกินไปไว้หน้าท้าย กำลังสร้างใหม่…`, `Moving ${pl(moved, "long row", "long rows")} to the end, generating again…`));
-          res = await mergeLabels(tplFile, order.map((i) => records[i]), { onProgress });
+          res = await mergeLabels(tplFile, order.map((i) => (i < 0 ? null : records[i])), { onProgress });
         }
         const { blob, pages, perPage } = res;
         const overflow = res.overflow.map((j) => order[j]).sort((a, b) => a - b);   // กลับเป็นเลขแถวเดิมใน Excel
@@ -387,14 +390,15 @@ export function mount(tool) {
         ]));
         // ช่องที่ย่อถึง 10pt แล้วยังยาวเกินความสูงแถว ข้อความจะถูกตัดหรือดันฉลากเลื่อน ต้องบอกแถวให้ไปแก้ใน Excel
         if (overflow.length) {
-          const xl = overflow.map((i) => i + 2);                         // แถว 1 ของ Excel เป็นหัวตาราง
+          // เลขแถวจริงใน Excel (SheetJS ข้ามแถวว่าง ลำดับใน rows จึงคลาดจากเลขแถวเมื่อมีแถวว่างคั่น รีวิวข้อ 4) แถว 1 เป็นหัวตาราง
+          const xl = overflow.map((i) => (Number.isInteger(rows[i]?.__rowNum__) ? rows[i].__rowNum__ + 1 : i + 2));
           const shown = xl.slice(0, 10).join(", ") + (xl.length > 10 ? tr(` และอีก ${xl.length - 10} แถว`, ` and ${xl.length - 10} more`) : "");
           results.appendChild(el("div", { class: "note warn", "data-warn": "overflow", "data-rows": xl.join(",") },
-            tr(`ยาวเกินช่องแม้ย่อเหลือ 10pt แถว Excel ที่ ${shown} ตัดข้อความแล้วสร้างใหม่`,
-               `Too long for the label even at 10pt, Excel rows ${shown}. Shorten the text and generate again`)));
+            tr(`ยาวเกินช่องแม้ย่อเหลือ 10pt แถว Excel ที่ ${shown} ตัดท้ายข้อความใส่ … ให้บรรทัดอื่นยังเห็น ตรวจก่อนพิมพ์`,
+               `Too long even at 10pt, Excel rows ${shown}. The end was cut with … so other lines still show. Check before printing`)));
         }
         if (moved) {
-          const from = Math.floor((records.length - moved) / perPage) + 1;
+          const from = Math.ceil((records.length - moved) / perPage) + 1;   // แถวยาวเริ่มหน้าใหม่เสมอ
           results.appendChild(el("div", { class: "note", "data-moved": `${from}-${pages}` },
             tr(`แถวที่ยาวเกินอยู่รวมกันหน้า ${from} ถึง ${pages} แยกแก้หรือแยกพิมพ์ได้`,
                `Long rows are grouped on pages ${from} to ${pages}, fix or print them separately`)));

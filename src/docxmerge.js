@@ -239,8 +239,10 @@ export async function mergeLabels(file, records, { onProgress } = {}) {
   if (!info || info.slots.length < 2) throw new Error(tr("ไม่พบตารางฉลาก ต้องมีตารางที่ช่องแรกมีตัวยึด เช่น {{ชื่อ}}", "No label table found. Put placeholders like {{Name}} in the first table cell"));
   const { slots } = info;
   if (info.copied) {                                   // ตัวยึดแค่ช่องแรก คัดลอกแพทเทินไปทุกช่อง (ทับข้อความเก่าในช่อง)
-    const src = kids(slots[0]).filter((c) => c.localName !== "tcPr");
-    for (const tc of slots.slice(1)) {
+    // รีวิวข้อ 1: ต้นแบบคือช่องที่มีตัวยึดจริง ไม่ใช่ช่องแรกของตาราง (ตัวยึดอยู่ช่องที่สอง เดิมได้ฉลากเปล่าทั้งไฟล์)
+    const tpl = slots.find((tc) => textOf(tc).includes("{{"));
+    const src = kids(tpl).filter((c) => c.localName !== "tcPr");
+    for (const tc of slots.filter((x) => x !== tpl)) {
       kids(tc).filter((c) => c.localName !== "tcPr").forEach((c) => tc.removeChild(c));
       src.forEach((c) => tc.appendChild(c.cloneNode(true)));
     }
@@ -333,8 +335,26 @@ function first(n, path) {                       // ไล่ลูกตาม�
   for (const name of path) { cur = cur && kids(cur, name)[0]; }
   return cur || null;
 }
+/** ชื่อฟอนต์ของข้อความไทยจาก rFonts ทั้งแบบระบุชื่อและแบบฟอนต์ธีม */
+function fontOf(rf, d) {
+  return rf.getAttribute("w:cs") || d.theme[rf.getAttribute("w:cstheme")] || rf.getAttribute("w:ascii") || d.theme[rf.getAttribute("w:asciiTheme")] || "";
+}
 async function docDefaults(zip) {
-  const d = { half: 22, font: "", before: 0, after: 0, line: 240, rule: "auto" };
+  const d = { half: 22, font: "", before: 0, after: 0, line: 240, rule: "auto", theme: {} };
+  // ฟอนต์ธีม (Word ขึ้นว่า Cordia New (Body CS)) rFonts มีแค่ w:cstheme ไม่มีชื่อฟอนต์ เดิมได้ชื่อว่าง ประเมินกว้างเกินจริงราว 40%
+  const th = zip.file("word/theme/theme1.xml");
+  if (th) {
+    const t = new DOMParser().parseFromString(await th.async("string"), "application/xml");
+    const A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    for (const [tag, kind] of [["majorFont", "major"], ["minorFont", "minor"]]) {
+      const box = t.getElementsByTagNameNS(A, tag)[0];
+      if (!box) continue;
+      const pick = (n) => kids(box).find((c) => c.localName === n)?.getAttribute("typeface") || "";
+      const thai = kids(box).find((c) => c.localName === "font" && c.getAttribute("script") === "Thai")?.getAttribute("typeface") || "";
+      d.theme[kind + "Bidi"] = pick("cs") || thai;
+      d.theme[kind + "HAnsi"] = d.theme[kind + "Ascii"] = pick("latin");
+    }
+  }
   const f = zip.file("word/styles.xml");
   if (!f) return d;
   const st = new DOMParser().parseFromString(await f.async("string"), "application/xml");
@@ -345,7 +365,7 @@ async function docDefaults(zip) {
     const sz = num(first(src, ["szCs"])) || num(first(src, ["sz"]));
     if (sz) d.half = sz;
     const rf = first(src, ["rFonts"]);
-    if (rf) d.font = rf.getAttribute("w:cs") || rf.getAttribute("w:ascii") || d.font;
+    if (rf) d.font = fontOf(rf, d) || d.font;
   }
   for (const src of [dd && first(dd, ["pPrDefault", "pPr"]), normal && first(normal, ["pPr"])]) {
     const sp = src && first(src, ["spacing"]);
@@ -356,46 +376,84 @@ async function docDefaults(zip) {
   }
   return d;
 }
+/** บรรทัดของข้อความช่วงหนึ่ง (ระหว่างตัวขึ้นบรรทัด) */
+function segLines(seg, usable) {
+  // ‼️ คำที่ไม่มีอักษรไทยและไม่มีเว้นวรรค (Site ยาว PTN0038,RYG0010,...) Word ไม่ตัดต่อท้ายบรรทัดเดิม แต่ขึ้นบรรทัดใหม่ก่อน
+  //    บรรทัด "Site :" จึงเสียที่ว่างเกือบทั้งบรรทัด ค่าเฉลี่ย 93% นับไม่ถึง ล้นครึ่งบรรทัดโดยไม่เตือน (Word จริง real30/word/zoom5c-1.png)
+  //    จำลองตัดทีละคำ คำไทยตัดกลางคำได้ (Word ตัดตามพจนานุกรม) แล้วใช้ค่าที่มากกว่าระหว่างสองวิธี
+  let sim = 1, cur = 0;
+  for (const [w, thai] of seg.toks) {
+    if (cur + w <= usable) { cur += w; continue; }
+    if (thai) { const left = cur + w - usable; sim += Math.ceil(left / usable); cur = left % usable || usable; continue; }
+    if (w <= usable) { sim++; cur = w; continue; }
+    if (cur > 0) sim++;
+    sim += Math.ceil(w / usable) - 1; cur = w % usable || usable;
+  }
+  // บรรทัดจริงเต็มเฉลี่ย 93% (Word จริง 05/11/2026: 373 ตัว 14pt 7 บรรทัด 10pt 5 บรรทัด , 186 ตัว 14pt 4 บรรทัด)
+  return Math.max(1, sim, Math.ceil(seg.width / (usable * 0.93)));
+}
+/** ความสูงที่ย่อหน้าหนึ่งต้องใช้ (pt) เมื่อขนาดตัวอักษรคูณ f */
+function paraNeed(p, usable, def, f) {
+  const sp = first(p, ["pPr", "spacing"]);
+  const before = sp && sp.hasAttribute("w:before") ? num(sp, "w:before") : def.before;
+  const after = sp && sp.hasAttribute("w:after") ? num(sp, "w:after") : def.after;
+  const line = sp && sp.hasAttribute("w:line") ? num(sp, "w:line") : def.line;
+  const rule = sp && sp.hasAttribute("w:line") ? (sp.getAttribute("w:lineRule") || "auto") : def.rule;
+  let maxPt = 0, font = def.font, lines = 0;
+  let seg = { width: 0, toks: [] };
+  // รีวิว 05/11/2026 ข้อ 2: ค่าใน Excel ที่กด Alt+Enter easy-template-x แตกเป็น w:br เดิมไม่นับเลย ข้อความถูกตัดเงียบในแถว Exactly
+  const close = () => { lines += segLines(seg, usable); seg = { width: 0, toks: [] }; };
+  for (const r of p.getElementsByTagNameNS(WNS, "r")) {
+    const half = num(first(r, ["rPr", "szCs"])) || num(first(r, ["rPr", "sz"])) || def.half;
+    const pt = scaled(half, f) / 2;
+    const rf = first(r, ["rPr", "rFonts"]);
+    const rfont = (rf && fontOf(rf, def)) || def.font;
+    for (const c of kids(r)) {
+      if (c.localName === "t" && c.textContent) {
+        const text = c.textContent;
+        seg.width += widthPt(text, rfont, pt); font = rfont;
+        for (const w of text.split(/(?<= )/)) if (w) seg.toks.push([widthPt(w, rfont, pt), /[฀-๿]/.test(w)]);
+      } else if ((c.localName === "br" && c.getAttribute("w:type") !== "page") || c.localName === "cr") close();
+    }
+    maxPt = Math.max(maxPt, pt);
+  }
+  close();
+  if (!maxPt) maxPt = scaled(num(first(p, ["pPr", "rPr", "szCs"])) || num(first(p, ["pPr", "rPr", "sz"])) || def.half, f) / 2;
+  const lh = rule === "auto" ? maxPt * lineFactor(font) * (line / 240) : Math.max(line / 20, rule === "atLeast" ? maxPt * lineFactor(font) : 0);
+  return before / 20 + after / 20 + lines * lh;
+}
 /** ความสูงที่ข้อความในช่องต้องใช้ (pt) เมื่อขนาดตัวอักษรคูณ f */
 function cellNeed(tc, usable, def, f) {
-  let total = 0;
-  for (const p of kids(tc, "p")) {
-    const sp = first(p, ["pPr", "spacing"]);
-    const before = sp && sp.hasAttribute("w:before") ? num(sp, "w:before") : def.before;
-    const after = sp && sp.hasAttribute("w:after") ? num(sp, "w:after") : def.after;
-    const line = sp && sp.hasAttribute("w:line") ? num(sp, "w:line") : def.line;
-    const rule = sp && sp.hasAttribute("w:line") ? (sp.getAttribute("w:lineRule") || "auto") : def.rule;
-    let width = 0, maxPt = 0, font = def.font;
-    const toks = [];                                                     // คำทีละคำไว้จำลองตัดบรรทัด [กว้าง, ตัดกลางคำได้ไหม]
-    for (const r of p.getElementsByTagNameNS(WNS, "r")) {
-      const text = [...r.getElementsByTagNameNS(WNS, "t")].map((t) => t.textContent).join("");
-      const half = num(first(r, ["rPr", "szCs"])) || num(first(r, ["rPr", "sz"])) || def.half;
-      const pt = scaled(half, f) / 2;
-      const rf = first(r, ["rPr", "rFonts"]);
-      const rfont = (rf && (rf.getAttribute("w:cs") || rf.getAttribute("w:ascii"))) || def.font;
-      if (text) {
-        width += widthPt(text, rfont, pt); font = rfont;
-        for (const w of text.split(/(?<= )/)) if (w) toks.push([widthPt(w, rfont, pt), /[\u0E00-\u0E7F]/.test(w)]);
-      }
-      maxPt = Math.max(maxPt, pt);
-    }
-    if (!maxPt) maxPt = scaled(num(first(p, ["pPr", "rPr", "szCs"])) || num(first(p, ["pPr", "rPr", "sz"])) || def.half, f) / 2;
-    // ‼️ คำที่ไม่มีอักษรไทยและไม่มีเว้นวรรค (Site ยาว PTN0038,RYG0010,...) Word ไม่ตัดต่อท้ายบรรทัดเดิม แต่ขึ้นบรรทัดใหม่ก่อน
-    //    บรรทัด "Site :" จึงเสียที่ว่างเกือบทั้งบรรทัด ค่าเฉลี่ย 93% นับไม่ถึง ล้นครึ่งบรรทัดโดยไม่เตือน (Word จริง real30/word/zoom5c-1.png)
-    //    จำลองตัดทีละคำ คำไทยตัดกลางคำได้ (Word ตัดตามพจนานุกรม) แล้วใช้ค่าที่มากกว่าระหว่างสองวิธี
-    let sim = 1, cur = 0;
-    for (const [w, thai] of toks) {
-      if (cur + w <= usable) { cur += w; continue; }
-      if (thai) { const left = cur + w - usable; sim += Math.ceil(left / usable); cur = left % usable || usable; continue; }
-      if (w <= usable) { sim++; cur = w; continue; }
-      if (cur > 0) sim++;
-      sim += Math.ceil(w / usable) - 1; cur = w % usable || usable;
-    }
-    const lines = Math.max(1, sim, Math.ceil(width / (usable * 0.93)));         // ตัดบรรทัดตามคำ บรรทัดจริงเต็มเฉลี่ย 93% (Word จริง 05/11/2026: 373 ตัว 14pt 7 บรรทัด 10pt 5 บรรทัด , 186 ตัว 14pt 4 บรรทัด)
-    const lh = rule === "auto" ? maxPt * lineFactor(font) * (line / 240) : Math.max(line / 20, rule === "atLeast" ? maxPt * lineFactor(font) : 0);
-    total += before / 20 + after / 20 + lines * lh;
+  return kids(tc, "p").reduce((sum, p) => sum + paraNeed(p, usable, def, f), 0);
+}
+/** ย่อสุดแล้วยังเกิน ตัดท้ายย่อหน้าที่ยาวที่สุดใส่ … ให้ย่อหน้าอื่น (Site) ยังเห็น
+ *  พี่ปอนด์ใช้จริง 05/11/2026 "SiteCode หายไปเลยทั้งที่ใน Excel มีทุกบรรทัด" บรรทัด Site อยู่ล่างสุด Word ตัดทิ้งพร้อมส่วนที่ล้น */
+function truncateCell(tc, usable, def, f, avail) {
+  const ps = kids(tc, "p");
+  if (!ps.length) return;
+  const p = ps.reduce((a, b) => (paraNeed(b, usable, def, f) > paraNeed(a, usable, def, f) ? b : a));
+  const doc = tc.ownerDocument, pieces = [];
+  for (const r of p.getElementsByTagNameNS(WNS, "r")) for (const c of kids(r)) {
+    if (c.localName === "t") pieces.push({ t: c, text: c.textContent });
+    else if (c.localName === "br" && c.getAttribute("w:type") !== "page") pieces.push({ br: c, ph: doc.createElementNS(WNS, "w:t") });
   }
-  return total;
+  const total = pieces.reduce((n, x) => n + (x.t ? x.text.length : 1), 0);
+  const apply = (k) => {
+    let left = k, last = null;
+    for (const x of pieces) {
+      if (x.t) { const keep = Math.max(0, Math.min(x.text.length, left)); x.t.textContent = x.text.slice(0, keep); left -= x.text.length; if (keep) last = x.t; }
+      else if (left > 0) { if (x.ph.parentNode) x.ph.parentNode.replaceChild(x.br, x.ph); left -= 1; }
+      else if (x.br.parentNode) x.br.parentNode.replaceChild(x.ph, x.br);
+    }
+    if (k < total && last) { last.textContent = last.textContent.replace(/[\s,]+$/, "") + "…"; last.setAttribute("xml:space", "preserve"); }
+  };
+  let lo = 0, hi = total;
+  while (lo < hi) {                                                      // หาความยาวมากสุดที่ยังพอดีช่อง
+    const mid = Math.ceil((lo + hi) / 2);
+    apply(mid);
+    if (cellNeed(tc, usable, def, f) <= avail) lo = mid; else hi = mid - 1;
+  }
+  apply(lo);
 }
 function scaled(half, f) { return half <= MIN_HALF_PT ? half : Math.max(MIN_HALF_PT, Math.round(half * f)); }
 function setSizes(tc, f, def) {
@@ -416,6 +474,28 @@ function setSizes(tc, f, def) {
   }
 }
 /** ย่อช่องที่ล้น คืนเลขแถวข้อมูล (นับจาก 0) ที่ย่อถึง 10pt แล้วยังเกิน */
+/** ความกว้างช่อง (twip) จากเส้นตาราง tblGrid ตามตำแหน่งคอลัมน์จริง
+ *  พี่ปอนด์ใช้จริง 05/11/2026 เลือกย้ายแถวยาวไปหน้าท้ายแล้วไม่ย้าย ฉลากไม่ถูกย่อเลย หรือแถวปกติไปปนท้าย
+ *  เทมเพลตที่ tcW เป็น auto หรือไม่มี tcW เดิมได้ 0 ข้ามทั้งไฟล์ , แบบ pct (ห้าสิบเท่าของร้อยละ) เดิมอ่านเป็น twip ช่องแคบผิดจริง
+ *  จำลองบนเว็บจริง v207 ครบสามแบบ .claude/evidence/2026-11-05-filekit-end/live207-*.log */
+function colWidth(tc) {
+  const tr = tc.parentNode, tbl = tr && tr.parentNode;
+  const grid = tbl && kids(tbl, "tblGrid")[0];
+  const cols = grid ? kids(grid, "gridCol").map((g) => num(g, "w:w")) : [];
+  let idx = num(first(tr, ["trPr", "gridBefore"])) || 0;
+  for (const c of kids(tr, "tc")) {
+    const span = num(first(c, ["tcPr", "gridSpan"])) || 1;
+    if (c === tc) {
+      const sum = cols.slice(idx, idx + span).reduce((a, b) => a + b, 0);
+      if (sum && cols.length >= idx + span) return sum;
+      break;
+    }
+    idx += span;
+  }
+  const w = first(tc, ["tcPr", "tcW"]);
+  const type = w && (w.getAttribute("w:type") || "dxa");
+  return type === "dxa" ? num(w, "w:w") : 0;
+}
 async function fitCells({ zip, doc }) {
   const def = await docDefaults(zip);
   const over = [];
@@ -424,15 +504,18 @@ async function fitCells({ zip, doc }) {
     const rec = Number(tc.getAttribute("fk-rec")); tc.removeAttribute("fk-rec");
     const tr = tc.parentNode, h = first(tr, ["trPr", "trHeight"]);
     const avail = num(h) / 20;                                            // ไม่ได้ตั้งความสูงแถว = แถวยืดได้ ไม่ต้องย่อ
-    const w = Number(widthOf(tc)) / 20;
+    const w = colWidth(tc) / 20;
     if (!avail || !w) continue;
     const mar = first(tc, ["tcPr", "tcMar"]);
     const side = mar ? (num(first(mar, ["left"]), "w:w") || 108) + (num(first(mar, ["right"]), "w:w") || 108) : 216;
     const usable = w - side / 20;
     let f = 1;
-    while (cellNeed(tc, usable, def, f) > avail && f > 0.3) f -= 0.05;
-    if (f < 1) setSizes(tc, Math.max(f, 0.3), def);
-    if (cellNeed(tc, usable, def, Math.max(f, 0.3)) > avail) over.push(rec);
+    // ลดจนทุก run ถึง 10pt (รีวิวข้อ 7: เดิมหยุดที่ f 0.3 ตัวใหญ่ 48pt ลงไม่ถึง 10pt แต่เตือนว่าย่อถึง 10pt แล้ว)
+    while (cellNeed(tc, usable, def, f) > avail && f > 0.05) f -= 0.05;
+    f = Math.max(f, 0.05);
+    if (f < 1) setSizes(tc, f, def);
+    // ขนาดเขียนลงไฟล์แล้ว ประเมินต่อที่ f 1 (ค่าในไฟล์คือขนาดจริง)
+    if (cellNeed(tc, usable, def, 1) > avail) { truncateCell(tc, usable, def, 1, avail); over.push(rec); }
   }
   return over;
 }

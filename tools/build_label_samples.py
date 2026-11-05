@@ -19,12 +19,19 @@ args = [a for a in sys.argv[1:] if not a.startswith("--")]
 ALL = "--all-cells" in sys.argv
 ATLEAST = "--at-least" in sys.argv
 JITTER = "--jitter" in sys.argv
+SECOND = "--second" in sys.argv   # ตัวยึดอยู่ช่องที่สองของแถวแรก ช่องแรกเป็นข้อความเก่า (รีวิว 05/11/2026 ข้อ 1)
+# --theme-font ไม่ระบุชื่อฟอนต์ใน run ใช้ฟอนต์ธีม (Word ทำเองแบบนี้ ขึ้นว่า Cordia New (Body CS)) พี่ปอนด์ใช้จริง 05/11/2026
+THEME = "--theme-font" in sys.argv
 FONT = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--font=")), "TH Sarabun New")   # --font="Cordia New" ใช้ทดสอบทางวัดด้วยฟอนต์จริง
 out = pathlib.Path(args[0]) if args else pathlib.Path(__file__).resolve().parent.parent / "samples"
 out.mkdir(parents=True, exist_ok=True)
 
 def thai_font(run, size=14):
-    run.font.name = FONT; run.font.size = Pt(size)
+    run.font.size = Pt(size)
+    if THEME:
+        run._element.get_or_add_rPr().append(run._element.makeelement(qn("w:szCs"), {qn("w:val"): str(size * 2)}))
+        return
+    run.font.name = FONT
     rf = run._element.get_or_add_rPr().get_or_add_rFonts()
     for k in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):  # ไทยต้องครบ 4 ช่องรวม cs (คลัง Proven)
         rf.set(qn(k), FONT)
@@ -47,7 +54,7 @@ for row in t.rows:
     for j, c in enumerate(row.cells): c.width = Cm(9.4 if JITTER and j == 1 else 9.5)
 for i, row in enumerate(t.rows):
     for j, c in enumerate(row.cells):
-        if (i, j) == (0, 0) or ALL:
+        if (i, j) == ((0, 1) if SECOND else (0, 0)) or ALL:
             para(c, "ผู้รับ", first=True, bold=True)
             para(c, "{{ชื่อ}}")
             para(c, "{{ที่อยู่จัดส่งเอกสาร}}")
@@ -57,7 +64,7 @@ for i, row in enumerate(t.rows):
             para(c, "ผู้รับ", first=True, bold=True)
             para(c, "ชื่อเก่าที่ต้องหายไป")
             para(c, "Site : OLD0000", right=True)
-name = "ตัวอย่าง-ฉลากชื่อที่อยู่" + ("-ครบทุกช่อง" if ALL else "") + ("-atleast" if ATLEAST else "") + ("-jitter" if JITTER else "") + ("-" + FONT.replace(" ", "") if FONT != "TH Sarabun New" else "") + ".docx"
+name = "ตัวอย่าง-ฉลากชื่อที่อยู่" + ("-ครบทุกช่อง" if ALL else "") + ("-atleast" if ATLEAST else "") + ("-jitter" if JITTER else "") + ("-second" if SECOND else "") + ("-theme" if THEME else "") + ("-" + FONT.replace(" ", "") if FONT != "TH Sarabun New" else "") + ".docx"
 d.save(out / name)
 
 wb = Workbook(); ws = wb.active; ws.title = "รายชื่อ"
@@ -68,6 +75,6 @@ prov = ["กรุงเทพมหานคร", "นนทบุรี", "ป
 for i in range(1, 16):
     ws.append([f"TRG{i:04d}", f"คุณทดสอบ ตัวอย่างที่{i}", f"{i * 7} หมู่ {i % 9 + 1} {streets[i % 5]} จังหวัด{prov[i % 5]} 10{i:03d}"])
 ws.column_dimensions["B"].width = 26; ws.column_dimensions["C"].width = 60
-if not (ALL or ATLEAST or JITTER or FONT != "TH Sarabun New"):
+if not (ALL or ATLEAST or JITTER or SECOND or FONT != "TH Sarabun New"):
     wb.save(out / "ตัวอย่าง-ข้อมูลฉลาก.xlsx")
 print("เขียน", out / name)

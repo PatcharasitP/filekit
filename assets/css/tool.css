@@ -437,6 +437,13 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   .mm-arrow{display:none}
   .mm-grid select{margin-bottom:8px}
 }
+/* ขนาดตัวอักษรรายฟิลด์ของโหมดฉลาก (05/11/2026) พับไว้ตั้งต้น ไม่ตั้ง = ทุกฟิลด์เท่ากัน */
+.mm-fsbox{margin-top:12px;font-size:13px}
+.mm-fsbox summary{cursor:pointer;color:var(--text-dim);padding:4px 0}
+.mm-fsizes{display:grid;grid-template-columns:minmax(0,auto) 90px 120px;gap:6px 10px;align-items:center;margin-top:8px}
+.mm-fs-h{font-size:12px;color:var(--text-mute)}
+.mm-fsizes input{width:100%;min-width:0}
+@media (max-width:560px){ .mm-fsizes{grid-template-columns:minmax(0,1fr) 72px 88px} }
 .mm-loop{color:var(--warn)!important;border-color:color-mix(in srgb,var(--warn) 40%,transparent)!important}
 
 /* ── ตรวจเอกสารก่อนส่ง ── */

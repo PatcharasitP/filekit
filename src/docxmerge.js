@@ -232,7 +232,9 @@ function run(doc, text) {
 }
 
 /** เติมข้อมูลลงช่องฉลากทีละช่องตามลำดับแถว เต็มหน้าแล้วขึ้นหน้าใหม่ คืน { blob, pages, perPage } */
-export async function mergeLabels(file, records, { onProgress, growFrom = 0 } = {}) {
+/** look = { font, half, fields: { ชื่อฟิลด์: { half, minHalf } } } ฟอนต์เดียวทั้งฉลาก ขนาดเท่ากันหมด ตั้งขนาดรายฟิลด์และฟิลด์ที่ย่อเองได้
+ *  ไม่ส่ง look = ฟอนต์และขนาดตามแม่แบบ ย่อทั้งช่องตามสัดส่วนแบบเดิม */
+export async function mergeLabels(file, records, { onProgress, growFrom = 0, look = null } = {}) {
   if (!records.length) throw new Error(tr("ไม่มีแถวข้อมูลให้ทำฉลาก", "No data rows to make labels"));
   const { zip, doc } = await openDoc(file);
   const info = findLabelTable(doc);
@@ -247,6 +249,8 @@ export async function mergeLabels(file, records, { onProgress, growFrom = 0 } = 
       src.forEach((c) => tc.appendChild(c.cloneNode(true)));
     }
   }
+  // พี่ปอนด์ 05/11/2026 ดึก ตั้งขนาดตัวอักษรรายฟิลด์ได้ ย่อหน้าที่มีตัวยึดจำไว้ว่าเป็นของฟิลด์ไหน (ตัวเติมข้อมูลเก็บแอตทริบิวต์ที่ติดไว้ เห็นจาก fk-rec)
+  if (look) for (const tc of slots) for (const p of kids(tc, "p")) { const m = textOf(p).match(/\{\{\s*([^{}#/]+?)\s*\}\}/); if (m) p.setAttribute("fk-field", m[1]); }
   fixLayout(slots[0].parentNode.parentNode);
   slots.forEach((tc, k) => tc.setAttribute("fk-slot", String(k + 1)));
   const body = doc.getElementsByTagNameNS(WNS, "body")[0];
@@ -305,11 +309,11 @@ export async function mergeLabels(file, records, { onProgress, growFrom = 0 } = 
   // ถอดบรรทัดนี้แล้วเทสยังเขียว จึงยังไม่เคยเห็นเกิดจริง แต่ราคาถูกและพังแล้วเปิดไฟล์ไม่ได้ทั้งชุด)
   const out = await openDoc(blob);
   for (const tc of out.doc.getElementsByTagNameNS(WNS, "tc")) if (!kids(tc, "p").length) tc.appendChild(out.doc.createElementNS(WNS, "w:p"));
-  const overflow = await fitCells(out);
+  const { over: overflow, need } = await fitCells(out, look);
   blob = await saveDoc(out.zip, out.doc);
   ({ blob } = await cleanDocx(blob, { comments: false, trackChanges: false, metadata: true, rsid: false }));
   onProgress?.({ done: pages + 1, total: pages + 1 });
-  return { blob, pages, perPage: per, overflow };
+  return { blob, pages, perPage: per, overflow, need };
 }
 
 // ── ย่อตัวอักษรช่องฉลากที่ข้อความยาวเกินความสูงแถว ─────────────────────────
@@ -334,18 +338,29 @@ function hasFont(name) {
   }
   return fontSeen.get(name);
 }
+// วัดจาก Word จริง 05/11/2026 ช่องตาราง Table Grid กว้าง 4749 twip ระยะบรรทัดเดียว (.claude/evidence/2026-11-05-label-look/word/measure2.out)
+// ระยะบรรทัดต่อขนาดตัวอักษร Leelawadee UI 13.32pt ที่ 10pt , Tahoma 12.05 , Cordia New 19.42 ที่ 14pt (1.387)
+// ความกว้างเฉลี่ยต่อตัว (em ไม่นับสระบนล่าง) Leelawadee UI 0.48 ถึง 0.55 , Tahoma 0.53 ถึง 0.58 , Cordia New 0.38 ถึง 0.41 ปัดขึ้น ยอมนับว่ายาวเกินดีกว่าล้นกล่อง
+// ‼️ ค่าเดิม 1.2 ของ Cordia ได้จากการหาร 13.85 ด้วยระยะบรรทัด 1.15 ของเอกสาร แต่ช่อง Table Grid ใช้ 1.0 จริง สองค่าผิดคู่กันเลยหักลบกันพอดี
+const WORD_LINE = { "leelawadee ui": 1.34, tahoma: 1.21, "cordia new": 1.39 };
+const WORD_EM = { "leelawadee ui": 0.55, tahoma: 0.6, "cordia new": 0.41 };
 function widthPt(text, font, pt) {
+  // ฟอนต์ไทยตัวเล็กที่เครื่องไม่มี (TH Sarabun New ไม่มากับ Windows) Word เอา Cordia New มาวางแทน วัดด้วย Cordia New ตรงกับ Word
+  // (373 ตัว 10pt Word 5 บรรทัด Cordia 5 บรรทัด , 186 ตัว 3 กับ 3 , .claude/evidence/2026-11-05-label-look/calib/sarabun.out)
+  if (!hasFont(font) && NARROW.test(font || "") && hasFont("Cordia New")) font = "Cordia New";
   if (hasFont(font)) { const c = canvasCtx(); c.font = `${pt}pt "${font}"`; return c.measureText(text).width * 0.75; }
-  return text.replace(COMBINING, "").length * pt * (NARROW.test(font || "") ? 0.36 : 0.5);
+  return text.replace(COMBINING, "").length * pt * (WORD_EM[(font || "").toLowerCase()] || (NARROW.test(font || "") ? 0.41 : 0.5));
 }
 function lineFactor(font) {
+  const known = WORD_LINE[(font || "").toLowerCase()];
+  if (known) return known;                        // canvas ให้ Cordia 1.14 (คูณเผื่อ 1.1 ได้ 1.25) ต่ำกว่า Word 1.39 ใช้ค่าที่วัดจาก Word ก่อนเสมอ
   if (hasFont(font)) {
     const c = canvasCtx(); c.font = `100px "${font}"`;
     const m = c.measureText("กขค Ag");
     // canvas ให้ระยะบรรทัดต่ำกว่าที่ Word ใช้ (Cordia New: canvas 1.14 , Word 1.2 วัด 05/11/2026) เผื่อ 10% ยอมย่อเกินดีกว่าล้น
     if (m.fontBoundingBoxAscent) return ((m.fontBoundingBoxAscent + m.fontBoundingBoxDescent) / 100) * 1.1;
   }
-  return NARROW.test(font || "") ? 1.2 : 1.25;    // 1.2 วัดจาก Word (Cordia New ที่ Word ใช้แทนเมื่อไม่มีฟอนต์) 13.85pt ที่ 10pt หารระยะบรรทัด 1.15 ของเอกสาร , 1.25 ยังไม่ได้วัด
+  return NARROW.test(font || "") ? 1.39 : 1.34;    // ฟอนต์ที่ไม่รู้จัก ใช้ค่าของ Cordia New (ฟอนต์ไทยตัวเล็ก Word ใช้แทนเมื่อไม่มีฟอนต์) กับ Leelawadee UI
 }
 const num = (el, attr = "w:val") => (el ? Number(el.getAttribute(attr)) : NaN);
 function first(n, path) {                       // ไล่ลูกตามชื่อ เช่น first(r, ["rPr","sz"])
@@ -385,13 +400,28 @@ async function docDefaults(zip) {
     const rf = first(src, ["rFonts"]);
     if (rf) d.font = fontOf(rf, d) || d.font;
   }
-  for (const src of [dd && first(dd, ["pPrDefault", "pPr"]), normal && first(normal, ["pPr"])]) {
+  const spacing = (dst, src) => {
     const sp = src && first(src, ["spacing"]);
-    if (!sp) continue;
-    if (sp.hasAttribute("w:before")) d.before = num(sp, "w:before");
-    if (sp.hasAttribute("w:after")) d.after = num(sp, "w:after");
-    if (sp.hasAttribute("w:line")) { d.line = num(sp, "w:line"); d.rule = sp.getAttribute("w:lineRule") || "auto"; }
-  }
+    if (!sp) return dst;
+    if (sp.hasAttribute("w:before")) dst.before = num(sp, "w:before");
+    if (sp.hasAttribute("w:after")) dst.after = num(sp, "w:after");
+    if (sp.hasAttribute("w:line")) { dst.line = num(sp, "w:line"); dst.rule = sp.getAttribute("w:lineRule") || "auto"; }
+    return dst;
+  };
+  spacing(d, dd && first(dd, ["pPrDefault", "pPr"]));
+  // ‼️ สไตล์ตาราง (Table Grid ของ Word ตั้งหลังย่อหน้า 0 ระยะบรรทัด 1.0) ทับค่าตั้งต้นของเอกสารในช่องตาราง แต่แพ้สไตล์ Normal ที่ตั้งเอง
+  // พี่ปอนด์ใช้จริง 05/11/2026 ดึก แม่แบบ P_FERN 2,885 แถว เดิมนับหลังย่อหน้า 8pt กับบรรทัด 1.08 ของเอกสาร ช่องละ 4 ย่อหน้าเกินราว 40pt
+  // แถวปกติถูกนับว่ายาวเกินแล้วย้ายไปท้าย 1,069 แถว ("ไปเลือกย้ายอันแปลก ๆ ไปอยู่ด้านหลัง")
+  const styles = [...st.getElementsByTagNameNS(WNS, "style")];
+  const byId = new Map(styles.map((x) => [x.getAttribute("w:styleId"), x]));
+  d.tableSpacing = (id) => {
+    const chain = [];
+    for (let x = byId.get(id), n = 0; x && n < 10; x = byId.get(first(x, ["basedOn"])?.getAttribute("w:val")), n++) chain.unshift(x);
+    const out = { before: d.before, after: d.after, line: d.line, rule: d.rule };
+    for (const x of chain) spacing(out, first(x, ["pPr"]));
+    return spacing(out, normal && first(normal, ["pPr"]));
+  };
+  spacing(d, normal && first(normal, ["pPr"]));
   return d;
 }
 /** บรรทัดของข้อความช่วงหนึ่ง (ระหว่างตัวขึ้นบรรทัด) */
@@ -402,13 +432,16 @@ function segLines(seg, usable) {
   let sim = 1, cur = 0;
   for (const [w, thai] of seg.toks) {
     if (cur + w <= usable) { cur += w; continue; }
-    if (thai) { const left = cur + w - usable; sim += Math.ceil(left / usable); cur = left % usable || usable; continue; }
+    // ‼️ คำไทยระหว่างเว้นวรรคที่ยาวไม่ถึงบรรทัด Word ยกทั้งคำขึ้นบรรทัดใหม่ (กรุงเทพมหานคร ไม่ถูกตัดกลางคำ) ตัดกลางคำเฉพาะคำที่ยาวเกินบรรทัด
+    //    เดิมตัดคำไทยได้ทุกตำแหน่ง นับบรรทัดน้อยกว่า Word 99 จาก 2,872 ย่อหน้า (ที่อยู่จริงของพี่ปอนด์ 05/11/2026) กล่องที่นับว่าพอดีล้นจริง
+    //    แก้แล้วนับน้อยกว่า Word 0 ย่อหน้าครบ 3 ฟอนต์ (.claude/evidence/2026-11-05-label-look/calib/est3.log)
+    if (thai && w > usable) { const left = cur + w - usable; sim += Math.ceil(left / usable); cur = left % usable || usable; continue; }
     if (w <= usable) { sim++; cur = w; continue; }
     if (cur > 0) sim++;
     sim += Math.ceil(w / usable) - 1; cur = w % usable || usable;
   }
-  // บรรทัดจริงเต็มเฉลี่ย 93% (Word จริง 05/11/2026: 373 ตัว 14pt 7 บรรทัด 10pt 5 บรรทัด , 186 ตัว 14pt 4 บรรทัด)
-  return Math.max(1, sim, Math.ceil(seg.width / (usable * 0.93)));
+  // ตัวกันอีกชั้นจากความกว้างรวม เผื่อ 2% (เทียบ Word 2,872 ย่อหน้า: 1.0 นับเกิน 13 , 0.98 นับเกิน 96 ไม่มีนับขาด เผื่อเครื่องอื่นวัดฟอนต์ต่างเล็กน้อย)
+  return Math.max(1, sim, Math.ceil(seg.width / (usable * 0.98)));
 }
 /** ความสูงที่ย่อหน้าหนึ่งต้องใช้ (pt) เมื่อขนาดตัวอักษรคูณ f */
 function paraNeed(p, usable, def, f) {
@@ -485,13 +518,65 @@ function colWidth(tc) {
   const type = w && (w.getAttribute("w:type") || "dxa");
   return type === "dxa" ? num(w, "w:w") : 0;
 }
-async function fitCells({ zip, doc }) {
+const THEME_ATTRS = ["w:asciiTheme", "w:hAnsiTheme", "w:cstheme", "w:eastAsiaTheme", "w:hint"];
+function rPrOf(r) {
+  let rPr = kids(r, "rPr")[0];
+  if (!rPr) { rPr = r.ownerDocument.createElementNS(WNS, "w:rPr"); r.localName === "r" ? r.insertBefore(rPr, r.firstChild) : r.appendChild(rPr); }
+  return rPr;
+}
+/** run ทุกตัวของย่อหน้า รวมเครื่องหมายท้ายย่อหน้า (pPr/rPr) ที่ตั้งไว้เดิม */
+function runsOf(p) {
+  const out = [...p.getElementsByTagNameNS(WNS, "r")];
+  const pPr = kids(p, "pPr")[0];
+  if (pPr && kids(pPr, "rPr").length) out.push(pPr);
+  return out;
+}
+function setHalf(p, half) {
+  for (const r of runsOf(p)) {
+    const rPr = rPrOf(r);
+    for (const name of ["sz", "szCs"]) {
+      let e = kids(rPr, name)[0];
+      if (!e) { e = rPr.ownerDocument.createElementNS(WNS, "w:" + name); rPr.appendChild(e); }
+      e.setAttribute("w:val", String(half));
+    }
+  }
+}
+/** ฟอนต์เดียวทั้งฉลาก ไทยและอังกฤษ (ascii hAnsi cs eastAsia) ถอดฟอนต์ธีมที่ทับชื่อฟอนต์ออก */
+function setFont(p, font) {
+  for (const r of runsOf(p)) {
+    const rPr = rPrOf(r);
+    let rf = kids(rPr, "rFonts")[0];
+    if (!rf) { rf = rPr.ownerDocument.createElementNS(WNS, "w:rFonts"); const st = kids(rPr, "rStyle")[0]; rPr.insertBefore(rf, st ? st.nextSibling : rPr.firstChild); }
+    THEME_ATTRS.forEach((a) => rf.removeAttribute(a));
+    for (const a of ["w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"]) rf.setAttribute(a, font);
+  }
+}
+const halfOfP = (p, dflt) => { for (const r of runsOf(p)) { const v = num(first(r, ["rPr", "sz"])); if (v) return v; } return dflt; };
+
+async function fitCells({ zip, doc }, look = null) {
   const def = await docDefaults(zip);
-  const over = [];
+  const over = [], need = {};
+  const defOf = new Map();
+  // ค่าเว้นย่อหน้าของช่องตามสไตล์ตารางที่ตารางนั้นใช้ (Table Grid ไม่เว้นหลังย่อหน้า)
+  const cellDef = (tc) => {
+    const tbl = tc.parentNode && tc.parentNode.parentNode;
+    if (!defOf.has(tbl)) {
+      const id = tbl && first(tbl, ["tblPr", "tblStyle"])?.getAttribute("w:val");
+      defOf.set(tbl, id && def.tableSpacing ? { ...def, ...def.tableSpacing(id) } : def);
+    }
+    return defOf.get(tbl);
+  };
   for (const tc of [...doc.getElementsByTagNameNS(WNS, "tc")]) {
     if (!tc.hasAttribute("fk-rec")) continue;
     const rec = Number(tc.getAttribute("fk-rec")); tc.removeAttribute("fk-rec");
     const grow = tc.hasAttribute("fk-grow"); tc.removeAttribute("fk-grow");
+    const d = cellDef(tc);
+    const fieldOf = (p) => (look && look.fields && look.fields[p.getAttribute("fk-field")]) || null;
+    if (look) {
+      // พี่ปอนด์ 05/11/2026 ดึก "เอาสักฟอนต์นึงที่รองรับภาษาไทยและอังกฤษ ขนาดตัวอักษรเท่ากันให้หมด ... ฟิลด์ไหนจะให้ dynamic มีขนาดเท่าไร ถ้าไม่เลือกก็เท่ากันหมด"
+      // เดิมใช้ฟอนต์ตามแม่แบบ ชื่อกับที่อยู่ Cordia New 14 แต่บรรทัด Site เป็น Calibri 11 ตัวใหญ่กว่ากันชัด
+      for (const p of kids(tc, "p")) { if (look.font) setFont(p, look.font); setHalf(p, fieldOf(p)?.half || look.half); }
+    }
     const tr = tc.parentNode, h = first(tr, ["trPr", "trHeight"]);
     const avail = num(h) / 20;                                            // ไม่ได้ตั้งความสูงแถว = แถวยืดได้ ไม่ต้องย่อ
     const w = colWidth(tc) / 20;
@@ -499,18 +584,38 @@ async function fitCells({ zip, doc }) {
     const mar = first(tc, ["tcPr", "tcMar"]);
     const side = mar ? (num(first(mar, ["left"]), "w:w") || 108) + (num(first(mar, ["right"]), "w:w") || 108) : 216;
     const usable = w - side / 20;
-    // ลดทุก run ในช่องพร้อมกันตามสัดส่วนเดิม (บรรทัด Site เล็กลงด้วย) ทีละ 5% ปกติไม่ต่ำกว่า 10pt
-    // ถึง 10pt แล้วยังไม่พอดี = แถวยาวผิดปกติ ย่อต่อถึง 3pt จนพอดีช่อง ไม่ตัดข้อความทิ้ง แล้วนับเป็นแถวที่ยาวเกิน (เตือนและย้ายไปท้ายได้)
-    // เดิม 05/11/2026 v208 ตัดท้ายใส่ … พี่ปอนด์ "ไม่เอาตัด อันนี้แก้แล้วแย่กว่าเดิม" และ Site ตัวใหญ่ข้างที่อยู่ตัวจิ๋ว
-    const shrink = () => { let f = 1; while (cellNeed(tc, usable, def, f) > avail && f > 0.05) f -= 0.05; return Math.max(f, 0.05); };
-    floorHalf = MIN_HALF_PT;
-    let f = shrink();
-    const long = cellNeed(tc, usable, def, f) > avail;
-    if (long) { over.push(rec); if (!grow) { floorHalf = TINY_HALF_PT; f = shrink(); } } // หน้าท้ายแถวยาว ย่อถึง 10pt แล้วให้กล่องสูงขึ้นเอง
-    if (f < 1) setSizes(tc, f, def);
+    const shrink = (floor) => { floorHalf = floor; let f = 1; while (cellNeed(tc, usable, d, f) > avail && f > 0.05) f -= 0.05; return Math.max(f, 0.05); };
+    let long;
+    if (look) {
+      // ขนาดคงที่ทุกบรรทัด ย่อเฉพาะฟิลด์ที่เลือกให้ย่อได้ ทีละครึ่ง pt ไม่ต่ำกว่าขนาดเล็กสุดที่ตั้งไว้ของฟิลด์นั้น
+      const dyn = kids(tc, "p").filter((p) => fieldOf(p)?.minHalf);
+      floorHalf = 1;
+      let n = cellNeed(tc, usable, d, 1);
+      while (n > avail) {
+        let moved = false;
+        for (const p of dyn) { const cur = halfOfP(p, look.half); if (cur > fieldOf(p).minHalf) { setHalf(p, cur - 1); moved = true; } }
+        if (!moved) break;
+        n = cellNeed(tc, usable, d, 1);
+      }
+      long = n > avail;
+      if (long) need[rec] = n;
+      // ไว้ที่เดิมตามลำดับ Excel แถวที่ยังยาวเกินย่อทั้งช่องตามสัดส่วนถึง 3pt ให้พอดีกล่อง ไม่ตัดข้อความ , หน้าท้ายกล่องสูงตามข้อความ ไม่ย่อ
+      if (long && !grow) { const f = shrink(TINY_HALF_PT); if (f < 1) setSizes(tc, f, d); }
+    } else {
+      // ลดทุก run ในช่องพร้อมกันตามสัดส่วนเดิม (บรรทัด Site เล็กลงด้วย) ทีละ 5% ปกติไม่ต่ำกว่า 10pt
+      // ถึง 10pt แล้วยังไม่พอดี = แถวยาวผิดปกติ ย่อต่อถึง 3pt จนพอดีช่อง ไม่ตัดข้อความทิ้ง แล้วนับเป็นแถวที่ยาวเกิน (เตือนและย้ายไปท้ายได้)
+      // เดิม 05/11/2026 v208 ตัดท้ายใส่ … พี่ปอนด์ "ไม่เอาตัด อันนี้แก้แล้วแย่กว่าเดิม" และ Site ตัวใหญ่ข้างที่อยู่ตัวจิ๋ว
+      let f = shrink(MIN_HALF_PT);
+      const n = cellNeed(tc, usable, d, f);
+      long = n > avail;
+      if (long) { need[rec] = n; if (!grow) f = shrink(TINY_HALF_PT); } // หน้าท้ายแถวยาว ย่อถึง 10pt แล้วให้กล่องสูงขึ้นเอง
+      if (f < 1) setSizes(tc, f, d);
+    }
+    if (long) over.push(rec);
     floorHalf = MIN_HALF_PT;
   }
-  return over;
+  for (const p of [...doc.getElementsByTagNameNS(WNS, "p")]) p.removeAttribute("fk-field");
+  return { over, need };
 }
 
 // ── ล็อกความกว้างคอลัมน์ตารางฉลาก ────────────────────────────────────────────

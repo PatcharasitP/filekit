@@ -51,6 +51,57 @@ export function mount(tool) {
   // พี่ปอนด์ 05/11/2026 "เคสแปลก ๆ ให้เลือกว่าจะคงตามแถว Excel หรือเอาไปอยู่หน้าท้าย ๆ รวมกัน"
   const longSel = select([["keep", tr("ไว้ที่เดิมตามลำดับ Excel", "Keep in Excel order")], ["end", tr("ย้ายไปรวมไว้หน้าท้าย", "Move to the last pages")]], "keep");
   longSel.id = "mm-long";
+  // พี่ปอนด์ 05/11/2026 ดึก "เอาสักฟอนต์นึงที่รองรับภาษาไทยและอังกฤษ ขนาดตัวอักษรเท่ากันให้หมด แต่มีเพิ่มได้ว่าฟิลด์ไหนจะให้ dynamic มีขนาดเท่าไร ถ้าไม่เลือกก็เท่ากันหมด"
+  // ฟอนต์ที่มากับ Windows ทุกเครื่องมีตัวไทยและอังกฤษ (TH Sarabun New ไม่มีมากับ Windows เครื่องพี่ปอนด์ก็ไม่มี Word เอาฟอนต์อื่นมาแทน จึงไม่ใส่)
+  // ตามแม่แบบ = ไม่แตะฟอนต์และขนาด ย่อทั้งช่องตามสัดส่วนแบบเดิม
+  const fontSel = select([["Leelawadee UI", "Leelawadee UI"], ["Tahoma", "Tahoma"], ["Cordia New", "Cordia New"],
+    ["", tr("ตามแม่แบบ", "As in template")]], "Leelawadee UI");
+  fontSel.id = "mm-font";
+  const sizeIn = el("input", { id: "mm-size", type: "number", min: "4", max: "40", step: "0.5", value: "10", inputmode: "decimal" });
+  const NARROW_FONTS = /^(cordia|angsana|browallia)/i;   // ฟอนต์ไทยตัวเล็ก 14pt เท่ากับฟอนต์ทั่วไปราว 10pt
+  fontSel.addEventListener("change", () => {
+    if (!sizeIn.dataset.touched) sizeIn.value = NARROW_FONTS.test(fontSel.value) ? "14" : "10";
+    syncLook();
+  });
+  sizeIn.addEventListener("input", () => { sizeIn.dataset.touched = "1"; renderFieldSizes(); });
+  const fontField = field(tr("ฟอนต์ทั้งฉลาก", "Font for all labels"), fontSel, tr("ไทยและอังกฤษฟอนต์เดียวกัน", "One font for Thai and English"));
+  const sizeField = field(tr("ขนาดตัวอักษร (pt)", "Font size (pt)"), sizeIn, tr("ทุกบรรทัดเท่ากัน", "Same size on every line"));
+  const fsBody = el("div", { class: "mm-fsizes" });
+  const fsBox = el("details", { class: "mm-fsbox", id: "mm-fsizes" }, [
+    el("summary", {}, tr("ตั้งขนาดรายฟิลด์ (ไม่ตั้ง = เท่ากันหมด)", "Size per field (blank = all the same)")), fsBody]);
+  /** แถวละฟิลด์: ขนาด (ว่าง = เท่าขนาดหลัก) , ย่อเองได้ถึง (ว่าง = ไม่ย่อ) ค่าที่พิมพ์ไว้คงอยู่เมื่อวาดใหม่ */
+  function renderFieldSizes() {
+    const keep = {};
+    for (const i of fsBody.querySelectorAll("input")) keep[i.dataset.field + "|" + i.dataset.kind] = i.value;
+    fsBody.innerHTML = "";
+    if (!fields.length) return;
+    fsBody.append(el("span", { class: "mm-fs-h" }, tr("ฟิลด์", "Field")), el("span", { class: "mm-fs-h" }, tr("ขนาด", "Size")), el("span", { class: "mm-fs-h" }, tr("ย่อเองได้ถึง", "Shrink down to")));
+    for (const f of fields) {
+      const box = (kind, ph) => el("input", { type: "number", min: "3", max: "40", step: "0.5", inputmode: "decimal", placeholder: ph,
+        "data-field": f, "data-kind": kind, "aria-label": `${f} ${kind === "size" ? tr("ขนาด", "size") : tr("ย่อเองได้ถึง", "shrink down to")}`, value: keep[f + "|" + kind] || "" });
+      fsBody.append(el("span", { class: "mm-key" }, `{{${f}}}`), box("size", sizeIn.value || "10"), box("min", tr("ไม่ย่อ", "No shrink")));
+    }
+  }
+  function syncLook() {
+    const on = modeSel.value === "labels";
+    fontField.style.display = on ? "" : "none";
+    sizeField.style.display = on && fontSel.value ? "" : "none";
+    fsBox.style.display = on && fontSel.value ? "" : "none";
+    renderFieldSizes();
+  }
+  /** ค่าที่ส่งให้ตัวทำฉลาก หน่วยครึ่ง pt แบบ Word (w:sz) */
+  function readLook() {
+    if (!fontSel.value) return null;
+    const pt = (v) => { const n = Number(v); return v !== "" && n >= 3 && n <= 40 ? Math.round(n * 2) : 0; };
+    const half = pt(sizeIn.value) || 20;
+    const out = {};
+    for (const f of fields) {
+      const a = fsBody.querySelector(`input[data-kind="size"][data-field="${CSS.escape(f)}"]`), b = fsBody.querySelector(`input[data-kind="min"][data-field="${CSS.escape(f)}"]`);
+      const own = (a && pt(a.value)) || half, min = (b && pt(b.value)) || 0;
+      if (own !== half || (min && min < own)) out[f] = { half: own, minHalf: min && min < own ? min : 0 };
+    }
+    return { font: fontSel.value, half, fields: out };
+  }
 
   // ขั้นที่ยังทำอะไรไม่ได้ต้องบอกให้รู้ว่ารออะไรอยู่ ไม่ใช่โชว์หัวข้อลอย ๆ แล้วปล่อยให้เดา
   // ‼️ แถบลงมือทำต้องรวม "ปุ่ม + สถานะ" ไว้ก้อนเดียวและเป็นลูกคนสุดท้ายของแผง
@@ -87,8 +138,9 @@ export function mount(tool) {
           field(tr("รูปแบบเอกสาร", "Document mode"), modeSel),
           groupField, loopField,
           nameField = field(tr("ตั้งชื่อไฟล์จากคอลัมน์", "Name files from column"), nameCol, tr("เว้นไว้ = ตั้งชื่อตามลำดับ", "Leave blank = name by sequence")),
-          longField = field(tr("แถวที่ยาวเกินช่อง", "Rows too long for a label"), longSel, tr("ต้องย่อเล็กกว่า 10pt ถึงจะพอดีช่อง", "Need smaller than 10pt to fit")),
-        ])])]),
+          longField = field(tr("แถวที่ยาวเกินกล่อง", "Rows too long for a label"), longSel, tr("ยาวเกินกล่องตามแม่แบบ", "Longer than the template box")),
+          fontField, sizeField,
+        ]), fsBox])]),
     // ‼️ ปุ่มลงมือต้องเป็นลูกตรงของ .panel ไม่ใช่ซ้อนอยู่ในขั้นที่ 4
     //    position:sticky ลอยได้แค่ในกรอบของพ่อตัวเอง — ตอนอยู่ในขั้นที่ 4 มันลอยไม่พ้นขั้นนั้น
     //    บนมือถือจึงต้องเลื่อนลงไป 3,575px ถึงจะกดได้ (วัดจริงจาก tests/browser_mobile.py)
@@ -325,6 +377,7 @@ export function mount(tool) {
     loopField.style.display = grouped ? "" : "none";
     nameField.style.display = modeSel.value === "labels" ? "none" : "";   // ฉลากได้ไฟล์เดียว ไม่ต้องตั้งชื่อรายไฟล์
     longField.style.display = modeSel.value === "labels" ? "" : "none";
+    syncLook();
     renderPreview();
   }
   modeSel.addEventListener("change", () => { syncMode(); renderUnmatched(); refresh(); });
@@ -363,7 +416,8 @@ export function mount(tool) {
       if (modeSel.value === "labels") {
         const records = buildRecords(rows, { mode: "row", mapping });
         const onProgress = ({ done, total }) => st.progress((done / total) * 100, `(${done}/${total})`);
-        let res = await mergeLabels(tplFile, records, { onProgress });
+        const look = readLook();
+        let res = await mergeLabels(tplFile, records, { onProgress, look });
         let order = records.map((_, i) => i), moved = 0;
         if (longSel.value === "end" && res.overflow.length) {
           // รอบแรกรู้แล้วว่าแถวไหนยาวเกิน จัดลำดับใหม่ แถวปกติก่อนตามลำดับเดิม แถวยาวเกินไปรวมท้าย แล้วสร้างใหม่
@@ -371,10 +425,13 @@ export function mount(tool) {
           const ok = order.filter((i) => !bad.has(i));
           // พี่ปอนด์ใช้จริง 05/11/2026 "ของดีปนมาด้วย" แถวยาวต้องเริ่มหน้าใหม่ เติมช่องว่าง (-1) ให้หน้าสุดท้ายของแถวปกติเต็มก่อน
           const pad = (res.perPage - (ok.length % res.perPage)) % res.perPage;
-          order = [...ok, ...Array(pad).fill(-1), ...order.filter((i) => bad.has(i))];
+          // พี่ปอนด์ 05/11/2026 ดึก (ภาพ 139) "มันบาลานซ์ความสูงกันไหม อันไหนยาวเกินกล่องปกติก็ไปท้าย ๆ เลย ไม่ต้องสนใจลำดับ"
+          // กล่องในแถวตารางเดียวกันสูงเท่ากัน เรียงแถวยาวจากสั้นไปยาว กล่องข้างกันจึงยาวใกล้กัน ไม่มีกล่องสั้นสูงเปล่าข้างกล่องยาวมาก
+          const longOnes = order.filter((i) => bad.has(i)).sort((a, b) => (res.need[a] || 0) - (res.need[b] || 0) || a - b);
+          order = [...ok, ...Array(pad).fill(-1), ...longOnes];
           moved = bad.size;
           st.info(tr(`ย้าย ${moved} แถวที่ยาวเกินไปไว้หน้าท้าย กำลังสร้างใหม่…`, `Moving ${pl(moved, "long row", "long rows")} to the end, generating again…`));
-          res = await mergeLabels(tplFile, order.map((i) => (i < 0 ? null : records[i])), { onProgress, growFrom: (ok.length + pad) / res.perPage + 1 });
+          res = await mergeLabels(tplFile, order.map((i) => (i < 0 ? null : records[i])), { onProgress, look, growFrom: (ok.length + pad) / res.perPage + 1 });
         }
         const { blob, pages, perPage } = res;
         const overflow = res.overflow.map((j) => order[j]).sort((a, b) => a - b);   // กลับเป็นเลขแถวเดิมใน Excel
@@ -397,7 +454,7 @@ export function mount(tool) {
           const shown = xl.slice(0, 10).join(", ") + (xl.length > 10 ? tr(` และอีก ${xl.length - 10} แถว`, ` and ${xl.length - 10} more`) : "");
           results.appendChild(el("div", { class: "note warn", "data-warn": "overflow", "data-rows": xl.join(",") },
             moved ? tr(`ข้อความยาวเกินกล่อง แถว Excel ที่ ${shown} ขยายกล่องไว้หน้าท้าย`, `Too long for a label, Excel rows ${shown}. Taller boxes on the last pages`)
-              : tr(`ข้อความยาวมาก ย่อตัวอักษรเล็กกว่า 10pt ให้พอดีช่อง แถว Excel ที่ ${shown} ตรวจก่อนพิมพ์`, `Very long text shrunk below 10pt to fit, Excel rows ${shown}. Check before printing`)));
+              : tr(`ข้อความยาวเกินกล่อง ย่อตัวอักษรทั้งกล่องให้พอดี แถว Excel ที่ ${shown} ตรวจก่อนพิมพ์`, `Too long for a label, the whole label was shrunk to fit, Excel rows ${shown}. Check before printing`)));
         }
         if (moved) {
           const from = Math.ceil((records.length - moved) / perPage) + 1;   // แถวยาวเริ่มหน้าใหม่เสมอ

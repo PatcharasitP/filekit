@@ -37,6 +37,8 @@ with sync_playwright() as p:
         pg.goto(f"{BASE}/#/word-mailmerge", wait_until="networkidle"); pg.wait_for_selector(".mm-step")
         pg.locator("input[type=file]").nth(0).set_input_files(str(tpl)); pg.wait_for_timeout(1200)
         pg.locator("input[type=file]").nth(1).set_input_files(str(data)); pg.wait_for_timeout(1500)
+        # ชุดนี้ตรวจโหมดตามแม่แบบ (ฟอนต์และขนาดเดิม ย่อทั้งช่องตามสัดส่วน) ฟอนต์เดียวทั้งฉลากตรวจใน browser_mailmerge_look.py
+        pg.evaluate("() => { const s = document.querySelector('#mm-font'); if (s) { s.value = ''; s.dispatchEvent(new Event('change', { bubbles: true })); } }")
     mode = lambda: pg.locator("select:has(option[value=labels])")
     # ── ตัวยึดแค่ช่องแรก เลือกโหมดฉลากเอง ──
     load(S / "ตัวอย่าง-ฉลากชื่อที่อยู่.docx", S / "ตัวอย่าง-ข้อมูลฉลาก.xlsx")
@@ -142,9 +144,10 @@ with sync_playwright() as p:
         nm = lambda c: c.split("\n")[1] if c.count("\n") else ""
         # พี่ปอนด์ใช้จริง 05/11/2026 "ของดีปนมาด้วย" แถวยาวต้องเริ่มหน้าใหม่ หน้าแรกเหลือช่องว่างได้
         ck("หน้าแรกมีแต่แถวปกติตามลำดับ Excel ที่เหลือว่าง", [nm(c) for c in mpages[0]], [f"คุณทดสอบ ตัวอย่างที่{i}" for i in (1, 2, 3, 4, 5, 6, 8, 9, 10, 12)] + ["", ""])
-        ck("แถวยาวเกิน (คนที่ 7 กับ 11) เริ่มหน้าใหม่ หน้า 2", [nm(c) for c in mpages[1][:2]] if len(mpages) > 1 else None, ["คุณทดสอบ ตัวอย่างที่7", "คุณทดสอบ ตัวอย่างที่11"])
+        # พี่ปอนด์ 05/11/2026 ดึก "อันไหนยาวเกินกล่องปกติก็ไปท้าย ๆ เลย ไม่ต้องสนใจลำดับ" แถวยาวเรียงจากสั้นไปยาว คนที่ 11 (8 บรรทัดสั้น) มาก่อนคนที่ 7
+        ck("แถวยาวเกิน (คนที่ 11 กับ 7 เรียงจากสั้นไปยาว) เริ่มหน้าใหม่ หน้า 2", [nm(c) for c in mpages[1][:2]] if len(mpages) > 1 else None, ["คุณทดสอบ ตัวอย่างที่11", "คุณทดสอบ ตัวอย่างที่7"])
         # พี่ปอนด์ "SiteCode หายไปเลยทั้งที่ใน Excel มีทุกบรรทัด" ยาวเกินแม้ย่อสุด ตัดท้ายที่อยู่ใส่ … บรรทัด Site ต้องยังอยู่
-        c7 = mpages[1][0] if len(mpages) > 1 else ""
+        c7 = next((c for c in (mpages[1] if len(mpages) > 1 else []) if nm(c) == "คุณทดสอบ ตัวอย่างที่7"), "")
         ck("ช่องที่ยาวเกินย้ายมาแล้วข้อความครบ มี Site : TRG0007 ไม่มี …", ("Site : TRG0007" in c7, "…" in c7, c7.count("ถนนพหลโยธิน")), (True, False, 8))
         # พี่ปอนด์ 05/11/2026 "ถ้าอันไหนมันเยอะเกินกล่อง เราขยายไปเลยความยาวกล่อง แล้วย้ายมันไปอยู่ล่างสุดรวม ๆ"
         hr = lambda t: [tr.find(W + "trPr").find(W + "trHeight").get(W + "hRule") for tr in t.findall(W + "tr")]

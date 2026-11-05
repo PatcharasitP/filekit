@@ -142,21 +142,25 @@ with sync_playwright() as p:
         mtbls = mroot.find(W + "body").findall(W + "tbl")
         mpages = [[cell_text(tc) for tc in t.iter(W + "tc")] for t in mtbls]
         nm = lambda c: c.split("\n")[1] if c.count("\n") else ""
-        # พี่ปอนด์ใช้จริง 05/11/2026 "ของดีปนมาด้วย" แถวยาวต้องเริ่มหน้าใหม่ หน้าแรกเหลือช่องว่างได้
-        ck("หน้าแรกมีแต่แถวปกติตามลำดับ Excel ที่เหลือว่าง", [nm(c) for c in mpages[0]], [f"คุณทดสอบ ตัวอย่างที่{i}" for i in (1, 2, 3, 4, 5, 6, 8, 9, 10, 12)] + ["", ""])
+        # พี่ปอนด์ใช้จริง 06/11/2026 (ภาพ 140) "ทำไมมันมีว่างด้วย ไม่ควรว่าง" แถวยาวต่อท้ายแถวปกติทันที ไม่เว้นช่องว่างให้เริ่มหน้าใหม่
         # พี่ปอนด์ 05/11/2026 ดึก "อันไหนยาวเกินกล่องปกติก็ไปท้าย ๆ เลย ไม่ต้องสนใจลำดับ" แถวยาวเรียงจากสั้นไปยาว คนที่ 11 (8 บรรทัดสั้น) มาก่อนคนที่ 7
-        ck("แถวยาวเกิน (คนที่ 11 กับ 7 เรียงจากสั้นไปยาว) เริ่มหน้าใหม่ หน้า 2", [nm(c) for c in mpages[1][:2]] if len(mpages) > 1 else None, ["คุณทดสอบ ตัวอย่างที่11", "คุณทดสอบ ตัวอย่างที่7"])
-        # พี่ปอนด์ "SiteCode หายไปเลยทั้งที่ใน Excel มีทุกบรรทัด" ยาวเกินแม้ย่อสุด ตัดท้ายที่อยู่ใส่ … บรรทัด Site ต้องยังอยู่
-        c7 = next((c for c in (mpages[1] if len(mpages) > 1 else []) if nm(c) == "คุณทดสอบ ตัวอย่างที่7"), "")
+        allnames = [nm(c) for pgc in mpages for c in pgc]
+        ck("แถวปกติตามลำดับ Excel แล้วต่อด้วยแถวยาว (คนที่ 11 กับ 7) ทันที ไม่มีช่องว่างคั่น", allnames, [f"คุณทดสอบ ตัวอย่างที่{i}" for i in (1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 11, 7)])
+        # พี่ปอนด์ "SiteCode หายไปเลยทั้งที่ใน Excel มีทุกบรรทัด" ยาวเกินแม้ย่อสุด บรรทัด Site ต้องยังอยู่ ข้อความครบ
+        cells = [tc for t in mtbls for tc in t.iter(W + "tc")]
+        c7 = next((cell_text(tc) for tc in cells if nm(cell_text(tc)) == "คุณทดสอบ ตัวอย่างที่7"), "")
         ck("ช่องที่ยาวเกินย้ายมาแล้วข้อความครบ มี Site : TRG0007 ไม่มี …", ("Site : TRG0007" in c7, "…" in c7, c7.count("ถนนพหลโยธิน")), (True, False, 8))
-        # พี่ปอนด์ 05/11/2026 "ถ้าอันไหนมันเยอะเกินกล่อง เราขยายไปเลยความยาวกล่อง แล้วย้ายมันไปอยู่ล่างสุดรวม ๆ"
+        # หน้าที่มีแถวยาวแถวแรก (ข้อมูลนี้ 10 + 2 = 12 ช่อง อยู่หน้า 1) กล่องสูงตามข้อความ หน้าก่อนหน้าสูงคงที่
+        gi = next((k for k, pgc in enumerate(mpages) if any(nm(c) == "คุณทดสอบ ตัวอย่างที่11" for c in pgc)), None)
+        ck("ประชากร: หาหน้าที่มีแถวยาวแถวแรกเจอ เป็นหน้า 1", gi, 0)
         hr = lambda t: [tr.find(W + "trPr").find(W + "trHeight").get(W + "hRule") for tr in t.findall(W + "tr")]
-        ck("หน้าแถวปกติกล่องสูงคงที่ (Exactly) หน้าแถวยาวกล่องสูงตามข้อความ (At least)", (set(hr(mtbls[0])), set(hr(mtbls[1])) if len(mtbls) > 1 else None), ({"exact"}, {"atLeast"}))
-        ck("หน้าแถวยาวฉลากหนึ่งช่องไม่แยกข้ามหน้า (cantSplit ทุกแถว)", all(tr.find(W + "trPr").find(W + "cantSplit") is not None for tr in mtbls[1].findall(W + "tr")) if len(mtbls) > 1 else False, True)
-        mc = list(mtbls[1].iter(W + "tc")) if len(mtbls) > 1 else []
-        # Word จริง 05/11/2026 กล่องขยายรวมกล่องว่างที่เหลือดันย่อหน้าท้ายไปเกิดหน้าว่าง (word2/grow-5.png) หน้าแถวยาวเก็บเฉพาะแถวที่มีฉลาก
-        ck("หน้าแถวยาวไม่มีแถวกล่องว่าง (2 ฉลากเหลือ 1 แถว)", len(mtbls[1].findall(W + "tr")) if len(mtbls) > 1 else None, 1)
-        ck("หน้าแถวยาวไม่ย่อจิ๋ว ตัวอักษรไม่เล็กกว่า 10pt", min(sizes(mc[0]) + sizes(mc[1]) or [0]) >= 20 if mc else False, True)
+        ck("หน้าก่อนแถวยาวกล่องสูงคงที่ (Exactly) หน้าแถวยาวขึ้นไปกล่องสูงตามข้อความ (At least)", [set(hr(t)) for t in mtbls], [{"exact"}] * (gi or 0) + [{"atLeast"}] * (len(mtbls) - (gi or 0)))
+        gt = mtbls[gi:] if gi is not None else []
+        ck("หน้าแถวยาวฉลากหนึ่งช่องไม่แยกข้ามหน้า (cantSplit ทุกแถว)", bool(gt) and all(tr.find(W + "trPr").find(W + "cantSplit") is not None for t in gt for tr in t.findall(W + "tr")), True)
+        # Word จริง 05/11/2026 กล่องขยายรวมกล่องว่างที่เหลือดันย่อหน้าท้ายไปเกิดหน้าว่าง (word2/grow-5.png) ห้ามมีแถวตารางที่ว่างทั้งแถว
+        ck("หน้าแถวยาวไม่มีแถวกล่องว่างทั้งแถว", sum(1 for t in gt for tr in t.findall(W + "tr") if not any(cell_text(tc) for tc in tr.iter(W + "tc"))), 0)
+        mc = [tc for tc in cells if nm(cell_text(tc)) in ("คุณทดสอบ ตัวอย่างที่7", "คุณทดสอบ ตัวอย่างที่11")]
+        ck("แถวยาวไม่ย่อจิ๋ว ตัวอักษรไม่เล็กกว่า 10pt", len(mc) == 2 and min(sizes(mc[0]) + sizes(mc[1]) or [0]) >= 20, True)
         ck("ชื่อไฟล์ไม่บอกจำนวนหน้า (กล่องขยาย Word นับหน้าเอง)", dl.value.suggested_filename.endswith("แถว.docx"), True)
         # พี่ปอนด์ 05/11/2026 "ต้องเอาตาม Layout ของเขา อย่าง Site เราไปเปลี่ยนตำแหน่งเอง มันไม่ถูก" เทมเพลต: 4 ย่อหน้า Site ย่อหน้าสุดท้ายชิดขวา
         def layout(tc):
@@ -171,7 +175,8 @@ with sync_playwright() as p:
         ck("คำเตือนที่มองเห็นมีอันเดียว ไม่ซ้อนกับรอบก่อน", w2.count(), 1)
         ck("คำเตือนยังบอกเลขแถว Excel เดิม (9,13) ไม่ใช่ตำแหน่งใหม่", w2.first.get_attribute("data-rows") if w2.count() else None, "9,13")
         mv = pg.locator("[data-moved]:visible")
-        ck("บอกว่าแถวที่ยาวเกินเริ่มหน้าไหน", mv.get_attribute("data-moved") if mv.count() else None, "2")
+        # 06/11/2026 แถวยาวไม่เริ่มหน้าใหม่แล้ว ข้อความต้องบอกหน้าที่แถวยาวแถวแรกอยู่จริง (เดิมโค้ดยังปัดขึ้นหน้าถัดไป บอกผิดไป 1 หน้า)
+        ck("บอกว่าแถวที่ยาวเกินเริ่มหน้าไหน ตรงกับหน้าจริงในไฟล์", mv.get_attribute("data-moved") if mv.count() else None, str((gi or 0) + 1))
         ck("ข้อความบอกหน้าของแถวที่ย้าย มองเห็นบนหน้าเสร็จงาน", mv.count() == 1 and mv.is_visible(), True)
     # ── รีวิว 05/11/2026 ข้อ 1: ตัวยึดอยู่ช่องที่สอง ช่องแรกเป็นข้อความเก่า ต้องได้ฉลากครบ ไม่ใช่ฉลากเปล่าทั้งไฟล์ ──
     subprocess.run([sys.executable, str(ROOT / "tools/build_label_samples.py"), str(allcells), "--second"], check=True, capture_output=True)

@@ -423,15 +423,16 @@ export function mount(tool) {
           // รอบแรกรู้แล้วว่าแถวไหนยาวเกิน จัดลำดับใหม่ แถวปกติก่อนตามลำดับเดิม แถวยาวเกินไปรวมท้าย แล้วสร้างใหม่
           const bad = new Set(res.overflow);
           const ok = order.filter((i) => !bad.has(i));
-          // พี่ปอนด์ใช้จริง 05/11/2026 "ของดีปนมาด้วย" แถวยาวต้องเริ่มหน้าใหม่ เติมช่องว่าง (-1) ให้หน้าสุดท้ายของแถวปกติเต็มก่อน
-          const pad = (res.perPage - (ok.length % res.perPage)) % res.perPage;
+          // พี่ปอนด์ 06/11/2026 (ภาพ 140) "ทำไมมันมีว่างด้วย ไม่ควรว่าง" แถวยาวต่อท้ายแถวปกติทันที ไม่เติมช่องว่างให้เริ่มหน้าใหม่
+          // (เดิม 05/11 เติมช่องว่างเพราะ "ของดีปนมาด้วย" ตอนนั้นตัวประเมินติดธงแถวปกติผิด 1,069 แถว แก้ตัวประเมินแล้วเหลือแถวยาวจริง)
+          const pad = 0;
           // พี่ปอนด์ 05/11/2026 ดึก (ภาพ 139) "มันบาลานซ์ความสูงกันไหม อันไหนยาวเกินกล่องปกติก็ไปท้าย ๆ เลย ไม่ต้องสนใจลำดับ"
           // กล่องในแถวตารางเดียวกันสูงเท่ากัน เรียงแถวยาวจากสั้นไปยาว กล่องข้างกันจึงยาวใกล้กัน ไม่มีกล่องสั้นสูงเปล่าข้างกล่องยาวมาก
           const longOnes = order.filter((i) => bad.has(i)).sort((a, b) => (res.need[a] || 0) - (res.need[b] || 0) || a - b);
           order = [...ok, ...Array(pad).fill(-1), ...longOnes];
           moved = bad.size;
           st.info(tr(`ย้าย ${moved} แถวที่ยาวเกินไปไว้หน้าท้าย กำลังสร้างใหม่…`, `Moving ${pl(moved, "long row", "long rows")} to the end, generating again…`));
-          res = await mergeLabels(tplFile, order.map((i) => (i < 0 ? null : records[i])), { onProgress, look, growFrom: (ok.length + pad) / res.perPage + 1 });
+          res = await mergeLabels(tplFile, order.map((i) => (i < 0 ? null : records[i])), { onProgress, look, growFrom: Math.floor((ok.length + pad) / res.perPage) + 1 });   // หน้าที่มีแถวยาวแถวแรก
         }
         const { blob, pages, perPage } = res;
         const overflow = res.overflow.map((j) => order[j]).sort((a, b) => a - b);   // กลับเป็นเลขแถวเดิมใน Excel
@@ -457,7 +458,8 @@ export function mount(tool) {
               : tr(`ข้อความยาวเกินกล่อง ย่อตัวอักษรทั้งกล่องให้พอดี แถว Excel ที่ ${shown} ตรวจก่อนพิมพ์`, `Too long for a label, the whole label was shrunk to fit, Excel rows ${shown}. Check before printing`)));
         }
         if (moved) {
-          const from = Math.ceil((records.length - moved) / perPage) + 1;   // แถวยาวเริ่มหน้าใหม่เสมอ
+          // หน้าที่มีแถวยาวแถวแรก สูตรเดียวกับ growFrom (06/11/2026 เลิกเติมช่องว่าง แถวยาวไม่เริ่มหน้าใหม่แล้ว ปัดขึ้นจะบอกเกินไป 1 หน้า)
+          const from = Math.floor((records.length - moved) / perPage) + 1;
           results.appendChild(el("div", { class: "note", "data-moved": String(from) },
             tr(`แถวที่ยาวเกินอยู่รวมกันตั้งแต่หน้า ${from} ถึงท้ายไฟล์ กล่องสูงตามข้อความ แยกพิมพ์ได้`,
                `Long rows start on page ${from} to the end, in taller boxes. Print them separately`)));

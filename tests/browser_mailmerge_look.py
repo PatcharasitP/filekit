@@ -55,13 +55,31 @@ def build_template(path):
 ADDR = ["เลขที่ 254 ถ.พญาไท แขวงวังใหม่ เขตปทุมวัน กรุงเทพมหานคร 10330", "เลขที่ 96/27 ม.9 ต.บางเขน อ.เมืองนนทบุรี นนทบุรี 11000",
         "เลขที่ 12 ม.3 ต.วัดประดู่ อ.เมืองสุราษฎร์ธานี สุราษฎร์ธานี 84000", "อุทยานแห่งชาติแม่วงก์ ถ.คลองลาน อุ้มผาง อ.ปางศิลาทอง กำแพงเพชร 62120"]
 LONG_AT = {4: 250, 9: 1200, 16: 600, 21: 400}   # แถว Excel : ความยาวที่อยู่โดยประมาณ (ตัวอักษร)
+# พี่ปอนด์ 06/11/2026 (ภาพ 141 ถึง 143) Site หลายรหัสในย่อหน้าชิดขวา ข้อมูลจริงมีทั้งคั่นจุลภาคติดกันและเว้นวรรค
+SITE_AT = {7: ",".join(f"RM-BKK5298/{c}" for c in "AFIHKB"), 12: ", ".join(f"BKK{n}" for n in (1057, 1576, 1577, 1579, 1583, 1584))}
 def build_data(path):
     wb = Workbook(); ws = wb.active; ws.append(["Site", "ชื่อ", "ที่อยู่จัดส่งเอกสาร"])
     for xl in range(2, 26):
         n = LONG_AT.get(xl)
         addr = ",".join(ADDR * 40)[:n] if n else ADDR[xl % 4]
-        ws.append([f"KPT{xl:04d}", f"บริษัท ทดสอบ ตัวอย่างที่ {xl} จำกัด", addr])
+        name = f"บริษัท ทดสอบ ตัวอย่างที่ {xl} จำกัด" + (" ทุน 1,250 บาท" if xl == 13 else "")
+        ws.append([SITE_AT.get(xl, f"KPT{xl:04d}"), name, addr])
     wb.save(path)
+def label_cells(path):
+    """ช่องฉลากทุกช่องตามลำดับ รวมช่องว่าง (cells_of ข้ามช่องว่าง จึงไม่เห็นช่องว่างคั่นกลาง)"""
+    with zipfile.ZipFile(path) as z:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(z.read("word/document.xml"))
+    return [tc for tbl in root.iter(W + "tbl") for tc in tbl.iter(W + "tc")]
+def para_parts(p):
+    """ข้อความของย่อหน้าแยกตาม w:br และนับขีดห้ามตัดเป็น -"""
+    parts, cur = [], ""
+    for r in p.iter(W + "r"):
+        for c in r:
+            if c.tag == W + "t": cur += c.text or ""
+            elif c.tag == W + "noBreakHyphen": cur += "-"
+            elif c.tag == W + "br": parts.append(cur); cur = ""
+    return parts + [cur]
 
 def cells_of(path):
     with zipfile.ZipFile(path) as z:
@@ -132,6 +150,31 @@ with sync_playwright() as p:
     tail = [len(addr_of(c)) for c in cells[-4:]]
     ck("แถวยาวสี่แถวอยู่ท้ายไฟล์ เรียงจากสั้นไปยาว", tail, sorted(tail) if len(tail) == 4 and min(tail) > 200 else "ไม่ใช่สี่แถวยาว")
     ck("แถวปกติอยู่ก่อน ไม่มีแถวยาวปน", all(len(addr_of(c)) < 200 for c in cells[:-4]), True)
+    # พี่ปอนด์ 06/11/2026 ภาพ 140 "ทำไมมันมีว่างด้วย ไม่ควรว่าง" แถวยาวต่อท้ายแถวปกติทันที ช่องว่างมีได้แค่ท้ายไฟล์
+    tcs = label_cells(path)
+    filled = [i for i, tc in enumerate(tcs) if "".join(t.text or "" for t in tc.iter(W + "t")).strip()]
+    gaps = [i for i in range(len(tcs)) if i < filled[-1] and i not in filled]
+    ck("ประชากร: ช่องฉลากที่มีข้อความ 24 ช่อง", len(filled), 24)
+    ck("ไม่มีช่องฉลากว่างคั่นระหว่างแถวปกติกับแถวยาว (ว่างได้แค่ท้ายไฟล์)", gaps, [])
+    # Site หลายรหัส บรรทัดแรก Site : รหัสแรก อยู่ที่เดิมเหมือนฉลากปกติ ที่เหลือขึ้นบรรทัดใหม่ ชิดขวาตามแม่แบบ
+    def site_p(key):
+        for tc in tcs:
+            if key in "".join(t.text or "" for t in tc.iter(W + "t")):
+                return next((p for p in tc.iter(W + "p") if "Site :" in "".join(t.text or "" for t in p.iter(W + "t"))), None)
+    for xl, first_code in ((7, "RM-BKK5298/A,"), (12, "BKK1057,")):
+        sp = site_p(f"ตัวอย่างที่ {xl} ")
+        parts = para_parts(sp) if sp is not None else []
+        jc = sp.find(f"{W}pPr/{W}jc").get(W + "val") if sp is not None and sp.find(f"{W}pPr/{W}jc") is not None else None
+        ck(f"Site หลายรหัสแถว {xl} บรรทัดแรกเป็น Site : {first_code} แล้วขึ้นบรรทัดใหม่ ชิดขวาตามแม่แบบ", (parts[:1], len(parts) > 1, jc), ([f"Site : {first_code}"], True, "right"))
+        ck(f"Site แถว {xl} รหัสครบตรงตัวตามข้อมูล (ตาไม่เห็นตัวเว้นวรรคกว้างศูนย์)", "".join(parts).replace("​", "").replace("Site : ", "").replace(" ", ""), SITE_AT[xl].replace(" ", ""))
+    sp7 = site_p("ตัวอย่างที่ 7 ")
+    ck("รหัส RM-BKK ใช้ขีดห้ามตัด Word ไม่ตัดบรรทัดกลางรหัส", sum(1 for _ in sp7.iter(W + "noBreakHyphen")) if sp7 is not None else 0, 6)
+    # จุลภาค 5 ตัว ตัวแรกเป็นที่ขึ้นบรรทัดใหม่ (w:br) อีก 4 ตัวมีตัวเว้นวรรคกว้างศูนย์ตาม
+    ck("รหัสคั่นจุลภาคติดกัน มีจุดตัดบรรทัดที่ตาไม่เห็นหลังจุลภาคที่เหลือทั้ง 4 ตัว", "".join(para_parts(sp7)).count(",​") if sp7 is not None else 0, 4)
+    sp2 = site_p("ตัวอย่างที่ 2 ")
+    ck("Site รหัสเดียวไม่ขึ้นบรรทัดใหม่", len(para_parts(sp2)) if sp2 is not None else 0, 1)
+    nm = next(("".join(t.text or "" for t in tc.iter(W + "t")) for tc in tcs if "ตัวอย่างที่ 13 " in "".join(t.text or "" for t in tc.iter(W + "t"))), "")
+    ck("ตัวเลขเงิน 1,250 ไม่ถูกแทรกอะไร", "1,250" in nm and "1,​250" not in nm, True)
     pg.close()
 
     # ── ตั้งรายฟิลด์: ที่อยู่ 9pt ย่อเองได้ถึง 6pt , Site 8pt ──

@@ -444,16 +444,16 @@ function segLines(seg, usable) {
   return Math.max(1, sim, Math.ceil(seg.width / (usable * 0.98)));
 }
 /** ความสูงที่ย่อหน้าหนึ่งต้องใช้ (pt) เมื่อขนาดตัวอักษรคูณ f */
-function paraNeed(p, usable, def, f) {
+function paraNeed(p, usable, def, f, info = null) {
   const sp = first(p, ["pPr", "spacing"]);
   const before = sp && sp.hasAttribute("w:before") ? num(sp, "w:before") : def.before;
   const after = sp && sp.hasAttribute("w:after") ? num(sp, "w:after") : def.after;
   const line = sp && sp.hasAttribute("w:line") ? num(sp, "w:line") : def.line;
   const rule = sp && sp.hasAttribute("w:line") ? (sp.getAttribute("w:lineRule") || "auto") : def.rule;
   let maxPt = 0, font = def.font, lines = 0;
-  let seg = { width: 0, toks: [] };
+  let seg = { width: 0, toks: [] }, glue = false;
   // รีวิว 05/11/2026 ข้อ 2: ค่าใน Excel ที่กด Alt+Enter easy-template-x แตกเป็น w:br เดิมไม่นับเลย ข้อความถูกตัดเงียบในแถว Exactly
-  const close = () => { lines += segLines(seg, usable); seg = { width: 0, toks: [] }; };
+  const close = () => { lines += segLines(seg, usable); seg = { width: 0, toks: [] }; glue = false; };
   for (const r of p.getElementsByTagNameNS(WNS, "r")) {
     const half = num(first(r, ["rPr", "szCs"])) || num(first(r, ["rPr", "sz"])) || def.half;
     const pt = scaled(half, f) / 2;
@@ -463,12 +463,22 @@ function paraNeed(p, usable, def, f) {
       if (c.localName === "t" && c.textContent) {
         const text = c.textContent;
         seg.width += widthPt(text, rfont, pt); font = rfont;
-        for (const w of text.split(/(?<= )/)) if (w) seg.toks.push([widthPt(w, rfont, pt), /[฀-๿]/.test(w)]);
+        for (const w of text.split(/(?<=[ ​])/)) {   // ตัดได้หลังเว้นวรรคและหลัง ZW (softBreaks)
+          if (!w) continue;
+          const tok = [widthPt(w, rfont, pt), /[฀-๿]/.test(w)];
+          if (glue && seg.toks.length) seg.toks[seg.toks.length - 1][0] += tok[0]; else seg.toks.push(tok);
+          glue = false;
+        }
+      } else if (c.localName === "noBreakHyphen") {        // ขีดห้ามตัด คำก่อนและหลังขีดเป็นคำเดียวกัน
+        const hw = widthPt("-", rfont, pt); seg.width += hw;
+        if (seg.toks.length) seg.toks[seg.toks.length - 1][0] += hw; else seg.toks.push([hw, false]);
+        glue = true;
       } else if ((c.localName === "br" && c.getAttribute("w:type") !== "page") || c.localName === "cr") close();
     }
     maxPt = Math.max(maxPt, pt);
   }
   close();
+  if (info) info.lines = lines;
   if (!maxPt) maxPt = scaled(num(first(p, ["pPr", "rPr", "szCs"])) || num(first(p, ["pPr", "rPr", "sz"])) || def.half, f) / 2;
   const lh = rule === "auto" ? maxPt * lineFactor(font) * (line / 240) : Math.max(line / 20, rule === "atLeast" ? maxPt * lineFactor(font) : 0);
   return before / 20 + after / 20 + lines * lh;
@@ -551,6 +561,45 @@ function setFont(p, font) {
     for (const a of ["w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"]) rf.setAttribute(a, font);
   }
 }
+// พี่ปอนด์ใช้จริง 06/11/2026 (ภาพ 141 ถึง 143) Site ยาวหลายรหัส ย่อหน้าชิดขวาตามแม่แบบ บรรทัดแรกเต็มความกว้าง "Site :" ถูกดันไปซ้าย
+// "ไม่ควรขยับตำแหน่งของข้อความ ... ทุกกรณีต้องยึดตามความเป็นจริง ... ถ้ามันยาวก็ไปเพิ่มบรรทัดใหม่เอา"
+const ZW = "​";
+/** จุลภาคที่ไม่มีเว้นวรรคตาม (PTN0038,RYG0010) ใส่ตัวเว้นวรรคกว้างศูนย์ให้ Word ตัดบรรทัดระหว่างรหัสได้ ไม่ตัดกลางรหัส ตาไม่เห็น
+ *  ตัวเลขเงิน 1,234 ไม่แตะ (ตามด้วยตัวเลข) */
+function softBreaks(p) {
+  for (const t of [...p.getElementsByTagNameNS(WNS, "t")]) {
+    const s = t.textContent, v = s.replace(/,(?=[^\s\d​])/g, "," + ZW);
+    if (v !== s) t.textContent = v;
+    // ขีดในรหัส RM-BKK5298/K Word ตัดบรรทัดหลังขีดได้ ได้ "RM-" ค้างท้ายบรรทัด (Word จริง 2026-11-06-label-site/p-226.png)
+    // ขีดระหว่างตัวอักษรอังกฤษเปลี่ยนเป็นขีดห้ามตัดของ Word หน้าตาเหมือนเดิม ตัวเลข 24-26 ไม่แตะ
+    const parts = t.textContent.split(/(?<=[A-Za-z])-(?=[A-Za-z])/);
+    if (parts.length < 2) continue;
+    const doc = t.ownerDocument; let at = t;
+    t.textContent = parts[0];
+    for (const part of parts.slice(1)) {
+      const nb = doc.createElementNS(WNS, "w:noBreakHyphen"), nt = doc.createElementNS(WNS, "w:t");
+      nt.setAttribute("xml:space", "preserve"); nt.textContent = part;
+      at.parentNode.insertBefore(nb, at.nextSibling); nb.parentNode.insertBefore(nt, nb.nextSibling); at = nt;
+    }
+  }
+}
+/** ย่อหน้าชิดขวาหรือกึ่งกลางที่ยาวเกินบรรทัด ขึ้นบรรทัดใหม่หลังจุลภาคตัวแรก บรรทัดแรก (Site : รหัสแรก) อยู่ตำแหน่งเดียวกับฉลากปกติ ที่เหลือต่อบรรทัดล่าง */
+function keepHead(p, usable, d) {
+  const jc = first(p, ["pPr", "jc"]), al = jc ? jc.getAttribute("w:val") : "";
+  if (!["right", "end", "center"].includes(al) || p.getElementsByTagNameNS(WNS, "br").length) return false;
+  const info = {}; paraNeed(p, usable, d, 1, info);
+  if (!(info.lines > 1)) return false;
+  for (const t of [...p.getElementsByTagNameNS(WNS, "t")]) {
+    const s = t.textContent, i = s.indexOf(",");
+    if (i < 0) continue;
+    const doc = t.ownerDocument, br = doc.createElementNS(WNS, "w:br"), rest = doc.createElementNS(WNS, "w:t");
+    t.textContent = s.slice(0, i + 1);
+    rest.setAttribute("xml:space", "preserve"); rest.textContent = s.slice(i + 1).replace(/^[\s​]+/, "");
+    t.parentNode.insertBefore(br, t.nextSibling); br.parentNode.insertBefore(rest, br.nextSibling);
+    return true;
+  }
+  return false;
+}
 const halfOfP = (p, dflt) => { for (const r of runsOf(p)) { const v = num(first(r, ["rPr", "sz"])); if (v) return v; } return dflt; };
 
 async function fitCells({ zip, doc }, look = null) {
@@ -577,6 +626,7 @@ async function fitCells({ zip, doc }, look = null) {
       // เดิมใช้ฟอนต์ตามแม่แบบ ชื่อกับที่อยู่ Cordia New 14 แต่บรรทัด Site เป็น Calibri 11 ตัวใหญ่กว่ากันชัด
       for (const p of kids(tc, "p")) { if (look.font) setFont(p, look.font); setHalf(p, fieldOf(p)?.half || look.half); }
     }
+    for (const p of kids(tc, "p")) softBreaks(p);
     const tr = tc.parentNode, h = first(tr, ["trPr", "trHeight"]);
     const avail = num(h) / 20;                                            // ไม่ได้ตั้งความสูงแถว = แถวยืดได้ ไม่ต้องย่อ
     const w = colWidth(tc) / 20;
@@ -584,6 +634,7 @@ async function fitCells({ zip, doc }, look = null) {
     const mar = first(tc, ["tcPr", "tcMar"]);
     const side = mar ? (num(first(mar, ["left"]), "w:w") || 108) + (num(first(mar, ["right"]), "w:w") || 108) : 216;
     const usable = w - side / 20;
+    for (const p of kids(tc, "p")) keepHead(p, usable, d);
     const shrink = (floor) => { floorHalf = floor; let f = 1; while (cellNeed(tc, usable, d, f) > avail && f > 0.05) f -= 0.05; return Math.max(f, 0.05); };
     let long;
     if (look) {

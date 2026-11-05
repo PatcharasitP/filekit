@@ -41,7 +41,7 @@ export const KEYS = {
   "word-join": "merge join รวม ต่อ เอกสาร word docx เล่ม รายงาน",
   "word-replace": "find replace ค้นหา แทนที่ หลายไฟล์ batch แก้ทั้งชุด word",
   "word-clean": "clean metadata comment track changes ตรวจ ล้าง คอมเมนต์ ประวัติ ผู้เขียน ความลับ ส่งออก",
-  "word-mailmerge": "mailmerge mail merge จดหมายเวียน เทมเพลต template word excel ใบรับรอง ใบเสร็จ เวียน",
+  "word-mailmerge": "mailmerge mail merge จดหมายเวียน เทมเพลต template word excel ใบรับรอง ใบเสร็จ เวียน ฉลาก label labels สติกเกอร์ sticker ที่อยู่ ซองจดหมาย envelope",
   "word-to-pdf": "word docx pdf แปลง",
   "text-to-pdf": "text txt ข้อความ โน้ต note บันทึก พิมพ์ เป็น pdf แปลง ตัวอักษร พิมพ์ข้อความ",
   "powerpoint-to-word": "powerpoint ppt pptx สไลด์ word docx โน้ต presentation แปลง",

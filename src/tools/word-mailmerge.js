@@ -1,6 +1,6 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
-import { readPlaceholders, mergeAll, buildRecords, negName, isNegName } from "../docxmerge.js";
+import { readPlaceholders, mergeAll, buildRecords, negName, isNegName, inspectLabels, mergeLabels } from "../docxmerge.js";
 import { loadLibs } from "../loader.js";
 import { smartDecode } from "../thai.js";
 import { tr, pl } from "../i18n.js";
@@ -16,6 +16,7 @@ export function mount(tool) {
   let rows = [];          // ข้อมูลจาก Excel
   let columns = [];       // ชื่อคอลัมน์ใน Excel
   const mapping = {};     // ตัวยึด -> คอลัมน์
+  let labelInfo = null;   // ตารางฉลากในเทมเพลต { slots, copied, auto } (โหมดฉลาก หลายแถวต่อหน้า)
 
   // ── ขั้นที่ 1: เทมเพลต Word ───────────────────────────────────────────────
   const tplZone = dropzone({
@@ -37,7 +38,8 @@ export function mount(tool) {
   const mapBox = el("div", { class: "mm-box", hidden: true });
   const previewBox = el("div", { class: "mm-box", hidden: true });
 
-  const modeSel = select([["row", tr("หนึ่งแถว = หนึ่งเอกสาร", "One row = one document")], ["group", tr("รวมหลายแถวเป็น 1 เอกสาร (ตารางรายการ)", "Combine rows into 1 doc (item tables)")]], "row");
+  const modeSel = select([["row", tr("หนึ่งแถว = หนึ่งเอกสาร", "One row = one document")], ["group", tr("รวมหลายแถวเป็น 1 เอกสาร (ตารางรายการ)", "Combine rows into 1 doc (item tables)")],
+    ["labels", tr("ฉลาก หลายแถวต่อหน้า ได้ไฟล์เดียว", "Labels, many rows per page in one file")]], "row");
   const groupCol = el("select", {});
   const loopSel = el("select", {});
   const groupField = field(tr("จัดกลุ่มด้วยคอลัมน์", "Group by column"), groupCol, tr("ค่าตรงกันรวมเป็นเอกสารเดียว", "Matching values combine into one doc"));
@@ -45,7 +47,7 @@ export function mount(tool) {
   const nameCol = el("select", {});
   const go = button(tr("สร้างเอกสารทั้งชุด", "Generate all documents"), { onclick: run });
   go.disabled = true;
-  let step3, step4, wait3, wait4;
+  let step3, step4, wait3, wait4, nameField;
 
   // ขั้นที่ยังทำอะไรไม่ได้ต้องบอกให้รู้ว่ารออะไรอยู่ ไม่ใช่โชว์หัวข้อลอย ๆ แล้วปล่อยให้เดา
   // ‼️ แถบลงมือทำต้องรวม "ปุ่ม + สถานะ" ไว้ก้อนเดียวและเป็นลูกคนสุดท้ายของแผง
@@ -81,7 +83,7 @@ export function mount(tool) {
         el("div", { class: "row" }, [
           field(tr("รูปแบบเอกสาร", "Document mode"), modeSel),
           groupField, loopField,
-          field(tr("ตั้งชื่อไฟล์จากคอลัมน์", "Name files from column"), nameCol, tr("เว้นไว้ = ตั้งชื่อตามลำดับ", "Leave blank = name by sequence")),
+          nameField = field(tr("ตั้งชื่อไฟล์จากคอลัมน์", "Name files from column"), nameCol, tr("เว้นไว้ = ตั้งชื่อตามลำดับ", "Leave blank = name by sequence")),
         ])])]),
     // ‼️ ปุ่มลงมือต้องเป็นลูกตรงของ .panel ไม่ใช่ซ้อนอยู่ในขั้นที่ 4
     //    position:sticky ลอยได้แค่ในกรอบของพ่อตัวเอง — ตอนอยู่ในขั้นที่ 4 มันลอยไม่พ้นขั้นนั้น
@@ -103,6 +105,8 @@ export function mount(tool) {
       el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลพนักงาน.xlsx", download: true }, tr("ข้อมูลพนักงาน", "Employee data")),
       el("a", { class: "chip", href: "samples/ตัวอย่าง-ใบเสนอราคา.docx", download: true }, tr("เทมเพลตใบเสนอราคา", "Quotation template")),
       el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลใบเสนอราคา.xlsx", download: true }, tr("ข้อมูลใบเสนอราคา", "Quotation data")),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ฉลากชื่อที่อยู่.docx", download: true }, tr("เทมเพลตฉลาก", "Label template")),
+      el("a", { class: "chip", href: "samples/ตัวอย่าง-ข้อมูลฉลาก.xlsx", download: true }, tr("ข้อมูลฉลาก", "Label data")),
       el("a", { class: "chip", href: "samples/อ่านก่อนใช้.txt", download: true }, tr("วิธีเขียนตัวยึด", "How to write placeholders")),
     ]),
   ]);
@@ -121,6 +125,11 @@ export function mount(tool) {
     tr("ตารางรายการ: ใส่ {{#รายการ}} ที่ช่องแรกและ {{/รายการ}} ที่ช่องสุดท้ายของแถว",
     "Item table: put {{#Items}} in the first cell and {{/Items}} in the last cell")));
 
+  // พี่ปอนด์ 05/11/2026 ฉลากชื่อที่อยู่ ตาราง 2x6 ต่อหน้า ทำแพทเทินหน้าเดียว ระบบเติมทีละช่องแล้วเพิ่มหน้าเอง
+  body.appendChild(el("div", { class: "note" },
+    tr("ฉลาก: ทำตารางหน้าเดียว ใส่ตัวยึดในช่องแรก เลือกรูปแบบฉลาก ระบบเติมทีละช่องและเพิ่มหน้าให้เอง",
+    "Labels: make a one-page table, put placeholders in the first cell, pick Labels. Pages are added automatically")));
+
 /* ‼️ ย้ายแถบปุ่มลงมือทำมาไว้ท้ายสุดของแผงจริง ๆ (หลังกล่องตัวอย่างกับหมายเหตุ 3 บรรทัด)
  * เพราะ position:sticky หยุดลอยทันทีที่ของซึ่งอยู่ "ใต้มันในแผงเดียวกัน" ไล่ขึ้นมาถึง
  * หน้านี้ยาว 6,200px บนมือถือ ของที่ต่อท้ายอีก 430px ทำให้ปุ่มหลุดจอช่วงท้ายหน้า
@@ -131,12 +140,16 @@ export function mount(tool) {
   // ── อ่านตัวยึดจากเทมเพลต ─────────────────────────────────────────────────
   async function scanTemplate() {
     fieldsBox.hidden = true; fieldsBox.innerHTML = "";
-    fields = [];
+    fields = []; labelInfo = null;
     if (!tplFile) return refresh();
     st.info(tr("กำลังอ่านตัวยึดในเทมเพลต…", "Reading placeholders in the template…"));
     try {
       const parsed = await readPlaceholders(tplFile);
       fields = parsed.fields; loops = parsed.loops;
+      labelInfo = await inspectLabels(tplFile);
+      // ตัวยึดชุดเดียวกันซ้ำหลายช่องในตาราง = ตั้งใจทำฉลาก เลือกโหมดให้เลย
+      if (labelInfo?.auto && !loops.length) modeSel.value = "labels";
+      else if (modeSel.value === "labels" && !labelInfo) modeSel.value = "row";
       st.clear();
       fieldsBox.hidden = false;
       if (!fields.length && !loops.length) {
@@ -265,7 +278,26 @@ export function mount(tool) {
       head = tr(`จัดกลุ่มตามคอลัมน์ “${groupCol.value}” จะได้ ${n.toLocaleString("th-TH")} ไฟล์ จาก ${rows.length.toLocaleString("th-TH")} แถว`,
         `Grouped by column “${groupCol.value}”, will produce ${pl(n.toLocaleString("en-US"), "file", "files")} from ${pl(rows.length.toLocaleString("en-US"), "row", "rows")}`);
     }
-    previewBox.append(el("p", { class: "mm-label" }, head), list);
+    if (modeSel.value === "labels") {
+      if (!labelInfo) {
+        head = tr("เทมเพลตนี้ไม่มีตารางฉลาก ต้องมีตารางที่ช่องแรกมีตัวยึด เช่น {{ชื่อ}}", "This template has no label table. Put placeholders like {{Name}} in a table cell");
+      } else {
+        const pages = Math.ceil(rows.length / labelInfo.slots);
+        head = tr(`ฉลากหน้าละ ${labelInfo.slots} ช่อง จาก ${rows.length.toLocaleString("th-TH")} แถว ได้ ${pages.toLocaleString("th-TH")} หน้า ในไฟล์ Word เดียว`,
+          `${labelInfo.slots} labels per page from ${pl(rows.length.toLocaleString("en-US"), "row", "rows")}, ${pl(pages.toLocaleString("en-US"), "page", "pages")} in one Word file`);
+        if (labelInfo.copied) previewBox.append(el("p", { class: "mm-label" },
+          tr(`ใช้แพทเทินช่องแรกกับอีก ${labelInfo.copied} ช่องในตาราง ข้อความเดิมในช่องเหล่านั้นถูกแทน`,
+             `The first cell's pattern is copied to ${pl(labelInfo.copied, "other cell", "other cells")}, replacing their text`)));
+      }
+    }
+    else if (labelInfo && labelInfo.copied && modeSel.value === "row") {
+      // ตัวยึดแค่ช่องแรกเดาไม่ได้แน่ว่าเป็นฉลาก (ตารางฟอร์มก็หน้าตาแบบนี้) จึงไม่สลับเอง แค่บอกทาง
+      previewBox.append(el("p", { class: "mm-label", "data-hint": "labels" },
+        tr(`เทมเพลตมีตาราง ${labelInfo.slots} ช่อง ถ้าทำฉลากหลายแถวต่อหน้า เลือกรูปแบบเอกสารเป็น ฉลาก`,
+           `The template has a ${labelInfo.slots}-cell table. For many rows per page, set Document mode to Labels`)));
+    }
+    previewBox.prepend(el("p", { class: "mm-label" }, head));
+    previewBox.append(list);
   }
 
   // เตือนเฉพาะตัวยึดที่ผู้ใช้ต้องจับคู่จริง — ไม่นับบล็อกที่ระบบเติมรายการให้เองในโหมดจัดกลุ่ม
@@ -287,6 +319,7 @@ export function mount(tool) {
     const grouped = modeSel.value === "group";
     groupField.style.display = grouped ? "" : "none";
     loopField.style.display = grouped ? "" : "none";
+    nameField.style.display = modeSel.value === "labels" ? "none" : "";   // ฉลากได้ไฟล์เดียว ไม่ต้องตั้งชื่อรายไฟล์
     renderPreview();
   }
   modeSel.addEventListener("change", () => { syncMode(); renderUnmatched(); refresh(); });
@@ -296,7 +329,8 @@ export function mount(tool) {
   const refresh = () => {
     const grouped = modeSel.value === "group";
     go.disabled = !(tplFile && rows.length && (fields.length || loops.length)
-                    && (!grouped || (groupCol.value && loopSel.value)));
+                    && (!grouped || (groupCol.value && loopSel.value))
+                    && (modeSel.value !== "labels" || !!labelInfo));
   };
 
   // ── สร้างเอกสารทั้งชุด ───────────────────────────────────────────────────
@@ -321,6 +355,31 @@ export function mount(tool) {
         return (n > 1 ? `${name} (${n})` : name) + ".docx";
       };
 
+      if (modeSel.value === "labels") {
+        const records = buildRecords(rows, { mode: "row", mapping });
+        const { blob, pages, perPage, overflow } = await mergeLabels(tplFile, records, {
+          onProgress: ({ done, total }) => st.progress((done / total) * 100, `(${done}/${total})`),
+        });
+        st.progress(null);
+        const name = tr(`${base}-ฉลาก ${rows.length} แถว ${pages} หน้า.docx`, `${base}-labels ${pl(rows.length, "row", "rows")} ${pl(pages, "page", "pages")}.docx`);
+        download(blob, name);
+        st.ok(tr(`สร้างฉลากแล้ว ${rows.length.toLocaleString("th-TH")} แถว หน้าละ ${perPage} ช่อง รวม ${pages} หน้า (${fmtBytes(blob.size)})`,
+          `Labels done, ${pl(rows.length.toLocaleString("en-US"), "row", "rows")}, ${perPage} per page, ${pl(pages, "page", "pages")} (${fmtBytes(blob.size)})`));
+        results.appendChild(el("div", { class: "result" }, [
+          el("div", { class: "r-name" }, [el("strong", {}, name)]),
+          el("span", { class: "r-size" }, fmtBytes(blob.size)),
+          button(tr("ดาวน์โหลด", "Download"), { icon: "download", label: tr("ดาวน์โหลด", "Download"), onclick: () => download(blob, name) }),
+        ]));
+        // ช่องที่ย่อถึง 10pt แล้วยังยาวเกินความสูงแถว ข้อความจะถูกตัดหรือดันฉลากเลื่อน ต้องบอกแถวให้ไปแก้ใน Excel
+        if (overflow.length) {
+          const xl = overflow.map((i) => i + 2);                         // แถว 1 ของ Excel เป็นหัวตาราง
+          const shown = xl.slice(0, 10).join(", ") + (xl.length > 10 ? tr(` และอีก ${xl.length - 10} แถว`, ` and ${xl.length - 10} more`) : "");
+          results.appendChild(el("div", { class: "status show err", "data-warn": "overflow", "data-rows": xl.join(",") },
+            tr(`ยาวเกินช่องแม้ย่อเหลือ 10pt แถว Excel ที่ ${shown} ตัดข้อความแล้วสร้างใหม่`,
+               `Too long for the label even at 10pt, Excel rows ${shown}. Shorten the text and generate again`)));
+        }
+        return;
+      }
       const cleanMapping = { ...mapping };
       if (modeSel.value === "group" && loopSel.value) delete cleanMapping[loopSel.value];
       const records = buildRecords(rows, {

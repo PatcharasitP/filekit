@@ -172,3 +172,251 @@ export function buildRecords(rows, { mode = "row", groupBy, loopName, mapping })
     return record;
   });
 }
+
+// ── โหมดฉลาก: หลายแถวของ Excel ต่อหนึ่งหน้า ได้ไฟล์ Word เดียว ──────────────
+// พี่ปอนด์ 05/11/2026 ทำฉลากชื่อที่อยู่ ตาราง 2x6 ต่อหน้า อยากให้เติมจาก Excel ทีละช่องแล้วเพิ่มหน้าเอง
+// วิธี: หาตารางแรกที่มีตัวยึด ช่องที่มีตัวยึดคือช่องฉลาก (มีช่องเดียว = คัดลอกแพทเทินไปทุกช่องที่กว้างเท่ากัน)
+//      คัดเนื้อหน้าเดียวซ้ำเท่าจำนวนหน้า ครอบแต่ละช่องด้วยบล็อกวนซ้ำ {{#fkL_หน้า_ช่อง}} … {{/…}}
+//      แล้วส่งให้ easy-template-x เติมทีเดียว ช่องที่ไม่มีข้อมูลได้รายการว่าง เนื้อหาทั้งช่องหายไป
+// ‼️ คั่นหน้าด้วยตัวแบ่ง section (คัด sectPr ของเอกสารไปไว้ที่ย่อหน้าท้ายของแต่ละหน้า) ไม่ใช่ w:br page
+//    ตัวขึ้นหน้าใหม่แบบ br ทิ้งย่อหน้าว่างไว้หัวหน้าถัดไป ตารางที่เต็มหน้าพอดีจะดันแถวล่างตกไปอีกหน้า
+const WNS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const kids = (n, name) => [...n.childNodes].filter((c) => c.nodeType === 1 && (!name || c.localName === name));
+const textOf = (n) => [...n.getElementsByTagNameNS(WNS, "t")].map((t) => t.textContent).join("");
+const tagSet = (s) => [...s.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)].map((m) => m[1]).sort().join("|");
+function cellsOf(tbl) { return kids(tbl, "tr").flatMap((tr) => kids(tr, "tc")); }
+function widthOf(tc) {
+  const pr = kids(tc, "tcPr")[0];
+  const w = pr && kids(pr, "tcW")[0];
+  return w ? w.getAttribute("w:w") || "" : "";
+}
+function findLabelTable(doc) {
+  for (const tbl of doc.getElementsByTagNameNS(WNS, "tbl")) {
+    const cells = cellsOf(tbl);
+    const withTags = cells.filter((tc) => textOf(tc).includes("{{"));
+    if (withTags.length) {
+      if (withTags.length >= 2) return { cells, slots: withTags, copied: 0, auto: new Set(withTags.map((tc) => tagSet(textOf(tc)))).size === 1 };
+      // ตารางที่ทำเองใน Word ช่องกว้างไม่เท่ากันเป๊ะ (5386 กับ 5329 ต่างกัน 1%) ยอมคลาด 5% ยังกันช่องเว้นระยะแคบ ๆ ระหว่างฉลากไม่ให้นับ
+      const w = Number(widthOf(withTags[0])) || 0;
+      const near = (tc) => { const x = Number(widthOf(tc)) || 0; return w ? Math.abs(x - w) <= w * 0.05 : !x; };
+      const slots = cells.filter(near);
+      return { cells, slots, copied: slots.length - 1, auto: false };
+    }
+  }
+  return null;
+}
+async function openDoc(file) {
+  const [JSZip] = await loadLibs("jszip");
+  const zip = await JSZip.loadAsync(file);
+  const doc = new DOMParser().parseFromString(await zip.file("word/document.xml").async("string"), "application/xml");
+  return { zip, doc };
+}
+async function saveDoc(zip, doc) {
+  zip.file("word/document.xml", new XMLSerializer().serializeToString(doc));
+  return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+}
+
+/** ดูว่าเทมเพลตทำฉลากได้ไหม คืน { slots: จำนวนช่องต่อหน้า, copied: ช่องที่จะคัดลอกแพทเทินไปให้, auto: ตัวยึดซ้ำครบหลายช่องจึงน่าจะตั้งใจทำฉลาก } หรือ null */
+export async function inspectLabels(file) {
+  try {
+    const { doc } = await openDoc(file);
+    const info = findLabelTable(doc);
+    return info && info.slots.length >= 2 ? { slots: info.slots.length, copied: info.copied, auto: info.auto } : null;
+  } catch { return null; }
+}
+
+function run(doc, text) {
+  const r = doc.createElementNS(WNS, "w:r"), t = doc.createElementNS(WNS, "w:t");
+  t.setAttribute("xml:space", "preserve"); t.textContent = text; r.appendChild(t);
+  return r;
+}
+
+/** เติมข้อมูลลงช่องฉลากทีละช่องตามลำดับแถว เต็มหน้าแล้วขึ้นหน้าใหม่ คืน { blob, pages, perPage } */
+export async function mergeLabels(file, records, { onProgress } = {}) {
+  if (!records.length) throw new Error(tr("ไม่มีแถวข้อมูลให้ทำฉลาก", "No data rows to make labels"));
+  const { zip, doc } = await openDoc(file);
+  const info = findLabelTable(doc);
+  if (!info || info.slots.length < 2) throw new Error(tr("ไม่พบตารางฉลาก ต้องมีตารางที่ช่องแรกมีตัวยึด เช่น {{ชื่อ}}", "No label table found. Put placeholders like {{Name}} in the first table cell"));
+  const { slots } = info;
+  if (info.copied) {                                   // ตัวยึดแค่ช่องแรก คัดลอกแพทเทินไปทุกช่อง (ทับข้อความเก่าในช่อง)
+    const src = kids(slots[0]).filter((c) => c.localName !== "tcPr");
+    for (const tc of slots.slice(1)) {
+      kids(tc).filter((c) => c.localName !== "tcPr").forEach((c) => tc.removeChild(c));
+      src.forEach((c) => tc.appendChild(c.cloneNode(true)));
+    }
+  }
+  slots.forEach((tc, k) => tc.setAttribute("fk-slot", String(k + 1)));
+  const body = doc.getElementsByTagNameNS(WNS, "body")[0];
+  const finalSect = kids(body, "sectPr").pop() || null;
+  const content = kids(body).filter((c) => c !== finalSect);
+  content.forEach((c) => body.removeChild(c));
+  const per = slots.length, pages = Math.ceil(records.length / per);
+  const data = {};
+  for (let pg = 1; pg <= pages; pg++) {
+    const clones = content.map((c) => c.cloneNode(true));
+    clones.forEach((c) => body.insertBefore(c, finalSect));
+    const mine = clones.flatMap((c) => [...(c.localName === "tc" ? [c] : []), ...c.getElementsByTagNameNS(WNS, "tc")]).filter((tc) => tc.hasAttribute("fk-slot"));
+    for (const tc of mine) {
+      const k = Number(tc.getAttribute("fk-slot")); tc.removeAttribute("fk-slot");
+      const key = `fkL_${pg}_${k}`, rec = records[(pg - 1) * per + k - 1];
+      data[key] = rec ? [rec] : [];
+      if (rec) tc.setAttribute("fk-rec", String((pg - 1) * per + k - 1));   // ไว้หาช่องของแถวนี้หลังเติม เพื่อย่อตัวอักษรช่องที่ล้น
+      const ps = kids(tc, "p");
+      if (!ps.length) tc.appendChild(doc.createElementNS(WNS, "w:p")), ps.push(kids(tc, "p")[0]);
+      const first = ps[0], last = ps[ps.length - 1];
+      const pPr = kids(first, "pPr")[0];
+      first.insertBefore(run(doc, `{{#${key}}}`), pPr ? pPr.nextSibling : first.firstChild);
+      last.appendChild(run(doc, `{{/${key}}}`));
+    }
+    if (pg < pages && finalSect) {                     // ตัวแบ่ง section ที่ย่อหน้าท้ายของหน้า ค่าตั้งต้นของ section คือขึ้นหน้าใหม่
+      let tail = clones[clones.length - 1];
+      if (tail.localName !== "p") { tail = doc.createElementNS(WNS, "w:p"); body.insertBefore(tail, finalSect); }
+      let pPr = kids(tail, "pPr")[0];
+      if (!pPr) { pPr = doc.createElementNS(WNS, "w:pPr"); tail.insertBefore(pPr, tail.firstChild); }
+      kids(pPr, "sectPr").forEach((s) => pPr.removeChild(s));
+      const sect = finalSect.cloneNode(true);
+      kids(sect, "type").forEach((t) => t.setAttribute("w:val", "nextPage"));
+      pPr.appendChild(sect);
+    }
+    onProgress?.({ done: pg, total: pages + 1 });
+  }
+  const h = await handler();
+  let blob = await h.process(await saveDoc(zip, doc), data);
+  // กันไว้: ช่องตารางที่ไม่เหลือ w:p เลย Word ฟ้องว่าไฟล์เสีย (เทส 05/11/2026 easy-template-x ยังเหลือย่อหน้าไว้ให้เสมอ
+  // ถอดบรรทัดนี้แล้วเทสยังเขียว จึงยังไม่เคยเห็นเกิดจริง แต่ราคาถูกและพังแล้วเปิดไฟล์ไม่ได้ทั้งชุด)
+  const out = await openDoc(blob);
+  for (const tc of out.doc.getElementsByTagNameNS(WNS, "tc")) if (!kids(tc, "p").length) tc.appendChild(out.doc.createElementNS(WNS, "w:p"));
+  const overflow = await fitCells(out);
+  blob = await saveDoc(out.zip, out.doc);
+  ({ blob } = await cleanDocx(blob, { comments: false, trackChanges: false, metadata: true, rsid: false }));
+  onProgress?.({ done: pages + 1, total: pages + 1 });
+  return { blob, pages, perPage: per, overflow };
+}
+
+// ── ย่อตัวอักษรช่องฉลากที่ข้อความยาวเกินความสูงแถว ─────────────────────────
+// พี่ปอนด์ 05/11/2026 "ที่อยู่ยาวมาก ๆ มันจะเลยความกว้างไหม" Word ตัดบรรทัดให้เอง ไม่เลยความกว้าง แต่เลยความสูง
+// แถว Exactly ข้อความเกินถูกตัดหายเงียบ แถว At least แถวยืดจนตารางดันฉลากที่เหลือเลื่อนไม่ตรงสติกเกอร์ (Word COM จริง)
+// วิธี: ประเมินบรรทัดของแต่ละช่องหลังเติม ถ้าเกินความสูงแถว ย่อทุก run ในช่องลงทีละ 5% ไม่ต่ำกว่า 10pt
+// ค่าสำรองตอนเบราว์เซอร์ไม่มีฟอนต์ วัดจาก Word จริงที่ไม่มี TH Sarabun New เลยแทนด้วย Cordia New: ระยะบรรทัดของฟอนต์ 1.2 เท่า ตัวที่กินที่กว้าง 0.36 เท่า
+const COMBINING = /[ัิ-ฺ็-๎]/g;           // สระบนล่างวรรณยุกต์ไม่กินที่ในบรรทัด
+const NARROW = /^(th |angsana|cordia|browallia|eucrosia|freesia|iris|jasmine|kodchiang|lily|dillenia)/i;
+const MIN_HALF_PT = 20;                                            // 10pt
+let mctx = null;
+const fontSeen = new Map();
+function canvasCtx() { if (!mctx) mctx = document.createElement("canvas").getContext("2d"); return mctx; }
+function hasFont(name) {
+  if (!name) return false;
+  if (!fontSeen.has(name)) {
+    const c = canvasCtx(), probe = "กขคงabcdefgh 0123456789";
+    const w = (f) => { c.font = f; return c.measureText(probe).width; };
+    fontSeen.set(name, w(`40px "${name}", monospace`) !== w("40px monospace") || w(`40px "${name}", serif`) !== w("40px serif"));
+  }
+  return fontSeen.get(name);
+}
+function widthPt(text, font, pt) {
+  if (hasFont(font)) { const c = canvasCtx(); c.font = `${pt}pt "${font}"`; return c.measureText(text).width * 0.75; }
+  return text.replace(COMBINING, "").length * pt * (NARROW.test(font || "") ? 0.36 : 0.5);
+}
+function lineFactor(font) {
+  if (hasFont(font)) {
+    const c = canvasCtx(); c.font = `100px "${font}"`;
+    const m = c.measureText("กขค Ag");
+    // canvas ให้ระยะบรรทัดต่ำกว่าที่ Word ใช้ (Cordia New: canvas 1.14 , Word 1.2 วัด 05/11/2026) เผื่อ 10% ยอมย่อเกินดีกว่าล้น
+    if (m.fontBoundingBoxAscent) return ((m.fontBoundingBoxAscent + m.fontBoundingBoxDescent) / 100) * 1.1;
+  }
+  return NARROW.test(font || "") ? 1.2 : 1.25;    // 1.2 วัดจาก Word (Cordia New ที่ Word ใช้แทนเมื่อไม่มีฟอนต์) 13.85pt ที่ 10pt หารระยะบรรทัด 1.15 ของเอกสาร , 1.25 ยังไม่ได้วัด
+}
+const num = (el, attr = "w:val") => (el ? Number(el.getAttribute(attr)) : NaN);
+function first(n, path) {                       // ไล่ลูกตามชื่อ เช่น first(r, ["rPr","sz"])
+  let cur = n;
+  for (const name of path) { cur = cur && kids(cur, name)[0]; }
+  return cur || null;
+}
+async function docDefaults(zip) {
+  const d = { half: 22, font: "", before: 0, after: 0, line: 240, rule: "auto" };
+  const f = zip.file("word/styles.xml");
+  if (!f) return d;
+  const st = new DOMParser().parseFromString(await f.async("string"), "application/xml");
+  const dd = st.getElementsByTagNameNS(WNS, "docDefaults")[0];
+  const normal = [...st.getElementsByTagNameNS(WNS, "style")].find((s) => s.getAttribute("w:type") === "paragraph" && s.getAttribute("w:default") === "1");
+  for (const src of [dd && first(dd, ["rPrDefault", "rPr"]), normal && first(normal, ["rPr"])]) {
+    if (!src) continue;
+    const sz = num(first(src, ["szCs"])) || num(first(src, ["sz"]));
+    if (sz) d.half = sz;
+    const rf = first(src, ["rFonts"]);
+    if (rf) d.font = rf.getAttribute("w:cs") || rf.getAttribute("w:ascii") || d.font;
+  }
+  for (const src of [dd && first(dd, ["pPrDefault", "pPr"]), normal && first(normal, ["pPr"])]) {
+    const sp = src && first(src, ["spacing"]);
+    if (!sp) continue;
+    if (sp.hasAttribute("w:before")) d.before = num(sp, "w:before");
+    if (sp.hasAttribute("w:after")) d.after = num(sp, "w:after");
+    if (sp.hasAttribute("w:line")) { d.line = num(sp, "w:line"); d.rule = sp.getAttribute("w:lineRule") || "auto"; }
+  }
+  return d;
+}
+/** ความสูงที่ข้อความในช่องต้องใช้ (pt) เมื่อขนาดตัวอักษรคูณ f */
+function cellNeed(tc, usable, def, f) {
+  let total = 0;
+  for (const p of kids(tc, "p")) {
+    const sp = first(p, ["pPr", "spacing"]);
+    const before = sp && sp.hasAttribute("w:before") ? num(sp, "w:before") : def.before;
+    const after = sp && sp.hasAttribute("w:after") ? num(sp, "w:after") : def.after;
+    const line = sp && sp.hasAttribute("w:line") ? num(sp, "w:line") : def.line;
+    const rule = sp && sp.hasAttribute("w:line") ? (sp.getAttribute("w:lineRule") || "auto") : def.rule;
+    let width = 0, maxPt = 0, font = def.font;
+    for (const r of p.getElementsByTagNameNS(WNS, "r")) {
+      const text = [...r.getElementsByTagNameNS(WNS, "t")].map((t) => t.textContent).join("");
+      const half = num(first(r, ["rPr", "szCs"])) || num(first(r, ["rPr", "sz"])) || def.half;
+      const pt = scaled(half, f) / 2;
+      const rf = first(r, ["rPr", "rFonts"]);
+      const rfont = (rf && (rf.getAttribute("w:cs") || rf.getAttribute("w:ascii"))) || def.font;
+      if (text) { width += widthPt(text, rfont, pt); font = rfont; }
+      maxPt = Math.max(maxPt, pt);
+    }
+    if (!maxPt) maxPt = scaled(num(first(p, ["pPr", "rPr", "szCs"])) || num(first(p, ["pPr", "rPr", "sz"])) || def.half, f) / 2;
+    const lines = Math.max(1, Math.ceil(width / (usable * 0.93)));         // ตัดบรรทัดตามคำ บรรทัดจริงเต็มเฉลี่ย 93% (Word จริง 05/11/2026: 373 ตัว 14pt 7 บรรทัด 10pt 5 บรรทัด , 186 ตัว 14pt 4 บรรทัด)
+    const lh = rule === "auto" ? maxPt * lineFactor(font) * (line / 240) : Math.max(line / 20, rule === "atLeast" ? maxPt * lineFactor(font) : 0);
+    total += before / 20 + after / 20 + lines * lh;
+  }
+  return total;
+}
+function scaled(half, f) { return half <= MIN_HALF_PT ? half : Math.max(MIN_HALF_PT, Math.round(half * f)); }
+function setSizes(tc, f, def) {
+  const doc = tc.ownerDocument;
+  const targets = [...tc.getElementsByTagNameNS(WNS, "r")];
+  // เครื่องหมายท้ายย่อหน้าแตะเฉพาะที่ตั้งขนาดไว้เดิม ไม่สร้างใหม่ (ช่องที่เดิมไม่ได้ตั้ง ใช้ค่าตั้งต้นของเอกสารต่อ)
+  for (const p of kids(tc, "p")) { const pPr = kids(p, "pPr")[0]; if (pPr && kids(pPr, "rPr").length) targets.push(pPr); }
+  for (const r of targets) {
+    let rPr = kids(r, "rPr")[0];
+    if (!rPr) { rPr = doc.createElementNS(WNS, "w:rPr"); r.localName === "r" ? r.insertBefore(rPr, r.firstChild) : r.appendChild(rPr); }
+    const half = num(first(rPr, ["szCs"])) || num(first(rPr, ["sz"])) || def.half;
+    const v = String(scaled(half, f));
+    for (const name of ["sz", "szCs"]) {
+      let e = kids(rPr, name)[0];
+      if (!e) { e = doc.createElementNS(WNS, "w:" + name); rPr.appendChild(e); }
+      e.setAttribute("w:val", v);
+    }
+  }
+}
+/** ย่อช่องที่ล้น คืนเลขแถวข้อมูล (นับจาก 0) ที่ย่อถึง 10pt แล้วยังเกิน */
+async function fitCells({ zip, doc }) {
+  const def = await docDefaults(zip);
+  const over = [];
+  for (const tc of [...doc.getElementsByTagNameNS(WNS, "tc")]) {
+    if (!tc.hasAttribute("fk-rec")) continue;
+    const rec = Number(tc.getAttribute("fk-rec")); tc.removeAttribute("fk-rec");
+    const tr = tc.parentNode, h = first(tr, ["trPr", "trHeight"]);
+    const avail = num(h) / 20;                                            // ไม่ได้ตั้งความสูงแถว = แถวยืดได้ ไม่ต้องย่อ
+    const w = Number(widthOf(tc)) / 20;
+    if (!avail || !w) continue;
+    const mar = first(tc, ["tcPr", "tcMar"]);
+    const side = mar ? (num(first(mar, ["left"]), "w:w") || 108) + (num(first(mar, ["right"]), "w:w") || 108) : 216;
+    const usable = w - side / 20;
+    let f = 1;
+    while (cellNeed(tc, usable, def, f) > avail && f > 0.3) f -= 0.05;
+    if (f < 1) setSizes(tc, Math.max(f, 0.3), def);
+    if (cellNeed(tc, usable, def, Math.max(f, 0.3)) > avail) over.push(rec);
+  }
+  return over;
+}

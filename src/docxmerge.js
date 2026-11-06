@@ -70,13 +70,15 @@ export async function mergeOne(file, data) {
 export async function mergeAll(file, records, { nameOf, onProgress } = {}) {
   const h = await handler();
   const out = [];
+  /* ‼️ easy-template-x คัดลอก docProps/core.xml ของเทมเพลตไปทุกไฟล์ที่สร้าง — ชื่อผู้เขียน
+   * เทมเพลตจึงติดไปกับเอกสารทุกใบที่แจกจ่ายออก (ยิงจริง 09/09/2026: ทุกไฟล์ที่ merge ออกมา
+   * มี dc:creator เดิมของเทมเพลตอยู่) ใช้ตัวล้าง metadata เดียวกับ word-clean ไม่เขียนซ้ำ
+   * เฉพาะ metadata เท่านั้น — เนื้อหาที่ merge เข้าไปจริงไม่แตะ
+   * ล้างที่เทมเพลตครั้งเดียวก่อนวน ทุกใบได้ core.xml ที่ล้างแล้วเหมือนกัน (06/11/2026 เดิมล้างทีละใบ
+   * แตกและบีบไฟล์ซ้ำอีกรอบต่อใบ 2,800 ใบช้าเกินจำเป็น พี่ปอนด์ จดหมายเวียนรอเป็นชั่วโมง) */
+  const { blob: tpl } = await cleanDocx(file, { comments: false, trackChanges: false, metadata: true, rsid: false });
   for (let i = 0; i < records.length; i++) {
-    let blob = await h.process(file, records[i]);
-    /* ‼️ easy-template-x คัดลอก docProps/core.xml ของเทมเพลตไปทุกไฟล์ที่สร้าง — ชื่อผู้เขียน
-     * เทมเพลตจึงติดไปกับเอกสารทุกใบที่แจกจ่ายออก (ยิงจริง 09/09/2026: ทุกไฟล์ที่ merge ออกมา
-     * มี dc:creator เดิมของเทมเพลตอยู่) ใช้ตัวล้าง metadata เดียวกับ word-clean ไม่เขียนซ้ำ
-     * เฉพาะ metadata เท่านั้น — เนื้อหาที่ merge เข้าไปจริงไม่แตะ */
-    ({ blob } = await cleanDocx(blob, { comments: false, trackChanges: false, metadata: true, rsid: false }));
+    const blob = await h.process(tpl, records[i]);
     out.push({ name: nameOf ? nameOf(records[i], i) : tr(`เอกสาร-${i + 1}.docx`, `Document-${i + 1}.docx`), blob });
     onProgress?.({ done: i + 1, total: records.length });
   }

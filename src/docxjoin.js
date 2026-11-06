@@ -137,6 +137,22 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
   const extraFiles = {};          // ไฟล์สื่อที่ต้องเพิ่มเข้าแพ็กเกจ
   const parts = [{ name: files[0].name, paragraphs: countParagraphs(body) }];
   let relSeq = 1000;              // เริ่มรหัสใหม่ให้ห่างจากของเดิม กันชนกันแน่นอน
+  /* ‼️ รูปที่เนื้อเหมือนกันเก็บชุดเดียว (06/11/2026 พี่ปอนด์ จดหมายเวียน 2,800 ฉบับรอเป็นชั่วโมง)
+   * จดหมายเวียนทุกฉบับมีโลโก้ ลายเซ็น รูปท้ายกระดาษชุดเดียวกัน เดิมคัดลอกใหม่ทุกฉบับ
+   * วัดจริง แม่แบบรูปราว 230 KB 800 ฉบับได้ไฟล์ 105 MB หน่วยความจำ 595 MB (2,800 ฉบับราว 370 MB)
+   * เทียบเนื้อไฟล์จริงทุกไบต์ (แฮชเป็นแค่ตัวคัดกรอง) รูปต่างกันแม้ชื่อเดียวกันยังแยกไฟล์ */
+  const mediaSeen = new Map();    // แฮช → [{ bytes, target }]
+  const fnv = (u8) => { let h = 0x811c9dc5; for (let k = 0; k < u8.length; k++) { h ^= u8[k]; h = Math.imul(h, 0x01000193); } return `${u8.length}:${h >>> 0}`; };
+  const sameBytes = (a, b) => { if (a.length !== b.length) return false; for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return false; return true; };
+  const findMedia = (u8) => (mediaSeen.get(fnv(u8)) || []).find((m) => sameBytes(m.bytes, u8))?.target;
+  const keepMedia = (u8, target) => { const k = fnv(u8); if (!mediaSeen.has(k)) mediaSeen.set(k, []); mediaSeen.get(k).push({ bytes: u8, target }); };
+  // รูปของไฟล์ฐานลงทะเบียนก่อน ฉบับถัดไปที่ใช้รูปเดียวกันชี้มาที่ไฟล์ของฐานเลย
+  for (const rel of [...relsRoot.getElementsByTagName("Relationship")]) {
+    const target = rel.getAttribute("Target") || "";
+    if (rel.getAttribute("TargetMode") === "External" || !/^media\//.test(target.replace(/^\.\//, ""))) continue;
+    const entry = base.file("word/" + target.replace(/^\.\//, ""));
+    if (entry) keepMedia(await entry.async("uint8array"), target);
+  }
 
   for (let i = 1; i < files.length; i++) {
     onProgress?.({ done: i, total: files.length - 1 });
@@ -169,10 +185,16 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
           const srcPath = "word/" + target.replace(/^\.\//, "");
           const entry = zip.file(srcPath);
           if (entry) {
-            const ext = srcPath.split(".").pop();
-            const newName = `media/join${relSeq}_${i}.${ext}`;
-            extraFiles["word/" + newName] = await entry.async("uint8array");
-            newTarget = newName;
+            const bytes = await entry.async("uint8array");
+            const had = findMedia(bytes);
+            if (had) newTarget = had;   // รูปเดิมที่มีแล้ว ไม่คัดลอกซ้ำ
+            else {
+              const ext = srcPath.split(".").pop();
+              const newName = `media/join${relSeq}_${i}.${ext}`;
+              extraFiles["word/" + newName] = bytes;
+              keepMedia(bytes, newName);
+              newTarget = newName;
+            }
           }
         }
         const el = baseRels.createElementNS(RELS_NS, "Relationship");
@@ -245,7 +267,10 @@ export async function joinDocx(files, { pageBreak = true, onProgress } = {}) {
       const root = numbering.doc.documentElement;
       // schema ของ CT_Numbering บังคับลำดับ abstractNum* มาก่อน num* เสมอ ต้องแทรก abstractNum
       // ใหม่ไว้ก่อน <w:num> ตัวแรกที่มีอยู่ (ถ้ามี) ไม่ใช่ต่อท้ายรูตเฉย ๆ ไม่งั้นไฟล์เปิดไม่ขึ้น
-      const firstNum = [...root.children].find((c) => c.namespaceURI === W && c.localName === "num");
+      // หาครั้งเดียวแล้วจำไว้ abstractNum ใหม่แทรกก่อนตัวนี้ num ใหม่ต่อท้าย ตัวแรกจึงไม่เปลี่ยน
+      // เดิมไล่ลูกทั้งหมดทุกฉบับ ลูกโตขึ้นทุกฉบับ เวลาโตแบบกำลังสอง (2,800 ฉบับ 33 วินาที เทียบ 400 ฉบับ 2 วินาที)
+      if (numbering.firstNum === undefined || numbering.firstNum?.parentNode !== root) numbering.firstNum = [...root.children].find((c) => c.namespaceURI === W && c.localName === "num") || null;
+      const firstNum = numbering.firstNum;
 
       const abstractIdMap = new Map();   // abstractNumId เดิมของไฟล์นี้ → ใหม่
       for (const an of [...srcNumDoc.getElementsByTagNameNS(W, "abstractNum")]) {

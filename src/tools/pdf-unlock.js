@@ -13,7 +13,7 @@
 //   เราจัดการทั้งสองแบบ แต่ **บอกผู้ใช้ให้รู้ว่าไฟล์ที่เขาถืออยู่เป็นแบบไหน** ไม่ทำเงียบ ๆ
 import { friendlyPdfError } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, downloadButton,
-         stripExt, yieldToBrowser, fmtBytes, failedBox } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes, failedBox, announceResults } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
 
@@ -157,6 +157,7 @@ export function mount(tool) {
     st.begin();
 
     const failed = [];
+    const outs = []; // ทุกใบที่ปลดได้ ประกาศทีเดียวหลังลูป downloadButton ทีละแถวประกาศทับกันเหลือใบสุดท้าย
     let done = 0, restricted = 0, needPw = 0;
     try {
       for (const file of files) {
@@ -174,6 +175,7 @@ export function mount(tool) {
                 : tr(`ปลดรหัสแล้ว ${fmtBytes(blob.size)}`, `Password removed, ${fmtBytes(blob.size)}`))]),
             downloadButton(blob, name),
           ]));
+          outs.push({ blob, name });
           done++;
         } catch (e) {
           if (e && e.needsPassword) needPw++;
@@ -186,6 +188,7 @@ export function mount(tool) {
       }
       st.end();
       st.progress(null);
+      if (outs.length) announceResults(outs); // tests/browser_carry_results.py
       if (failed.length) results.appendChild(failedBox(failed));
       if (!done) {
         st.err(needPw

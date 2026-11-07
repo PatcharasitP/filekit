@@ -8,7 +8,7 @@
 import { openPdf, passwordBox, friendlyPdfError } from "../pdfopen.js";
 import { loadLibs } from "../loader.js";
 import { el, dropzone, statusBar, button, field, select, download,
-         stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes, announceResults } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
 
@@ -175,6 +175,7 @@ export function mount(tool) {
       const name = stripExt(file.name) + ".pptx";
       st.progress(null);
       st.ok(tr(`แปลงเสร็จ ${pageCount} สไลด์`, `Done, ${pl(pageCount, "slide", "slides")}`));
+      announceResults([{ blob, name }]); // ทำอะไรต่อดี พาไฟล์ pptx ไป ไม่ใช่ PDF ต้นฉบับ (tests/browser_carry_results.py)
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
           el("small", {}, tr(`${pageCount} สไลด์, ${fmtBytes(blob.size)}`,

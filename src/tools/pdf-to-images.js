@@ -1,6 +1,6 @@
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, parsePages, fmtBytes, yieldToBrowser, mapConcurrent } from "../ui.js";
+         stripExt, parsePages, fmtBytes, yieldToBrowser, mapConcurrent, announceResults } from "../ui.js";
 import { tr, pl } from "../i18n.js";
 
 export function mount(tool) {
@@ -80,6 +80,7 @@ export function mount(tool) {
           st.ok(tr("ดาวน์โหลด ZIP แล้ว", "ZIP downloaded"));
         } }),
       ]));
+      announceResults(made); // ทำอะไรต่อดี พาผลลัพธ์ทุกใบไป ไม่ใช่ต้นฉบับ (tests/browser_carry_results.py)
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

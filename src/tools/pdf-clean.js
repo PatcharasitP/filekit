@@ -13,7 +13,7 @@
 // ไว้ในที่เดียว เพราะคนที่จะส่งเอกสารออกไปคิดเป็นงานเดียวคือ "ตรวจก่อนส่ง"
 import { loadPdfLib, friendlyPdfError } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, downloadButton,
-         stripExt, yieldToBrowser, fmtBytes, failedBox } from "../ui.js";
+         stripExt, yieldToBrowser, fmtBytes, failedBox, announceResults } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
 
@@ -191,6 +191,7 @@ export function mount(tool) {
     ws.setBusy(true);
     st.begin();
     const failed = [];
+    const outs = []; // ทุกใบที่ล้างได้ ประกาศทีเดียวหลังลูป downloadButton ทีละแถวประกาศทับกันเหลือใบสุดท้าย
     let done = 0;
     try {
       for (const { file } of scans) {
@@ -231,6 +232,7 @@ export function mount(tool) {
                                  `${fmtBytes(file.size)} → ${fmtBytes(blob.size)}`))]),
             downloadButton(blob, name),
           ]));
+          outs.push({ blob, name });
           done++;
         } catch (e) {
           failed.push({ name: file.name, reason: friendlyPdfError(e, file.name).message });
@@ -241,6 +243,7 @@ export function mount(tool) {
       }
       st.end();
       st.progress(null);
+      if (outs.length) announceResults(outs); // tests/browser_carry_results.py
       if (failed.length) results.appendChild(failedBox(failed));
       if (!done) st.err(tr("ล้างไม่สำเร็จสักไฟล์", "Couldn't clean any file"));
       else st.ok(tr(`ล้างเรียบร้อย ${done} ไฟล์`, `Cleaned ${pl(done, "file", "files")}`));

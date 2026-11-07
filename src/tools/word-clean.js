@@ -1,4 +1,4 @@
-import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox } from "../ui.js";
+import { el, dropzone, toolShell, statusBar, button, download, stripExt, fmtBytes, yieldToBrowser, eachFile, failedBox, announceResults } from "../ui.js";
 import { inspect, clean } from "../docxclean.js";
 import { loadLibs } from "../loader.js";
 import { tr, pl } from "../i18n.js";
@@ -126,6 +126,7 @@ export function mount(tool) {
           download(await zip.generateAsync({ type: "blob" }), tr("เอกสารที่ล้างแล้ว.zip", "cleaned-documents.zip"));
         } }),
       ]));
+      announceResults(made); // ทำอะไรต่อดี พาผลลัพธ์ทุกใบไป ไม่ใช่ต้นฉบับ (tests/browser_carry_results.py)
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),
           el("small", {}, `${fmtBytes(m.from)} → ${fmtBytes(m.blob.size)}`)]),

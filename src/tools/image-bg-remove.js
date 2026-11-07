@@ -1,5 +1,5 @@
 import { el, dropzone, statusBar, button, field, select, segmented, download,
-         stripExt, fmtBytes, registerCleanup, yieldToBrowser } from "../ui.js";
+         stripExt, fmtBytes, registerCleanup, yieldToBrowser, announceResults } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
 import { decodeImage } from "../imgdecode.js";
@@ -430,6 +430,9 @@ export function mount(tool) {
       }
       st.progress(null);
       if (!made.length) throw new Error(tr("ลบพื้นหลังไม่สำเร็จ", "Could not remove the background"));
+      // ‼️ ประกาศรูปที่ลบพื้นหลังแล้วทุกใบเป็นผลลัพธ์ เดิมไม่ประกาศ "ทำอะไรต่อดี" จึงพารูปต้นฉบับที่ยังมีพื้นหลังไปแทน
+      //    (07/11/2026 tests/browser_bgremove_zip.py)
+      announceResults(made);
       st.ok(tr(`เสร็จแล้ว ${made.length} รูป` + (failed.length ? `, ข้าม ${failed.length} รูป` : ""),
                `Done, ${pl(made.length, "image", "images")}` + (failed.length ? `, skipped ${failed.length}` : "")));
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [

@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, announceResults } from "../ui.js";
 import { readPlaceholders, mergeAll, mergeOne, compileFast, buildRecords, negName, isNegName, inspectLabels, mergeLabels } from "../docxmerge.js";
 import { loadLibs } from "../loader.js";
 import { smartDecode } from "../thai.js";
@@ -617,6 +617,7 @@ export function mount(tool) {
           } }),
         ]));
       }
+      announceResults(made); // พาเอกสารทุกฉบับไปทำต่อ ไม่ใช่ไฟล์ Excel ต้นฉบับ (tests/browser_carry_results.py)
       made.slice(0, 50).forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download, downloadButton,
-         stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, announceResults } from "../ui.js";
 import { smartDecode } from "../thai.js";
 import { splitSheetsByVisibility } from "../xlsxutil.js";
 import { tr, pl } from "../i18n.js";
@@ -62,6 +62,7 @@ export function mount(tool) {
           button(tr("แปลงชีทที่ซ่อนด้วย", "Include the hidden sheets too"),
                  { onclick: () => { includeHidden = true; run(); } }),
         ]));
+        announceResults(made); // ทำอะไรต่อดี พาผลลัพธ์ทุกใบไป ไม่ใช่ต้นฉบับ (tests/browser_carry_results.py)
         made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
           el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
           el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

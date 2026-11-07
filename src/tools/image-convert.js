@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, fmtBytes, yieldToBrowser, eachFileConcurrent, failedBox } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, eachFileConcurrent, failedBox, announceResults } from "../ui.js";
 import { tr, pl } from "../i18n.js";
 import { decodeImage } from "../imgdecode.js";
 import { optimisePng } from "../pngopt.js";
@@ -150,6 +150,7 @@ export function mount(tool) {
       st.ok(tr(`แปลงเสร็จ ${made.length} ไฟล์` + (failed.length ? `, ข้าม ${failed.length} ไฟล์` : ""),
         `Done, ${pl(made.length, "file", "files")}` + (failed.length ? `, skipped ${failed.length}` : "")));
       const fb = failedBox(failed); if (fb) results.appendChild(fb);
+      announceResults(made); // ทำอะไรต่อดี พาผลลัพธ์ทุกใบไป ไม่ใช่ต้นฉบับ (tests/browser_carry_results.py)
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),
           el("small", {}, `${fmtBytes(m.from)} → ${fmtBytes(m.blob.size)}`)]),

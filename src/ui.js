@@ -62,8 +62,18 @@ function plainDownload(blob, filename) {
  *   ‼️ ห้ามมี await ก่อนเรียก navigator.share เพราะจะหลุดจากการกดของผู้ใช้แล้วถูกปฏิเสธ
  */
 export function download(blob, filename) {
-  announceResult(blob, filename); // ประกาศก่อนเสมอ ผลลัพธ์พร้อมพาไปเครื่องมือถัดไปแม้เซฟไม่สำเร็จ
+  // ประกาศก่อนเสมอ ผลลัพธ์พร้อมพาไปเครื่องมือถัดไปแม้เซฟไม่สำเร็จ ยกเว้นไฟล์ที่เป็นส่วนของผลลัพธ์ที่ประกาศไว้แล้ว
+  if (!partOfResults(blob, filename)) announceResult(blob, filename);
   saveFile(blob, filename);
+}
+/* ‼️ ไฟล์ที่ดาวน์โหลดเป็นส่วนของผลลัพธ์ที่ประกาศไว้แล้ว ห้ามประกาศทับ (07/11/2026)
+ *   เดิมกด "โหลดทั้งหมด (ZIP)" ใน image-bg-remove แล้วผลลัพธ์กลางกลายเป็นไฟล์ zip ใบเดียว
+ *   "ทำอะไรต่อดี" จาก 6 เครื่องมือที่พารูปไปได้ เหลือ 2 ที่พาอะไรไปไม่ได้เลย ทั้งที่หัวข้อยังบอกว่าไฟล์จะตามไป
+ *   (tests/browser_bgremove_zip.py) ZIP ที่รวมผลลัพธ์หลายไฟล์ กับไฟล์ที่ชื่อและขนาดตรงกับผลลัพธ์ใบหนึ่ง จึงไม่ประกาศซ้ำ */
+function partOfResults(blob, filename) {
+  if (!resultFiles || !resultFiles.length) return false;
+  if (resultFiles.some((f) => f.name === filename && f.size === blob.size)) return true;
+  return resultFiles.length > 1 && /\.zip$/i.test(filename);
 }
 
 /** บันทึกไฟล์ลงเครื่องเฉย ๆ โดยไม่ประกาศว่าเป็น "ผลลัพธ์ของหน้านี้"
@@ -897,6 +907,13 @@ export function watchFiles(fn, dead = () => false) {
   const w = { fn, dead };
   resultWatchers.add(w);
   return () => resultWatchers.delete(w);
+}
+/** ประกาศผลลัพธ์ทั้งชุดทีเดียว [{ blob, name }] ให้ "ทำอะไรต่อดี" พาไปครบทุกใบ
+ *  ‼️ เครื่องมือที่ได้ผลหลายใบต้องเรียกตัวนี้ตอนจบงาน (07/11/2026 tests/browser_carry_results.py)
+ *    ปุ่มดาวน์โหลดทีละแถวประกาศตอนกดเท่านั้น หรือประกาศทับกันเหลือใบสุดท้าย 10 เครื่องมือจึงพาต้นฉบับหรือใบเดียวไป */
+export function announceResults(items) {
+  try { setResultFiles((items || []).map(({ blob, name }) => new File([blob], name, { type: blob.type }))); }
+  catch { /* เบราว์เซอร์เก่าที่ไม่รองรับ File ตรง ๆ */ }
 }
 function announceResult(blob, filename) {
   try { setResultFiles([new File([blob], filename, { type: blob.type })]); }

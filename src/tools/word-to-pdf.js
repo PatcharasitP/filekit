@@ -1,5 +1,5 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
-         stripExt, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
+         stripExt, fmtBytes, yieldToBrowser, segmented, announceResults } from "../ui.js";
 import { loadLibs } from "../loader.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, textChunks } from "../thaifont.js";
 import { tr, pl } from "../i18n.js";
@@ -411,6 +411,7 @@ export function mount(tool) {
           download(await zip.generateAsync({ type: "blob" }), tr("เอกสารที่แปลงแล้ว.zip", "converted-documents.zip"));
         } }),
       ]));
+      announceResults(made); // ทำอะไรต่อดี พาผลลัพธ์ทุกใบไป ไม่ใช่ต้นฉบับ (tests/browser_carry_results.py)
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.pages} หน้า`, `${pl(m.pages, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

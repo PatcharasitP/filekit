@@ -1,6 +1,6 @@
 import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, passwordBox } from "../pdfopen.js";
 import { el, dropzone, statusBar, button, field, download,
-         stripExt, parsePages, fmtBytes, yieldToBrowser, segmented } from "../ui.js";
+         stripExt, parsePages, fmtBytes, yieldToBrowser, segmented, announceResults } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { tr, pl } from "../i18n.js";
 
@@ -412,6 +412,7 @@ export function mount(tool) {
       if (encrypted) results.appendChild(el("div", { class: "status show err" }, ENCRYPTED_WARNING));
       // ‼️ ชั้นที่ผู้ใช้ซ่อนไว้จะกลายเป็นมองเห็นได้ในไฟล์ผลลัพธ์ ต้องบอกก่อนไฟล์หลุดไป
       if (hiddenLayers) results.appendChild(el("div", { class: "note warn" }, HIDDEN_LAYERS_WARNING));
+      announceResults(made); // ทำอะไรต่อดี พาผลลัพธ์ทุกใบไป ไม่ใช่ต้นฉบับ (tests/browser_carry_results.py)
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name), el("small", {}, tr(`${m.count} หน้า`, `${pl(m.count, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(m.blob.size)),

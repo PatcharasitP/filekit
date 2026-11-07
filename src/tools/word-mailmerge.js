@@ -1,9 +1,12 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser } from "../ui.js";
-import { readPlaceholders, mergeAll, buildRecords, negName, isNegName, inspectLabels, mergeLabels } from "../docxmerge.js";
+import { readPlaceholders, mergeAll, mergeOne, compileFast, buildRecords, negName, isNegName, inspectLabels, mergeLabels } from "../docxmerge.js";
 import { loadLibs } from "../loader.js";
 import { smartDecode } from "../thai.js";
 import { tr, pl } from "../i18n.js";
+
+// ตั้งแต่กี่แถวใช้ทางข้อมูลใหญ่ (ZIP ทีละชุด เขียนออกทันที) ต่ำกว่านี้ใช้ทางเดิม มีปุ่มรวมเป็นไฟล์ Word เดียว
+export const BIG_N = 1500;
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -391,6 +394,85 @@ export function mount(tool) {
                     && (modeSel.value !== "labels" || !!labelInfo));
   };
 
+  // ── ข้อมูลใหญ่: ZIP ทีละชุด เขียนออกทันที (07/11/2026) ───────────────────
+  // วัดทางเดิมก่อนทำ 5,000 ฉบับ 20.6 วินาที ผล 188 MB ค้างในหน่วยความจำจนกดโหลด ล้านฉบับเบราว์เซอร์รับไม่ไหว
+  // มีโฟลเดอร์ (Chrome Edge) เขียนลงไฟล์ตรง ชุดละ 20,000 ฉบับ , ไม่มี (Firefox Safari) ดาวน์โหลดทีละชุด ชุดละ 2,000 ฉบับ
+  async function bigRun(records, { dir, base, nameOf }) {
+    const zw = await import("../zipwrite.js");
+    st.info(tr("กำลังเตรียมแม่แบบสำหรับข้อมูลจำนวนมาก…", "Preparing the template for a large run…"));
+    const fast = await compileFast(tplFile, fields);
+    const per = dir ? 20000 : 2000;
+    const total = records.length, t0 = performance.now();
+    const made = [];
+    let zip = null, sink = null, part = 0, slow = 0, bytes = 0;
+    const partName = (n) => tr(`${base}-ชุด ${n}.zip`, `${base}-part ${n}.zip`);
+    async function open() {
+      part++;
+      if (dir) {
+        const fh = await dir.getFileHandle(partName(part), { create: true });
+        const w = await fh.createWritable();
+        // รวมก้อนเล็กเป็นก้อนละราว 4 MB ก่อนเขียน การเขียนลงดิสก์ทีละหัวไฟล์ช้า
+        let buf = [], n = 0;
+        const flush = async () => { if (!n) return; const all = new Uint8Array(n); let o = 0; for (const b of buf) { all.set(b, o); o += b.length; } buf = []; n = 0; await w.write(all); };
+        sink = { write: async (u8) => { buf.push(u8); n += u8.length; if (n >= 4 << 20) await flush(); }, close: async () => { await flush(); await w.close(); },
+          abort: async () => { try { await w.abort(); } catch { /* เขียนไม่ได้อยู่แล้ว */ } } }; // ล้มกลางชุด ไฟล์ชุดนั้นไม่ค้างครึ่งไฟล์
+      } else {
+        const chunks = [];
+        sink = { write: (u8) => { chunks.push(u8); }, close: async () => { download(new Blob(chunks, { type: "application/zip" }), partName(part)); }, abort: async () => { chunks.length = 0; } };
+      }
+      zip = zw.zipStream((u8) => sink.write(u8));
+    }
+    async function close() {
+      if (!zip) return;
+      await zip.finish(); bytes += zip.bytes; await sink.close();
+      made.push({ name: partName(part), files: zip.count });
+      zip = null;
+    }
+    // ข้อความเดิม "กำลังเตรียมแม่แบบ" ค้างตลอดการสร้าง (ภาพของจริง 07/11/2026) เปลี่ยนเมื่อเริ่มสร้าง , ปุ่มหยุดของแถบสถานะใช้ได้
+    st.info(tr(`กำลังสร้างเอกสาร ${total.toLocaleString("th-TH")} ฉบับ…`, `Making ${pl(total.toLocaleString("en-US"), "document", "documents")}…`));
+    st.begin();
+    let i = 0;
+    try {
+      for (; i < total; i++) {
+        if (st.cancelled) break;
+        if (!zip || zip.count >= per || zip.bytes >= zw.ZIP_MAX_BYTES) { await close(); await open(); }
+        const rec = records[i];
+        let doc;
+        if (fast.needsSlow(rec)) { slow++; doc = new Uint8Array(await (await mergeOne(fast.tpl, rec)).arrayBuffer()); }
+        else doc = fast.render(rec);
+        await zip.add(nameOf(rec, i), doc);
+        if (i % 250 === 249) { st.progress(((i + 1) / total) * 100, `(${(i + 1).toLocaleString("th-TH")}/${total.toLocaleString("th-TH")})`); await yieldToBrowser(); }
+      }
+      await close(); // หยุดกลางทาง ชุดสุดท้ายปิดให้ครบ ฉบับที่สร้างแล้วใช้ได้
+    } catch (e) {
+      // ดิสก์เต็ม (exceed its storage quota ยิงจริง 07/11/2026) หรือเขียนไม่ได้ ชุดที่เขียนครบแล้วยังใช้ได้ ชุดที่ค้างทิ้ง
+      if (sink) await sink.abort();
+      st.end(); st.progress(null);
+      const ok = made.reduce((n, m) => n + m.files, 0);
+      st.err(tr(`เขียนไม่สำเร็จที่ฉบับที่ ${(i + 1).toLocaleString("th-TH")} (${e.message}) ชุดที่ครบแล้ว ${made.length} ชุด ${ok.toLocaleString("th-TH")} ฉบับยังใช้ได้ ตรวจที่ว่างในดิสก์แล้วลองใหม่`,
+        `Writing failed at document ${(i + 1).toLocaleString("en-US")} (${e.message}). ${pl(made.length, "finished part", "finished parts")} with ${ok.toLocaleString("en-US")} documents are fine. Check free disk space and try again`));
+      results.appendChild(el("div", { class: "note warn", id: "mm-big-fail", "data-done": String(ok), "data-parts": String(made.length) }, made.map((m) => m.name).join(", ") || tr("ยังไม่มีชุดที่ครบ", "No finished part yet")));
+      return;
+    }
+    st.end(); st.progress(null);
+    if (i < total) {
+      const ok = made.reduce((n, m) => n + m.files, 0);
+      st.info(tr(`หยุดแล้ว สร้างไป ${ok.toLocaleString("th-TH")} จาก ${total.toLocaleString("th-TH")} ฉบับ ใน ${made.length} ชุด`, `Stopped, made ${ok.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} documents in ${pl(made.length, "part", "parts")}`));
+      results.appendChild(el("div", { class: "note", id: "mm-big-stopped", "data-done": String(ok) }, made.map((m) => m.name).join(", ")));
+      return;
+    }
+    const sec = (performance.now() - t0) / 1000;
+    st.ok(tr(`สร้างเอกสารสำเร็จ ${total.toLocaleString("th-TH")} ไฟล์ ใน ${made.length} ชุด รวม ${fmtBytes(bytes)} ใช้เวลา ${sec.toFixed(1)} วินาที`,
+      `Done, ${pl(total.toLocaleString("en-US"), "file", "files")} in ${pl(made.length, "part", "parts")}, ${fmtBytes(bytes)}, ${sec.toFixed(1)} s`));
+    results.appendChild(el("div", { class: "note", id: "mm-big-done", "data-files": String(total), "data-parts": String(made.length), "data-slow": String(slow) },
+      dir ? tr(`บันทึกไว้ในโฟลเดอร์ที่เลือกแล้ว ไฟล์ละไม่เกิน ${per.toLocaleString("th-TH")} ฉบับ`, `Saved in the folder you picked, up to ${per.toLocaleString("en-US")} documents per file`)
+        : tr(`ดาวน์โหลดเป็นชุด ชุดละไม่เกิน ${per.toLocaleString("th-TH")} ฉบับ`, `Downloaded in parts of up to ${per.toLocaleString("en-US")} documents`)));
+    made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
+      el("div", { class: "r-name" }, [el("strong", {}, m.name)]),
+      el("span", { class: "r-size" }, tr(`${m.files.toLocaleString("th-TH")} ฉบับ`, pl(m.files.toLocaleString("en-US"), "document", "documents"))),
+    ])));
+  }
+
   // ── สร้างเอกสารทั้งชุด ───────────────────────────────────────────────────
   async function run() {
     results.innerHTML = "";
@@ -466,6 +548,16 @@ export function mount(tool) {
         }
         return;
       }
+      // ข้อมูลใหญ่ หนึ่งแถวหนึ่งเอกสาร ไม่มีบล็อกวนซ้ำ: ทางเร็ว เขียน ZIP ทีละชุดออกไปเลย ไม่ถือผลไว้ในหน่วยความจำ (07/11/2026)
+      if (modeSel.value === "row" && !loops.length && rows.length >= BIG_N) {
+        let dir = null;
+        if (window.showDirectoryPicker) {
+          // ต้องเรียกก่อน await อื่น สิทธิ์จากการกดปุ่มหมดอายุเร็ว
+          try { dir = await window.showDirectoryPicker({ mode: "readwrite", id: "fk-mailmerge" }); }
+          catch (e) { if (e && e.name === "AbortError") { st.info(tr("ยกเลิกแล้ว ยังไม่ได้สร้างเอกสาร", "Cancelled, nothing was made")); return; } dir = null; }
+        }
+        return await bigRun(buildRecords(rows, { mode: "row", mapping }), { dir, base, nameOf });
+      }
       const cleanMapping = { ...mapping };
       if (modeSel.value === "group" && loopSel.value) delete cleanMapping[loopSel.value];
       const records = buildRecords(rows, {
@@ -477,6 +569,7 @@ export function mount(tool) {
 
       const made = await mergeAll(tplFile, records, {
         nameOf,
+        fastFields: modeSel.value === "row" && !loops.length ? fields : null, // ไม่มีบล็อกวนซ้ำ ใช้ตัวต่อข้อความ (เร็ว ขึ้นบรรทัดถูกที่)
         onProgress: ({ done, total }) => st.progress((done / total) * 100, `(${done}/${total})`),
       });
 

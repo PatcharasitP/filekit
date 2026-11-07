@@ -67,9 +67,22 @@ export async function mergeOne(file, data) {
 }
 
 /** ทำทั้งชุด: เทมเพลตหนึ่งไฟล์ + ข้อมูลหลายก้อน → เอกสารหลายไฟล์ */
-export async function mergeAll(file, records, { nameOf, onProgress } = {}) {
+export async function mergeAll(file, records, { nameOf, onProgress, fastFields = null } = {}) {
   const h = await handler();
   const out = [];
+  /* fastFields = ตัวยึดทั้งหมดเมื่อเทมเพลตไม่มีบล็อกวนซ้ำ ใช้ตัวต่อข้อความเดียวกับทางข้อมูลใหญ่ (compileFast)
+   * เร็วกว่า และค่าหลายบรรทัดขึ้นบรรทัดตรงตำแหน่งตัวยึด ทางไลบรารีต่อบรรทัดสองไว้ท้ายก้อน (ยิงจริง 07/11/2026) */
+  if (fastFields) {
+    const fast = await compileFast(file, fastFields);
+    const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    for (let i = 0; i < records.length; i++) {
+      const blob = fast.needsSlow(records[i]) ? await h.process(fast.tpl, records[i]) : new Blob([fast.render(records[i])], { type: DOCX });
+      out.push({ name: nameOf ? nameOf(records[i], i) : tr(`เอกสาร-${i + 1}.docx`, `Document-${i + 1}.docx`), blob });
+      onProgress?.({ done: i + 1, total: records.length });
+      if (i % 200 === 199) await new Promise((r) => setTimeout(r, 0)); // ให้แถบความคืบหน้าขยับ
+    }
+    return out;
+  }
   /* ‼️ easy-template-x คัดลอก docProps/core.xml ของเทมเพลตไปทุกไฟล์ที่สร้าง — ชื่อผู้เขียน
    * เทมเพลตจึงติดไปกับเอกสารทุกใบที่แจกจ่ายออก (ยิงจริง 09/09/2026: ทุกไฟล์ที่ merge ออกมา
    * มี dc:creator เดิมของเทมเพลตอยู่) ใช้ตัวล้าง metadata เดียวกับ word-clean ไม่เขียนซ้ำ
@@ -83,6 +96,68 @@ export async function mergeAll(file, records, { nameOf, onProgress } = {}) {
     onProgress?.({ done: i + 1, total: records.length });
   }
   return out;
+}
+
+/* ── ทางเร็วสำหรับข้อมูลใหญ่ (07/11/2026 พี่ปอนด์ท้าให้รองรับหลายแสนถึงล้านแถว) ──────────────
+ * วัดจริงก่อนทำ: ทางเดิมใช้ราว 4.1 มิลลิวินาทีต่อฉบับ (แตกแพ็ก แปลง XML ทั้งเอกสาร แล้วบีบใหม่ทุกฉบับ)
+ * ล้านฉบับคือราว 70 นาที และผลทุกฉบับค้างในหน่วยความจำ
+ * ทางเร็ว: ให้ easy-template-x ทำงานครั้งเดียวด้วยตัวแทนที่ไม่ซ้ำ (QZXFK<เลข>QZX) แล้วตัดไฟล์ที่มีตัวแทนเป็นชิ้น
+ * แต่ละฉบับแค่ต่อชิ้นกับค่าที่หลีกอักขระ XML แล้ว ไฟล์อื่นในแพ็กบีบครั้งเดียวใช้ไบต์ซ้ำ
+ * ใช้ได้เฉพาะเทมเพลตที่มีแต่ตัวยึดธรรมดา (ไม่มีบล็อกวนซ้ำหรือเงื่อนไข) ค่าที่มีขึ้นบรรทัดต้องใช้ทางเดิม
+ * เพราะ easy-template-x แตกเป็นหลายบรรทัดด้วย w:br (needsSlow บอก) ค่าว่างได้ w:t ว่าง (ทางเดิมลบ w:t ทิ้ง หน้าตาเหมือนกัน) */
+const MARK_RE = /QZXFK(\d+)QZX/;
+const xmlEsc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const valStr = (v) => (v == null ? "" : v.toString()); // แบบเดียวกับ stringValue ของ easy-template-x
+export async function compileFast(file, fields) {
+  const h = await handler();
+  const zw = await import("./zipwrite.js");
+  const { blob: tpl } = await cleanDocx(file, { comments: false, trackChanges: false, metadata: true, rsid: false });
+  const marks = Object.fromEntries(fields.map((f, i) => [f, `QZXFK${i}QZX`]));
+  const once = await h.process(tpl, marks);
+  const zip = await globalThis.JSZip.loadAsync(once);
+  const dec = new TextDecoder(), enc = new TextEncoder();
+  const parts = [];
+  let seen = 0;
+  for (const name of Object.keys(zip.files)) {
+    const f = zip.files[name];
+    if (f.dir) continue;
+    const bytes = await f.async("uint8array");
+    if (/\.(xml|rels)$/i.test(name)) {
+      const text = dec.decode(bytes);
+      if (MARK_RE.test(text)) {
+        const segs = text.split(/QZXFK(\d+)QZX/);
+        // ตัวแทนแต่ละตัวอยู่ในข้อความ (ในแท็ก w:t) หรือไม่ ดูจากแท็กสุดท้ายก่อนหน้า ตัวที่อยู่ในข้อความใส่ขึ้นบรรทัดตรงตำแหน่งได้
+        // ‼️ ทางเดิม (easy-template-x) ต่อบรรทัดที่สองไว้ท้ายก้อนข้อความ ข้อความหลังตัวยึดในบรรทัดเดียวกันจึงขึ้นก่อนบรรทัดสอง
+        //    (ยิงจริง 07/11/2026 "หมายเหตุ {{x}} จบ" ได้ "หมายเหตุ บรรทัดแรก จบ" แล้วค่อย "บรรทัดสอง")
+        const inText = [];
+        let ctx = false;
+        for (let i = 0; i < segs.length; i += 2) {
+          const lt = segs[i].lastIndexOf("<");
+          if (lt >= 0) ctx = /^<w:t(\s[^>]*)?>[^<]*$/.test(segs[i].slice(lt));
+          if (i + 1 < segs.length) inText.push(ctx);
+        }
+        seen += inText.length; parts.push({ name, segs, inText }); continue;
+      }
+    }
+    parts.push(await zw.deflateEntry(name, bytes));
+  }
+  const BR = '</w:t><w:br/><w:t xml:space="preserve">';
+  return {
+    tpl, // แม่แบบที่ล้างชื่อผู้เขียนแล้ว ค่าหลายบรรทัดที่ตัวแทนไม่ได้อยู่ในข้อความ (เช่นในค่าลิงก์) ใช้ตัวนี้กับทางเดิม
+    marks: seen,
+    needsSlow: (rec) => parts.some((p) => p.segs && p.inText.some((t, j) => !t && valStr(rec[fields[+p.segs[2 * j + 1]]]).includes("\n"))),
+    render(rec) {
+      return zw.makeZip(parts.map((p) => {
+        if (!p.segs) return p;
+        const out = p.segs.map((s, i) => {
+          if (!(i % 2)) return s;
+          const v = valStr(rec[fields[+s]]);
+          return p.inText[(i - 1) / 2] && v.includes("\n") ? v.split("\n").map(xmlEsc).join(BR) : xmlEsc(v);
+        });
+        return zw.storeEntry(p.name, enc.encode(out.join("")));
+      }));
+    },
+  };
 }
 
 /**

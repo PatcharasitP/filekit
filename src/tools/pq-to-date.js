@@ -648,7 +648,7 @@ export function mount(tool) {
 
   function onReset() {
     applyPreset("plain");
-    state.clear();
+    state.forget();
     st.ok(tr("คืนค่าเริ่มต้นแล้ว", "Back to the defaults"));
   }
 }

@@ -772,7 +772,7 @@ export function mount(tool) {
     Object.assign(sort, fresh.sort);
     Object.assign(opt, fresh.opt);
     queryInput.value = query;
-    state.clear();
+    state.forget();
     rebuildAll();
     st.ok(tr("คืนค่าเริ่มต้นแล้ว", "Back to the defaults"));
   }

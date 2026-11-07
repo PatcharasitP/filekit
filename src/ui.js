@@ -1083,7 +1083,14 @@ export function dropzone(opts = {}) {
     const key = (f) => `${f.name}|${f.size}|${f.lastModified}`;
     if (multiple) {
       const have = new Set(files.map(key));
-      usable = usable.filter((f) => !have.has(key(f)) && (have.add(key(f)), true));
+      const dupes = [];
+      usable = usable.filter((f) => { if (have.has(key(f))) { dupes.push(f.name); return false; } have.add(key(f)); return true; });
+      /* ‼️ ตัดซ้ำแล้วต้องบอก เดิมตัดเงียบ เลือกสองไฟล์จอขึ้นไฟล์เดียว คนใช้ไม่รู้ว่าทำไม (ฟ้าลองกดเองในรวมไฟล์ PDF 07/11/2026) */
+      if (dupes.length) {
+        const names = [...new Set(dupes)].join(", ");
+        warn.appendChild(el("div", { class: "dupe-note", role: "status" },
+          tr(`${names} อยู่ในรายการแล้ว ไม่ได้เพิ่มซ้ำ`, `${names} is already in the list, not added again`)));
+      }
       if (!usable.length) return;              // ไฟล์เดิมทั้งหมด ไม่มีอะไรให้เพิ่ม
     }
     if (!multiple) files.forEach(revokeThumb); // โหมดไฟล์เดียว — ไฟล์เก่าถูกแทนที่ ต้องคืนหน่วยความจำก่อน
@@ -1183,7 +1190,7 @@ export function dropzone(opts = {}) {
     ]);
     warn.appendChild(box);
   }
-  function remove(i) { revokeThumb(files[i]); pageCounts.delete(files[i]); pagePending.delete(files[i]);
+  function remove(i) { warn.querySelectorAll(".dupe-note").forEach((n) => n.remove()); revokeThumb(files[i]); pageCounts.delete(files[i]); pagePending.delete(files[i]);
     states.delete(files[i]); files.splice(i, 1); render(); fireChange(); }
 
   /** ป้ายสถานะท้ายแถว — ยังไม่เริ่มทำ = ไม่ต้องมีป้าย (แถวเปล่าอ่านง่ายกว่าป้าย "รอ" เต็มจอ) */

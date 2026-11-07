@@ -589,7 +589,12 @@ function ensureBox() {
  *   คือดูได้ทีละใบ (backward compatible เต็มร้อย) ใส่แล้วมีไฟล์ที่ดูได้ >1 ใบ = เปิดเป็น
  *   coverflow เลื่อนดูใบอื่นในชุดได้ทันที ไม่ต้องปิดแล้วเปิดใหม่ */
 export async function viewFile(file, allFiles) {
-
+  /* ‼️ canView ยอมเปิด PDF เฉพาะตอนมี pdf.js แล้ว เครื่องมือ PDF ที่ไม่มีภาพย่อหน้า (pdf-split pdf-protect pdf-watermark
+     และอีกหลายตัว) ไม่ได้โหลดไว้ กดชื่อไฟล์แล้วคืน false เงียบ ๆ ทั้งที่ชื่อขีดเส้นใต้แบบลิงก์ (ไล่กดเว็บจริง 07/11/2026
+     tests/browser_preview_open.py) โหลดให้ก่อนตรงนี้ ที่เดียวครอบทุกทางที่เรียกตัวดู */
+  if (detectType(file) === "pdf" && !window.pdfjsLib) {
+    try { const { loadLibs } = await import("./loader.js"); await loadLibs("pdfjs"); } catch { /* โหลดไม่ได้ ตกไปตามเดิม */ }
+  }
   if (!canView(file)) return false;
   const pool = Array.isArray(allFiles) && allFiles.length ? allFiles : [file];
   const newList = pool.filter(canView);

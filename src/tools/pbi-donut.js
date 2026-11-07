@@ -7,7 +7,7 @@ import { configSearch, CFGSEARCH_CSS } from "../cfgsearch.js";
 import { dirtyMarks, DIRTYMARK_CSS } from "../dirtymark.js";
 import { codeView, CODEVIEW_CSS } from "../codeview.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
-import { loadLibs } from "../loader.js";
+import { loadLibs, fetchRetry } from "../loader.js";
 import { readWorkbook, sheetToTable, cellText } from "../sheetpick.js";
 import { insightBox, INSIGHT_CSS } from "../insightbox.js";
 
@@ -341,7 +341,7 @@ export function mount(tool) {
   }
 
   function fetchJson(url) {
-    return fetch(url).then((r) => {
+    return fetchRetry(url).then((r) => {
       if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
       return r.json();
     });
@@ -964,7 +964,7 @@ export function mount(tool) {
   // (announceResult ของ download() ยังทำงานเหมือนเดิม พาไฟล์ไปเครื่องมือถัดไปได้)
   async function onDownloadSample(url, filename) {
     try {
-      const res = await fetch(url);
+      const res = await fetchRetry(url);
       if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
       const blob = await res.blob();
       download(blob, filename);

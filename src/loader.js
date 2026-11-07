@@ -232,3 +232,19 @@ export function libsReady(names = []) {
     return s && (!s.global || !!window[s.global]);
   });
 }
+
+/* ‼️ โหลดไฟล์ของเว็บเอง (สเปกกราฟ ไฟล์ตัวอย่าง ฟังก์ชัน M) ต้องลองซ้ำเมื่อพลาดชั่วคราว (07/11/2026)
+   ไล่กดบนเว็บจริงเจอ GitHub Pages ตอบ 503 หนึ่งครั้ง ยิงซ้ำทันทีได้ 200 แต่เครื่องมือค้างหน้า error ปุ่ม 5 ปุ่มกดแล้วเงียบ
+   ลองซ้ำเฉพาะเน็ตสะดุดกับ 408 429 5xx สองรอบ (0.4 กับ 1.2 วินาที) ส่วน 404 คืนทันที เพราะลองกี่ครั้งก็ไม่มี
+   tests/fetch_retry.test.mjs , tests/browser_fetch_retry.py */
+export async function fetchRetry(url, opts, waits = [400, 1200]) {
+  for (let i = 0; ; i++) {
+    try {
+      const res = await fetch(url, opts);
+      if (res.ok || i >= waits.length || !(res.status === 408 || res.status === 429 || res.status >= 500)) return res;
+    } catch (e) {
+      if (i >= waits.length || (opts && opts.signal && opts.signal.aborted)) throw e;
+    }
+    await new Promise((r) => setTimeout(r, waits[i]));
+  }
+}

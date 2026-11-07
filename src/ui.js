@@ -1395,7 +1395,8 @@ export function dropzone(opts = {}) {
         try {
           const loaded = [];
           for (const [path, , ] of entries) {
-            const res = await fetch(path);
+            const { fetchRetry } = await import("./loader.js"); // ลองซ้ำเมื่อพลาดชั่วคราว โหลดตอนใช้ หน้าแรกไม่หนักขึ้น
+            const res = await fetchRetry(path);
             if (!res.ok) throw new Error("fetch failed: " + path);
             const blob = await res.blob();
             loaded.push(new File([blob], path.split("/").pop(), { type: blob.type }));

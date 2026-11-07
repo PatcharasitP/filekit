@@ -1,4 +1,5 @@
 import { workspace } from "../workspace.js";
+import { fetchRetry } from "../loader.js";
 import { el, statusBar, button, field, select, segmented, dropzone, download } from "../ui.js";
 import { tr, IS_EN } from "../i18n.js";
 import { readWorkbook, sheetToTable, tablesToBlob } from "../sheetpick.js";
@@ -205,7 +206,7 @@ export function mount(tool) {
   });
   ws.body.prepend(styleEl);
 
-  fetch(new URL("../../assets/thailand-map.json", import.meta.url))
+  fetchRetry(new URL("../../assets/thailand-map.json", import.meta.url))
     .then((r) => r.json()).then((d) => { mapData = d; if (centers.length) draw(); }).catch(() => {});
 
   [radius, dotSize].forEach((r) => r.addEventListener("input", () => {

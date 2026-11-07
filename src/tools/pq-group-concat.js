@@ -1,4 +1,5 @@
 import { workspace } from "../workspace.js";
+import { fetchRetry } from "../loader.js";
 import { el, statusBar, button, field, select, download } from "../ui.js";
 import { paintCode, CODE_TOKEN_CSS } from "../codeview.js";
 import { tr } from "../i18n.js";
@@ -700,7 +701,7 @@ export function mount(tool) {
     if (fnText === null) {
       codeEl.textContent = tr("กำลังโหลดตัวฟังก์ชัน…", "Loading the function…");
       try {
-        const res = await fetch(FN_URL);
+        const res = await fetchRetry(FN_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         fnText = await res.text();
       } catch (e) {

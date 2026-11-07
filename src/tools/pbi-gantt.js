@@ -7,7 +7,7 @@ import { configSearch, CFGSEARCH_CSS } from "../cfgsearch.js";
 import { dirtyMarks, DIRTYMARK_CSS } from "../dirtymark.js";
 import { codeView, CODEVIEW_CSS } from "../codeview.js";
 import { stateKit, SHARE_MSG } from "../statekit.js";
-import { loadLibs } from "../loader.js";
+import { loadLibs, fetchRetry } from "../loader.js";
 import { readWorkbook, sheetToTable } from "../sheetpick.js";
 import { guessGanttColumns, buildGanttRows } from "../ganttkit.js";
 import { formatDate, toBE } from "../thai.js";
@@ -284,7 +284,7 @@ export function mount(tool) {
   }
 
   function fetchJson(url) {
-    return fetch(url).then((r) => {
+    return fetchRetry(url).then((r) => {
       if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
       return r.json();
     });
@@ -723,7 +723,7 @@ export function mount(tool) {
   /** โหลดไฟล์ Excel ตัวอย่างทั้งชุด (ทุกชุดข้อมูลเป็นชีตละชุด) ไว้ลองใช้ช่อง "ข้อมูลของคุณเอง" หรือเปิดใน Power BI ต่อ */
   async function onDownloadSample() {
     try {
-      const res = await fetch(XLSX_SAMPLE_URL);
+      const res = await fetchRetry(XLSX_SAMPLE_URL);
       if (!res.ok) throw new Error(`${XLSX_SAMPLE_URL}: HTTP ${res.status}`);
       download(await res.blob(), XLSX_SAMPLE_NAME);
       st.ok(tr("ดาวน์โหลดไฟล์ตัวอย่างแล้ว", "Sample file downloaded"));

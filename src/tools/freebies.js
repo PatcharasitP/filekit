@@ -16,6 +16,7 @@
 //    stale-while-revalidate อยู่แล้ว เปิดครั้งแรกแล้วใช้ออฟไลน์ได้เลย
 
 import { workspace } from "../workspace.js";
+import { fetchRetry } from "../loader.js";
 import { el, statusBar, button, download } from "../ui.js";
 import { uiIcon } from "../icons.js";
 import { paintCode, CODE_TOKEN_CSS } from "../codeview.js";
@@ -185,7 +186,7 @@ export function mount(tool) {
     for (const g of gifts) list.appendChild(card(g));
     await Promise.all(gifts.map(async (g) => {
       try {
-        const res = await fetch(g.file);
+        const res = await fetchRetry(g.file);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         g.text = await res.text();
         ok++;

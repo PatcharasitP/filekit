@@ -370,7 +370,9 @@ export function mount(tool) {
   });
 
   // ── ทำจริงทั้งชุดที่ความละเอียดเต็ม
-  const results = el("div", {});
+  // ‼️ ต้องมี class results เปลือกหน้าย้าย .results > .actions (ปุ่ม ZIP) ไปแผงขวา ไม่มีแล้วปุ่มค้างใต้ผืนงานที่บังอยู่ กดไม่ได้
+  //    (ไล่กดเว็บจริง 07/11/2026 tests/browser_bgremove_zip.py , tests/results_class.test.mjs)
+  const results = el("div", { class: "results" });
   const go = button(tr("ลบพื้นหลัง", "Remove background"), { onclick: () => run() });
 
   async function processOne(file) {

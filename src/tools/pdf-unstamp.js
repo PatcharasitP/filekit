@@ -140,7 +140,7 @@ export function mount(tool) {
   function reset() {
     groups = []; blocked = []; ready = false; pageNo = 1; pageCount = 0;
     layerBox.innerHTML = ""; blockedBox.textContent = "";
-    ws.showCanvas(false); st.clear(); go.disabled = true;
+    ws.showCanvas(false); st.clear(); go.disabled = true; go.dataset.why = "";
   }
 
   /** อ่านโครงชั้นของทุกหน้า แล้วจับกลุ่มชั้นที่หน้าตาเหมือนกัน */
@@ -232,7 +232,7 @@ export function mount(tool) {
         st.err(tr("ไฟล์นี้ไม่มีชั้นที่ถอดออกได้ ลายน้ำน่าจะถูกวาดปนอยู่กับเนื้อหา หรืออบเป็นภาพไปแล้ว",
                   "No removable layer in this file. The stamp is likely drawn into the content, or already flattened into an image"));
       } else { sayState(); }
-      go.disabled = !groups.length;
+      if (!groups.length) { go.disabled = true; go.dataset.why = ""; }
     } catch (e) {
       st.err(tr("เปิดไฟล์นี้ไม่ได้: ", "Could not open this file: ") + e.message);
       go.disabled = true;
@@ -338,6 +338,10 @@ export function mount(tool) {
   /** ข้อความบอกสถานะให้ตรงกับที่ติ๊กไว้จริง ไม่ค้างเป็นคำแนะนำเดิม */
   function sayState() {
     const off = groups.filter((g) => !g.on).length;
+    /* ‼️ ปุ่มบันทึกเปิดเมื่อติ๊กออกแล้วอย่างน้อยหนึ่งชั้นเท่านั้น เดิมเปิดทันทีที่เจอชั้น กดแล้วได้ ไฟล์เหมือนเดิมทุกอย่าง
+       (ไล่กดเว็บจริง 07/11/2026 tests/browser_unstamp_go.py) เหตุผลขึ้นใต้ปุ่มผ่าน data-why ของ shell2 */
+    go.disabled = !off;
+    go.dataset.why = off ? "" : tr("ติ๊กชั้นที่จะเอาออกก่อน แล้วค่อยบันทึก", "Untick a layer to remove first, then save");
     if (!off) {
       st.ok(tr(`พบชั้นที่ถอดออกได้ ${groups.length} ชั้น ติ๊กออกแล้วดูผลทางซ้ายได้เลย`,
                `Found ${pl(groups.length, "removable layer", "removable layers")}. Untick one and watch the preview`));
@@ -406,7 +410,7 @@ export function mount(tool) {
         : tr("ยังไม่ได้ติ๊กชั้นไหนออก ไฟล์เหมือนเดิมทุกอย่าง", "No layer unticked, the file is unchanged"));
     } catch (e) {
       st.err(tr("บันทึกไม่สำเร็จ: ", "Could not save: ") + e.message);
-    } finally { st.end(); go.disabled = false; }
+    } finally { st.end(); go.disabled = !groups.some((g) => !g.on); }
   }
 
   const ws = workspace(tool, {

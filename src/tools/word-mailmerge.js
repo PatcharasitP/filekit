@@ -309,6 +309,9 @@ export function mount(tool) {
       modeSel.value = "group"; groupCol.value = columns[0];
     }
     syncMode();
+    // ‼️ คิดคำเตือนใหม่หลังระบบสลับโหมดเองข้างบน ตัวที่เรียกก่อนหน้ายังเห็นโหมดทีละแถว จึงเตือน {{รายการ}} ค้าง
+    //    ทั้งที่จัดกลุ่มเลือกบล็อกนี้ให้แล้ว (ไล่กดเว็บจริง 07/11/2026 tests/browser_mailmerge_unmatched.py)
+    renderUnmatched();
     renderPreview();
   }
 

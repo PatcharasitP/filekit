@@ -145,12 +145,13 @@ function findSubAcrossProvince(prov, raw) {
 
 /* ── ตัดข้อความเป็นชิ้น ๆ ด้วยคำนำหน้า ต./อ./จ. (รองรับทั้งแบบมีจุด/เต็ม/ติดกัน/เว้นวรรค) ── */
 function extractSegments(text) {
-  const segs = { sub: null, dist: null, prov: null };
+  const segs = { sub: null, dist: null, prov: null, provAt: -1 };
   let any = false, m;
   MARK_RE.lastIndex = 0;
   while ((m = MARK_RE.exec(text))) {
     any = true;
     let type, value;
+    if ((m.groups.bkk || m.groups.prov) && segs.provAt < 0) segs.provAt = m.index;   // ตำแหน่งคำนำหน้าจังหวัด ไว้เดาตำบลอำเภอจากคำข้างหน้า
     if (m.groups.bkk) { type = "prov"; value = BKK_NAME; }
     else {
       type = m.groups.prov ? "prov" : m.groups.dist ? "dist" : "sub";
@@ -208,6 +209,12 @@ export function parseAddress(raw, geo) {
     provSeg = toks[pIdx];
     distSeg = pIdx >= 1 ? toks[pIdx - 1] : null;
     subSeg = pIdx >= 2 ? toks[pIdx - 2] : null;
+  } else if (provSeg && !distSeg && !subSeg && segs.provAt > 0) {
+    // ‼️ มีคำนำหน้าแค่จังหวัด (จ. , จังหวัด , กรุงเทพฯ , กทม) ไม่มี ต./อ./แขวง/เขต เช่น "ในเมือง เมืองขอนแก่น จ.ขอนแก่น"
+    //    เดิมไม่เข้าทางเดาจากลำดับคำ ช่องตำบลอำเภอว่าง แยกไม่ได้ทุกแบบ (07/11/2026 tests/thai_address.test.mjs)
+    //    เดาจากคำข้างหน้าคำนำหน้าจังหวัดแบบเดียวกับไม่มีคำนำหน้าเลย แล้วติดธงให้ตรวจซ้ำ
+    const toks = fallbackTokens(text.slice(0, segs.provAt));
+    if (toks.length) { warn = true; distSeg = toks[toks.length - 1]; subSeg = toks.length >= 2 ? toks[toks.length - 2] : null; }
   } else if (!provSeg) {
     // มีคำนำหน้า ต./อ./เขต ให้ตำบล/อำเภอ แต่ไม่มี "จ./จังหวัด/กรุงเทพ" (เช่นพิมพ์ "Bangkok" เป็นอังกฤษ
     // ปนกับ เขต/แขวง ภาษาไทย) — ลองหาชื่อจังหวัดจากคำในข้อความแทน (ตรงตัวเท่านั้น กัน fuzzy จับมั่ว)

@@ -180,6 +180,8 @@ export const cellText = (v) =>
  *   suffix -> ต่อท้ายชื่อไฟล์ที่ดาวน์โหลด
  * }
  */
+const COLTOOL_SAMPLE = "samples/ตัวอย่าง-ข้อมูลลูกค้า.xlsx"; // มีชื่อ เลขผู้เสียภาษี ที่อยู่ วันที่ ยอดเงิน ครบทั้ง 5 เครื่องมือ
+
 export function columnTool(tool, cfg) {
   const { wrap, body } = toolShell(tool);
   const st = statusBar();
@@ -204,9 +206,12 @@ export function columnTool(tool, cfg) {
     chips, preview,
   ]);
 
+  // ‼️ ตระกูลนี้ต้องมีไฟล์ตัวอย่างของตัวเอง ตัวอย่างกลาง (ข้อมูลใบเสนอราคา) ไม่มีคอลัมน์ที่อยู่ ไม่มีเลขบัตร
+  //    ไล่กดเว็บจริง 07/11/2026 แยกที่อยู่ได้ 0 จาก 5 , ตรวจเลขบัตรเลือกคอลัมน์ ภาษี , คำอ่านตัวเลขเลือกคอลัมน์วันที่ (tests/browser_coltool_samples.py)
   const dz = dropzone({
     accept: cfg.accept, multiple: false, expect: cfg.expect, expectLabel: cfg.expectLabel,
     hint: cfg.hint, onChange: load,
+    samples: cfg.samples || [[COLTOOL_SAMPLE, "ข้อมูลลูกค้าตัวอย่าง (Excel)", "Sample customer data (Excel)"]],
   });
   const goX = button(tr("ดาวน์โหลดเป็น Excel", "Download as Excel"), { icon: "download",  onclick: () => save("xlsx") });
   const goC = button(tr("ดาวน์โหลดเป็น CSV", "Download as CSV"), { icon: "download",  onclick: () => save("csv"), ghost: true });

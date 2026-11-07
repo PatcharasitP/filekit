@@ -367,6 +367,7 @@ export function mount(tool) {
   const saveBtn = button(tr("บันทึก", "Save"), { onclick: save });
   [placeMidBtn, undoBtn, clearBtn].forEach((b) => { b.disabled = true; });
   saveBtn.disabled = true;
+  let saving = false;
 
   const leftNode = el("div", { class: "pe-left" }, [
     dz.container, extra,
@@ -490,7 +491,7 @@ export function mount(tool) {
       await showPage(0);
       ws.setBusy(false);
       ws.showCanvas(true);
-      saveBtn.disabled = false;
+      syncButtons();
       st.ok(tr(`เปิดแล้ว ${pageCount} หน้า`, `Opened ${pl(pageCount, "page", "pages")}`));
       setMode(mode);
     } catch (e) {
@@ -701,6 +702,9 @@ export function mount(tool) {
     placeMidBtn.disabled = !pdf;
     undoBtn.disabled = !n;
     clearBtn.disabled = !edits.some((e) => e.page === cur);
+    // บันทึกได้เฉพาะเมื่อมีของแก้ เดิมเปิดตั้งแต่โหลดไฟล์ กดแล้วขึ้นแดง ยังไม่ได้แก้อะไรเลย (ไล่กดมือถือ 07/11/2026 tests/browser_pdfedit_save_ready.py)
+    saveBtn.disabled = saving || !pdf || !n;
+    saveBtn.dataset.why = saving ? "" : !pdf ? tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF first") : !n ? tr("ปิดทับ พิมพ์ข้อความ หรือวางลายเซ็นอย่างน้อยหนึ่งจุดก่อน", "Add at least one cover, text, or signature first") : "";
     st.info(n ? tr(`แก้ไว้ ${n} จุด`, `${n} edit${n > 1 ? "s" : ""} pending`) : "");
   }
   function undoLast() { edits.pop(); drawOverlay(); renderThumbs(); }
@@ -775,6 +779,7 @@ export function mount(tool) {
     if (!file) return st.err(tr("เลือกไฟล์ก่อน", "Choose a file first"));
     if (!edits.length) return st.err(tr("ยังไม่ได้แก้อะไรเลย", "No edits yet"));
     results.innerHTML = "";
+    saving = true;
     saveBtn.disabled = true;
     ws.setBusy(true);
     st.info(tr("กำลังบันทึก…", "Saving…"));
@@ -827,7 +832,8 @@ export function mount(tool) {
       st.err(tr("บันทึกไม่ได้: ", "Couldn't save: ") + e.message);
     } finally {
       ws.setBusy(false);
-      saveBtn.disabled = false;
+      saving = false;
+      syncButtons();
     }
   }
 

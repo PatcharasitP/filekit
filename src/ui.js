@@ -1110,6 +1110,17 @@ export function dropzone(opts = {}) {
       }
       if (!usable.length) return;              // ไฟล์เดิมทั้งหมด ไม่มีอะไรให้เพิ่ม
     }
+    /* ‼️ กล่องไฟล์เดียวได้มาหลายใบ (ทำอะไรต่อดี พาผลลัพธ์หลายใบมา หรือลากหลายไฟล์) ต้องบอกว่าใบไหนไม่ได้ใช้
+     * เดิมตัดเหลือใบแรกเงียบ word-to-pdf ได้ 2 ใบ กดแยกไฟล์ PDF แล้วใบที่สองหาย (07/11/2026 tests/browser_single_drop_note.py) */
+    if (!multiple && usable.length > 1) {
+      const left = usable.slice(1).map((f) => f.name).join(", ");
+      // แยกสองบรรทัด บรรทัดเดียวตัดกลางคำ ไม่ | ได้ใช้ (ภาพจอ 07/11/2026)
+      warn.appendChild(el("div", { class: "dupe-note", role: "status" }, [
+        el("div", {}, tr(`ใช้ไฟล์ ${usable[0].name}`, `Using ${usable[0].name}`)),
+        el("div", {}, [tr(`ไม่ได้ใช้ ${left} `, `Not using ${left} `),
+          el("span", { style: "white-space:nowrap" }, tr("(รับครั้งละ 1 ไฟล์)", "(takes 1 file at a time)"))]),
+      ]));
+    }
     if (!multiple) files.forEach(revokeThumb); // โหมดไฟล์เดียว — ไฟล์เก่าถูกแทนที่ ต้องคืนหน่วยความจำก่อน
     files = multiple ? files.concat(usable) : usable.slice(0, 1);
     render();

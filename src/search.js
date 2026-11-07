@@ -67,14 +67,24 @@ let _seg = null;
  *    (หลักเดียวกับที่ cfgsearch.js เขียนไว้ ตัดวรรณยุกต์ได้เฉพาะตอนเทียบ ห้ามใช้ตอนหาตำแหน่ง)
  */
 function segWords(raw) {
+  /* ‼️ ตัวตัดคำของเบราว์เซอร์พลาดสองแบบ วัดจริง 07/11/2026 กับคำค้นที่คนพิมพ์
+     ① ไทยติดอังกฤษ "แปลงเป็นexcel" ได้ [แปลง, เป็นexcel] คำ excel หายไปทั้งคำ
+     ② คำย่อไม่มีจุด "แปลงพศเป็นคศ" ได้ [แป, ลงพศ, เป็น, คศ]
+     จึงเว้นวรรคตรงรอยต่อไทยกับอังกฤษหรือตัวเลข และแยก พ.ศ. ค.ศ. เป็นคำก่อนส่งให้ตัวตัดคำ
+     ปีสี่หลัก 25xx คือ พ.ศ. ส่วน 19xx 20xx คือ ค.ศ. คนพิมพ์ "เปลี่ยน 2567 เป็น 2024" ตรงกับคำค้น พศ คศ */
+  const pre = String(raw)
+    .replace(/([฀-๿])([A-Za-z0-9])/g, "$1 $2").replace(/([A-Za-z0-9])([฀-๿])/g, "$1 $2")
+    .replace(/([พค])\.?ศ\.?/g, " $1ศ ");
   let words;
   try {
     if (!_seg) _seg = new Intl.Segmenter("th", { granularity: "word" });
-    words = [..._seg.segment(String(raw))].filter((x) => x.isWordLike).map((x) => x.segment);
+    words = [..._seg.segment(pre)].filter((x) => x.isWordLike).map((x) => x.segment);
   } catch {
-    words = String(raw).split(/[\s,.]+/);
+    words = pre.split(/[\s,.]+/);
   }
-  return words.map(norm).filter((w) => w.length >= 2 && !STOP_N.has(w));
+  // ปีที่แปลงมาใส่จุดเป็น "พ.ศ." ยาวสี่ตัว นับเป็นคำยาวที่มีความหมาย (คำ 2 ตัวอักษรไม่นับ ดูเงื่อนไข longHit)
+  return words.map((w) => (/^25\d\d$/.test(w) ? "พ.ศ." : /^(19|20)\d\d$/.test(w) ? "ค.ศ." : w))
+    .map(norm).filter((w) => w.length >= 2 && !STOP_N.has(w));
 }
 
 /** คำนี้อยู่ในกองข้อความไหม · ยอมตัดหางคำได้บ้าง ("หน้าที่" -> "หน้า")
@@ -116,6 +126,13 @@ function formatOf(w) {
   return null;
 }
 
+/** นับคำชื่อฟอร์แมตในคำค้น ไม่ตัดตัวซ้ำ ("png เป็น jpg" ได้ 2) */
+function fmtWords(s) {
+  let n = 0;
+  for (const [, re] of FORMAT_PAT) { re.lastIndex = 0; while (re.exec(s)) n++; }
+  return n;
+}
+
 /** คืนชื่อฟอร์แมตที่พบ เรียงตามตำแหน่งที่ปรากฏ และตัดตัวซ้ำที่ติดกันออก */
 function formatOrder(s) {
   const found = [];
@@ -130,7 +147,14 @@ function formatOrder(s) {
   return out;
 }
 
+/* ‼️ คำทับศัพท์ชื่อโปรแกรม แปลงเป็นอังกฤษก่อนให้คะแนน (07/11/2026)
+   คนพิมพ์ "แปลงเวิร์ดเป็นพีดีเอฟ" ชื่อเครื่องมือเป็น "Word เป็น PDF" เดิมได้แค่ pq-to-date
+   ทำในตัวรูปแบบฟอร์แมตไม่ได้ เพราะตัวตัดคำแยก พีดีเอฟ เป็น [พี, ดี, เอฟ] แม้เว้นวรรคไว้ และตัดวรรณยุกต์ทำให้ เวิร์ด เป็น เวิรด */
+const TRANSLIT = [[/พีดีเอฟ/g, "pdf"], [/เวิร์ด|เวิด/g, "word"], [/เอ็กเซล|เอกเซล/g, "excel"], [/พาวเวอร์พอยต์|พาวเวอร์พอย/g, "powerpoint"]];
+const translit = (s) => TRANSLIT.reduce((a, [re, to]) => a.replace(re, ` ${to} `), String(s)).replace(/\s+/g, " ").trim();
+
 export function scoreTool(t, rawQ) {
+  rawQ = translit(rawQ);
   const q = norm(rawQ);
   if (!q) return 1;
   const title = norm(t.title);
@@ -215,6 +239,10 @@ export function scoreTool(t, rawQ) {
       if (qf.length >= 2 && tf.length >= 2 && qf[0] === tf[0] && qf[1] === tf[1] && title.includes(norm("เป็น"))) {
         sc += 8;
       }
+      /* ‼️ แปลงในตระกูลเดียวกัน "png เป็น jpg" ฟอร์แมตสองคำแต่เป็นรูปทั้งคู่ (07/11/2026)
+         เครื่องมือ PDF ที่ชื่อมีคำว่ารูปได้คะแนนเท่าตัวแปลงรูป แล้วชนะเพราะอยู่ก่อนในทะเบียน
+         ให้เพิ่มเมื่อฟอร์แมตในชื่อเครื่องมือมีแต่ตัวที่คนพิมพ์ ใช้เฉพาะคำค้นที่มีชื่อฟอร์แมตตั้งแต่สองคำ */
+      if (fmtWords(s) >= 2 && tf.length >= 1 && tf.every((f) => qf.includes(f))) sc += 8;
     }
     if (sc > 0) best = Math.max(best, sc - penalty);
   }

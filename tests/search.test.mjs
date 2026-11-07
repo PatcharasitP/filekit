@@ -138,6 +138,59 @@ ck("‘bar chart’ → กราฟแท่ง (ไม่ใช่ Gantt ท�
 ck("‘donut chart’ → กราฟโดนัท", top("donut chart"), ["pbi-donut"]);
 ck("‘chart’ เฉย ๆ → เจอกราฟ Deneb ครบสามตัว", top("chart", 3).sort(), ["pbi-bar", "pbi-donut", "pbi-gantt"]);
 
+/* ‼️ ที่มา 07/11/2026 ค้นด้วย "สิ่งที่อยากทำ" แบบที่คนพิมพ์จริง (งานวิจัย .claude/research/2026-11-07-filekit-suite-and-bigmerge.md ข้อเสนอ 1)
+     เขียนคำค้นก่อนเปิดดูคำค้นสำรองของระบบ สามชุด วัดก่อนแก้ (ติด 3 อันดับแรก):
+       ชุดหนึ่ง 50 คำ 76% , ชุดสอง 30 คำ 83% , ชุดสามที่ไม่เคยเห็นตอนแก้ 30 คำ 83% (หลังแก้คำพ้องกับตัวตัดคำ วัดครั้งเดียว 90%)
+     ที่แก้: คำพ้องตามกลุ่มความหมาย (ถมดำ ไดคัท ใบประกาศ ไฟล์หนัก) , ไทยติดอังกฤษ "แปลงเป็นexcel" ตัดคำหาย ,
+     ปีสี่หลัก 25xx 20xx เป็น พ.ศ. ค.ศ. , คำทับศัพท์ พีดีเอฟ เวิร์ด เอ็กเซล , แปลงรูปในตระกูลเดียวกัน "png เป็น jpg" */
+console.log("\n━━ ⑬ ค้นด้วยสิ่งที่อยากทำ 110 คำ ต้องติด 3 อันดับแรก ━━");
+const INTENT = [
+  ["ไฟล์ pdf ใหญ่ส่งเมลไม่ได้", ["pdf-compress"]], ["ลดขนาดไฟล์", ["pdf-compress", "image-resize"]], ["รูปใหญ่เกิน", ["image-resize"]],
+  ["ต่อไฟล์pdfหลายไฟล์", ["pdf-merge"]], ["เอาหน้า 3 ออก", ["pdf-pages"]], ["หมุนหน้า", ["pdf-pages"]], ["เรียงหน้าใหม่", ["pdf-pages"]],
+  ["ตัดเอาบางหน้า", ["pdf-split", "pdf-pages"]], ["แปลง pdf เป็น word", ["pdf-to-word"]], ["pdf แก้ไขไม่ได้ อยากได้เวิร์ด", ["pdf-to-word"]],
+  ["ดึงตารางจาก pdf", ["pdf-to-excel"]], ["copy ข้อความจากไฟล์สแกน", ["pdf-ocr"]], ["สแกนแล้วค้นหาคำไม่ได้", ["pdf-ocr"]],
+  ["ล็อกไฟล์ไม่ให้คนอื่นเปิด", ["pdf-protect"]], ["ลืมรหัส pdf", ["pdf-unlock"]], ["ถอดรหัส pdf", ["pdf-unlock"]],
+  ["ปิดเลขบัญชีก่อนส่ง", ["pdf-redact"]], ["ถมดำ", ["pdf-redact"]], ["ใส่ชื่อบริษัทจางๆทุกหน้า", ["pdf-watermark"]],
+  ["ลงลายเซ็น", ["pdf-sign", "pdf-edit"]], ["ใส่เลขหน้า", ["pdf-page-numbers"]], ["หน้าเปล่าในไฟล์สแกน", ["pdf-remove-blank"]],
+  ["รูปถ่ายหลายรูปรวมเป็นไฟล์เดียว", ["images-to-pdf"]], ["jpg เป็น pdf", ["images-to-pdf"]], ["heic เป็น jpg", ["image-convert"]],
+  ["ไดคัทรูป", ["image-bg-remove"]], ["ทำพื้นหลังโปร่งใส", ["image-bg-remove"]], ["ทำคิวอาร์โค้ดลิงก์", ["qr-code"]],
+  ["ส่งจดหมายถึงลูกค้าหลายคนชื่อไม่ซ้ำ", ["word-mailmerge"]], ["ทำใบประกาศหลายชื่อ", ["word-mailmerge"]], ["ต่อไฟล์ word", ["word-join"]],
+  ["เปลี่ยนชื่อบริษัทในเอกสารทุกไฟล์", ["word-replace"]], ["word เป็น pdf", ["word-to-pdf"]], ["สไลด์เป็น pdf", ["powerpoint-to-pdf"]],
+  ["csv ภาษาไทยเปิดแล้วเป็นภาษาต่างดาว", ["thai-encoding", "excel-csv"]], ["อ่านไม่ออกเป็นตัวประหลาด", ["thai-encoding"]],
+  ["แยกชีทตามสาขา", ["excel-split"]], ["รวมไฟล์ excel ทุกสาขา", ["excel-merge"]], ["vlookup สองไฟล์", ["excel-lookup"]],
+  ["หาว่าบิลไหนรวมกันได้ยอดนี้", ["excel-match-sum"]], ["เปลี่ยน 2567 เป็น 2024", ["thai-date"]], ["ปีพุทธเป็นปีคริสต์", ["thai-date"]],
+  ["เช็คเลขบัตรประชาชนถูกไหม", ["thai-id"]], ["แยกชื่อกับนามสกุล", ["thai-name"]], ["แยกจังหวัดอำเภอจากที่อยู่", ["thai-address"]],
+  ["เขียนจำนวนเงินเป็นตัวหนังสือ", ["thai-number"]], ["นับจำนวนคำบทความ", ["thai-wordcount"]], ["ทำธีมสีให้ power bi", ["pbi-theme"]],
+  ["ตัดขอบขาวรอบเอกสาร", ["pdf-crop"]], ["เทียบสัญญาสองฉบับว่าต่างตรงไหน", ["pdf-compare"]],
+  ["ไฟล์หนักไป", ["pdf-compress", "image-resize"]], ["ย่อรูปให้เล็ก", ["image-resize"]], ["ลบหน้าที่ไม่ใช้", ["pdf-pages"]],
+  ["เอาหลายไฟล์มาต่อกัน", ["pdf-merge", "word-join", "excel-merge"]], ["แปลงเป็นexcel", ["pdf-to-excel", "excel-csv"]], ["ตั้งรหัสผ่านไฟล์", ["pdf-protect"]],
+  ["เปิดไฟล์ที่ติดรหัส", ["pdf-unlock"]], ["ซ่อนข้อมูลส่วนตัว", ["pdf-redact"]], ["ประทับคำว่าสำเนา", ["pdf-watermark"]],
+  ["เซ็นเอกสารออนไลน์", ["pdf-sign", "pdf-edit"]], ["รันเลขหน้า", ["pdf-page-numbers"]], ["ถ่ายเอกสารแล้วมีหน้าขาว", ["pdf-remove-blank"]],
+  ["เอารูปจากไฟล์ pdf", ["pdf-extract-images"]], ["png เป็น jpg", ["image-convert"]], ["ลบพื้นหลัง", ["image-bg-remove"]],
+  ["ทำบาร์โค้ด qr", ["qr-code"]], ["ใบเสร็จหลายคนจาก excel", ["word-mailmerge"]], ["แทนคำในเวิร์ดหลายไฟล์", ["word-replace"]],
+  ["แปลงสไลด์เป็นเวิร์ด", ["powerpoint-to-word"]], ["excel เป็น csv", ["excel-csv"]], ["แยกไฟล์ตามชื่อพนักงาน", ["excel-split"]],
+  ["จับคู่ข้อมูลสองตาราง", ["excel-lookup"]], ["แปลงพศเป็นคศ", ["thai-date"]], ["ตรวจเลขผู้เสียภาษี", ["thai-id"]],
+  ["ตัดคำนำหน้าชื่อ", ["thai-name"]], ["แยกรหัสไปรษณีย์", ["thai-address"]], ["ตัวเลขเป็นคำอ่านภาษาไทย", ["thai-number"]],
+  ["ย่อหลายหน้าลงแผ่นเดียว", ["pdf-nup"]], ["เปลี่ยนเป็นกระดาษa4", ["pdf-resize"]], ["หาความต่างของเอกสาร", ["pdf-compare", "word-clean"]],
+  ["อัดไฟล์ให้เล็ก", ["pdf-compress", "image-resize"]], ["พีดีเอฟรวมไฟล์", ["pdf-merge"]], ["หน้ากลับหัว", ["pdf-pages"]],
+  ["แบ่งไฟล์ pdf ทีละหน้า", ["pdf-split"]], ["อยากแก้คำในpdf", ["pdf-edit", "pdf-to-word"]], ["ไฟล์สแกนเป็นข้อความ", ["pdf-ocr"]],
+  ["กันคนพิมพ์ไฟล์", ["pdf-protect"]], ["เบลอเลขบัตร", ["pdf-redact"]], ["ใส่โลโก้จางทุกหน้า", ["pdf-watermark"]],
+  ["ลายมือชื่อ", ["pdf-sign", "pdf-edit"]], ["ใส่หมายเลขหน้า", ["pdf-page-numbers"]], ["แปลงรูปเป็น pdf", ["images-to-pdf"]],
+  ["เปลี่ยนนามสกุลรูป", ["image-convert"]], ["ทำรูปโปร่ง", ["image-bg-remove"]], ["สร้างคิวอาร์", ["qr-code"]],
+  ["พิมพ์ซองจดหมาย", ["word-mailmerge"]], ["ฉลากที่อยู่ลูกค้า", ["word-mailmerge"]], ["รวมเอกสารเวิร์ด", ["word-join"]],
+  ["แปลงเวิร์ดเป็นพีดีเอฟ", ["word-to-pdf"]], ["ppt เป็น pdf", ["powerpoint-to-pdf"]], ["ภาษาไทยเพี้ยน", ["thai-encoding"]],
+  ["รวมชีทหลายไฟล์", ["excel-merge"]], ["แยกexcelเป็นหลายไฟล์", ["excel-split"]], ["ดึงข้อมูลข้ามไฟล์", ["excel-lookup"]],
+  ["ปี 2568 เป็น ค.ศ.", ["thai-date"]], ["เลขบัตร 13 หลักถูกไหม", ["thai-id"]], ["คำนำหน้า นาย นาง", ["thai-name"]],
+  ["บาท สตางค์ ตัวหนังสือ", ["thai-number"]], ["นับคำ", ["thai-wordcount"]], ["เทียบไฟล์ pdf", ["pdf-compare"]],
+];
+let intentMiss = [];
+for (const [q, ok] of INTENT) { const r = top(q, 3); if (!r.some((x) => ok.includes(x))) intentMiss.push(`${q} ได้ [${r.join(", ")}] ควร ${ok.join("/")}`); }
+ck(`คำค้น ${INTENT.length} คำ ติด 3 อันดับแรกครบทุกคำ`, intentMiss, []);
+ck("‘ราคา 2500 บาท’ ตัวเลขสี่หลักที่ไม่ใช่ปี ไม่ดึงตัวแปลงปีขึ้นอันดับหนึ่ง", top("ราคา 2500 บาท")[0] !== "thai-date", true);
+ck("‘พีดีเอฟ’ คำทับศัพท์ เจอเครื่องมือ PDF เหมือนพิมพ์ pdf", top("พีดีเอฟ", 3), top("pdf", 3));
+ck("‘รวมพีดีเอฟ’ → รวมไฟล์ PDF", top("รวมพีดีเอฟ"), ["pdf-merge"]);
+ck("‘png เป็น jpg’ → แปลงชนิดไฟล์รูป ไม่ใช่เครื่องมือ PDF ที่ชื่อมีคำว่ารูป", top("png เป็น jpg"), ["image-convert"]);
+
 console.log("\n" + "━".repeat(52));
 console.log(`ผ่าน ${pass} · ตก ${F.length}`);
 if (F.length) { console.log("\nรายการที่ตก:"); F.forEach((f, i) => console.log(`  ${i + 1}. ${f}`)); process.exit(1); }

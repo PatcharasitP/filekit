@@ -194,7 +194,8 @@ const STYLE = `
 .ts-arr{position:absolute; top:50%; transform:translateY(-50%); width:42px; height:42px; border-radius:999px; padding:0;
   border:1px solid var(--tbd); background:var(--tbg); color:var(--tfg); cursor:pointer; display:grid; place-items:center;
   box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.ts-arr:hover{background:var(--thov)}
+.ts-arr:hover:not(:disabled){background:var(--thov)}
+.ts-arr:disabled{opacity:.35; cursor:default; box-shadow:none}
 .ts-arr.prev{inset-inline-start:-10px} .ts-arr.next{inset-inline-end:-10px}
 .ts-arr svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 .ts-hint{margin:12px 0 0; font-size:12px; line-height:16px; text-align:center; color:var(--tmute)}
@@ -495,7 +496,19 @@ export function mount(tool) {
     "aria-label": dir === "prev" ? tr("ชุดสีก่อนหน้า", "Previous palettes") : tr("ชุดสีถัดไป", "Next palettes"),
     onclick: () => { const w = track.clientWidth / 2 + 6; track.scrollBy({ left: dir === "prev" ? -w : w, behavior: "smooth" }); },
   });
-  const caro = el("div", { class: "ts-caro" }, [arrow("prev"), track, arrow("next")]);
+  const prevA = arrow("prev"), nextA = arrow("next");
+  const caro = el("div", { class: "ts-caro" }, [prevA, track, nextA]);
+  /* ‼️ ลูกศรต้องปิดตัวเองเมื่อเลื่อนต่อไม่ได้ เดิมต้นแถบกับสุดแถบยังทึบเต็มกดได้ กดแล้วไม่เกิดอะไรขึ้น
+     (พี่ปอนด์ 07/11/2026 "บางปุ่มเหมือนมีแต่กดแล้วไม่เกิดอะไรขึ้น" tests/browser_carousel_ends.py)
+     ต้นแถบวัดได้ scrollLeft 2 ไม่ใช่ 0 จึงเผื่อ 4px */
+  const syncArrows = () => {
+    const max = track.scrollWidth - track.clientWidth;
+    prevA.disabled = track.scrollLeft <= 4;
+    nextA.disabled = track.scrollLeft >= max - 4;
+  };
+  track.addEventListener("scroll", syncArrows, { passive: true });
+  if (typeof ResizeObserver === "function") new ResizeObserver(syncArrows).observe(track);
+  requestAnimationFrame(syncArrows);
   const fileIn = el("input", {
     type: "file", accept: ".json,application/json", hidden: true,
     onchange: (e) => { const f = e.target.files[0]; fileIn.value = ""; if (f) readTheme(f); },

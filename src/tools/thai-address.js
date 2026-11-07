@@ -19,6 +19,7 @@
 //      ไม่มั่นใจบางส่วน (ไม่มีคำนำหน้าเลยต้องเดาลำดับ, ยืนยันตำบลไม่ได้แต่ยังมีอำเภอ/จังหวัด) → ผ่านแบบติดธง "ไม่ชัวร์เต็มร้อย"
 import { el } from "../dom.js";
 import { columnTool } from "../sheetpick.js";
+import { fetchRetry } from "../loader.js";
 import { thaiToArabicDigits } from "../thai.js";
 import { tr } from "../i18n.js";
 
@@ -271,7 +272,8 @@ export function parseAddress(raw, geo) {
   };
 }
 
-export function mount(tool) {
+/** ค่าตั้งของเครื่องมือนี้ ใช้ทั้งหน้าเดี่ยวและอุปกรณ์รวม thai-suite (07/11/2026) เรียกใหม่ทุกครั้งได้ค่าตั้งชุดใหม่ */
+export function config() {
   let geo = null, geoErr = null, refreshFn = null, noteEl = null;
 
   function setNote() {
@@ -284,13 +286,13 @@ export function mount(tool) {
   }
 
   // ‼️ โหลด vendor/th-address.json เฉพาะตอนเปิดเครื่องมือนี้เท่านั้น — ห้ามอยู่ใน libs ของ registry.js
-  fetch("vendor/th-address.json")
+  fetchRetry("vendor/th-address.json") // ลองซ้ำเมื่อพลาดชั่วคราว (หลุดจากรอบ v222 เพราะค้นแค่ fetch( ตามด้วยตัวแปร)
     .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
     .then((doc) => { geo = buildGeo(doc); })
     .catch((e) => { geoErr = e; })
     .finally(() => { setNote(); if (refreshFn) refreshFn(); });
 
-  return columnTool(tool, {
+  return {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("ไฟล์เดียว .xlsx .xls .csv (เลือกคอลัมน์ที่อยู่ที่ยังไม่ได้แยก)",
              "One .xlsx .xls .csv file (pick the column with an unsplit address)"),
@@ -321,5 +323,7 @@ export function mount(tool) {
 
     note: tr("มีคำนำหน้า ต./อ./จ. หรือไม่มีก็อ่านได้, รหัสไปรษณีย์มาจากฐานข้อมูล แก้พิมพ์ผิดให้, ไม่มั่นใจจะบอก",
              "Works with or without ต./อ./จ. prefixes, Postcode comes from the database, fixing typos, Says so when unsure"),
-  });
+  };
 }
+
+export function mount(tool) { return columnTool(tool, config()); }

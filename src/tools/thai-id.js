@@ -5,8 +5,9 @@ import { columnTool } from "../sheetpick.js";
 import { checkThaiId13, formatThaiId } from "../thai.js";
 import { tr } from "../i18n.js";
 
-export function mount(tool) {
-  return columnTool(tool, {
+/** ค่าตั้งของเครื่องมือนี้ ใช้ทั้งหน้าเดี่ยวและอุปกรณ์รวม thai-suite (07/11/2026) เรียกใหม่ทุกครั้งได้ค่าตั้งชุดใหม่ */
+export function config() {
+  return {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("ไฟล์เดียว .xlsx .xls .csv (อ่านขีด/เลขไทยได้)", "One .xlsx .xls .csv file (reads dashes or Thai digits)"),
     suffix: tr("-ตรวจแล้ว", "-checked"), writeFail: true,
@@ -37,5 +38,7 @@ export function mount(tool) {
 
     note: tr("ตรวจด้วยสูตร check-digit มาตรฐาน บอกได้แค่ว่าพิมพ์ผิด ไม่ยืนยันว่ามีเจ้าของจริง",
              "Uses the standard check-digit formula. Flags typos only, doesn't confirm the ID belongs to anyone"),
-  });
+  };
 }
+
+export function mount(tool) { return columnTool(tool, config()); }

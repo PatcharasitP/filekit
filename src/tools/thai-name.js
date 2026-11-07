@@ -108,8 +108,9 @@ export function splitThaiName(raw) {
   return { ok: true, value: [prefixOut, first, last] };
 }
 
-export function mount(tool) {
-  return columnTool(tool, {
+/** ค่าตั้งของเครื่องมือนี้ ใช้ทั้งหน้าเดี่ยวและอุปกรณ์รวม thai-suite (07/11/2026) เรียกใหม่ทุกครั้งได้ค่าตั้งชุดใหม่ */
+export function config() {
+  return {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("ไฟล์เดียว .xlsx .xls .csv (คอลัมน์ชื่อเต็ม 1 ช่อง เช่น \"นางสาวสมหญิง ใจดี\")",
              "One .xlsx .xls .csv file (one full-name column, e.g. \"Ms. Jane Doe\")"),
@@ -126,5 +127,7 @@ export function mount(tool) {
 
     note: tr("นามสกุลมีวรรค (เช่น ณ อยุธยา) ก็แยกถูก, แถวที่แยกไม่ออกจะบอกเหตุผลไว้ให้",
              "Two-part surnames are handled, rows it cannot split say why"),
-  });
+  };
 }
+
+export function mount(tool) { return columnTool(tool, config()); }

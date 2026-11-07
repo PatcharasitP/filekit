@@ -14,8 +14,9 @@ function modeDefs() {
   ];
 }
 
-export function mount(tool) {
-  return columnTool(tool, {
+/** ค่าตั้งของเครื่องมือนี้ ใช้ทั้งหน้าเดี่ยวและอุปกรณ์รวม thai-suite (07/11/2026) เรียกใหม่ทุกครั้งได้ค่าตั้งชุดใหม่ */
+export function config() {
+  return {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("ไฟล์เดียว .xlsx .xls .csv (อ่านคอมมา/เลขไทยได้)", "One .xlsx .xls .csv file (reads commas or Thai digits)"),
     suffix: tr("-แปลงตัวเลขแล้ว", "-number-converted"),
@@ -47,5 +48,7 @@ export function mount(tool) {
 
     note: tr("ใช้กับจดหมายเวียน Word ได้เลย อ้างคอลัมน์นี้ด้วย {{จำนวนเงินตัวหนังสือ}}",
              "Works with a Word mail merge, reference this column as {{Amount in words}}"),
-  });
+  };
 }
+
+export function mount(tool) { return columnTool(tool, config()); }

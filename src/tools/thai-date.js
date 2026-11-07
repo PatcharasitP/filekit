@@ -15,8 +15,9 @@ function fmtsDefs() {
   ];
 }
 
-export function mount(tool) {
-  return columnTool(tool, {
+/** ค่าตั้งของเครื่องมือนี้ ใช้ทั้งหน้าเดี่ยวและอุปกรณ์รวม thai-suite (07/11/2026) เรียกใหม่ทุกครั้งได้ค่าตั้งชุดใหม่ */
+export function config() {
+  return {
     accept: ".xlsx,.xls,.csv", expect: ["xlsx", "csv"], expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
     hint: tr("ไฟล์เดียว .xlsx .xls .csv (อ่านวันที่ไทยได้ทุกรูปแบบ)",
              "One .xlsx .xls .csv file (reads any Thai date format)"),
@@ -57,5 +58,7 @@ export function mount(tool) {
 
     note: tr("ปี 2 หลัก (เช่น 69) เดาเป็น พ.ศ. 2569 และติดธง ตรวจก่อนใช้จริง",
              "A 2-digit year (like 69) is guessed as B.E. 2569 and flagged, double-check first"),
-  });
+  };
 }
+
+export function mount(tool) { return columnTool(tool, config()); }

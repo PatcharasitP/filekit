@@ -268,6 +268,11 @@ export const TOOLS = [
     accepts:["csv","txt"],
     libs:["jszip"], next:["excel-csv","thai-date"] },
 
+  { id:"thai-suite", group:"thai", icon:"🧰", since:"2026-11-07", title:"จัดข้อมูลลูกค้าไทยครบในรอบเดียว",
+    desc:"แยกที่อยู่ แยกชื่อ ตรวจเลขบัตร แปลงปี บาทถ้วน ติ๊กงานที่ต้องการ ได้ไฟล์เดียวครบทุกคอลัมน์",
+    accepts:["xlsx","csv"],
+    libs:["xlsx"], next:["word-mailmerge","excel-split"] },
+
   { id:"thai-date", group:"thai", icon:"📅", title:"สลับปี พ.ศ. กับ ค.ศ. ทั้งคอลัมน์",
     desc:"อ่านวันที่ไทยได้ทุกแบบ (15 ม.ค. 2569, ๑๕/๐๑/๒๕๖๙) แปลงทั้งคอลัมน์แล้วเลือกรูปแบบผลลัพธ์ได้",
     accepts:["xlsx","csv"],

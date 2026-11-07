@@ -365,3 +365,152 @@ export function columnTool(tool, cfg) {
 
   return wrap;
 }
+
+/* ─── อุปกรณ์รวมหลายงานต่อคอลัมน์ในรอบเดียว (thai-suite 07/11/2026) ─────────────
+   วัดเส้นทางเดิมบนเว็บจริง v222: แยกที่อยู่ แยกชื่อ ตรวจเลขบัตร แปลงปี ผ่านการ์ดทำต่อ
+   กด 8 ครั้ง ได้ไฟล์ 4 ไฟล์ ชื่อยาวขึ้นทุกขั้น (.claude/evidence/2026-11-07-filekit-suite-plan/chain_now.log)
+   ใช้ config() เดิมของแต่ละเครื่องมือ ตัวแปลงจึงเป็นตัวเดียวกับหน้าเดี่ยวทุกตัว */
+
+/** ผลของหลายงานบนทั้งตาราง jobs: [{ cfg, o, c }] คืน { header, rows, stats } ใส่คอลัมน์ใหม่ต่อท้ายคอลัมน์ต้นทางของแต่ละงาน
+ *  งานที่ใช้คอลัมน์ต้นทางเดียวกัน เรียงคอลัมน์ใหม่ตามลำดับงาน ไม่เขียนทับคอลัมน์เดิม */
+export function applyJobs(table, jobs) {
+  const header = table.header.slice();
+  const rows = table.rows.map((r) => r.slice());
+  const stats = jobs.map(() => ({ ok: 0, skip: 0, bad: 0, warn: 0 }));
+  const done = jobs.map((j, k) => {
+    const outCol = j.cfg.outName(j.o, table.header[j.c]);
+    const names = Array.isArray(outCol) ? outCol : [outCol];
+    const cells = table.rows.map((r) => {
+      const res = j.cfg.convert(r[j.c], j.o);
+      const s = stats[k];
+      if (res == null) { s.skip++; return names.map(() => null); }
+      if (res.ok) { s.ok++; if (res.warn) s.warn++; } else s.bad++;
+      const raw = res.ok ? res.value : j.cfg.writeFail ? (res.value ?? res.reason ?? "") : cellText(r[j.c]);
+      return Array.isArray(raw) ? names.map((_, i) => raw[i] ?? null) : [raw, ...names.slice(1).map(() => null)];
+    });
+    return { k, c: j.c, names, cells };
+  });
+  // ใส่จากคอลัมน์ขวาสุดก่อน ตำแหน่งคอลัมน์ทางซ้ายจึงไม่เลื่อน คอลัมน์เดียวกันใส่งานหลังก่อน ผลจึงเรียงตามลำดับงาน
+  done.sort((a, b) => b.c - a.c || b.k - a.k);
+  const fresh = header.map(() => false); // เดินคู่กับ header บอกว่าตำแหน่งไหนเป็นคอลัมน์ใหม่ (ชื่อหัวใหม่ซ้ำของเดิมได้ เทียบชื่อไม่ได้)
+  for (const d of done) {
+    header.splice(d.c + 1, 0, ...d.names);
+    fresh.splice(d.c + 1, 0, ...d.names.map(() => true));
+    rows.forEach((r, i) => r.splice(d.c + 1, 0, ...d.cells[i]));
+  }
+  return { header, rows, stats, added: fresh.flatMap((f, i) => (f ? [i] : [])) };
+}
+
+/** หน้าอุปกรณ์รวม items: [{ id, label, cfg }] ไฟล์เดียว เลือกหลายงาน ดาวน์โหลดไฟล์เดียว */
+export function columnSuite(tool, items, { suffix = tr("-จัดข้อมูลแล้ว", "-cleaned"), samples, expect = ["xlsx", "csv"] } = {}) {
+  const { wrap, body } = toolShell(tool);
+  const st = statusBar();
+  let table = null, sheetNames = [], wb = null, encNote = null;
+  const sheetSel = select([["0", "-"]], "0");
+  const sheetField = field(tr("ชีท", "Sheet"), sheetSel);
+  const jobsEl = el("div", { class: "suite-jobs" });
+  const chips = el("div", { class: "stats" });
+  const preview = el("div", { class: "xt-wrap" });
+  const panel = el("div", { class: "panel", hidden: true }, [el("div", { class: "row" }, [sheetField]), jobsEl, chips, preview]);
+  const rowsUi = items.map((it) => {
+    const on = el("input", { type: "checkbox", class: "suite-on", "data-job": it.id });
+    const colSel = select([["0", "-"]], "0");
+    const opts = it.cfg.options ? it.cfg.options(refresh) : { node: null, read: () => ({}) };
+    const stat = el("span", { class: "stat dim suite-stat" }, "");
+    const node = el("div", { class: "suite-job", "data-job": it.id }, [
+      el("label", { class: "suite-head" }, [on, el("strong", {}, it.label)]),
+      el("div", { class: "row" }, [field(tr("คอลัมน์", "Column"), colSel), stat]),
+      ...(opts.node ? [el("div", { class: "suite-opts" }, [opts.node])] : []),
+    ]);
+    on.onchange = () => { node.classList.toggle("off", !on.checked); refresh(); };
+    colSel.onchange = refresh;
+    jobsEl.appendChild(node);
+    return { it, on, colSel, opts, stat, node };
+  });
+  const dz = dropzone({
+    accept: ".xlsx,.xls,.csv", multiple: false, expect, expectLabel: tr("ไฟล์ Excel หรือ CSV", "an Excel or CSV file"),
+    hint: tr("ไฟล์เดียว .xlsx .xls .csv ติ๊กงานที่อยากทำ ได้ไฟล์เดียวครบ", "One .xlsx .xls .csv file, tick the jobs, get one file with all of it"),
+    onChange: load, samples: samples || [[COLTOOL_SAMPLE, "ข้อมูลลูกค้าตัวอย่าง (Excel)", "Sample customer data (Excel)"]],
+  });
+  const goX = button(tr("ดาวน์โหลดเป็น Excel", "Download as Excel"), { icon: "download", onclick: () => save("xlsx") });
+  const goC = button(tr("ดาวน์โหลดเป็น CSV", "Download as CSV"), { icon: "download", onclick: () => save("csv"), ghost: true });
+  const actions = el("div", { class: "actions" }, [goX, goC]);
+  actions.hidden = true;
+  body.append(dz.container, panel, actions, st.node);
+  sheetSel.onchange = () => pickSheet(+sheetSel.value);
+
+  async function load() {
+    panel.hidden = true; actions.hidden = true; st.clear(); chips.innerHTML = ""; preview.innerHTML = "";
+    const f = dz.files[0];
+    if (!f) return;
+    try {
+      st.info(tr("กำลังอ่านไฟล์…", "Reading the file…"));
+      ({ wb, encNote } = await readWorkbook(f));
+      sheetNames = wb.SheetNames.filter((n) => wb.Sheets[n]);
+      if (!sheetNames.length) throw new Error(tr("ไม่พบชีทในไฟล์นี้", "No sheets found in this file"));
+      sheetSel.innerHTML = "";
+      sheetNames.forEach((n, i) => sheetSel.appendChild(el("option", { value: String(i) }, n)));
+      sheetField.hidden = sheetNames.length < 2;
+      pickSheet(0);
+    } catch (e) {
+      st.err(tr("อ่านไฟล์ไม่สำเร็จ: ", "Could not read the file: ") + (e.message || e));
+    }
+  }
+
+  function pickSheet(i) {
+    table = sheetToTable(wb.Sheets[sheetNames[i]]);
+    if (!table.header.length) { st.err(tr("ชีทนี้ว่างเปล่า", "This sheet is empty")); panel.hidden = true; return; }
+    for (const u of rowsUi) {
+      u.colSel.innerHTML = "";
+      table.header.forEach((h, c) => u.colSel.appendChild(el("option", { value: String(c) }, h)));
+      const g = u.it.cfg.guessColumn ? table.header.findIndex((h) => u.it.cfg.guessColumn(h)) : -1;
+      u.colSel.value = String(g >= 0 ? g : 0);
+      u.on.checked = g >= 0; // ติ๊กให้เฉพาะงานที่เจอคอลัมน์ที่น่าจะใช่ งานอื่นให้คนเลือกเอง
+      u.node.classList.toggle("off", !u.on.checked);
+    }
+    panel.hidden = false; actions.hidden = false;
+    refresh();
+  }
+
+  const picked = () => rowsUi.filter((u) => u.on.checked);
+  const jobsNow = () => picked().map((u) => ({ cfg: u.it.cfg, o: u.opts.read(), c: +u.colSel.value }));
+
+  function refresh() {
+    if (!table) return;
+    const use = picked();
+    goX.disabled = goC.disabled = !use.length;
+    goX.dataset.why = goC.dataset.why = use.length ? "" : tr("ติ๊กงานอย่างน้อยหนึ่งงานก่อน", "Tick at least one job first");
+    const { header, rows, stats, added: cols } = applyJobs(table, jobsNow());
+    for (const u of rowsUi) { u.stat.textContent = ""; u.stat.className = "stat dim suite-stat"; }
+    use.forEach((u, k) => {
+      const s = stats[k], L = u.it.cfg.labels || {};
+      const bad = s.bad ? "  " + (L.bad || tr("อ่านไม่ออก", "Unreadable")) + " " + s.bad.toLocaleString() : "";
+      u.stat.textContent = (L.ok || tr("แปลงได้", "Converted")) + " " + s.ok.toLocaleString() + bad;
+      u.stat.className = "stat suite-stat " + (s.bad ? "warn" : "ok");
+    });
+    chips.innerHTML = "";
+    chips.appendChild(el("span", { class: "stat ok", id: "suite-newcols" },
+      tr("คอลัมน์ใหม่ " + cols.length + " คอลัมน์ ในไฟล์เดียว", pl(cols.length, "new column", "new columns") + " in one file")));
+    preview.innerHTML = "";
+    if (!cols.length) { preview.appendChild(el("div", { class: "note" }, tr("ติ๊กงานด้านบนเพื่อดูผล", "Tick a job above to see the result"))); }
+    else preview.appendChild(el("table", { class: "xt" }, [
+      el("thead", {}, [el("tr", {}, [el("th", {}, tr("แถว", "Row")), ...cols.map((i) => el("th", {}, header[i]))])]),
+      el("tbody", {}, rows.slice(0, 8).map((r, n) => el("tr", {}, [el("td", { class: "num" }, String(n + 2)), ...cols.map((i) => el("td", { class: "new" }, cellText(r[i])))]))),
+    ]));
+    if (encNote) st.info(encNote); else st.clear();
+  }
+
+  async function save(kind) {
+    if (!picked().length) return;
+    const { header, rows } = applyJobs(table, jobsNow());
+    await yieldToBrowser();
+    const base = stripExt(dz.files[0].name) + suffix;
+    if (kind === "csv") {
+      const ws = XLSX.utils.aoa_to_sheet([header, ...rows], { cellDates: true, dateNF: "dd/mm/yyyy" });
+      download(new Blob(["﻿" + XLSX.utils.sheet_to_csv(ws)], { type: "text/csv;charset=utf-8" }), base + ".csv");
+    } else download(tableToBlob(header, rows, sheetNames[+sheetSel.value]), base + ".xlsx");
+    st.ok(tr("บันทึกแล้ว " + picked().length + " งานในไฟล์เดียว", "Saved, " + pl(picked().length, "job", "jobs") + " in one file"));
+  }
+
+  return wrap;
+}

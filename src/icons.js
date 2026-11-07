@@ -89,6 +89,8 @@ export const ICONS = {
   "thai-name":    `<circle cx="12"cy="7.6"r="4.1"/><path d="M4 20.8a8 8 0 0 1 16 0"/>`,
   "thai-address": `<path d="M12 21.4c0 0 7.3-6.6 7.3-11.5a7.3 7.3 0 1 0-14.6 0c0 4.9 7.3 11.5 7.3 11.5z"/><circle cx="12"cy="9.6"r="2.9"/>`,
   "thai-number":  `<path d="M9 3.2v17.6M13.4 3.2v17.6"/><path d="M5.8 7.2h8.8a3.3 3.3 0 0 1 0 6.6H5.8"/><path d="M5.8 13.8h9.4a3.3 3.3 0 0 1 0 6.6H5.8"/>`,
+  // อุปกรณ์รวม กล่องเครื่องมือมีหูหิ้วกับสลัก (thai-suite 07/11/2026)
+  "thai-suite":   `<rect x="3"y="8"width="18"height="12"rx="2"/><path d="M9 8V5.6A1.6 1.6 0 0 1 10.6 4h2.8A1.6 1.6 0 0 1 15 5.6V8"/><path d="M3 13.2h18"/><path d="M10.4 13.2v2.4h3.2v-2.4"/>`,
   "thai-wordcount": `<rect x="2.5" y="6" width="7.5" height="12" rx="2"/><rect x="14" y="6" width="7.5" height="12" rx="2"/><path d="M12 4v16" stroke-dasharray="2 2"/><path d="M4.8 14.5v-4.3a1.7 1.7 0 0 1 3.4 0v4.3M16.4 10h2.8M16.4 14h2.8"/>`,
 
   // ── Power BI ──

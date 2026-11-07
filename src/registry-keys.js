@@ -58,6 +58,7 @@ export const KEYS = {
   "thai-id": "บัตรประชาชน เลขบัตร ผู้เสียภาษี tax id 13 หลัก ตรวจสอบ checksum",
   "thai-name": "ชื่อ นามสกุล คำนำหน้า นาย นาง นางสาว แยกชื่อ split name title prefix hr รายชื่อ",
   "thai-address": "ที่อยู่ จังหวัด อำเภอ ตำบล เขต แขวง รหัสไปรษณีย์ address province district subdistrict postcode แยกที่อยู่",
+  "thai-suite": "รวม ครบ ทีเดียว หลายอย่าง ข้อมูลลูกค้า รายชื่อลูกค้า ล้างข้อมูล จัดข้อมูล clean ทำความสะอาด เตรียมข้อมูล จดหมายเวียน ที่อยู่ ชื่อ เลขบัตร ปี บาท",
   "thai-number": "บาทถ้วน ตัวหนังสือ อ่านตัวเลข bahttext เลขไทย อารบิก ใบเสนอราคา ใบกำกับ เช็ค จำนวนเงิน คำอ่าน เขียนเงิน",
   "thai-wordcount": "นับคำ จำนวนคำ word count counter wordcount ตัดคำ นับตัวอักษร ตัวอักษร จำกัดคำ บทความ แคปชัน len",
   "pbi-donut": "deneb donut vega โดนัท วงกลม power bi custom visual กราฟ chart pie พาย",

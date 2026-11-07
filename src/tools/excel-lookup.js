@@ -148,6 +148,10 @@ export function mount(tool) {
     hint: which === "main"
       ? tr("ไฟล์ที่จะถูกเติมข้อมูล", "The file that gets filled in")
       : tr("ไฟล์ที่เป็นแหล่งข้อมูล", "The file the data comes from"),
+    /* ตัวอย่างเป็นคู่ที่จับกันได้ (รหัสสินค้า) ไม่ใช่ไฟล์กลางตามชนิด เดิมสองกล่องได้ไฟล์เดียวกัน ลองไม่ได้ (07/11/2026) ข้อมูลสมมติทั้งหมด */
+    samples: which === "main"
+      ? [["samples/ตัวอย่าง-รายการสั่งซื้อ.xlsx", "ตัวอย่างรายการสั่งซื้อ ช่องราคายังว่าง (Excel)", "Sample order list with empty prices (Excel)"]]
+      : [["samples/ตัวอย่าง-ราคาสินค้า.xlsx", "ตัวอย่างตารางราคาสินค้า (Excel)", "Sample price table (Excel)"]],
     onChange: () => onFile(which),
   });
   const mainDz = mkDz("main"), secDz = mkDz("sec");

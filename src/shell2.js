@@ -428,8 +428,20 @@ export function toolShell2(tool, cfg = {}) {
       if (btn) btn.click();
       return;
     }
-    const s = dz.querySelector(".dz-sample button, .dz-sample .btn");
-    if (s) s.click();
+    /* ‼️ เครื่องมือที่ต้องใช้หลายไฟล์ (จดหมายเวียน ดึงข้อมูลจากอีกไฟล์ แผนที่) กดตัวอย่างทุกกล่องที่ยังว่าง เรียงทีละกล่อง
+       เดิมกดแค่กล่องแรก ปุ่มหลักจางค้าง คนที่แค่อยากลองต้องหาไฟล์ที่สองเอง (ฟ้าไล่กดทุกเครื่องมือ 07/11/2026) */
+    const boxes = [...wrap.querySelectorAll(".dz-wrap")].filter((d) => d.querySelector(".dz-sample button, .dz-sample .btn"));
+    const hasFile = (d) => !!d.querySelector('button[aria-label^="เอา "], button[aria-label^="Remove "]');
+    (async () => {
+      for (const d of boxes) {
+        if (d !== dz && hasFile(d)) continue;
+        const s = d.querySelector(".dz-sample button, .dz-sample .btn");
+        if (!s) continue;
+        s.click();
+        // รอกล่องนี้ได้ไฟล์ก่อนค่อยกดกล่องถัดไป เครื่องมือบางตัวอ่านไฟล์แรกก่อน (เทมเพลตก่อนข้อมูล)
+        for (let t = 0; t < 40 && !hasFile(d); t++) await new Promise((r) => setTimeout(r, 150));
+      }
+    })();
   }
 
   /* ── เครื่องสถานะ ────────────────────────────────────────────────────

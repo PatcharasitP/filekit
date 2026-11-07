@@ -380,6 +380,21 @@ export function toolShell2(tool, cfg = {}) {
   ctaRow.append(sheetBtn, ctaSlot);
   if (subBtns.length) sideFoot.appendChild(makeSubrow(subBtns));
 
+  /* ── บอกเหตุผลใต้ปุ่มหลักที่จางอยู่ ─────────────────────────────────────
+   * ‼️ ช่อง .s2-cta-why สร้างไว้ตั้งแต่แกน v2 แต่ไม่เคยต่อสาย (เจอ 07/11/2026 ไล่กดทุกเครื่องมือ)
+   *   word-replace ใส่ไฟล์แล้วปุ่มยังจาง ไม่มีอะไรบอกว่าต้องพิมพ์คำที่จะค้นหาก่อน
+   * เครื่องมือฝากเหตุผลไว้ที่ data-why ของปุ่มตัวเอง ว่างเมื่อไม่มีอะไรต้องบอก
+   * ‼️ เฝ้าทั้งแถว ไม่ใช่ปุ่มเดียว เพราะเครื่องมือแบบ panel ได้ปุ่มเงามาทีหลังตอนโหลดไฟล์เสร็จ */
+  function syncWhy() {
+    const b = ctaRow.querySelector("button.s2-cta");
+    const w = b && b.disabled && !b.hidden ? (b.dataset.why || "").trim() : "";
+    if (ctaWhy.textContent !== w) ctaWhy.textContent = w;
+    ctaWhy.hidden = !w;
+  }
+  new MutationObserver(syncWhy).observe(ctaRow,
+    { subtree: true, childList: true, attributes: true, attributeFilter: ["disabled", "data-why", "hidden"] });
+  syncWhy();
+
   /* ── ทางเข้าแบบไม่มีไฟล์ ─────────────────────────────────────────────
    * เครื่องมือที่มีโหมด "วางตัวเลขเอง" (หายอดที่บวกกันได้, แบ่งช่วงตัวเลข) ใช้งานได้โดยไม่ต้องมีไฟล์
    * ‼️ หน้าเปล่าของ v2 มีแค่ปุ่มเลือกไฟล์กับไฟล์ตัวอย่าง แล้วสั่ง inert ทั้งผืนงานข้างหลัง
@@ -748,6 +763,7 @@ export function toolShell2(tool, cfg = {}) {
         ghost.textContent = real.textContent;
         ghost.disabled = real.disabled;
         ghost.hidden = real.hidden;
+        if ((ghost.dataset.why || "") !== (real.dataset.why || "")) ghost.dataset.why = real.dataset.why || "";
         const al = real.getAttribute("aria-label");
         if (al) ghost.setAttribute("aria-label", al);
       };

@@ -127,6 +127,7 @@ export function mount(tool) {
   function refresh() {
     const n = files.length;
     go.disabled = !n || !pw.value;
+    go.dataset.why = n && !pw.value ? tr("พิมพ์รหัสสำหรับเปิดไฟล์ก่อน", "Type a password to open the file first") : "";
     if (!n) { stage.hidden = true; ws.showCanvas(false); return; }
     stage.hidden = false;
     ws.showCanvas(true);

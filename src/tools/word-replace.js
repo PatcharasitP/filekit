@@ -59,6 +59,9 @@ export function mount(tool) {
   function refresh() {
     const ok = files.length > 0 && getPairs().length > 0;
     go.disabled = !ok; preview.disabled = !ok;
+    // เหตุผลใต้ปุ่มหลัก (ดู syncWhy ใน shell2) บอกเฉพาะตอนมีไฟล์แล้ว หน้าว่างบอกเองอยู่แล้วว่าต้องเลือกไฟล์
+    go.dataset.why = preview.dataset.why = files.length && !getPairs().length
+      ? tr("พิมพ์คำที่จะค้นหาในช่อง ค้นหาคำนี้ ก่อน", "Type the text to find first") : "";
   }
   refresh();
 

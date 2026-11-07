@@ -722,7 +722,10 @@ export function toolShell2(tool, cfg = {}) {
        (pbi-theme ใช้ .ts-actions) แล้วปุ่มดาวน์โหลดธีมจะไม่ถูกยกขึ้นมาเป็นปุ่มหลักเลย
        จับได้เพราะเทสถามว่า "สถานะนี้มีปุ่มลงมือทำที่มองเห็นไหม" กับทั้ง 53 ตัว */
     const acts = [...wrap.querySelectorAll('.s2-stage .actions, .s2-stage [class$="-actions"]')];
-    const reals = acts.flatMap((a) => [...a.querySelectorAll("button")]).filter((b) => !ghosts.has(b));
+    /* ‼️ ปุ่มในแถบสถานะ (ปุ่มหยุด) ไม่ทำเงา แถบสถานะทั้งก้อนถูกยกไปข้างปุ่มหลักด้านล่างแทน ปุ่มจริงจึงอยู่ที่นั่นอยู่แล้ว
+       เดิมเครื่องมือที่วางแถบสถานะไว้ใน .actions (จดหมายเวียนกับอีกราว 10 ตัว) ได้ปุ่มเงาหยุด แต่ข้อความกับแถบความคืบหน้าค้างใต้ผืนงาน
+       งานยาวจอเห็นแค่ปุ่มจาง ๆ ไม่รู้ว่าไปถึงไหน (ภาพจริงจดหมายเวียน 3,100 แถว 07/11/2026) */
+    const reals = acts.flatMap((a) => [...a.querySelectorAll("button")]).filter((b) => !ghosts.has(b) && !b.closest(".status-wrap"));
     for (const real of reals) {
       const first = ghosts.size === 0;
       const ghost = el("button", {
@@ -759,7 +762,7 @@ export function toolShell2(tool, cfg = {}) {
     }
     /* แถบสถานะของเครื่องมือ (ความคืบหน้า/ข้อความ) ก็ควรอยู่ติดปุ่ม ไม่ใช่กลางผืนงาน
        แต่ตัวนี้ย้ายได้ปลอดภัย เพราะไม่มีเครื่องมือไหนค้นหามันจากตำแหน่ง */
-    const st = wrap.querySelector(".s2-stage > .status-wrap");
+    const st = wrap.querySelector(".s2-stage > .status-wrap") || acts.map((a) => a.querySelector(":scope > .status-wrap")).find(Boolean);
     if (st && !sideFoot.contains(st)) sideFoot.insertBefore(el("div", { class: "s2-stat" }, [st]), ctaWhy);
   }
   /* ‼️ เครื่องมือแบบ panel ที่ยังไม่ได้ย้ายตัวเลือกเข้าแผง จะเหลือแผงขวาว่างเปล่าทั้งแถบ

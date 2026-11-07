@@ -320,6 +320,11 @@ export function mount(tool) {
   const levelsEl = el("div", { class: "pmd-levels" });
   const addSel = select([["", "-"]], "");
   const addBtn = button(tr("เพิ่มชั้น", "Add level"), { ghost: true, onclick: onAddLevel });
+  /* ‼️ ปุ่มจางจนกว่าจะเลือกคอลัมน์ เดิมเปิดตลอด กดตอนช่องยังเป็น เลือกคอลัมน์… แล้วเงียบ
+     (ไล่กดเว็บจริง 07/11/2026 tests/browser_matrix_addlevel.py) */
+  const syncAdd = () => { addBtn.disabled = addSel.value === ""; };
+  addSel.addEventListener("change", syncAdd);
+  syncAdd();
   const strategySel = select([
     ["rows", tr("ไล่ทีละแถวของตาราง (แนะนำ)", "Iterate the table rows (recommended)")],
     ["values", tr("ค่าที่ไม่ซ้ำของแต่ละฟิลด์", "Distinct values per field")],
@@ -503,6 +508,7 @@ export function mount(tool) {
     cols.forEach((c, i) => {
       if (!levels.includes(i)) addSel.appendChild(el("option", { value: String(i) }, c.name));
     });
+    syncAdd();
     /* ‼️ ชั้นในสุดคือตัวที่ ISINSCOPE ผูกอยู่ ต้องเห็นชัดว่าตัวไหน ไม่ให้เดา */
     const last = levelsEl.lastElementChild;
     if (last) last.classList.add("inner");

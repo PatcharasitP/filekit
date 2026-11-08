@@ -129,6 +129,24 @@ with sync_playwright() as p:
         # ‼️ และข้อนี้มาจากบั๊กที่สอง: รูปที่มีส่วนสว่างเท่าพื้นหลัง ต้องไม่ถูกเจาะรู
         leak, loss, agree = score(DIR / "product-out.png", DIR / "product-truth.png")
         check("ของที่มีส่วนสว่างเท่าพื้นหลัง ต้องไม่ถูกเจาะรูกลางวัตถุ", loss <= 12.0, f"หาย {loss:.2f}/255")
+        # ‼️ 08/11/2026 ล่าบั๊ก F5: รูปตัวอย่างของเว็บเอง (ก้อนสีทึบใหญ่บนพื้นสว่าง) ถูกเดาเป็นหมึกบนกระดาษ
+        #    โหมดหมึกประมาณแสงจากบริเวณรอบ ๆ ก้อนทึบใหญ่จึงถูกนับเป็นกระดาษ เจาะรูกลางก้อน ความทึบกลางก้อนเหลือ 124/255
+        ctx = b.new_context(viewport={"width": 1440, "height": 960}, accept_downloads=True)
+        pg = ctx.new_page()
+        pg.goto(f"{BASE}/#image-bg-remove", wait_until="load", timeout=45000); pg.wait_for_timeout(2200)
+        sample = pathlib.Path(__file__).resolve().parent.parent / "samples" / "ตัวอย่าง-รูปภาพ-1.jpg"
+        pg.locator("input[type=file]").first.set_input_files(str(sample)); pg.wait_for_timeout(2400)
+        mode = pg.evaluate("() => document.querySelector('input[name^=seg]:checked').value")
+        check("รูปตัวอย่างของเว็บ (ก้อนสีทึบบนพื้นเรียบ) เดาเป็นวัตถุบนพื้นสีเดียว", mode == "key", f"เดา {mode}")
+        pg.get_by_role("button", name="ลบพื้นหลัง").first.click(); pg.wait_for_timeout(3000)
+        with pg.expect_download() as dl:
+            pg.get_by_role("button", name="ดาวน์โหลด").first.click()
+        got = DIR / "sample1-out.png"; dl.value.save_as(str(got))
+        a = np.asarray(Image.open(got).convert("RGBA").getchannel("A"), float)
+        h, w = a.shape
+        core = a[int(h * 0.36):int(h * 0.54), int(w * 0.22):int(w * 0.40)]  # กลางก้อนสีน้ำเงิน (140-420 x 140-380 ในรูป 900x600)
+        check("รูปตัวอย่างของเว็บ กลางก้อนสินค้าไม่ถูกเจาะรู", core.mean() >= 240, f"ความทึบกลางก้อน {core.mean():.0f}/255 ภาพ {w}x{h}")
+        ctx.close()
     except Exception as e:
         bad.append(f"เทสระเบิดกลางทาง: {str(e).splitlines()[0][:90]}")
         print(f"  ❌ เทสระเบิดกลางทาง {str(e).splitlines()[0][:90]}")

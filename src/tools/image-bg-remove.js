@@ -178,7 +178,29 @@ function autoMode(d, w, h) {
     if (0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2] >= keyL - 12) notDarker++;
   }
   if (subject < 20) return "ink";        // แทบไม่มีอะไรต่างจากพื้น เดาเป็นเอกสารไว้ก่อน
-  return notDarker / subject > 0.15 ? "key" : "ink";
+  if (notDarker / subject > 0.15) return "key";
+  return solidShare(d, w, h, key) > 0.25 ? "key" : "ink";
+}
+
+/* สัดส่วนของ "เนื้อ" ที่อยู่กลางก้อนหนา (ห่างขอบก้อนเกิน r ทั้งสี่ทิศ)
+ * ‼️ หมึกจริง (ลายเซ็น ตัวหนังสือ ตราประทับ) เป็นเส้นบาง แทบไม่มีจุดไหนอยู่ลึกจากขอบเส้น
+ *    ส่วนสินค้าหรือก้อนสีทึบใหญ่ โหมดหมึกประมาณแสงจากบริเวณรอบ ๆ กลางก้อนจึงถูกนับเป็นกระดาษ เจาะรูทะลุ
+ *    วัดจริง 08/11/2026 รูปตัวอย่างของเว็บเอง (ตัวอย่าง-รูปภาพ-1.jpg) กลางก้อนเหลือความทึบ 5/255 (tests/browser_bgremove.py) */
+function solidShare(d, w, h, key) {
+  const m = new Uint8Array(w * h);
+  for (let p = 0, i = 0; p < m.length; p++, i += 4) {
+    const dr = d[i] - key[0], dg = d[i+1] - key[1], db = d[i+2] - key[2];
+    m[p] = dr * dr + dg * dg + db * db >= 46 * 46 ? 1 : 0;
+  }
+  const r = Math.max(4, Math.round(Math.min(w, h) / 40));
+  let subj = 0, deep = 0;
+  for (let y = r; y < h - r; y += 2) for (let x = r; x < w - r; x += 2) {
+    const p = y * w + x;
+    if (!m[p]) continue;
+    subj++;
+    if (m[p - r] && m[p + r] && m[p - r * w] && m[p + r * w]) deep++;
+  }
+  return subj ? deep / subj : 0;
 }
 
 /** ลบพื้นหลังลงบน ImageData ตรง ๆ (แก้ช่องอัลฟาอย่างเดียว สี RGB เดิมไม่ถูกแตะ) */

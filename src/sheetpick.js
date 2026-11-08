@@ -139,7 +139,7 @@ export function tableToBlob(header, rows, sheetName = "Sheet1") {
   ws["!cols"] = autoWidths(header, rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, String(sheetName).replace(/[[\]*?/\\:]/g, "-").slice(0, 31) || "Sheet1");
-  return new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })],
+  return new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })],
     { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
@@ -158,7 +158,7 @@ export function tablesToBlob(sheets) {
     used.add(name);
     XLSX.utils.book_append_sheet(wb, ws, name);
   }
-  return new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })],
+  return new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })],
     { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 

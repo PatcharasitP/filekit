@@ -91,7 +91,7 @@ export function mount(tool) {
           st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
           await yieldToBrowser();
         }
-        const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const out = XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true });
         const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         st.progress(null);
         st.ok(tr(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +

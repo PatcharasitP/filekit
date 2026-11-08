@@ -279,7 +279,7 @@ export function mount(tool) {
         meta = tr(`${rows.length.toLocaleString()} แถว, ${header.length} คอลัมน์`,
                   `${pl(rows.length.toLocaleString(), "row", "rows")}, ${pl(header.length, "column", "columns")}`);
       }
-      const blob = new Blob([XLSX.write(out, { bookType: "xlsx", type: "array" })], { type: XLSX_MIME });
+      const blob = new Blob([XLSX.write(out, { bookType: "xlsx", type: "array", compression: true })], { type: XLSX_MIME });
       const name = `${stripExt(read[0].name)}${tr("-รวมแล้ว.xlsx", "-merged.xlsx")}`;
       st.ok(tr(`รวมเสร็จ จาก ${read.length} ไฟล์`, `Done, merged ${pl(read.length, "file", "files")}`));
       results.appendChild(el("div", { class: "result" }, [

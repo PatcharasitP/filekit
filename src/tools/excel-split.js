@@ -45,7 +45,7 @@ function makeSheet(rows, header, withHead, name, colRef) {
 }
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const toBlob = (wb) => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })], { type: XLSX_MIME });
+const toBlob = (wb) => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })], { type: XLSX_MIME });
 
 const MAX_GROUPS = 300;       // เกินนี้แปลว่าเลือกคอลัมน์ผิด (เช่นไปเลือกคอลัมน์รหัสที่ไม่ซ้ำกันเลย)
 const PREVIEW_GROUPS = 12;

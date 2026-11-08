@@ -20,7 +20,7 @@ c = rl_canvas.Canvas(str(src), pagesize=A4); c.drawString(100, 750, "07/11/2026"
 
 with sync_playwright() as pw:
     b = pw.chromium.launch(); errs = []
-    for vw, vh in ((1440, 1000), (390, 844)):
+    for vw, vh in ((1440, 1000), (390, 844), (360, 740)):
         p = b.new_page(viewport={"width": vw, "height": vh}); p.on("pageerror", lambda e: errs.append(str(e)))
         p.goto(f"{BASE}/#/pdf-edit", wait_until="load", timeout=60000); p.wait_for_timeout(1500)
         p.set_input_files(".dz input[type=file]", [str(src)])
@@ -29,6 +29,9 @@ with sync_playwright() as pw:
         st = lambda: {"disabled": save.is_disabled(), "why": save.get_attribute("data-why") or ""}
         s0 = st()
         check(f"{vw}: เปิดไฟล์แล้วยังไม่แก้ ปุ่มบันทึกปิดและบอกเหตุผล", s0["disabled"] and s0["why"], s0)
+        # ‼️ 08/11/2026 ล่าบั๊ก F8: จอ 360 เปิดมาหน้า PDF กว้าง 674 ล้นจอ เพราะวัดกล่องกลางตอนยังไม่โผล่ (กว้าง 0 ใช้ค่าสำรอง 700)
+        fit = p.evaluate("() => { const s = document.querySelector('.pe-scroll'), g = document.querySelector('.pe-stage'); return { stage: Math.round(g.getBoundingClientRect().width), room: s.clientWidth }; }")
+        check(f"{vw}: เปิดไฟล์มาแล้วหน้า PDF พอดีกล่องกลาง ไม่ล้นจอ", fit["room"] > 0 and fit["stage"] <= fit["room"], fit)
         box = p.locator(".pe-layer").bounding_box()
         x0, y0 = box["x"] + box["width"] * 0.25, box["y"] + box["height"] * 0.10
         p.mouse.move(x0, y0); p.mouse.down(); p.mouse.move(x0 + box["width"] * 0.35, y0 + box["height"] * 0.035, steps=8); p.mouse.up()

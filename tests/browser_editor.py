@@ -107,6 +107,16 @@ def drag(pg, x0, y0, x1, y1):
 
 def click_at(pg, x, y):
     box = pg.locator(".pe-layer").bounding_box()
+    ty, vh = box["y"] + box["height"] * y, pg.viewport_size["height"]
+    if ty < 80 or ty > vh - 60:
+        # ‼️ 09/11/2026 (v225) หน้าพอดีความกว้างกล่องกลางแล้ว จอคอม 1280 หน้ากว้าง 874 สูง 1236 เกินจอ
+        #    จุดล่างของหน้าอยู่นอกจอ เมาส์คลิกนอกจอไม่โดนอะไร (เดิมหน้าติดค่าสำรอง 674 จึงอยู่ในจอพอดี)
+        #    คนจริงเลื่อนลงก่อนคลิก เทสจึงเลื่อนกล่องที่เลื่อนได้ตัวใกล้สุดให้จุดนั้นมาอยู่กลางจอก่อน
+        pg.evaluate("""(dy) => { let s = document.querySelector('.pe-layer').parentElement;
+            while (s && !(s.scrollHeight > s.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(s).overflowY))) s = s.parentElement;
+            (s || document.scrollingElement).scrollBy(0, dy) }""", ty - vh / 2)
+        pg.wait_for_timeout(250)
+        box = pg.locator(".pe-layer").bounding_box()
     pg.mouse.click(box["x"] + box["width"] * x, box["y"] + box["height"] * y)
     pg.wait_for_timeout(400)
 

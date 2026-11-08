@@ -315,6 +315,18 @@ export function mount(tool) {
   const zoomInBtn = button("+", { ghost: true, label: tr("ซูมเข้า", "Zoom in"), onclick: () => stepZoom(1) });
   const fitBtn = button(tr("พอดีหน้า", "Fit"), { ghost: true, onclick: () => setZoom(1) });
 
+  /* ความกว้างพอดีกล่องกลาง
+     ‼️ ตอนเปิดไฟล์ครั้งแรกกล่องกลางยังไม่โผล่ (สลับหน้าเป็นหน้าทำงานทีหลัง) กว้าง 0 จึงตกไปค่าสำรอง 700
+        จอ 360 ได้หน้ากว้าง 674 ล้นจอ (ล่าบั๊ก F8 08/11/2026 tests/browser_pdfedit_save_ready.py)
+        จึงคำนวณใหม่ทุกครั้งที่กล่องกลางเปลี่ยนขนาด ซูมที่ผู้ใช้ตั้งไว้คงสัดส่วนเดิมเทียบกับพอดีหน้า */
+  let pageViewW = 0;
+  const fitFor = () => Math.max(240, Math.min(pageViewW, (scroller.clientWidth || 700) - 26));
+  new ResizeObserver(() => {
+    if (!pageViewW || !scroller.clientWidth) return;
+    const f = fitFor();
+    if (Math.abs(f - fitWidth) > 1) { fitWidth = f; applyZoom(); }
+  }).observe(scroller);
+
   function stepZoom(dir) {
     const i = ZOOMS.indexOf(zoom);
     const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (i < 0 ? 1 : i) + dir))];
@@ -538,8 +550,8 @@ export function mount(tool) {
     stage.hidden = false;
     /* ‼️ ฐานของซูมคือ "กว้างเท่ากล่องกลาง" ไม่ใช่เลขตายตัว
        เดิมตรึงไว้ที่ 900px ซึ่งบนจอแคบก็ล้น บนจอกว้างก็ไม่ได้ใช้ที่ที่มี */
-    const room = (scroller.clientWidth || 700) - 26;
-    fitWidth = Math.max(240, Math.min(vp.width, room));
+    pageViewW = vp.width;
+    fitWidth = fitFor();
     applyZoom();
     renderThumbs();
     drawOverlay();
@@ -697,7 +709,9 @@ export function mount(tool) {
     node.addEventListener("pointercancel", end);
   }
 
-  function syncButtons() {
+  /* keepStatus: หลังกดบันทึกห้ามเขียน แก้ไว้ N จุด ทับข้อความผล
+     เดิมทับทุกครั้ง ตอนล้มข้อความแดงหายไปเลย ผู้ใช้ไม่รู้ว่าไม่ได้ไฟล์ (รีวิว 08/11/2026 tests/browser_pdfedit_save_status.py) */
+  function syncButtons(keepStatus = false) {
     const n = edits.length;
     placeMidBtn.disabled = !pdf;
     undoBtn.disabled = !n;
@@ -705,7 +719,7 @@ export function mount(tool) {
     // บันทึกได้เฉพาะเมื่อมีของแก้ เดิมเปิดตั้งแต่โหลดไฟล์ กดแล้วขึ้นแดง ยังไม่ได้แก้อะไรเลย (ไล่กดมือถือ 07/11/2026 tests/browser_pdfedit_save_ready.py)
     saveBtn.disabled = saving || !pdf || !n;
     saveBtn.dataset.why = saving ? "" : !pdf ? tr("เลือกไฟล์ PDF ก่อน", "Choose a PDF first") : !n ? tr("ปิดทับ พิมพ์ข้อความ หรือวางลายเซ็นอย่างน้อยหนึ่งจุดก่อน", "Add at least one cover, text, or signature first") : "";
-    st.info(n ? tr(`แก้ไว้ ${n} จุด`, `${n} edit${n > 1 ? "s" : ""} pending`) : "");
+    if (!keepStatus) st.info(n ? tr(`แก้ไว้ ${n} จุด`, `${n} edit${n > 1 ? "s" : ""} pending`) : "");
   }
   function undoLast() { edits.pop(); drawOverlay(); renderThumbs(); }
   function clearPage() { edits = edits.filter((e) => e.page !== cur); drawOverlay(); renderThumbs(); }
@@ -833,7 +847,7 @@ export function mount(tool) {
     } finally {
       ws.setBusy(false);
       saving = false;
-      syncButtons();
+      syncButtons(true);
     }
   }
 

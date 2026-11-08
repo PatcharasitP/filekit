@@ -595,5 +595,13 @@ ck(middotHits.length + htmlMiddot.length === 0,
   ck(!ghost.length, "เทสที่ย้ายไป FlowKit ไม่ค้างใน tests/ (ของ FileKit ไม่ควรตรวจหน้าที่ไม่ใช่ของตัวเอง)" + (ghost.length ? " เจอ " + ghost.join(", ") : ""));
 }
 
+// ข้อความไฟล์ผิดชนิด เว้นวรรคก่อนชื่ออังกฤษ (ล่าบั๊ก F9 08/11/2026 เดิมขึ้น "ไฟล์นี้เป็นExcel" ทุกครั้ง)
+{
+  const { wrongTypeMessage } = await import(pathToFileURL(join(ROOT, "src/filetype.js")).href);
+  const x = wrongTypeMessage("xlsx", "ไฟล์ PDF").text, img = wrongTypeMessage("image", "ไฟล์ PDF").text;
+  ck(x.includes("ไฟล์นี้เป็น Excel"), "ไฟล์ผิดชนิด ชื่ออังกฤษมีวรรคนำ: " + x);
+  ck(img.includes("ไฟล์นี้เป็นรูปภาพ"), "ไฟล์ผิดชนิด ชื่อไทยไม่เติมวรรค: " + img);
+}
+
 console.log(`\nผ่าน ${pass} · ตก ${fail.length}`);
 process.exit(fail.length ? 1 : 0);

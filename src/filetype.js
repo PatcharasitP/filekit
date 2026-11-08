@@ -110,7 +110,8 @@ export function wrongTypeMessage(kind, expectLabel) {
   const t = TYPES[kind];
   const labelTh = t ? t.label : "ไฟล์ชนิดนี้";
   const labelEn = t ? (LABEL_EN[kind] || t.label) : "this file type";
-  const whatTh = kind ? `ไฟล์นี้เป็น${labelTh}` : "ไฟล์นี้ไม่ใช่ชนิดที่รองรับ";
+  // ชื่ออังกฤษ (Excel PDF) ต้องมีวรรคนำ ชื่อไทย (รูปภาพ) ติดกันได้ (ล่าบั๊ก F9 08/11/2026 tests/accepts.test.mjs)
+  const whatTh = kind ? `ไฟล์นี้เป็น${/^[A-Za-z]/.test(labelTh) ? " " : ""}${labelTh}` : "ไฟล์นี้ไม่ใช่ชนิดที่รองรับ";
   const whatEn = kind ? `This is ${labelEn}` : "This file type isn't supported";
   const s = SUGGEST[kind];
   if (s && s[0]) {

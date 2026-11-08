@@ -459,3 +459,19 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
 /* ไฟล์ผิดชนิดตอนอยู่หน้าแรก สำเนากล่องเตือนขึ้นมาให้เห็น (ล่าบั๊ก 08/11/2026 tests/browser_wrongtype_landing.py) */
 .s2-land-warn{margin:14px 0 0; text-align:left}
 .s2-land-warn:empty{display:none}
+
+/* ── มือถือ (ไล่หลายรุ่น 09/11/2026 เทส tests/browser_mobile_narrow.py) ──
+ * ① แถวไฟล์บนจอแคบ: ป้ายสถานะกับปุ่มขึ้นลงลบเบียดชื่อไฟล์จนเหลือ 6px (excel-merge บน iPhone SE 320px อ่านได้แค่ "ตั")
+ *   ให้แถวตัดบรรทัด ชื่อไฟล์จองที่อย่างน้อย 120px ของที่ไม่พอลงบรรทัดสองชิดขวา
+ *   ‼️ เฉพาะจอแคบ บนคอมแถวยังเป็นบรรทัดเดียวเหมือนเดิม */
+@media (max-width:560px){
+  .file-row{flex-wrap:wrap;justify-content:flex-end;row-gap:6px}
+  .file-row .f-meta{flex:1 1 120px}
+}
+/* ② ช่องพิมพ์ต่ำกว่า 16px แตะแล้ว Safari บน iPhone ซูมทั้งหน้า (31 เครื่องมือ ส่วนใหญ่ select 14.5px)
+ *   ใช้ pointer:coarse = จอสัมผัส บนคอมขนาดเดิมไม่เปลี่ยน
+ *   ‼️ !important เพราะแต่ละเครื่องมือตั้งขนาดเองด้วย class ต่าง ๆ กฎกลางที่ specificity ต่ำกว่าจะแพ้ */
+@media (pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),
+  select, textarea{font-size:16px !important}
+}

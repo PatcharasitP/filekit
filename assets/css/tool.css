@@ -95,6 +95,8 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   transition:border-color .15s,background .15s,transform var(--t-panel,.22s) var(--ease-spring,ease),box-shadow var(--t-panel,.22s) var(--ease-spring,ease);
 }
 .dz:hover,.dz:focus-visible{border-color:var(--ac,var(--brand));background:var(--card-hi);outline:none}
+/* วงโฟกัสชัดของกล่องรับไฟล์ เดิมเปลี่ยนแค่สีขอบ คนใช้คีย์บอร์ดมองไม่ออกว่าโฟกัสอยู่ที่กล่องนี้ (ล่าบั๊ก F6 08/11/2026) */
+.dz:focus-visible{outline:2px solid var(--ac,var(--brand));outline-offset:2px}
 /* เดิม hover มีแค่เปลี่ยนสีเส้นขอบ ไม่ยกตัวเลย — ปุ่ม/ป้ายบนหน้าแรกทุกอันสปริงตอน hover
    ให้กล่องลากไฟล์เป็นจุดที่ผู้ใช้เจอก่อนสิ่งอื่นในหน้าเครื่องมือก็ควรมีความรู้สึกเดียวกัน */
 .dz:hover{transform:translateY(-2px);box-shadow:0 14px 28px -18px color-mix(in srgb,var(--ac,var(--brand)) 55%,transparent)}

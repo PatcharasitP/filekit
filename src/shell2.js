@@ -525,6 +525,16 @@ export function toolShell2(tool, cfg = {}) {
       const dl = resultHost.querySelector("button, a");
       if (dl && document.activeElement && wrap.contains(document.activeElement)) dl.focus();
     }
+    /* ‼️ ออกจากหน้าแรกแล้วปุ่มที่โฟกัสอยู่ (เลือกไฟล์ ลองไฟล์ตัวอย่าง) หายไปกับหน้าแรก โฟกัสหลุดไป BODY
+       คนใช้คีย์บอร์ดไม่รู้ว่าอยู่ตรงไหน (ล่าบั๊ก F6 08/11/2026 tests/browser_sample_focus.py)
+       ย้ายไปของชิ้นแรกที่กดได้และมองเห็นในหน้าทำงาน เฉพาะตอนโฟกัสหลุดจริง ไม่แย่งโฟกัสที่ผู้ใช้วางไว้แล้ว */
+    if (s !== "landing") requestAnimationFrame(() => {
+      const ae = document.activeElement;
+      if (ae && ae !== document.body && !ae.closest(".s2-land")) return;
+      const first = [...wrap.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .find((e) => !e.disabled && !e.closest(".s2-land") && !e.closest("[inert]") && e.getClientRects().length && getComputedStyle(e).visibility !== "hidden");
+      if (first) first.focus();
+    });
   }
   function setSheet(on) {
     sheetOpen = !!on;

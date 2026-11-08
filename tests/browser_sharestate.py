@@ -253,6 +253,21 @@ with sync_playwright() as p:
         ck(f"④ [{tid}] ถอดสถานะในลิงก์ออกมาอ่านได้", (err is None) and len(keys) > 0, True)
         ck(f"④ [{tid}] ลิงก์ต้องไม่พกค่าที่ผูกกับไฟล์", sorted(set(keys) & BANNED), [])
         print(f"      คีย์ที่อยู่ในลิงก์: {keys}{' , ถอดรหัสพลาด: ' + err if err else ''}")
+
+    # ⑤ พิมพ์แล้วรีเฟรชทันที (ไม่รอ 400ms ที่ statekit หน่วงไว้) ค่าต้องยังอยู่ (09/11/2026)
+    #    ที่มา: เทสขนานตก หน่วย กม. ของ number-bins หายหลังรีเฟรช เครื่องหนักตัวนับเวลาช้า
+    #    คนใช้มือถือเจอแบบเดียวกันตอนพิมพ์แล้วสลับแอป ระบบปิดแท็บก่อนครบ 400ms
+    #    ต้องบันทึกค้างทันทีตอน pagehide ไม่งั้นค่าหาย
+    ctx = b.new_context(viewport={"width": 1440, "height": 950})
+    pg = ctx.new_page()
+    pg.goto(f"{BASE}/#number-bins", wait_until="domcontentloaded", timeout=60000)
+    pg.wait_for_timeout(2800)
+    fkui.leave_landing(pg)
+    set_bins(pg)
+    pg.reload(wait_until="domcontentloaded")
+    pg.wait_for_timeout(2800)
+    ck("⑤ [number-bins] พิมพ์แล้วรีเฟรชทันที ค่ายังอยู่", pg.evaluate(READ_BINS), {"a": "quantile", "b": "กม."})
+    ctx.close()
     b.close()
 
 print(f"\nผ่าน {ok} · ตก {fail}")

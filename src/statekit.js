@@ -89,15 +89,25 @@ export function stateKit(toolId, cfg) {
     return values;
   }
 
+  function write() {
+    timer = null;
+    try {
+      const diff = diffFrom(defaults, collect(), skip);
+      if (Object.keys(diff).length) localStorage.setItem(KEY(toolId), JSON.stringify(diff));
+      else localStorage.removeItem(KEY(toolId));
+    } catch { /* เก็บไม่ได้ก็ไม่เป็นไร ของยังใช้ได้ปกติ */ }
+  }
+
+  /* ‼️ พิมพ์แล้วรีเฟรชหรือปิดแท็บภายใน 400ms ค่าหาย (เทส browser_sharestate ⑤ 09/11/2026)
+     บนมือถือสลับแอปแล้วระบบปิดแท็บได้ทุกเมื่อ จึงบันทึกที่ค้างอยู่ทันทีตอน pagehide หรือแท็บถูกซ่อน
+     บันทึกเฉพาะตอนมีของค้าง (timer ยังไม่ทำงาน) ผลเท่ากับรอครบ 400ms แค่เร็วขึ้น ไม่แตะของเครื่องมืออื่น */
+  function flush() { if (timer) { clearTimeout(timer); write(); } }
+  globalThis.addEventListener?.("pagehide", flush);
+  globalThis.document?.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+
   function save() {
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      try {
-        const diff = diffFrom(defaults, collect(), skip);
-        if (Object.keys(diff).length) localStorage.setItem(KEY(toolId), JSON.stringify(diff));
-        else localStorage.removeItem(KEY(toolId));
-      } catch { /* เก็บไม่ได้ก็ไม่เป็นไร ของยังใช้ได้ปกติ */ }
-    }, 400);
+    timer = setTimeout(write, 400);
   }
 
   function forget() {

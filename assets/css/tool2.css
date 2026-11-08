@@ -455,3 +455,7 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
 @media (pointer:coarse){
   .s2-sub.btn, .s2-side-ft .s2-subrow.s2-many .s2-more{height:44px; min-height:44px}
 }
+
+/* ไฟล์ผิดชนิดตอนอยู่หน้าแรก สำเนากล่องเตือนขึ้นมาให้เห็น (ล่าบั๊ก 08/11/2026 tests/browser_wrongtype_landing.py) */
+.s2-land-warn{margin:14px 0 0; text-align:left}
+.s2-land-warn:empty{display:none}

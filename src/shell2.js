@@ -170,6 +170,7 @@ function landingBlock(tool, forward, pasteLink) {
       big,
       el("p", { class: "s2-land-drop" }, tr("หรือลากไฟล์มาวางตรงไหนก็ได้ในหน้านี้",
                                             "Or drop your files anywhere on this page")),
+      el("div", { class: "s2-land-warn", "aria-live": "polite" }),
       el("div", { class: "s2-land-row" }, [
         sample,
         pasteLink,
@@ -431,6 +432,26 @@ export function toolShell2(tool, cfg = {}) {
     grid,
     noteEl,
   ]);
+
+  /* ── ไฟล์ผิดชนิดตอนอยู่หน้าแรก ─────────────────────────────────────────
+   * กล่องรับไฟล์วางกล่องเตือน .wrong-type ไว้ในตัวเอง ซึ่งอยู่ใต้หน้าแรกที่ลอยทับ
+   * ไม่มีไฟล์ที่ใช้ได้ หน้าจึงยังเป็นหน้าแรก ผู้ใช้เห็นว่าไม่มีอะไรเกิดขึ้นเลย (ล่าบั๊ก 08/11/2026 tests/browser_wrongtype_landing.py)
+   * ‼️ ทำสำเนาขึ้นมาบนหน้าแรก ไม่ย้ายของจริง เพราะกล่องรับไฟล์ล้างกล่องเตือนของตัวเองด้วย warn.innerHTML
+   *   ปุ่มในสำเนาส่งต่อการกดไปปุ่มจริง สำเนาตามของจริงทุกครั้งที่กล่องเตือนเกิดหรือหาย */
+  const landWarn = wrap.querySelector(".s2-land-warn");
+  const hasWrong = (n) => n.nodeType === 1 && (n.classList.contains("wrong-type") || !!n.querySelector(".wrong-type"));
+  function syncLandWarn() {
+    const boxes = [...wrap.querySelectorAll(".wrong-type")].filter((b) => !landWarn.contains(b));
+    landWarn.replaceChildren(...boxes.map((b) => {
+      const c = b.cloneNode(true);
+      const real = b.querySelector("button"), copy = c.querySelector("button");
+      if (real && copy) copy.addEventListener("click", () => real.click());
+      return c;
+    }));
+  }
+  new MutationObserver((recs) => {
+    if (recs.some((r) => !landWarn.contains(r.target) && [...r.addedNodes, ...r.removedNodes].some(hasWrong))) syncLandWarn();
+  }).observe(wrap, { childList: true, subtree: true });
 
   /* ── ส่งต่อการกดจากปุ่มยักษ์ไปยังปุ่มจริงในกล่องรับไฟล์ ─────────────────
    * หากล่องแบบอ่านอย่างเดียว ไม่แตะ ไม่ย้าย · เครื่องมือ panel ต่อกล่องหลัง mount

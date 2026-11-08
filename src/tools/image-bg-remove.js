@@ -459,7 +459,7 @@ export function mount(tool) {
                `Done, ${pl(made.length, "image", "images")}` + (failed.length ? `, skipped ${failed.length}` : "")));
       made.forEach((m) => results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, m.name),
-          el("small", {}, `${fmtBytes(m.from)} เป็น ${fmtBytes(m.blob.size)}`)]),
+          el("small", {}, tr(`${fmtBytes(m.from)} เป็น ${fmtBytes(m.blob.size)}`, `${fmtBytes(m.from)} to ${fmtBytes(m.blob.size)}`))]),
         button(tr("ดาวน์โหลด", "Download"), { icon: "download",
           label: tr(`ดาวน์โหลด ${m.name}`, `Download ${m.name}`), onclick: () => download(m.blob, m.name) }),
       ])));

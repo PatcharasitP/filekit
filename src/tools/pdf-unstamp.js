@@ -401,7 +401,7 @@ export function mount(tool) {
       results.innerHTML = "";
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name),
-          el("small", {}, `${fmtBytes(file.size)} เป็น ${fmtBytes(blob.size)}`)]),
+          el("small", {}, tr(`${fmtBytes(file.size)} เป็น ${fmtBytes(blob.size)}`, `${fmtBytes(file.size)} to ${fmtBytes(blob.size)}`))]),
         button(tr("ดาวน์โหลด", "Download"), { icon: "download",
           label: tr(`ดาวน์โหลด ${name}`, `Download ${name}`), onclick: () => download(blob, name) }),
       ]));

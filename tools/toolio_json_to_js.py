@@ -78,7 +78,12 @@ if new:
 #    ② ตัวที่เปลี่ยน "แค่ขนาดไฟล์ที่ใส่เข้าไป" ซึ่งแปลว่าไฟล์ตัวอย่างถูกแก้ทีหลัง
 #       โดยไม่มีใครเก็บค่าใหม่ ค่าเก่าจึงล้าสมัย ไม่ใช่เครื่องมือทำงานเปลี่ยน
 #    นอกจากนี้ = หยุด เพราะแปลว่าผลลัพธ์ของเครื่องมือเปลี่ยนจริงโดยไม่ได้ตั้งใจ
-EXPECTED_CHANGES = {"pdf-pages"}   # ตัวที่ตั้งใจแก้ฟีเจอร์ในรอบนี้
+# รอบ v225 (09/11/2026) ค่าเดิมเก็บไว้ตั้งแต่ 18/09 เพราะ harvest หาปุ่มไม่เจอมาตลอด
+#   excel-merge excel-split pdf-to-excel เล็กลงเพราะตั้งใจบีบอัด xlsx (df0532d)
+#   images-to-pdf pdf-merge pdf-watermark ต่างกัน 1 KB จำนวนหน้าเท่าเดิม มี commit แก้เครื่องมือ PDF หลัง 18/09 หลายตัว
+#   pdf-to-word แกว่งเอง 8.3 กับ 8.4 KB ระหว่าง harvest สองรอบติดกัน (harvest2.log กับ harvest3.log)
+EXPECTED_CHANGES = {"pdf-pages", "excel-merge", "excel-split", "pdf-to-excel",
+                    "images-to-pdf", "pdf-merge", "pdf-watermark", "pdf-to-word"}
 
 
 def only_input_size(old_th, new_th):

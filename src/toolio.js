@@ -45,7 +45,7 @@ export const TOOL_IO_ALL = {
    "inSize": "6.3 KB",
    "inMeta": "",
    "outExt": "xlsx",
-   "outSize": "32 KB",
+   "outSize": "15 KB",
    "outMeta": "9 แถว, 45 คอลัมน์"
   },
   "en": {
@@ -53,7 +53,7 @@ export const TOOL_IO_ALL = {
    "inSize": "6.3 KB",
    "inMeta": "",
    "outExt": "xlsx",
-   "outSize": "32 KB",
+   "outSize": "15 KB",
    "outMeta": "9 rows, 45 columns"
   }
  },
@@ -63,7 +63,7 @@ export const TOOL_IO_ALL = {
    "inSize": "6.3 KB",
    "inMeta": "",
    "outExt": "zip",
-   "outSize": "42 KB",
+   "outSize": "22 KB",
    "outMeta": "2 ไฟล์"
   },
   "en": {
@@ -71,7 +71,7 @@ export const TOOL_IO_ALL = {
    "inSize": "6.3 KB",
    "inMeta": "",
    "outExt": "zip",
-   "outSize": "42 KB",
+   "outSize": "22 KB",
    "outMeta": "2 files"
   }
  },
@@ -91,6 +91,24 @@ export const TOOL_IO_ALL = {
    "outExt": "pdf",
    "outSize": "74 KB",
    "outMeta": "1 page"
+  }
+ },
+ "image-bg-remove": {
+  "th": {
+   "n": 2,
+   "inSize": "23 KB",
+   "inMeta": "",
+   "outExt": "png",
+   "outSize": "",
+   "outMeta": "23 KB เป็น 36 KB"
+  },
+  "en": {
+   "n": 2,
+   "inSize": "23 KB",
+   "inMeta": "",
+   "outExt": "png",
+   "outSize": "",
+   "outMeta": "23 KB to 36 KB"
   }
  },
  "image-convert": {
@@ -117,7 +135,7 @@ export const TOOL_IO_ALL = {
    "inSize": "23 KB",
    "inMeta": "",
    "outExt": "pdf",
-   "outSize": "44 KB",
+   "outSize": "43 KB",
    "outMeta": "2 หน้า"
   },
   "en": {
@@ -125,8 +143,26 @@ export const TOOL_IO_ALL = {
    "inSize": "23 KB",
    "inMeta": "",
    "outExt": "pdf",
-   "outSize": "44 KB",
+   "outSize": "43 KB",
    "outMeta": "2 pages"
+  }
+ },
+ "pdf-compare": {
+  "th": {
+   "n": 2,
+   "inSize": "27 KB",
+   "inMeta": "3 หน้า",
+   "outExt": "txt",
+   "outSize": "4.6 KB",
+   "outMeta": "สรุปผลเป็นไฟล์ข้อความ เอาไปแนบอีเมลได้"
+  },
+  "en": {
+   "n": 2,
+   "inSize": "27 KB",
+   "inMeta": "3 pages",
+   "outExt": "txt",
+   "outSize": "4.1 KB",
+   "outMeta": "A text summary you can attach to an email"
   }
  },
  "pdf-compress": {
@@ -153,7 +189,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
-   "outSize": "47 KB",
+   "outSize": "48 KB",
    "outMeta": "5 หน้า"
   },
   "en": {
@@ -161,8 +197,26 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
-   "outSize": "47 KB",
+   "outSize": "48 KB",
    "outMeta": "5 pages"
+  }
+ },
+ "pdf-nup": {
+  "th": {
+   "n": 1,
+   "inSize": "27 KB",
+   "inMeta": "3 หน้า",
+   "outExt": "pdf",
+   "outSize": "",
+   "outMeta": "2 แผ่น, 29 KB"
+  },
+  "en": {
+   "n": 1,
+   "inSize": "27 KB",
+   "inMeta": "3 pages",
+   "outExt": "pdf",
+   "outSize": "",
+   "outMeta": "2 sheets, 29 KB"
   }
  },
  "pdf-page-numbers": {
@@ -189,7 +243,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
-   "outSize": "47 KB",
+   "outSize": "48 KB",
    "outMeta": "5 หน้า"
   },
   "en": {
@@ -197,8 +251,26 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
-   "outSize": "47 KB",
+   "outSize": "48 KB",
    "outMeta": "5 pages"
+  }
+ },
+ "pdf-resize": {
+  "th": {
+   "n": 1,
+   "inSize": "27 KB",
+   "inMeta": "3 หน้า",
+   "outExt": "pdf",
+   "outSize": "",
+   "outMeta": "595 x 842 พอยต์, 29 KB"
+  },
+  "en": {
+   "n": 1,
+   "inSize": "27 KB",
+   "inMeta": "3 pages",
+   "outExt": "pdf",
+   "outSize": "",
+   "outMeta": "595 x 842 pt, 29 KB"
   }
  },
  "pdf-split": {
@@ -225,7 +297,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "xlsx",
-   "outSize": "21 KB",
+   "outSize": "12 KB",
    "outMeta": "3 ชีท"
   },
   "en": {
@@ -233,7 +305,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "xlsx",
-   "outSize": "21 KB",
+   "outSize": "12 KB",
    "outMeta": "3 sheets"
   }
  },
@@ -273,13 +345,31 @@ export const TOOL_IO_ALL = {
    "outMeta": "3 pages, 1071x4561 px, 183 KB"
   }
  },
+ "pdf-to-powerpoint": {
+  "th": {
+   "n": 1,
+   "inSize": "27 KB",
+   "inMeta": "3 หน้า",
+   "outExt": "pptx",
+   "outSize": "",
+   "outMeta": "3 สไลด์, 305 KB"
+  },
+  "en": {
+   "n": 1,
+   "inSize": "27 KB",
+   "inMeta": "3 pages",
+   "outExt": "pptx",
+   "outSize": "",
+   "outMeta": "3 slides, 305 KB"
+  }
+ },
  "pdf-to-word": {
   "th": {
    "n": 1,
    "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "docx",
-   "outSize": "8.4 KB",
+   "outSize": "8.3 KB",
    "outMeta": "3 หน้า"
   },
   "en": {
@@ -291,13 +381,31 @@ export const TOOL_IO_ALL = {
    "outMeta": "3 pages"
   }
  },
+ "pdf-unlock": {
+  "th": {
+   "n": 2,
+   "inSize": "27 KB",
+   "inMeta": "3 หน้า",
+   "outExt": "pdf",
+   "outSize": "",
+   "outMeta": "ไฟล์นี้ล็อกแค่สิทธิ์ ตอนนี้คัดลอกและสั่งพิมพ์ได้แล้ว"
+  },
+  "en": {
+   "n": 2,
+   "inSize": "27 KB",
+   "inMeta": "3 pages",
+   "outExt": "pdf",
+   "outSize": "",
+   "outMeta": "This file was restricted only, copying and printing now work"
+  }
+ },
  "pdf-watermark": {
   "th": {
    "n": 1,
    "inSize": "27 KB",
    "inMeta": "3 หน้า",
    "outExt": "pdf",
-   "outSize": "46 KB",
+   "outSize": "47 KB",
    "outMeta": "3 หน้า"
   },
   "en": {
@@ -305,7 +413,7 @@ export const TOOL_IO_ALL = {
    "inSize": "27 KB",
    "inMeta": "3 pages",
    "outExt": "pdf",
-   "outSize": "47 KB",
+   "outSize": "48 KB",
    "outMeta": "3 pages"
   }
  },
@@ -361,6 +469,24 @@ export const TOOL_IO_ALL = {
    "outExt": "docx",
    "outSize": "38 KB",
    "outMeta": "ตัวอย่าง-ใบเสนอราคา.docx (19 paragraphs), ตัวอย่าง-หนังสือแจ้งผลประเมิน.docx (25 paragraphs)"
+  }
+ },
+ "word-mailmerge": {
+  "th": {
+   "n": 2,
+   "inSize": "37 KB",
+   "inMeta": "",
+   "outExt": "docx",
+   "outSize": "37 KB",
+   "outMeta": ""
+  },
+  "en": {
+   "n": 2,
+   "inSize": "37 KB",
+   "inMeta": "",
+   "outExt": "docx",
+   "outSize": "37 KB",
+   "outMeta": ""
   }
  },
  "word-to-pdf": {

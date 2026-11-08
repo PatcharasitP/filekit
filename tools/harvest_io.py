@@ -21,6 +21,9 @@ ROOT = Path(__file__).resolve().parent.parent
 BASE = os.environ.get("FK_BASE", "http://localhost:8971")
 reg = (ROOT / "src/registry.js").read_text(encoding="utf-8")
 IDS = [m.group(1) for m in re.finditer(r'\{\s*id:"([\w-]+)",\s*group:', reg)]
+# HARVEST_ONLY=pdf-merge,pdf-split ไล่เฉพาะบางตัวไว้ดูปัญหา (ด่านกันทับข้างล่างจะไม่ยอมเขียนไฟล์ ตั้งใจแล้ว)
+if os.environ.get("HARVEST_ONLY"):
+    IDS = [t for t in IDS if t in os.environ["HARVEST_ONLY"].split(",")]
 print(f"เครื่องมือในทะเบียน {len(IDS)} ตัว")
 
 READ = """() => {
@@ -68,9 +71,18 @@ def harvest(pg, lang):
             name = pg.evaluate("""() => {
                 const skip = /คัดลอก|Copy|ดาวน์โหลด|Download|โหลดไว้|ล้าง|Clear|รีเซ็ต|Reset/i;
                 const s = document.querySelector('.actions, .ws-footer');
-                if (!s) return null;
+                /* เครื่องมือแบบแผง (pdf-compress pdf-split ...) ไม่มีกล่อง .actions แล้ว
+                   เหลือปุ่มเงา .s2-cta ในแผงขวา ซึ่งเป็นปุ่มที่คนใช้กดจริง กดตัวนี้แทน (09/11/2026 หาย 5 ตัว) */
+                if (!s) {
+                  const g = [...document.querySelectorAll('.s2-cta-row button.s2-cta')]
+                    .find(e => e.offsetParent && !e.disabled && !skip.test(e.textContent));
+                  if (!g) return null; g.click(); return g.textContent.trim();
+                }
                 const b = [...s.querySelectorAll('button.btn')]
-                  .find(e => e.offsetParent && !e.disabled && !e.classList.contains('ghost')
+                  /* ‼️ ตั้งแต่ 21/09/2026 shell2 ซ่อนปุ่มจริงด้วยคลาส s2-lifted แล้วโชว์ปุ่มเงาแทน
+                     ปุ่มจริงไม่มี offsetParent กรองแบบเดิมจึงไม่เจอสักตัว (09/11/2026 เก็บได้ 0 จาก 71)
+                     ปุ่มจริงยังกด .click() ได้ตามปกติ */
+                  .find(e => (e.offsetParent || (e.classList.contains('s2-lifted') && !e.hidden)) && !e.disabled && !e.classList.contains('ghost')
                              && !skip.test(e.textContent));
                 if (!b) return null; b.click(); return b.textContent.trim();
             }""")
@@ -118,5 +130,18 @@ with sync_playwright() as p:
         ctx.close()
     br.close()
 
+# ‼️ ด่านกันทับ (09/11/2026) รอบที่ปุ่มหาไม่เจอ เก็บได้ 0 แล้วเขียนทับไฟล์เดิม 20 ตัวจนว่าง
+#    เก็บได้น้อยกว่าครึ่งของไฟล์เดิม = สคริปต์พังมากกว่าเครื่องมือหาย ไม่เขียนทับ ให้คนดูก่อน
+#    ตั้งใจลดจริงใช้ HARVEST_FORCE=1
+old_p = ROOT / "tools/toolio.json"
+try:
+    old = json.loads(old_p.read_text(encoding="utf-8"))
+except Exception:
+    old = {}
+for lg in ("th", "en"):
+    had, got = len(old.get(lg, {})), len(both.get(lg, {}))
+    if had and got * 2 < had and os.environ.get("HARVEST_FORCE") != "1":
+        print(f"\n‼️ ไม่เขียนทับ ภาษา {lg} เก็บได้ {got} จากเดิม {had} น่าจะเป็นสคริปต์หาปุ่มไม่เจอ (ตั้งใจลด ใช้ HARVEST_FORCE=1)")
+        sys.exit(2)
 (ROOT / "tools/toolio.json").write_text(json.dumps(both, ensure_ascii=False, indent=1), encoding="utf-8")
 print(f"\nเก็บได้ ไทย {len(both['th'])} อังกฤษ {len(both['en'])} จาก {len(IDS)} เครื่องมือ → tools/toolio.json")

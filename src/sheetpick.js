@@ -199,10 +199,11 @@ export function columnTool(tool, cfg) {
 
   const chips = el("div", { class: "stats" });
   const preview = el("div", { class: "xt-wrap" });
+  const modeRow = el("div", { class: "row" }, [modeField]);
   const panel = el("div", { class: "panel", hidden: true }, [
     el("div", { class: "row" }, [sheetField, colField]),
     ...(opts.node ? [opts.node] : []),
-    el("div", { class: "row" }, [modeField]),
+    modeRow,
     chips, preview,
   ]);
 
@@ -245,7 +246,11 @@ export function columnTool(tool, cfg) {
 
   function pickSheet(i) {
     table = sheetToTable(wb.Sheets[sheetNames[i]]);
-    if (!table.header.length) { st.err(tr("ชีทนี้ว่างเปล่า", "This sheet is empty")); panel.hidden = true; return; }
+    /* ‼️ ชีทว่างต้องเหลือช่องเลือกชีทไว้ เดิมซ่อนทั้งแผง กลับชีทเดิมไม่ได้ (รีวิว 08/11/2026) */
+    const empty = !table.header.length;
+    panel.hidden = false;
+    for (const n of [colField, opts.node, modeRow, chips, preview, actions]) if (n) n.hidden = empty;
+    if (empty) { table = null; st.err(tr("ชีทนี้ว่างเปล่า เลือกชีทอื่นด้านบน", "This sheet is empty, pick another sheet above")); return; }
     colSel.innerHTML = "";
     table.header.forEach((h, c) => colSel.appendChild(el("option", { value: String(c) }, h)));
     // เดาคอลัมน์ที่น่าจะใช่ให้ล่วงหน้า
@@ -325,9 +330,10 @@ export function columnTool(tool, cfg) {
     const srcName = table.header[c];
     const outCol = cfg.outName(o, srcName);
     const multi = Array.isArray(outCol);          // ผลลัพธ์หลายคอลัมน์
-    const names = multi ? outCol : [outCol];
-    const header = table.header.slice();
     const overwrite = !multi && modeSel.value === "replace";   // หลายคอลัมน์เขียนทับไม่ได้
+    // หัวใหม่ห้ามซ้ำหัวเดิม (เขียนทับไม่นับหัวของคอลัมน์ที่ถูกทับ) ล่าบั๊ก F4 08/11/2026
+    const names = freshNames(multi ? outCol : [outCol], new Set(table.header.filter((_, i) => !(overwrite && i === c)).map(hkey)));
+    const header = table.header.slice();
     const target = c + 1;
     if (overwrite) header[c] = names[0];
     else header.splice(target, 0, ...names);
@@ -373,13 +379,27 @@ export function columnTool(tool, cfg) {
 
 /** ผลของหลายงานบนทั้งตาราง jobs: [{ cfg, o, c }] คืน { header, rows, stats } ใส่คอลัมน์ใหม่ต่อท้ายคอลัมน์ต้นทางของแต่ละงาน
  *  งานที่ใช้คอลัมน์ต้นทางเดียวกัน เรียงคอลัมน์ใหม่ตามลำดับงาน ไม่เขียนทับคอลัมน์เดิม */
+/* หัวคอลัมน์ใหม่ห้ามซ้ำหัวที่มีอยู่ ไฟล์ที่มีหัว ชื่อ นามสกุล อยู่แล้ว แยกชื่อได้หัวซ้ำสองคู่
+   Power Query PivotTable VLOOKUP หยิบผิดคอลัมน์ (ล่าบั๊ก F4 08/11/2026 tests/apply_jobs.test.mjs)
+   หัวที่ชนเติม (ใหม่) (ใหม่ 2) ตามลำดับ หัวที่ไม่ชนคงชื่อเดิม */
+const hkey = (s) => String(s ?? "").trim().toLowerCase();
+export function freshNames(names, taken) {
+  return names.map((n) => {
+    let out = n;
+    for (let i = 1; taken.has(hkey(out)); i++) out = `${n} (${tr("ใหม่", "new")}${i > 1 ? " " + i : ""})`;
+    taken.add(hkey(out));
+    return out;
+  });
+}
+
 export function applyJobs(table, jobs) {
   const header = table.header.slice();
   const rows = table.rows.map((r) => r.slice());
   const stats = jobs.map(() => ({ ok: 0, skip: 0, bad: 0, warn: 0 }));
+  const taken = new Set(table.header.map(hkey));
   const done = jobs.map((j, k) => {
     const outCol = j.cfg.outName(j.o, table.header[j.c]);
-    const names = Array.isArray(outCol) ? outCol : [outCol];
+    const names = freshNames(Array.isArray(outCol) ? outCol : [outCol], taken);
     const cells = table.rows.map((r) => {
       const res = j.cfg.convert(r[j.c], j.o);
       const s = stats[k];
@@ -459,17 +479,41 @@ export function columnSuite(tool, items, { suffix = tr("-จัดข้อม�
 
   function pickSheet(i) {
     table = sheetToTable(wb.Sheets[sheetNames[i]]);
-    if (!table.header.length) { st.err(tr("ชีทนี้ว่างเปล่า", "This sheet is empty")); panel.hidden = true; return; }
+    /* ‼️ ชีทว่างต้องเหลือช่องเลือกชีทไว้ เดิมซ่อนทั้งแผงรวมช่องเลือกชีท กลับชีทเดิมไม่ได้ (รีวิว 08/11/2026) */
+    const empty = !table.header.length;
+    panel.hidden = false;
+    jobsEl.hidden = chips.hidden = preview.hidden = actions.hidden = empty;
+    if (empty) { table = null; st.err(tr("ชีทนี้ว่างเปล่า เลือกชีทอื่นด้านบน", "This sheet is empty, pick another sheet above")); return; }
     for (const u of rowsUi) {
       u.colSel.innerHTML = "";
       table.header.forEach((h, c) => u.colSel.appendChild(el("option", { value: String(c) }, h)));
-      const g = u.it.cfg.guessColumn ? table.header.findIndex((h) => u.it.cfg.guessColumn(h)) : -1;
-      u.colSel.value = String(g >= 0 ? g : 0);
-      u.on.checked = g >= 0; // ติ๊กให้เฉพาะงานที่เจอคอลัมน์ที่น่าจะใช่ งานอื่นให้คนเลือกเอง
+      const g = guessJob(u.it.cfg, u.opts.read());
+      u.colSel.value = String(g.c);
+      u.on.checked = g.on; // ติ๊กให้เฉพาะงานที่ข้อมูลในคอลัมน์แปลงได้จริง งานอื่นให้คนเลือกเอง
       u.node.classList.toggle("off", !u.on.checked);
     }
-    panel.hidden = false; actions.hidden = false;
     refresh();
+  }
+
+  /* เดาจากชื่อหัวอย่างเดียวหลวมเกิน หัว Paid ติด id หัว ภาษีมูลค่าเพิ่ม ติด ภาษี หัว ชื่อสินค้า ติด ชื่อ
+     ไฟล์ผลลัพธ์ได้คอลัมน์ ผลตรวจ ผิดทุกแถวที่ผู้ใช้ไม่ได้ขอ (รีวิว 08/11/2026 tests/browser_thai_suite_guard.py)
+     จึงลองแปลงข้อมูลจริง 200 แถวแรกของทุกหัวที่เข้าเค้า เลือกหัวที่แปลงได้มากสุด
+     และติ๊กให้เมื่อแปลงได้มากกว่าแปลงไม่ได้ของช่องที่มีค่า */
+  function guessJob(cfg, o) {
+    if (!cfg.guessColumn) return { c: 0, on: false };
+    let best = null;
+    table.header.forEach((h, c) => {
+      if (!cfg.guessColumn(h)) return;
+      let ok = 0, bad = 0;
+      for (const r of table.rows.slice(0, 200)) {
+        const res = cfg.convert(r[c], o);
+        if (res == null) continue;
+        if (res.ok) ok++; else bad++;
+      }
+      if (!best || ok > best.ok) best = { c, ok, bad };
+    });
+    if (!best) return { c: 0, on: false };
+    return { c: best.c, on: best.ok > best.bad };
   }
 
   const picked = () => rowsUi.filter((u) => u.on.checked);
@@ -485,8 +529,10 @@ export function columnSuite(tool, items, { suffix = tr("-จัดข้อม�
     use.forEach((u, k) => {
       const s = stats[k], L = u.it.cfg.labels || {};
       const bad = s.bad ? "  " + (L.bad || tr("อ่านไม่ออก", "Unreadable")) + " " + s.bad.toLocaleString() : "";
-      u.stat.textContent = (L.ok || tr("แปลงได้", "Converted")) + " " + s.ok.toLocaleString() + bad;
-      u.stat.className = "stat suite-stat " + (s.bad ? "warn" : "ok");
+      // แถวที่ระบบเดา (ที่อยู่ไม่ชัวร์ ปี 2 หลัก) ต้องบอกเหมือนหน้าเดี่ยว เดิมนับเป็นสำเร็จเงียบ (รีวิว 08/11/2026)
+      const warn = s.warn ? "  " + (L.warn || tr("ควรตรวจซ้ำ", "Double-check")) + " " + s.warn.toLocaleString() : "";
+      u.stat.textContent = (L.ok || tr("แปลงได้", "Converted")) + " " + s.ok.toLocaleString() + warn + bad;
+      u.stat.className = "stat suite-stat " + (s.bad || s.warn ? "warn" : "ok");
     });
     chips.innerHTML = "";
     chips.appendChild(el("span", { class: "stat ok", id: "suite-newcols" },

@@ -16,7 +16,7 @@ const STYLE = `
 .suite-job.off{opacity:.62}
 .suite-job.off .row,.suite-job.off .suite-opts{display:none}
 .suite-head{display:flex;align-items:center;gap:8px;cursor:pointer;min-height:36px}
-.suite-head input{width:18px;height:18px}
+.suite-head input{width:20px;height:20px;flex:none;margin:0}  /* flex:none กันหัวข้อสองบรรทัดบีบช่องติ๊กเหลือ 14px บนจอ 360 (ล่าบั๊ก F7 08/11/2026) */
 .suite-job .row{margin-top:8px;align-items:flex-end}
 .suite-opts{margin-top:6px}
 `;

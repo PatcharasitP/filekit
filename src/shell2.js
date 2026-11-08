@@ -790,15 +790,20 @@ export function toolShell2(tool, cfg = {}) {
         type: "button", class: "btn " + (first ? "s2-cta" : "s2-sub"),
         onclick: () => real.click(),
       }, real.textContent);
+      /* ‼️ ต้องดูกล่องปุ่มต้นทางด้วย เครื่องมือหลายตัวซ่อนทั้งกล่อง .actions แทนการซ่อนปุ่ม
+         เดิมเงาดูแค่ real.hidden ชีทว่างของตระกูลคอลัมน์จึงยังมีปุ่มดาวน์โหลดเด่นอยู่ (รีวิว 08/11/2026 tests/browser_thai_suite_guard.py)
+         ดูแค่กล่องที่ใกล้สุด ห้ามดูบรรพบุรุษทุกชั้น เพราะผืนงานบางสถานะถูกซ่อนทั้งก้อนแต่ปุ่มหลักต้องอยู่ */
+      const box = real.closest('.actions, [class$="-actions"]');
       const sync = () => {
         ghost.textContent = real.textContent;
         ghost.disabled = real.disabled;
-        ghost.hidden = real.hidden;
+        ghost.hidden = real.hidden || !!(box && box.hidden);
         if ((ghost.dataset.why || "") !== (real.dataset.why || "")) ghost.dataset.why = real.dataset.why || "";
         const al = real.getAttribute("aria-label");
         if (al) ghost.setAttribute("aria-label", al);
       };
       new MutationObserver(sync).observe(real, { attributes: true, childList: true, subtree: true, characterData: true });
+      if (box) new MutationObserver(sync).observe(box, { attributes: true, attributeFilter: ["hidden"] });
       sync();
       /* ‼️ ซ่อนปุ่มจริงทิ้งไว้หลังบ้าน หลังมีปุ่มเงาสะท้อนมันแล้ว (21/09/2026)
        * ก่อนหน้านี้ปุ่มเดียวกันมีอยู่สองใบบนหน้าจอพร้อมกัน วัดได้จริงที่ pdf-merge

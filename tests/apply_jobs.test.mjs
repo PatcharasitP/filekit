@@ -25,5 +25,13 @@ ck("ช่องว่างข้ามได้ ไม่นับเป็น
 const same = { outName: () => "a", convert: (v) => ({ ok: true, value: v }) };
 ck("ชื่อหัวใหม่ซ้ำของเดิม ยังบอกตำแหน่งคอลัมน์ใหม่ถูก", applyJobs(table, [{ cfg: same, o: {}, c: 2 }]).added, [3]);
 ck("ไม่แตะตารางต้นฉบับ", table.header, ["a", "b", "c"]);
+// ‼️ 08/11/2026 ล่าบั๊ก F4: ไฟล์มีหัว ชื่อ กับ นามสกุล อยู่แล้ว แยกชื่อได้หัว ชื่อ นามสกุล ซ้ำสองคู่ Power Query PivotTable VLOOKUP สับสน
+const name3 = { outName: () => ["คำนำหน้า", "ชื่อ", "นามสกุล"], convert: (v) => ({ ok: true, value: ["นาย", v, "ใจดี"] }) };
+const tn = { header: ["รหัส", "ชื่อ", "นามสกุล"], rows: [["1", "สมชาย", "ใจดี"]] };
+const r3 = applyJobs(tn, [{ cfg: name3, o: {}, c: 1 }]);
+ck("หัวผลลัพธ์ไม่ซ้ำหัวเดิม", new Set(r3.header).size, r3.header.length);
+ck("หัวที่ชนได้คำต่อท้าย (ใหม่) ส่วนหัวที่ไม่ชนคงเดิม", r3.header, ["รหัส", "ชื่อ", "คำนำหน้า", "ชื่อ (ใหม่)", "นามสกุล (ใหม่)", "นามสกุล"]);
+const r4 = applyJobs(tn, [{ cfg: name3, o: {}, c: 1 }, { cfg: name3, o: {}, c: 2 }]);
+ck("สองงานได้หัวชุดเดียวกัน ก็ยังไม่ซ้ำกันเอง", new Set(r4.header).size, r4.header.length);
 
 console.log(`\nผ่าน ${pass} ตก ${F.length}`); if (F.length) { F.forEach((f) => console.log("  " + f)); process.exit(1); }

@@ -20,6 +20,7 @@ import { uiIcon } from "../icons.js";
 import { signaturePad, savedSignatures, saveSignature, removeSignature,
          imageToSignature } from "../signpad.js";
 import { tr, pl } from "../i18n.js";
+import { decodeImage } from "../imgdecode.js";
 
 const VIEW_SCALE = 1.6;    // ความละเอียดที่เรนเดอร์หน้ามาให้ดู ยิ่งสูงยิ่งวางตำแหน่งแม่น
 /* ‼️ ต้องซูมได้ เพราะข้อความในสัญญาจริงตัวเล็กมาก (พี่ปอนด์ขอเอง 18/09/2026)
@@ -219,7 +220,8 @@ export function mount(tool) {
 
   /** แปลงไฟล์รูปอะไรก็ได้เป็น PNG (pdf-lib ฝังได้แน่นอนทั้ง PNG และ JPEG แต่ PNG เก็บความโปร่งไว้) */
   async function fileToPng(file) {
-    const bmp = await createImageBitmap(file);
+    // ‼️ ผ่าน decodeImage ไม่ใช่ createImageBitmap ตรง ๆ ไม่งั้นรูป HEIC จากไอโฟนอ่านไม่ได้บน Chrome และ Android
+    const bmp = await decodeImage(file);
     const c = document.createElement("canvas");
     c.width = bmp.width; c.height = bmp.height;
     c.getContext("2d").drawImage(bmp, 0, 0);

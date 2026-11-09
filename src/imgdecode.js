@@ -122,7 +122,13 @@ export async function decodeImage(file, opts) {
   try {
     return await createImageBitmap(file, opts);
   } catch (e) {
-    if (!(await isHeif(file))) throw e;
+    // ‼️ 09/11/2026 เดิมโยน error ของเบราว์เซอร์ตรง ๆ ผู้ใช้เห็น "อ่านรูปไม่ได้: The source image could not be decoded."
+    //    (WebKit "Cannot decode the data in the argument to createImageBitmap") แปลเป็นไทยที่นี่ที่เดียว
+    //    ทุกเครื่องมือที่ต่อท้าย e.message ได้ข้อความนี้ ของเดิมเก็บไว้ใน cause (tests/browser_image_error_thai.py)
+    if (!(await isHeif(file))) {
+      throw new Error(tr("ไฟล์รูปเสียหายหรือไม่ใช่รูปที่เปิดได้ ลองส่งออกรูปจากต้นทางใหม่ หรือบันทึกเป็น JPG หรือ PNG แล้วลองอีกครั้ง",
+        "The image file is damaged or isn't a picture this browser can open, export it again or save it as JPG or PNG and try again"), { cause: e });
+    }
     return decodeHeif(file);
   }
 }

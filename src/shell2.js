@@ -552,6 +552,21 @@ export function toolShell2(tool, cfg = {}) {
     sheetOpen = !!on;
     side.classList.toggle("open", sheetOpen);
     sheetBtn.setAttribute("aria-expanded", String(sheetOpen));
+    if (sheetOpen) requestAnimationFrame(showFirstOption);
+  }
+  /* เปิดลิ้นชักแล้วเห็นตัวเลือกแรกเลย (เทสเตอร์มือถือ U4 09/11/2026: iPhone SE 7 จาก 8 เครื่องมือ
+     ช่องแรกอยู่ใต้แถบปุ่มล่าง เปิดมาเจอแต่รายการไฟล์ที่เลือกไว้แล้ว ปุ่มหลักก็จางจนกว่าจะกรอก)
+     เลื่อนเฉพาะเมื่อช่องแรกมองไม่เห็นครบ ส่วนไฟล์ยังอยู่ข้างบน เลื่อนขึ้นไปดูได้ ไม่ย้ายลำดับใน DOM (ลำดับ Tab คงเดิม)
+     ‼️ ไม่ focus ให้ ช่องพิมพ์ได้โฟกัสแล้วแป้นพิมพ์มือถือเด้งบังลิ้นชักทันที */
+  function showFirstOption() {
+    if (!sheetOpen || !sideBody.offsetParent) return;
+    const ctrl = [...sideBody.querySelectorAll("input:not([type=file]):not([type=hidden]), select, textarea")]
+      .find((c) => !c.closest(".dz-wrap, .dz, .file-row") && c.getClientRects().length);
+    if (!ctrl) return;
+    const box = ctrl.closest("label, .field, .opt, .s2-field") || ctrl;
+    const b = sideBody.getBoundingClientRect(), r = box.getBoundingClientRect(), c = ctrl.getBoundingClientRect();
+    if (c.top >= b.top && c.bottom <= b.bottom) return;
+    sideBody.scrollTop += r.top - b.top - 12;
   }
   sheetBtn.addEventListener("click", () => setSheet(!sheetOpen));
 

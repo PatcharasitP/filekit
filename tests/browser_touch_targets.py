@@ -81,6 +81,24 @@ def main():
             ck(f"{name} แตะฉากหลังเหนือลิ้นชักแล้วลิ้นชักปิด", closed)
             focus_ok = pg.evaluate("() => document.activeElement && document.activeElement !== document.body")
             ck(f"{name} ปิดลิ้นชักแล้วโฟกัสไม่หลุดไป body", focus_ok, pg.evaluate("() => document.activeElement?.className || document.activeElement?.tagName"))
+            # U4 เปิดลิ้นชักแล้วเห็นตัวเลือกแรกครบ ไม่ซ่อนใต้แถบปุ่มล่าง (เทสเตอร์ iPhone SE 7 จาก 8 เครื่องมือถูกบัง)
+            for tool in ("pdf-protect", "pdf-compress", "pdf-page-numbers", "pdf-split"):
+                fkui.open_tool(pg, tool, base=BASE)
+                fkui.feed(pg, [PDF])
+                btn = pg.locator("button.s2-sheetbtn:visible")
+                if not btn.count():
+                    ck(f"{name} {tool} มีปุ่มตัวเลือก", False)
+                    continue
+                btn.first.click()
+                pg.wait_for_timeout(600)
+                v = pg.evaluate("""() => { const bd = document.querySelector('.s2-side.open .s2-side-bd'); if (!bd) return null;
+                  const c = [...bd.querySelectorAll('input:not([type=file]):not([type=hidden]), select, textarea')].find(x => !x.closest('.dz-wrap, .dz, .file-row') && x.getClientRects().length);
+                  if (!c) return 'ไม่มีช่อง'; const r = c.getBoundingClientRect(), b = bd.getBoundingClientRect(), f = document.querySelector('.s2-side.open .s2-side-ft').getBoundingClientRect();
+                  return [Math.round(r.top), Math.round(r.bottom), Math.round(b.top), Math.round(Math.min(b.bottom, f.top))] }""")
+                seen = isinstance(v, list) and v[0] >= v[2] - 1 and v[1] <= v[3] + 1
+                ck(f"{name} {tool} เปิดลิ้นชักแล้วเห็นช่องตัวเลือกแรกครบ", seen, f"ช่อง บน ล่าง, พื้นที่ บน ล่าง = {v}")
+                act = pg.evaluate("() => document.activeElement?.tagName")
+                ck(f"{name} {tool} เปิดลิ้นชักแล้วไม่โฟกัสช่องพิมพ์เอง (แป้นพิมพ์ไม่เด้ง)", act not in ("INPUT", "TEXTAREA"), act)
             # U6 ช่องค้นหาหน้าแรก
             pg.goto(BASE + "/")
             pg.wait_for_selector("#q", timeout=20000)

@@ -3,6 +3,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download, do
 import { smartDecode } from "../thai.js";
 import { splitSheetsByVisibility } from "../xlsxutil.js";
 import { tr, pl } from "../i18n.js";
+import { assertSheetBytes } from "../filetype.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -36,7 +37,9 @@ export function mount(tool) {
       if (dirSel.value === "to-csv") {
         st.info(tr("กำลังแยกชีท…", "Splitting sheets…"));
         const f = files[0];
-        const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+        const ab = await f.arrayBuffer();
+        assertSheetBytes(ab, f); // ด่านหัวไฟล์ PDF หรือรูปที่เปลี่ยนนามสกุลเป็นตาราง (filetype.js assertSheetBytes 09/11/2026)
+        const wb = XLSX.read(ab, { type: "array" });
         const base = stripExt(f.name);
         // ‼️ ชีทที่ผู้ใช้ซ่อนไว้ = ของที่ตั้งใจไม่ให้คนอื่นเห็น ห้ามส่งออกให้เองโดยไม่ถาม
         const { visible, hidden } = splitSheetsByVisibility(wb);
@@ -82,7 +85,9 @@ export function mount(tool) {
         for (let i = 0; i < files.length; i++) {
           // ห้ามใช้ .text() ตรง ๆ — มันบังคับอ่านเป็น UTF-8 ทำให้ CSV ที่ส่งออกจาก
           // ระบบเก่า (TIS-620/Windows-874) กลายเป็นตัวประหลาดทั้งไฟล์
-          const dec = smartDecode(new Uint8Array(await files[i].arrayBuffer()));
+          const raw = new Uint8Array(await files[i].arrayBuffer());
+          assertSheetBytes(raw, files[i]); // ด่านหัวไฟล์ PDF หรือรูปที่เปลี่ยนนามสกุลเป็นตาราง (filetype.js assertSheetBytes 09/11/2026)
+          const dec = smartDecode(raw);
           if (dec.enc !== "utf-8" || dec.undo) fixedEnc++;
           const sheet = XLSX.read(dec.text, { type: "string" }).Sheets.Sheet1;
           // ชื่อชีทของ Excel ยาวได้ไม่เกิน 31 ตัว และห้ามอักขระพิเศษบางตัว

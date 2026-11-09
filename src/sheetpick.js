@@ -8,6 +8,7 @@ import { toolShell, statusBar, button, field, select, dropzone,
          download, stripExt, yieldToBrowser } from "./ui.js";
 import { smartDecode, ENC_LABEL } from "./thai.js";
 import { tr, pl } from "./i18n.js";
+import { assertSheetBytes } from "./filetype.js";
 
 const TEXTY = ["csv", "txt", "tsv"];
 
@@ -46,6 +47,7 @@ export function fixExcelDateSkew(wb) {
 /** อ่านไฟล์เป็นสมุดงาน — ไฟล์ข้อความจะเดาการเข้ารหัสให้เองด้วย (ไทยเพี้ยนก็อ่านออก) */
 export async function readWorkbook(file) {
   const buf = new Uint8Array(await file.arrayBuffer());
+  assertSheetBytes(buf, file); // ด่านหัวไฟล์ PDF หรือรูปที่เปลี่ยนนามสกุลเป็นตาราง (filetype.js assertSheetBytes 09/11/2026)
   const ext = (file.name.split(".").pop() || "").toLowerCase();
   if (!TEXTY.includes(ext))
     return { wb: fixExcelDateSkew(XLSX.read(buf, { type: "array", cellDates: true })), encNote: null };

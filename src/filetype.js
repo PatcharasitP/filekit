@@ -87,6 +87,34 @@ export function friendlyZipOpenError(e, file, buf) {
     `${name}Could not open. The file may be damaged or its content doesn't match the extension, open the original and save again`));
 }
 
+/* ‼️ 09/11/2026 เทสเตอร์มือถือ: PDF ที่เปลี่ยนนามสกุลเป็น .xlsx เข้า excel-csv excel-merge excel-to-pdf แล้วขึ้นสำเร็จ
+   (SheetJS อ่านไบต์อะไรก็ได้เป็นข้อความ CSV บรรทัดแรกได้ %PDF-1.4,,,,,) ข้อความธรรมดาเปลี่ยนชื่อเป็น .xlsx ก็ผ่าน
+   ด่านนี้ดูหัวไฟล์ก่อนส่งให้ SheetJS: .xlsx .xlsm .xlsb ต้องเป็น ZIP (PK) หรือ Compound File (ไฟล์ล็อกรหัส)
+   ทุกนามสกุลตาราง (รวม .xls .csv .txt ที่เป็นข้อความหรือ HTML ได้) ห้ามเป็น PDF รูปภาพ หรือ ZIP ที่ไม่ใช่ Excel (tests/browser_fake_ext_thai.py) */
+const ZIP_SIG = [0x50, 0x4b, 0x03, 0x04];
+const FOREIGN = [ // [หัวไฟล์, ป้ายไทย, ป้ายอังกฤษ] แปลตอนโยน ไม่เรียก tr() ตอนโหลดไฟล์ (กติกาเดียวกับ LABEL_EN)
+  [PDF_SIG, "PDF", "a PDF"], [[0x89, 0x50, 0x4e, 0x47], "รูป PNG", "a PNG image"], [[0xff, 0xd8, 0xff], "รูป JPG", "a JPG image"],
+  [[0x47, 0x49, 0x46, 0x38], "รูป GIF", "a GIF image"], [[0x52, 0x49, 0x46, 0x46], "ไฟล์สื่อ (RIFF)", "a media file (RIFF)"],
+];
+export function assertSheetBytes(buf, file) {
+  const ab = buf instanceof ArrayBuffer ? buf : buf?.buffer?.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  const name = file?.name ? `${file.name}: ` : "";
+  const ext = ((file?.name || "").split(".").pop() || "").toLowerCase();
+  for (const [sig, th, en] of FOREIGN) {
+    if (!sigMatch(ab, sig)) continue;
+    const label = tr(th, en);
+    throw new Error(tr(`${name}ไฟล์นี้ข้างในเป็น ${label} ที่เปลี่ยนนามสกุล ไม่ใช่ไฟล์ตารางจริง, เลือกไฟล์ Excel หรือ CSV ต้นฉบับ`,
+        `${name}This is actually ${label} with a renamed extension, not a spreadsheet. Choose the original Excel or CSV file`));
+  }
+  const zipLike = sigMatch(ab, ZIP_SIG), ole = sigMatch(ab, OLE_SIG);
+  if (["xlsx", "xlsm", "xlsb"].includes(ext) && !zipLike && !ole)
+    throw new Error(tr(`${name}ไฟล์นี้ไม่ใช่ไฟล์ Excel จริง (นามสกุล .${ext} แต่ข้างในไม่ใช่) อาจเสียหรือถูกเปลี่ยนนามสกุล, เปิดต้นฉบับแล้วบันทึกเป็น Excel ใหม่`,
+      `${name}This isn't a real Excel file (.${ext} name, different content). It may be damaged or renamed, open the original and save as Excel again`));
+  if (zipLike && ["csv", "txt", "tsv"].includes(ext))
+    throw new Error(tr(`${name}ไฟล์นี้ข้างในเป็นไฟล์บีบอัด (ZIP หรือ Excel) ที่เปลี่ยนนามสกุล ไม่ใช่ข้อความ CSV, เปลี่ยนนามสกุลกลับหรือเลือกไฟล์ต้นฉบับ`,
+      `${name}This is actually a ZIP or Excel file with a renamed extension, not CSV text. Rename it back or choose the original file`));
+}
+
 export function detectType(file) {
   const name = (file.name || "").toLowerCase();
   for (const [kind, t] of Object.entries(TYPES)) {

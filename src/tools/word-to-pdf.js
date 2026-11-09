@@ -1,6 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, fmtBytes, yieldToBrowser, segmented, announceResults } from "../ui.js";
 import { loadLibs } from "../loader.js";
+import { friendlyZipOpenError } from "../filetype.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, textChunks } from "../thaifont.js";
 import { tr, pl } from "../i18n.js";
 import { normalizeThaiPUA } from "../thai.js";
@@ -288,7 +289,12 @@ export function mount(tool) {
 
   /** แปลงหนึ่งไฟล์ คืน { blob, pages, warnings } */
   async function convertOne(file) {
-      const { value: rawHtml, messages } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      // ไฟล์เสียหรือ PDF ที่เปลี่ยนนามสกุล JSZip ใน mammoth โยน "Can't find end of central directory" พร้อมลิงก์
+      // แปลเป็นไทยที่ตัวแปลกลาง (filetype.js friendlyZipOpenError) แบบเครื่องมือ Word ตัวอื่น (09/11/2026 tests/browser_fake_ext_thai.py)
+      const ab = await file.arrayBuffer();
+      let conv;
+      try { conv = await mammoth.convertToHtml({ arrayBuffer: ab }); } catch (e) { throw friendlyZipOpenError(e, null, ab); } // ชื่อไฟล์ชั้นนอกใส่ให้แล้ว
+      const { value: rawHtml, messages } = conv;
       /* ‼️ เอกสารที่พิมพ์ด้วยฟอนต์ตระกูล TH รุ่นเก่า (TH SarabunPSK) เก็บวรรณยุกต์บางตัวเป็น
        * อักขระเฉพาะของฟอนต์ ไม่ใช่รหัสไทยมาตรฐาน ถ้าปล่อยไหลลง PDF ต่อ ฟอนต์ที่เราฝังจะไม่มี
        * รหัสพวกนั้น วรรณยุกต์จึงหายเงียบทั้งเล่ม (เจอจริงกับคู่มือโครงงานของ สจล. 09/09/2026:

@@ -651,7 +651,9 @@ function syncTopHeight() {
   if (!top) return;
   const set = () => document.documentElement.style.setProperty("--top-h", top.offsetHeight + "px");
   set();
-  if (window.ResizeObserver) new ResizeObserver(set).observe(top);
+  // ‼️ ต้องเฝ้า border-box ค่าตั้งต้น content-box ไม่รู้ตัวเมื่อ padding เปลี่ยน
+  //    (จอแนวนอนเตี้ยลด padding หัวเว็บ 61 เหลือ 45 แต่ --top-h ค้าง 61 ท้ายจอว่าง 16px 10/11/2026)
+  if (window.ResizeObserver) new ResizeObserver(set).observe(top, { box: "border-box" });
 }
 if (useV2()) (document.readyState === "loading"
   ? document.addEventListener("DOMContentLoaded", syncTopHeight, { once: true })

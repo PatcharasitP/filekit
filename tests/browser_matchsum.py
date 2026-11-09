@@ -147,10 +147,19 @@ def main():
             ok("นับแถวที่อ่านไม่ออกแยกไว้ 3 แถว",
                any("อ่านไม่ออก" in c and "3" in c for c in chips), f"ได้ {chips}")
 
+            print("\n── ①ข ปุ่มค้นหาบอกความจริง: ยังไม่มียอดเป้าหมาย ต้องกดไม่ได้ (09/11/2026) ──")
+            # ‼️ เทสมือถือจนได้ไฟล์ 09/11 กด ลองด้วยไฟล์ตัวอย่าง แล้วกดค้นหาได้ทันที ขึ้น error ยอดเป้าหมายอ่านไม่ออก
+            #    กฎกลางของเว็บ (ui.js 11/09/2026) ปุ่มที่กดแล้วยังทำไม่ได้ต้องจาง ไม่ใช่กดแล้วโดนดุ
+            go_dis = "() => [...document.querySelectorAll('button')].find(b => b.offsetParent && /ค้นหาชุดที่รวมกันได้/.test(b.textContent))?.disabled"
+            ok("ยังไม่ใส่ยอดเป้าหมาย ปุ่มค้นหาจาง", pg.evaluate(go_dis) is True, pg.evaluate(go_dis))
+            tgt = pg.locator(".s2-side-bd input.ms-num, .s2-stage input.ms-num, .ws-right input.ms-num").first
+            tgt.fill("400"); pg.wait_for_timeout(200)
+            ok("พิมพ์ยอดเป้าหมายแล้ว ปุ่มค้นหากดได้", pg.evaluate(go_dis) is False, pg.evaluate(go_dis))
+            tgt.fill(""); pg.wait_for_timeout(200)
+            ok("ลบยอดเป้าหมายออก ปุ่มกลับมาจาง", pg.evaluate(go_dis) is True, pg.evaluate(go_dis))
+
             print("\n── ② ชุดที่รวมกันได้ ต้องครบและถูกทุกชุด ──")
-            pg.evaluate("""() => {
-              document.querySelectorAll('.s2-side-bd input.ms-num, .s2-stage input.ms-num, .ws-right input.ms-num')[0].value = '400';
-            }""")
+            tgt.fill("400"); pg.wait_for_timeout(200)
             fkui.act(pg, "ค้นหา")
             pg.wait_for_timeout(1200)
             found = sets_on_screen(pg)
@@ -179,6 +188,8 @@ def main():
                   const n = document.querySelectorAll('.s2-side-bd input.ms-num, .s2-stage input.ms-num, .ws-right input.ms-num');
                   n[0].value = t; n[1].value = tol; n[2].value = lo; n[3].value = hi;
                   n[4].value = minv; n[5].value = maxv;
+                  /* ปุ่มค้นหาฟังการพิมพ์ในช่องเป้าหมาย (09/11/2026) ใส่ค่าด้วยสคริปต์ต้องส่งสัญญาณ input เหมือนคนพิมพ์ */
+                  for (const i of [0, 1, 2, 3, 4, 5]) n[i].dispatchEvent(new Event('input', { bubbles: true }));
                   /* ‼️ หาสวิตช์จากชื่อที่ผู้ใช้เห็น ห้ามนับลำดับ (22/09/2026)
                      v2 รวมแผงซ้ายกับขวาไว้แผงเดียว สวิตช์ตัวแรกจึงกลายเป็น "แถวแรกเป็นหัวตาราง"
                      เทสเลยไปสลับหัวตารางแทนค่าติดลบ แล้วได้คำตอบผิดชุดโดยไม่มีอะไรฟ้อง */
@@ -276,9 +287,12 @@ def main():
             pg.wait_for_timeout(600)
             ok("พิมพ์ลงช่องวางตัวเลขได้ทันทีโดยไม่ต้องกดหาช่องเอง",
                pg.evaluate("() => document.querySelector('.ms-ta').value").count("\n") == 3)
-            ok("ปุ่มค้นหากดได้แม้ไม่มีไฟล์",
-               pg.locator("button.s2-cta:visible", has_text="ค้นหา").first.is_enabled())
+            # 09/11/2026 ปุ่มจางจนกว่าจะมียอดเป้าหมาย (ข้อ ①ข) ข้อนี้จึงใส่เป้าหมายก่อนค่อยดูว่าไม่มีไฟล์ก็กดได้
+            ok("ยังไม่ใส่ยอดเป้าหมาย ปุ่มค้นหาจางในโหมดวางตัวเลข",
+               not pg.locator("button.s2-cta:visible", has_text="ค้นหา").first.is_enabled())
             pg.locator(".s2-side-bd input.ms-num:visible").first.fill("400")
+            ok("ปุ่มค้นหากดได้แม้ไม่มีไฟล์ (ใส่ยอดเป้าหมายแล้ว)",
+               pg.locator("button.s2-cta:visible", has_text="ค้นหา").first.is_enabled())
             fkui.act(pg, "ค้นหา")
             pg.wait_for_timeout(800)
             ck("ค้นจากตัวเลขที่วางเองได้", set(sets_on_screen(pg)),

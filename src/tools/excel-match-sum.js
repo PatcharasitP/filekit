@@ -230,6 +230,10 @@ export function mount(tool) {
   for (const n of [negSw.input, reuseSw.input]) n.addEventListener("change", () => store.save());
 
   const goBtn = button(tr("ค้นหาชุดที่รวมกันได้", "Find matching sets"), { icon: "play", onclick: run });
+  /* ‼️ ปุ่มบอกความจริง (09/11/2026 เทสมือถือจนได้ไฟล์): ยังไม่มียอดเป้าหมาย กดไปก็ได้แค่ error
+     เดิมกด ลองด้วยไฟล์ตัวอย่าง แล้วกดค้นหาทันที ขึ้น ยอดเป้าหมายอ่านไม่ออก ทุกจอ ให้จางไว้จนกว่าจะมีตัวเลขกับเป้าหมาย */
+  const syncGo = () => { goBtn.disabled = !items.length || !String(targetIn.value).trim(); };
+  targetIn.addEventListener("input", syncGo);
   const dlBtn = button(tr("ดาวน์โหลดผลเป็น Excel", "Download results as Excel"), { icon: "download", ghost: true, onclick: downloadAll });
   dlBtn.hidden = true;
 
@@ -383,7 +387,7 @@ export function mount(tool) {
     /* ‼️ ปุ่มหลักถูกกล่องลากไฟล์ปิดไว้จนกว่าจะมีไฟล์ (กฎกลางใน ui.js) แต่เครื่องนี้ยังมีโหมด
        "วางตัวเลขเอง" ที่ไม่มีไฟล์เลย ถ้าไม่เปิดเอง ปุ่มค้นหาจะกดไม่ได้ทั้งโหมด
        (เจอกับตาตอนลองวางตัวเลข 7 ตัวแล้วกดค้น ไม่มีอะไรเกิดขึ้น 15/09/2026) */
-    goBtn.disabled = !items.length;
+    syncGo();
     ws.showCanvas(items.length > 0);
     if (viewTabs.value === "excel") renderExcelGuide();
   }
@@ -470,7 +474,7 @@ export function mount(tool) {
       if (performance.now() - t0 > budget) { exhaustedAll = false; break; }
     }
     const ms = Math.round(performance.now() - t0);
-    st.end(); st.progress(null); goBtn.disabled = false;
+    st.end(); st.progress(null); syncGo();
 
     renderCards(labelOf);
     dlBtn.hidden = lastResults.length === 0;

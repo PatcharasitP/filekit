@@ -406,7 +406,7 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
   body.tool .back{display:none}
   /* ‼️ ซ่อนแค่ข้อความ แต่ต้องคงพื้นที่กดไว้ 36px ไม่งั้นปุ่มเหลือกว้าง 8px กดไม่โดน
      (ซ่อนข้อความแล้วปุ่มหดตามทันที เพราะไอคอนในปุ่มนี้เป็น svg ที่กว้างตามข้อความ) */
-  body.tool .brand > span{display:none}
+  body.tool .brand > span:not(.mark){display:none} /* ‼️ เดิม > span ซ่อนไอคอน .mark ไปด้วย เหลือปุ่มล่องหน 40px (เจอ 10/11/2026 tests/browser_touch_targets.py) */
   body.tool .brand{min-width:40px; justify-content:center}
   body.tool .s2-menubtn{max-width:52vw; min-width:0}
   body.tool .s2-menubtn > span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}

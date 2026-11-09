@@ -328,6 +328,15 @@ export function toolShell2(tool, cfg = {}) {
 
   /* แผงขวา */
   const sideBody = el("div", { class: "s2-side-bd" });
+  /* ‼️ กด Tab ไปถึงช่องที่โผล่อยู่บางส่วน Chrome ไม่เลื่อนแผงให้เห็นครบ (ตัวกวาด Tab 09/11/2026 pq-combine 1440x900
+     ช่อง SQL แหล่งที่ 2 ได้โฟกัสที่ 642 ถึง 741 แผงเห็นถึง 692 ครึ่งล่างกับกรอบโฟกัสหายใต้แถบปุ่ม tests/browser_a11y.py ข้อ 9)
+     เลื่อนเฉพาะตอนโผล่ไม่ครบ และของไม่สูงกว่าแผง (สูงกว่าเลื่อนให้ครบไม่ได้ ปล่อยตามเบราว์เซอร์) */
+  sideBody.addEventListener("focusin", (e) => {
+    const t = e.target;
+    if (!t || t === sideBody || !t.getBoundingClientRect) return;
+    const b = sideBody.getBoundingClientRect(), r = t.getBoundingClientRect();
+    if (r.height <= b.height && (r.top < b.top - 1 || r.bottom > b.bottom + 1)) t.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
   if (cfg.left) {
     if (cfg.left.title) sideBody.appendChild(el("div", { class: "s2-grp" }, cfg.left.title));
     if (cfg.left.hint) sideBody.appendChild(el("p", { class: "s2-hint" }, cfg.left.hint));

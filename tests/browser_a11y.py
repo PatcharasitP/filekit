@@ -386,6 +386,32 @@ with sync_playwright() as p:
     pg2.close()
 
     # ═══════════════════════════════════════════════════════════════
+    print("\n━━ ⑨ กด Tab แล้วช่องที่ได้โฟกัสในแผงต้องโผล่ครบ ไม่โดนขอบแผงตัดครึ่ง (WCAG 2.4.11) ━━")
+    # ‼️ ตัวกวาด Tab 09/11/2026 จับได้: pq-combine จอ 1440x900 ช่อง SQL แหล่งที่ 2 ได้โฟกัสที่ 642 ถึง 741
+    #    แต่แผงมองเห็นถึง 692 ครึ่งล่างหายใต้แถบปุ่ม Chrome ไม่เลื่อนแผงเมื่อของโผล่อยู่บางส่วนแล้ว
+    #    ต้องรอการเลื่อนนิ่งก่อนวัด (เว็บตั้ง smooth) ไม่งั้นได้ค่าระหว่างเลื่อน
+    SETTLE = """() => new Promise((ok) => { const t0 = performance.now(); let last = '', same = 0;
+      const pos = () => [scrollX, scrollY, ...[...document.querySelectorAll('*')].filter(e => e.scrollTop || e.scrollLeft).map(e => e.scrollTop + ',' + e.scrollLeft)].join('|');
+      const tick = () => { const p = pos(); same = p === last ? same + 1 : 0; last = p; if (same >= 3 || performance.now() - t0 > 2000) ok(); else requestAnimationFrame(tick); };
+      requestAnimationFrame(tick); })"""
+    pg4 = b.new_page(viewport={"width": 1440, "height": 900})
+    open_tool_page(pg4, "pq-combine")
+    pg4.wait_for_timeout(500)
+    seen_sql, cut = 0, []
+    for i in range(40):
+        pg4.keyboard.press("Tab"); pg4.evaluate(SETTLE)
+        r = pg4.evaluate("""() => { const t = document.activeElement; if (!t || !t.matches('textarea.pqc-sql')) return null;
+          const bd = t.closest('.s2-side-bd').getBoundingClientRect(), q = t.getBoundingClientRect();
+          return [Math.round(q.top), Math.round(q.bottom), Math.round(bd.top), Math.round(bd.bottom)] }""")
+        if r:
+            seen_sql += 1
+            if r[0] < r[2] - 1 or r[1] > r[3] + 1: cut.append(r)
+        if seen_sql >= 2: break
+    ck_true("ตัวตรวจเจอช่อง SQL ครบ 2 ช่องจริง (ประชากร > 0)", seen_sql >= 2, f"เจอ {seen_sql}")
+    ck_true("ช่องที่ได้โฟกัสโผล่ครบในแผง ไม่โดนขอบตัด", not cut, f"[บน ล่าง แผงบน แผงล่าง] {cut}")
+    pg4.close()
+
+    # ═══════════════════════════════════════════════════════════════
     print("\n━━ 🧪 self-test: เทสคอนทราสต์วงโฟกัสต้องจับ 'ไม่มีวงโฟกัสเลย' ได้จริง ━━")
     pg3 = b.new_page(viewport={"width": 1280, "height": 950})
     pg3.goto(BASE, wait_until="networkidle")

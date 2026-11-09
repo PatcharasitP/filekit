@@ -176,7 +176,7 @@ export function mount(tool) {
   store.restore();
 
   ws.wrap.appendChild(el("style", {}, STYLE));
-  ws.wrap.appendChild(results);
+  ws.body.appendChild(results);  // 09/11/2026 เดิม ws.wrap อยู่นอกพื้นที่ที่ shell2 ย้ายผลลัพธ์ แถวค้างก้นจอ การ์ดทับบนมือถือ (tests/results_host.test.mjs)
 
   let file = null, pageCount = 0, encrypted = false;
 

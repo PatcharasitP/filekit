@@ -72,7 +72,7 @@ export function mount(tool) {
   });
   ws.wrap.appendChild(el("style", {}, STYLE));
   ws.wrap.appendChild(extra);
-  ws.wrap.appendChild(results);
+  ws.body.appendChild(results);  // 09/11/2026 เหมือน pdf-page-numbers (tests/results_host.test.mjs)
 
   levelSel.onchange = () => { applyLevel(); render(); };
 

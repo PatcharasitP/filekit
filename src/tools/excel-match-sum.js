@@ -232,7 +232,14 @@ export function mount(tool) {
   const goBtn = button(tr("ค้นหาชุดที่รวมกันได้", "Find matching sets"), { icon: "play", onclick: run });
   /* ‼️ ปุ่มบอกความจริง (09/11/2026 เทสมือถือจนได้ไฟล์): ยังไม่มียอดเป้าหมาย กดไปก็ได้แค่ error
      เดิมกด ลองด้วยไฟล์ตัวอย่าง แล้วกดค้นหาทันที ขึ้น ยอดเป้าหมายอ่านไม่ออก ทุกจอ ให้จางไว้จนกว่าจะมีตัวเลขกับเป้าหมาย */
-  const syncGo = () => { goBtn.disabled = !items.length || !String(targetIn.value).trim(); };
+  /* ‼️ จางแล้วต้องบอกเหตุผล (ตาเนื้อบนเว็บจริง v226 iPhone SE 09/11/2026): บนมือถือช่องยอดเป้าหมายซ่อนในแผงตัวเลือก
+     ปุ่มจางเฉย ๆ คนใช้ไม่รู้ว่าต้องทำอะไรต่อ ฝากเหตุผลไว้ที่ data-why ให้ shell2 โชว์ใต้ปุ่ม */
+  const syncGo = () => {
+    const noTarget = !String(targetIn.value).trim();
+    goBtn.disabled = !items.length || noTarget;
+    goBtn.dataset.why = items.length && noTarget
+      ? tr("ใส่ยอดเป้าหมายในตัวเลือกก่อน", "Enter the target total in Options first") : "";
+  };
   targetIn.addEventListener("input", syncGo);
   const dlBtn = button(tr("ดาวน์โหลดผลเป็น Excel", "Download results as Excel"), { icon: "download", ghost: true, onclick: downloadAll });
   dlBtn.hidden = true;
@@ -336,11 +343,15 @@ export function mount(tool) {
       labelSel.appendChild(el("option", { value: String(c) }, h));
     });
     // เดาคอลัมน์ตัวเลขให้ล่วงหน้า: คอลัมน์ที่อ่านเป็นตัวเลขได้มากที่สุด
-    let best = 0, bestScore = -1;
+    // ‼️ คะแนนเท่ากันเลือกคอลัมน์แรก ไฟล์ตัวอย่างใบเสนอราคาจึงได้ ลำดับ (1 2 3 1 2) ใส่ยอดอะไรก็ไม่เจอ
+    //    (ตาเนื้อบนเว็บจริง v226 09/11/2026) ตัดสินเสมอด้วยชื่อคอลัมน์ที่เป็นยอดเงิน แล้วค่อยจำนวนค่าไม่ซ้ำ
+    const moneyRank = (h) => /จำนวนเงิน|ยอดเงิน|amount/i.test(h) ? 2 : /ยอด|ราคา|เงิน|total|price|value|sum/i.test(h) ? 1 : 0;
+    let best = 0, bestKey = null;
     for (let c = 0; c < table.header.length; c++) {
-      let hit = 0;
-      for (const r of table.rows) if (looksNumeric(r.cells[c])) hit++;
-      if (hit > bestScore) { bestScore = hit; best = c; }
+      let hit = 0; const seen = new Set();
+      for (const r of table.rows) if (looksNumeric(r.cells[c])) { hit++; seen.add(String(r.cells[c]).trim()); }
+      const key = [hit, moneyRank(String(table.header[c] ?? "")), seen.size];
+      if (!bestKey || key[0] > bestKey[0] || (key[0] === bestKey[0] && (key[1] > bestKey[1] || (key[1] === bestKey[1] && key[2] > bestKey[2])))) { bestKey = key; best = c; }
     }
     // ‼️ บั๊กที่เทส browser_affordance จับได้ 16/09/2026: เดิมเช็คว่า keep มีค่าไหม
     //    แต่ค่าเริ่มต้นของ dropdown คือสตริง "0" ซึ่งเป็นค่าจริงในเงื่อนไข คอลัมน์ที่เดาไว้จึงไม่เคยถูกใช้เลย

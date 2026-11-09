@@ -330,6 +330,37 @@ def main():
 
             ok("ไม่มี error ในคอนโซลตลอดการทดสอบ", not errs, f"เจอ {errs[:3]}")
             ctx.close()
+
+            print("\n── ⑩ มือถือ ลองด้วยไฟล์ตัวอย่าง (ตาเนื้อบนเว็บจริง v226 iPhone SE 09/11/2026) ──")
+            # ‼️ เห็นสองเรื่องจากภาพจอจริง:
+            #    ① ปุ่มค้นหาจางถูกแล้ว แต่ไม่มีอะไรบอกว่าทำไม ช่องยอดเป้าหมายซ่อนในแผงตัวเลือก
+            #    ② ไฟล์ตัวอย่างใบเสนอราคามีหลายคอลัมน์ที่อ่านเป็นตัวเลขได้ครบเท่ากัน ตัวเดาเลือกคอลัมน์แรก
+            #       คือ ลำดับ (1 2 3 1 2 รวม 9) ใส่ยอดอะไรก็ไม่เจอ ควรได้ จำนวนเงิน
+            mctx = b2 = None
+            b2 = pw.chromium.launch()
+            mctx = b2.new_context(viewport={"width": 375, "height": 667}, is_mobile=True, has_touch=True,
+                                  device_scale_factor=2)
+            mctx.add_init_script("try{localStorage.setItem('fk-lang','th')}catch(e){}")
+            mp = mctx.new_page()
+            mp.goto(f"{base}/#/excel-match-sum", wait_until="networkidle")
+            mp.wait_for_timeout(500)
+            clicked = mp.evaluate("""() => { const b = [...document.querySelectorAll('button')]
+              .find((e) => e.offsetParent && /ลองด้วยไฟล์ตัวอย่าง/.test(e.textContent)); if (!b) return false; b.click(); return true }""")
+            ok("เจอปุ่ม ลองด้วยไฟล์ตัวอย่าง บนมือถือ", clicked)
+            mp.wait_for_timeout(2500)
+            why = mp.evaluate("() => { const w = document.querySelector('.s2-cta-why'); return w && !w.hidden && w.offsetParent ? w.textContent.trim() : '' }")
+            ok("ปุ่มจางแล้วมีเหตุผลใต้ปุ่ม บอกให้ใส่ยอดเป้าหมาย", "ยอดเป้าหมาย" in why, f"ได้ {why!r}")
+            col = mp.evaluate("() => { const s = [...document.querySelectorAll('select')].find(x => [...x.options].some(o => o.text === 'จำนวนเงิน')); return s ? s.options[s.selectedIndex].text : '' }")
+            ck("ไฟล์ตัวอย่างเดาคอลัมน์ตัวเลขเป็น จำนวนเงิน ไม่ใช่ ลำดับ", col, "จำนวนเงิน")
+            mp.get_by_role("button", name="ตัวเลือก").click()
+            mp.wait_for_timeout(800)
+            mtg = mp.locator(".s2-side-bd input.ms-num").first
+            mtg.fill("75000")
+            mp.wait_for_timeout(300)
+            why2 = mp.evaluate("() => { const w = document.querySelector('.s2-cta-why'); return w && !w.hidden ? w.textContent.trim() : '' }")
+            ok("ใส่ยอดเป้าหมายแล้ว เหตุผลใต้ปุ่มหายไป", why2 == "", f"ยังเหลือ {why2!r}")
+            mctx.close()
+            b2.close()
             b.close()
     finally:
         if server:

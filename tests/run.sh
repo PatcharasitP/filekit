@@ -32,7 +32,7 @@ if [ "${1:-}" = "all" ]; then set -- $(ls tests/browser_*.py tests/css_contract.
 fail=0
 for t in "$@"; do
   echo "##### $t"
-  FK_BASE="http://127.0.0.1:$PORT" timeout 600 "$PY" "tests/$t.py"; rc=$?
+  FK_BASE="http://127.0.0.1:$PORT" timeout "${FK_TIMEOUT:-600}" "$PY" "tests/$t.py"; rc=$?
   echo "exit=$rc"; [ $rc -ne 0 ] && fail=$((fail+1))
 done
 echo "━━ รวม: ตก $fail ชุด"

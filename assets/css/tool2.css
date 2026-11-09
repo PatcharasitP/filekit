@@ -486,6 +486,8 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
  *    ใช้เฉพาะตอนยังไม่เสร็จงาน หน้าผลลัพธ์มีกฎของตัวเองอยู่แล้ว */
 @media (max-width:860px) and (max-height:500px) and (orientation:landscape){
   body.tool .top{padding-block:2px; min-height:0}
+  /* ‼️ จอเตี้ยแนวนอนความสูงมีค่ากว่า ปุ่มหัวเว็บสูง 36 คงความกว้าง 44 ไว้ (ปุ่ม 44 ทำ Fold 653x280 เห็นเอกสารเหลือ 111 ต่ำกว่าเกณฑ์ 10/11/2026) */
+  body.tool .top .langopt, body.tool .top .iconbtn, body.tool .top .s2-menubtn{height:36px; min-height:36px}
   .s2-tbar{flex-wrap:nowrap; overflow-x:auto; min-height:0; padding-block:2px; scrollbar-width:none}
   .s2-tbar::-webkit-scrollbar{display:none}
   .s2-tbar > *{flex:none}
@@ -503,4 +505,20 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
     min-width:min(46vw, 360px); max-width:none; margin:0; flex:initial}
   .s2:not([data-state="result"]) .s2-side-ft .s2-subrow{grid-column:3; grid-row:1 / 3; margin:0; flex:initial}
   .s2-cta.btn,.s2-cta,.s2-sheetbtn{height:44px; font-size:15px}
+}
+
+/* ── จอสัมผัส ปุ่มที่แตะบ่อยและปุ่มสำคัญอย่างน้อย 44x44 ตามที่ Apple แนะนำ ──────────────
+ * ‼️ เทสเตอร์มือถือ 09/11/2026 U1 ปุ่มดาวน์โหลดหน้าผลลัพธ์ 41x36 , U2 ปุ่มขึ้น ลง เอาออก ในแถวไฟล์ 36x36 (เอาออกคือปุ่มทำลายข้อมูล)
+ *    U3 ปุ่มปิดลิ้นชัก 17x36 , U5 ปุ่มเมนูเครื่องมือสูง 36 (ปุ่มภาษาและธีมอยู่ใน index.html) tests/browser_touch_targets.py
+ *    เฉพาะ pointer:coarse เมาส์บนคอมได้ขนาดเดิม */
+@media (pointer:coarse){
+  .file-row .icon-btn{min-width:44px; min-height:44px}
+  .s2-side-res button{min-width:44px; min-height:44px}
+  .s2-sheet-hd .s2-link, .s2-side-hd .s2-link{min-width:44px; min-height:44px; justify-content:center; padding-inline:8px}
+  .s2-menubtn{min-height:44px}
+}
+/* ฉากหลังลิ้นชักตัวเลือก แตะแล้วปิด (shell2.js scrim) ‼️ z-index ต่ำกว่าลิ้นชัก 40 หนึ่งขั้น */
+.s2-scrim{display:none}
+@media (max-width:860px){
+  .s2-side.open + .s2-scrim{display:block; position:fixed; inset:0; z-index:39; background:rgba(0,0,0,.32)}
 }

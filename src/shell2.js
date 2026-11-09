@@ -359,7 +359,7 @@ export function toolShell2(tool, cfg = {}) {
   const side = el("aside", { class: "s2-side" }, [
     el("div", { class: "s2-sheet-hd" }, [
       el("b", {}, tr("ตัวเลือก", "Options")),
-      el("button", { class: "s2-link", type: "button", onclick: () => setSheet(false) }, tr("ปิด", "Close")),
+      el("button", { class: "s2-link", type: "button", onclick: () => { setSheet(false); sheetBtn.focus(); } }, tr("ปิด", "Close")),
     ]),
     el("div", { class: "s2-side-hd" }, [
       el("h2", {}, tool.title),
@@ -369,7 +369,10 @@ export function toolShell2(tool, cfg = {}) {
   ]);
   attachSideSearch(sideBody);
 
-  const grid = el("div", { class: "s2-work" }, [canvas, side]);
+  /* ฉากหลังของลิ้นชักตัวเลือกบนจอแคบ แตะแล้วปิด (เทสเตอร์มือถือ U3 09/11/2026 เดิมปิดได้แค่ปุ่ม ปิด กับ Esc ซึ่งมือถือไม่มี)
+     ‼️ ต้องอยู่ถัดจาก side ทันที CSS ใช้ .s2-side.open + .s2-scrim , tests/browser_touch_targets.py */
+  const scrim = el("div", { class: "s2-scrim", "aria-hidden": "true", onclick: () => { setSheet(false); sheetBtn.focus(); } });
+  const grid = el("div", { class: "s2-work" }, [canvas, side, scrim]);
   if (panelMode) grid.classList.add("panel-mode");
 
   /* ── ปุ่มหลัก ────────────────────────────────────────────────────────

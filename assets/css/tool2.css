@@ -248,6 +248,9 @@ body.tool{overflow:hidden}
 /* ── มือถือและจอแคบ ─────────────────────────────────────────────────── */
 .s2-sheet-hd{display:none}
 .s2-sheetbtn{display:none}
+/* ข้อความที่อ้างตำแหน่งแผง ใช้จุดตัดเดียวกับลิ้นชักตัวเลือก (เทสเตอร์ B4 09/11/2026 , tests/browser_side_wording.py) */
+.s2-only-narrow{display:none}
+@media (max-width:860px){ .s2-only-wide{display:none !important} .s2-only-narrow{display:block} }
 @media (max-width:860px){
   .s2-work{grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto;
     display:flex; flex-direction:column}

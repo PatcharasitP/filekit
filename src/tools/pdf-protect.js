@@ -133,10 +133,12 @@ export function mount(tool) {
     ws.showCanvas(true);
     filesLine.replaceChildren(
       el("b", {}, tr(`${n} ไฟล์พร้อมใส่รหัส`, `${pl(n, "file", "files")} ready to protect`)),
-      el("div", {}, pw.value
-        ? tr("กดปุ่มด้านล่างเพื่อใส่รหัส ไฟล์ต้นฉบับของคุณไม่ถูกแตะต้อง",
-             "Press the button below. Your original files are left untouched")
-        : tr("พิมพ์รหัสในแผงด้านขวาก่อน", "Type a password in the panel on the right first")),
+      ...(pw.value
+        ? [el("div", {}, tr("กดปุ่มด้านล่างเพื่อใส่รหัส ไฟล์ต้นฉบับของคุณไม่ถูกแตะต้อง",
+             "Press the button below. Your original files are left untouched"))]
+        // ‼️ จอแคบไม่มีแผงขวา ตัวเลือกอยู่ในลิ้นชักปุ่ม ตัวเลือก (เทสเตอร์ B4 09/11/2026 , tests/browser_side_wording.py)
+        : [el("div", { class: "s2-only-wide" }, tr("พิมพ์รหัสในแผงด้านขวาก่อน", "Type a password in the panel on the right first")),
+           el("div", { class: "s2-only-narrow" }, tr("กดปุ่ม ตัวเลือก ด้านล่าง แล้วพิมพ์รหัสก่อน", "Tap Options below and type a password first"))]),
     );
   }
 

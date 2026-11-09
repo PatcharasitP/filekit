@@ -282,11 +282,15 @@ export function mount(tool) {
       ["[ ]", tr("หมุนซ้าย ขวา", "Rotate left, right")],
       ["Enter", tr("เลือก ยกเลิกเลือก", "Select, deselect")],
     ]),
-    el("div", { class: "note" },
+    el("div", { class: "note s2-only-wide" },
       // ‼️ เครื่องมือนี้สร้างไฟล์ใหม่แล้วคัดลอกหน้าที่เก็บเข้าไป สารบัญ/บุ๊กมาร์กของไฟล์เดิม
       //    จึงไม่ติดมาด้วย แม้ผู้ใช้จะไม่ได้แก้อะไรเลย · บอกไว้ตรง ๆ เหมือนที่ pdf-merge บอก
       tr("คลิกหน้าเพื่อเลือก ลากเพื่อสลับลำดับ หรือพิมพ์ช่วงหน้าด้านขวาเพื่อเก็บเฉพาะบางหน้า",
          "Click a page to select, drag to reorder, or type a range on the right to keep pages")),
+    // ‼️ จอแคบไม่มีแผงขวาและไม่มีเมาส์ (เทสเตอร์ B4 09/11/2026 , tests/browser_side_wording.py)
+    el("div", { class: "note s2-only-narrow" },
+      tr("แตะหน้าเพื่อเลือก ลากเพื่อสลับลำดับ หรือกดปุ่ม ตัวเลือก เพื่อพิมพ์ช่วงหน้าที่จะเก็บ",
+         "Tap a page to select, drag to reorder, or tap Options to type a range to keep")),
     // แยกเป็นอีกก้อนเพราะข้อความบนหน้าจอก้อนเดียวห้ามยาวเกิน 100 ตัวอักษร (มีเทสจับ)
     el("div", { class: "note" },
       tr("ใส่หลายไฟล์ได้ ป้าย A B C บอกว่าหน้านั้นมาจากไฟล์ไหน",

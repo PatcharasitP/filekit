@@ -95,6 +95,25 @@ async function decodeHeif(file) {
 }
 
 /**
+ * ไฟล์รูปที่ส่งต่อให้ตัวอ่านที่ไม่ผ่าน createImageBitmap ได้ (เช่น Tesseract ที่ถอดรหัสรูปเอง)
+ * ‼️ HEIC ของไอโฟนแปลงเป็น PNG ให้ก่อน ไฟล์อื่นคืนตัวเดิมไม่แตะ จึงไม่ไปโหลดตัวถอด 877 KB โดยไม่จำเป็น
+ *   เจอจริง 09/11/2026: pdf-ocr ส่ง HEIC ดิบให้ Tesseract แล้วขึ้น "อ่านไม่สำเร็จ: undefined"
+ * @param {File|Blob} file
+ * @returns {Promise<File|Blob>}
+ */
+export async function readableImage(file) {
+  if (!(await isHeif(file))) return file;
+  const bmp = await decodeImage(file);
+  const c = document.createElement("canvas");
+  c.width = bmp.width; c.height = bmp.height;
+  c.getContext("2d").drawImage(bmp, 0, 0);
+  bmp.close?.();
+  const blob = await new Promise((res) => c.toBlob(res, "image/png"));
+  if (!blob) throw new Error(tr("แปลงรูป HEIC ไม่สำเร็จ", "Could not convert the HEIC image"));
+  return new File([blob], String(file.name || "image").replace(/\.[^.]+$/, "") + ".png", { type: "image/png" });
+}
+
+/**
  * อ่านไฟล์รูปเป็น ImageBitmap — ใช้แทน createImageBitmap ทุกที่ที่รับไฟล์จากผู้ใช้
  * @param {File|Blob} file
  * @param {object} [opts] ส่งต่อให้ createImageBitmap เช่น { imageOrientation: "from-image" }

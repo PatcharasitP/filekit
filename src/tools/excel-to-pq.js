@@ -107,7 +107,7 @@ export function mount(tool) {
   for (const c of [rowsSel, onlyWarn]) c.addEventListener("change", () => store.save());
 
   const dz = dropzone({
-    accept: ".xlsx,.xls,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp",
+    accept: ".xlsx,.xls,.csv,.pdf,.docx,.png,.jpg,.jpeg,.webp,.heic",
     multiple: false,
     hint: tr("ลากไฟล์ Excel, CSV, PDF, Word หรือรูปถ่ายตารางมาวาง",
              "Drop an Excel, CSV, PDF, Word file, or a photo of a table"),

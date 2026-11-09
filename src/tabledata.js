@@ -16,7 +16,7 @@ import { tr, pl } from "./i18n.js";
 export const TABLE_SOURCES = {
   pdf: ["pdf"],
   word: ["docx"],
-  image: ["png", "jpg", "jpeg", "webp", "bmp"],
+  image: ["png", "jpg", "jpeg", "webp", "bmp", "heic"],
 };
 
 export const extOf = (name) => (String(name).split(".").pop() || "").toLowerCase();

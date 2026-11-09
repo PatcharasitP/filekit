@@ -89,7 +89,7 @@ export function mount(tool) {
    * จึงแค่เปลี่ยนที่มาของ PNG จาก "canvas ที่วาดข้อความ" เป็น "รูปที่ผู้ใช้เลือก"
    * ตำแหน่ง ขนาด ความเข้ม ใช้เส้นทางเดิมทั้งหมดโดยไม่ต้องแก้ */
   const modeSel = segmented([["text", tr("ข้อความ", "Text")], ["image", tr("รูปโลโก้", "Logo image")]], "text");
-  const logoInput = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
+  const logoInput = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp,image/heic,.heic", hidden: true });
   const logoBtn = button(tr("เลือกรูปโลโก้", "Choose a logo"), { ghost: true, onclick: () => logoInput.click() });
   const logoName = el("small", { class: "wmp-logo-name" }, tr("ยังไม่ได้เลือกรูป", "No image chosen"));
   const logoField = el("label", { class: "field" }, [

@@ -2,6 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, download,
          stripExt, parsePages, yieldToBrowser, segmented } from "../ui.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { tr, pl } from "../i18n.js";
+import { isHeif, readableImage } from "../imgdecode.js";
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -38,7 +39,10 @@ export function mount(tool) {
 
   async function pageImages() {
     // คืนรายการ dataURL ของภาพที่จะส่งให้ OCR — รองรับทั้ง PDF และไฟล์รูป
-    if (file.type.startsWith("image/")) return [{ label: file.name, url: URL.createObjectURL(file) }];
+    // ‼️ HEIC ของไอโฟนบางเครื่องไม่บอกชนิดไฟล์ (type ว่าง) จึงดูไบต์ด้วย และแปลงเป็น PNG ก่อนส่ง Tesseract ซึ่งอ่าน HEIC ไม่ได้
+    if (file.type.startsWith("image/") || await isHeif(file)) {
+      return [{ label: file.name, url: URL.createObjectURL(await readableImage(file)) }];
+    }
     const pdf = await openPdf(file, passwordBox(extra));
     const pages = parsePages(rangeInput.value || "1-", pdf.numPages);
     if (!pages.length) throw new Error(tr(`ไฟล์มี ${pdf.numPages} หน้า ช่วงที่ระบุไม่ตรงหน้าใดเลย`, `File has ${pl(pdf.numPages, "page", "pages")}, but the range matches none`));

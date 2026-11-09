@@ -6,6 +6,7 @@
 
 import { loadLibs } from "./loader.js";
 import { yieldToBrowser } from "./ui.js";
+import { readableImage } from "./imgdecode.js";
 
 /** เรนเดอร์หน้า PDF เป็น dataURL สำหรับป้อนให้ OCR */
 async function pageToImage(pdf, pageNo, scale) {
@@ -79,7 +80,8 @@ export async function ocrImage(file, { lang = "tha+eng", onProgress, minConfiden
     },
   });
   try {
-    const { data } = await worker.recognize(file);
+    // ‼️ Tesseract ถอดรหัสรูปเอง อ่าน HEIC ไม่ได้ จึงแปลง HEIC เป็น PNG ให้ก่อน (ไฟล์อื่นผ่านตรง ๆ)
+    const { data } = await worker.recognize(await readableImage(file));
     // ตัดบรรทัดขยะแบบเดียวกับ ocrPdf: ตัดเฉพาะที่ทั้งความมั่นใจต่ำและสั้นมาก
     const raw = Array.isArray(data.lines) && data.lines.length
       ? data.lines.map((l) => ({ text: (l.text || "").trim(), conf: l.confidence ?? 100 }))

@@ -595,6 +595,32 @@ ck(middotHits.length + htmlMiddot.length === 0,
   ck(!ghost.length, "เทสที่ย้ายไป FlowKit ไม่ค้างใน tests/ (ของ FileKit ไม่ควรตรวจหน้าที่ไม่ใช่ของตัวเอง)" + (ghost.length ? " เจอ " + ghost.join(", ") : ""));
 }
 
+/* ‼️ ช่องเลือกไฟล์ที่รับรูป ต้องรับ HEIC ของไอโฟนด้วย และต้องมีตัวถอดรองรับจริง (09/11/2026)
+ *
+ * ไอโฟนกรองไฟล์ในหน้าต่างเลือกตาม accept ถ้าเขียนแค่ image/png,image/jpeg,image/webp ไฟล์ .heic จะเทาเลือกไม่ได้
+ * ทั้งที่เครื่องมือถอด HEIC ได้ (เจอจริงที่ pdf-watermark ช่องรูปโลโก้ ถอดได้ผ่าน decodeImage แต่ accept ไม่เปิดให้เลือก)
+ * และกลับกัน accept="image/*" รับ .heic เข้ามาแต่ส่งต่อให้ตัวที่อ่าน HEIC ไม่ได้ (เจอจริงที่ pdf-ocr ขึ้น "อ่านไม่สำเร็จ: undefined")
+ * ข้อ ② ตรวจแบบอ่านโค้ด ไม่ครอบทุกทาง ตัวพิสูจน์พฤติกรรมจริงคือ tests/browser_heic.py, browser_heic_ocr.py, browser_pdfedit_heic.py
+ *
+ * ถ้าผิดจะรู้ได้ยังไง: ถอด .heic ออกจาก accept ของ pdf-watermark หรือลบการเรียก decodeImage ออกจาก pdf-ocr แล้วข้อที่ตรงกันต้องแดง */
+{
+  const IMG_ACCEPT = /image\/|\.(png|jpe?g|webp|gif|bmp)\b/i;
+  const HEIC_OK = /image\/\*|\.heic|image\/heic/i;
+  const DECODES = /\b(decodeImage|imageToSignature|readableImage|extractTable)\b/;
+  const seen = [], noHeic = [], noDecoder = [];
+  for (const f of toolFiles.sort()) {
+    const src = readFileSync(join(ROOT, "src/tools", f), "utf8");
+    const accs = [...src.matchAll(/\baccept:\s*"([^"]*)"/g)].map((m) => m[1]).filter((a) => IMG_ACCEPT.test(a));
+    if (!accs.length) continue;
+    seen.push(f);
+    for (const a of accs) if (!HEIC_OK.test(a)) noHeic.push(`${f}: accept="${a}"`);
+    if (!DECODES.test(src)) noDecoder.push(f);
+  }
+  ck(seen.length >= 8, `หาเครื่องมือที่รับรูปเจอ (${seen.length} ไฟล์, ประชากรต้องไม่เป็นศูนย์)`);
+  ck(noHeic.length === 0, `① accept ที่รับรูปต้องเปิดให้เลือก .heic ด้วย (ผิด ${noHeic.length})` + (noHeic.length ? "\n      " + noHeic.join("\n      ") : ""));
+  ck(noDecoder.length === 0, `② เครื่องมือที่รับรูปต้องอ่านผ่านตัวถอด HEIC (decodeImage หรือตัวที่ห่อมัน) ไม่ใช่ส่งไฟล์ดิบ (ผิด ${noDecoder.length})` + (noDecoder.length ? " " + noDecoder.join(", ") : ""));
+}
+
 // ข้อความไฟล์ผิดชนิด เว้นวรรคก่อนชื่ออังกฤษ (ล่าบั๊ก F9 08/11/2026 เดิมขึ้น "ไฟล์นี้เป็นExcel" ทุกครั้ง)
 {
   const { wrongTypeMessage } = await import(pathToFileURL(join(ROOT, "src/filetype.js")).href);

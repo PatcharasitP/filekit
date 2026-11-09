@@ -588,7 +588,10 @@ export function toolShell2(tool, cfg = {}) {
    *   จึงต้องมีตัวเฝ้าคอยเก็บตกทีหลังด้วย ไม่ใช่เก็บแค่ตอนสลับสถานะ */
   function pullNotes() {
     if (state !== "result") return;
-    const notes = [...wrap.querySelectorAll(".results > .note")]
+    /* ‼️ 09/11/2026 กล่องไฟล์ที่ข้าม (.fail-box) ต้องตามมาด้วย เดิมดึงแค่ .note สถานะบอก "ข้าม 1 ไฟล์"
+       แต่ไม่บอกว่าไฟล์ไหนเพราะอะไร กล่องค้างในผืนงานที่ถูกซ่อน (เห็นจากภาพ image-convert จอ 390
+       ใช้ failedBox 14 เครื่องมือ tests/browser_image_error_thai.py) */
+    const notes = [...wrap.querySelectorAll(".results > .note, .results > .fail-box")]
       .filter((n) => !resultHost.contains(n) && !staleRes.has(n));
     if (!notes.length) return;
     const res = resultHost.querySelector(".s2-res");
@@ -677,7 +680,7 @@ export function toolShell2(tool, cfg = {}) {
         nextSteps(tool),
       ]);
       /* คำเตือนที่ย้ายมาแล้วในรอบก่อน ต้องเก็บไว้ ไม่งั้นหายตอนวาดแผงใหม่ (เหมือนเรื่องสะสมแถวผลลัพธ์) */
-      const keptNotes = [...resultHost.querySelectorAll(".s2-res-notes > .note")];
+      const keptNotes = [...resultHost.querySelectorAll(".s2-res-notes > .note, .s2-res-notes > .fail-box")];
       resultHost.replaceChildren(host);
       if (keptNotes.length) {
         const box = el("div", { class: "s2-res-notes" }, keptNotes);

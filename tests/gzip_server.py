@@ -57,7 +57,8 @@ def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8899
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", port), functools.partial(Handler, directory=root)) as srv:
+    # ‼️ 10/11/2026 เดิมผูก "" = ทุกเครือข่าย คนในวง WiFi เดียวกันเปิดไฟล์ในโฟลเดอร์ได้ (Scripts/forgotten_servers.py จับได้) ผูกเฉพาะในเครื่อง
+    with socketserver.TCPServer(("127.0.0.1", port), functools.partial(Handler, directory=root)) as srv:
         print(f"เสิร์ฟ {root} ที่ http://localhost:{port} แบบบีบอัด gzip")
         srv.serve_forever()
 

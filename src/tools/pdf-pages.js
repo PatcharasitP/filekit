@@ -37,8 +37,9 @@ const STYLE = `
 /* แถบสีประจำไฟล์บนการ์ดหน้า กับป้ายตัวอักษรที่เป็นตัวบอกจริง */
 .pg{position:relative}
 .pg.multi{border-top:3px solid var(--fc,transparent)}
+/* ‼️ พื้นป้ายผสมดำ 32% ตัวขาวบนสีไฟล์ตรง ๆ ได้แค่ 2.42 ถึง 3.98:1 (ทอง เขียว ส้ม) ผสมแล้ว 4.87 ขึ้นไปทุกสี (วัด 10/11/2026) */
 .pg .src{position:absolute;inset-block-start:5px;inset-inline-start:5px;z-index:2;
-  min-width:19px;height:19px;padding:0 5px;border-radius:5px;background:var(--fc,#666);
+  min-width:19px;height:19px;padding:0 5px;border-radius:5px;background:color-mix(in srgb,var(--fc,#666) 68%,#000);
   color:#fff;font-size:11px;font-weight:700;line-height:19px;text-align:center;
   box-shadow:0 1px 3px rgba(0,0,0,.35)}
 /* ‼️ ป้าย A B C ไปเกาะกับรายการไฟล์ที่กล่องเลือกไฟล์วาดไว้แล้ว ไม่ทำรายการใหม่
@@ -49,7 +50,7 @@ const STYLE = `
 .pp-has-tag{position:relative}
 .pp-tag{position:absolute;inset-block-start:3px;inset-inline-start:3px;z-index:2;
   min-width:17px;height:17px;padding:0 4px;border-radius:5px;
-  background:var(--fc,#666);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center;
+  background:color-mix(in srgb,var(--fc,#666) 68%,#000);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center;
   box-shadow:0 1px 3px rgba(0,0,0,.3)}
 `;
 

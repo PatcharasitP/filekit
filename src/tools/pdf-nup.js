@@ -16,7 +16,8 @@ import { tr, pl } from "../i18n.js";
 const STYLE = `
 .nu-stage{display:flex;flex-direction:column;gap:14px;margin:auto;width:100%;max-width:460px;text-align:center}
 .nu-stage[hidden]{display:none}
-.nu-sheet{position:relative;margin:0 auto;background:#fff;border:1px solid var(--line);
+/* ‼️ กระดาษพื้นขาวทั้งสองโหมด ต้องตั้ง token สีชุดสว่างให้ลูกเอง โหมดมืดเลขหน้าเคยเหลือ 2.95:1 (วัด 10/11/2026) */
+.nu-sheet{--g-pdf:#b03a0a;--bg-soft:#efeeea;--text-mute:#626771;position:relative;margin:0 auto;background:#fff;border:1px solid var(--line);
   border-radius:4px;box-shadow:var(--sh2);display:grid;gap:4px;padding:6px}
 .nu-cell{background:color-mix(in srgb,var(--g-pdf) 12%,#fff);border:1px solid color-mix(in srgb,var(--g-pdf) 30%,transparent);
   border-radius:2px;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--g-pdf);

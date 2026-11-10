@@ -117,9 +117,11 @@ const ICONS = {
 const STYLE = `
 .ts{--tsf:"Segoe UI","Leelawadee UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
   --tp:#3E5C76; --tq:#546D8E; --tsur:var(--bg-soft); --tbd:var(--line); --thov:var(--card-hi);
-  --tfg:var(--text); --tmute:var(--text-dim); --tbg:var(--card)}
-@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]) .ts{--tsur:#F8FAFC; --tbd:#E2E8F0; --thov:#F1F5F9; --tfg:#121212; --tmute:#5B6472; --tbg:#fff} }
-:root[data-theme="light"] .ts{--tsur:#F8FAFC; --tbd:#E2E8F0; --thov:#F1F5F9; --tfg:#121212; --tmute:#5B6472; --tbg:#fff}
+  --tfg:var(--text); --tmute:var(--text-dim); --tbg:var(--card); --tlink:var(--tfg)}
+/* ‼️ --tlink สีตัวอักษรปุ่มรอง (เปิดไฟล์ธีมเดิม , เริ่มใหม่) โหมดมืดใช้สีตัวอักษรปกติ ไม่ใช้สีธีม --tp
+   เดิมใช้ --tp ทั้งสองโหมด สีธีมเข้มบนพื้นมืดเหลือ 3.05:1 (วัด 10/11/2026 tests/browser_contrast_mobile.py) */
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]) .ts{--tsur:#F8FAFC; --tbd:#E2E8F0; --thov:#F1F5F9; --tfg:#121212; --tmute:#5B6472; --tbg:#fff; --tlink:var(--tp)} }
+:root[data-theme="light"] .ts{--tsur:#F8FAFC; --tbd:#E2E8F0; --thov:#F1F5F9; --tfg:#121212; --tmute:#5B6472; --tbg:#fff; --tlink:var(--tp)}
 /* แถบหัวของเครื่องมือทาสีธีมที่กำลังสร้าง แบบเดียวกับแถบหัวของเขา */
 .ts .tool-head{background:linear-gradient(90deg,var(--tp),var(--tq)); border-color:transparent}
 .ts{font-family:var(--tsf)}
@@ -203,7 +205,7 @@ const STYLE = `
 .ts-own{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--tbd);
   font-size:12px; line-height:16px; color:var(--tmute)}
 .ts-link{font:inherit; font-size:12px; font-weight:500; line-height:16px; padding:8px 12px; min-height:36px; border-radius:6px; cursor:pointer;
-  border:1px solid var(--tbd); background:var(--tbg); color:var(--tp)}
+  border:1px solid var(--tbd); background:var(--tbg); color:var(--tlink)}
 .ts-link:hover{background:var(--thov)}
 /* กล่องยุบ ใช้ทั้ง "ปรับสีเอง" และ "ดูไฟล์" */
 .ts-more{grid-column:1/-1; border:1px solid var(--tbd); border-radius:8px; background:var(--tsur); padding:0 16px}
@@ -323,7 +325,7 @@ const STYLE = `
 .ts-name{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; line-height:20px}
 .ts-name .ts-ico{width:18px; height:18px}
 .ts-reset{font:inherit; font-size:14px; font-weight:500; line-height:20px; padding:8px 16px; border-radius:6px; cursor:pointer;
-  border:1px solid var(--tbd); background:var(--tbg); color:var(--tp); display:inline-flex; align-items:center; gap:6px; margin-inline-start:auto}
+  border:1px solid var(--tbd); background:var(--tbg); color:var(--tlink); display:inline-flex; align-items:center; gap:6px; margin-inline-start:auto}
 .ts-reset:hover{background:var(--thov)}
 .ts-reset svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 .th-facts{font-size:12px; line-height:16px; color:var(--tmute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}

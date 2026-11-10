@@ -26,7 +26,8 @@ const LAYOUTS = {
 const STYLE = `
 .pp-stage{display:flex;flex-direction:column;gap:14px;margin:auto;width:100%;max-width:440px;text-align:center}
 .pp-stage[hidden]{display:none}
-.pp-slide{margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:4px;
+/* ‼️ สไลด์พื้นขาวทั้งสองโหมด ตั้ง --text-mute ชุดสว่างเอง โหมดมืดป้ายขนาดเคยเหลือ 2.8:1 (วัด 10/11/2026) */
+.pp-slide{--text-mute:#626771;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:4px;
   box-shadow:var(--sh2);display:grid;place-items:center;color:var(--text-mute);font-size:12px}
 .pp-meta{font-size:13.5px;line-height:1.6;color:var(--text-dim)}
 .pp-meta b{color:var(--text)}

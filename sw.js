@@ -8,7 +8,7 @@
 // ผลพลอยได้คือเปิดใช้งานได้แม้ออฟไลน์ ซึ่งพิสูจน์คำโฆษณา "ไฟล์ไม่ออกจากเครื่อง"
 // ด้วยพฤติกรรมจริง ไม่ใช่แค่คำพูด
 
-const VERSION = "filekit-v236";
+const VERSION = "filekit-v237";
 const SHELL = `${VERSION}-shell`;
 /* เพดานเวลารอเครือข่ายตอนเปิดหน้าเว็บ ครบเวลาแล้วใช้แคชทันที */
 const NAV_NET_TIMEOUT_MS = 1200;
@@ -51,6 +51,7 @@ const PRECACHE = [
   "vendor/heic-sandbox.html",  /* ห้องขังตัวถอด HEIC */
   "vendor/heic-sandbox.js",
   "src/imgdecode.js",   /* ตัวอ่านรูป รวมทางถอด HEIC */
+  "src/xlsx-worker.js", /* sheetpick.js อ่าน Excel ใหญ่นอกเธรดหลัก */
   "src/inapp.js",       /* แถบเตือน + ทางออกตอนเปิดจากแอปแชท ui.js เรียกใช้ทุกหน้า */
   "src/cfgsearch.js",
   "src/codeview.js",

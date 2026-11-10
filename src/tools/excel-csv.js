@@ -1,7 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download, downloadButton,
          stripExt, fmtBytes, yieldToBrowser, announceResults } from "../ui.js";
 import { smartDecode } from "../thai.js";
-import { splitSheetsByVisibility } from "../xlsxutil.js";
+import { splitSheetsByVisibility, readXlsx } from "../xlsxutil.js";
 import { tr, pl } from "../i18n.js";
 import { assertSheetBytes } from "../filetype.js";
 
@@ -39,7 +39,7 @@ export function mount(tool) {
         const f = files[0];
         const ab = await f.arrayBuffer();
         assertSheetBytes(ab, f); // ด่านหัวไฟล์ PDF หรือรูปที่เปลี่ยนนามสกุลเป็นตาราง (filetype.js assertSheetBytes 09/11/2026)
-        const wb = XLSX.read(ab, { type: "array" });
+        const wb = await readXlsx(ab, { type: "array" }); // ไฟล์ใหญ่อ่านใน worker หน้าไม่ค้าง (xlsxutil.js)
         const base = stripExt(f.name);
         // ‼️ ชีทที่ผู้ใช้ซ่อนไว้ = ของที่ตั้งใจไม่ให้คนอื่นเห็น ห้ามส่งออกให้เองโดยไม่ถาม
         const { visible, hidden } = splitSheetsByVisibility(wb);
@@ -89,7 +89,7 @@ export function mount(tool) {
           assertSheetBytes(raw, files[i]); // ด่านหัวไฟล์ PDF หรือรูปที่เปลี่ยนนามสกุลเป็นตาราง (filetype.js assertSheetBytes 09/11/2026)
           const dec = smartDecode(raw);
           if (dec.enc !== "utf-8" || dec.undo) fixedEnc++;
-          const sheet = XLSX.read(dec.text, { type: "string" }).Sheets.Sheet1;
+          const sheet = (await readXlsx(dec.text, { type: "string" })).Sheets.Sheet1;
           // ชื่อชีทของ Excel ยาวได้ไม่เกิน 31 ตัว และห้ามอักขระพิเศษบางตัว
           const safe = stripExt(files[i].name).replace(/[\\/?*[\]:]/g, "-").slice(0, 31) || tr(`ชีท${i + 1}`, `Sheet${i + 1}`);
           XLSX.utils.book_append_sheet(wb, sheet, safe);

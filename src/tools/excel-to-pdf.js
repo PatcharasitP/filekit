@@ -2,7 +2,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select, downloadButt
          stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { useThaiFont, warmThaiFont, THAI_FONT, splitThaiTextToSize } from "../thaifont.js";
 import { smartDecode } from "../thai.js";
-import { splitSheetsByVisibility } from "../xlsxutil.js";
+import { splitSheetsByVisibility, readXlsx } from "../xlsxutil.js";
 import { tr, pl } from "../i18n.js";
 import { assertSheetBytes } from "../filetype.js";
 
@@ -44,9 +44,9 @@ export function mount(tool) {
       // CSV ที่ไม่ใช่ UTF-8 (ส่งออกจากระบบเก่า) ต้องเดาการเข้ารหัสก่อน ไม่งั้นไทยเพี้ยนทั้งไฟล์
       const buf = new Uint8Array(await file.arrayBuffer());
       assertSheetBytes(buf, file); // ด่านหัวไฟล์ PDF หรือรูปที่เปลี่ยนนามสกุลเป็นตาราง (filetype.js assertSheetBytes 09/11/2026)
-      const wb = /\.(csv|txt|tsv)$/i.test(file.name)
-        ? XLSX.read(smartDecode(buf).text, { type: "string" })
-        : XLSX.read(buf, { type: "array" });
+      const wb = /\.(csv|txt|tsv)$/i.test(file.name) // ไฟล์ใหญ่อ่านใน worker หน้าไม่ค้าง (xlsxutil.js)
+        ? await readXlsx(smartDecode(buf).text, { type: "string" })
+        : await readXlsx(buf, { type: "array" });
       const { jsPDF } = jspdf;
       const doc = new jsPDF({ unit: "pt", format: "a4", orientation: orient.value });
       await useThaiFont(doc, "both");

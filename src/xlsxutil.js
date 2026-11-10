@@ -26,3 +26,53 @@ export function splitSheetsByVisibility(wb) {
     hiddenOf,
   };
 }
+
+/* ‼️ ไฟล์ใหญ่อ่านใน worker (xlsx-worker.js) หน้าไม่ค้างนิ่ง ที่มา 09/11/2026 เทสเตอร์มือถือ Pixel 7 CPU ช้า 4 เท่า
+ * เปิดไฟล์ 50,000 แถว หน้าค้าง 8 ถึง 11 วินาที ตัวกินเวลาคือ XLSX.read บนเธรดหลัก
+ * ไฟล์เล็กกว่าเกณฑ์อ่านบนหน้าเหมือนเดิม (เปิด worker ครั้งแรกต้องโหลดไลบรารีซ้ำ ไฟล์เล็กจะช้าลงเปล่า ๆ)
+ * worker ใช้ไม่ได้ (เบราว์เซอร์เก่า โหลดไลบรารีไม่ได้ อ่านไฟล์แล้ว error) คืน null ให้อ่านบนหน้าแบบเดิม ไม่มีทางพังเพิ่ม
+ * ใช้ร่วม: sheetpick readWorkbook, preview ตัวดูไฟล์, excel-csv, excel-to-pdf
+ * เทส tests/browser_xlsx_worker.py เทียบผลสองทางทุกเซลล์ */
+const WORKER_MIN = 256 * 1024;
+let xw = null;
+let xwBroken = false;
+let xwSeq = 0;
+const xwWait = new Map();
+
+function xlsxWorker() {
+  if (xw) return xw;
+  xw = new Worker(new URL("./xlsx-worker.js", import.meta.url));
+  xw.onmessage = ({ data }) => {
+    const done = xwWait.get(data.id);
+    xwWait.delete(data.id);
+    done?.(data.wb || null);
+  };
+  xw.onerror = (e) => {
+    e.preventDefault?.();
+    xwBroken = true;
+    for (const done of xwWait.values()) done(null);
+    xwWait.clear();
+    xw?.terminate();
+    xw = null;
+  };
+  return xw;
+}
+
+async function readOffMain(data, opts) {
+  const size = typeof data === "string" ? data.length : data.byteLength;
+  if (xwBroken || typeof Worker === "undefined" || size < WORKER_MIN) return null;
+  try {
+    return await new Promise((resolve) => {
+      const id = ++xwSeq;
+      xwWait.set(id, resolve);
+      xlsxWorker().postMessage({ id, data, opts });
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** XLSX.read ที่ไฟล์ใหญ่ทำใน worker ได้ผลเหมือน XLSX.read ทุกอย่าง (ใช้ worker ไม่ได้ก็อ่านบนหน้า error เดิม) */
+export async function readXlsx(data, opts) {
+  return (await readOffMain(data, opts)) || XLSX.read(data, opts);
+}

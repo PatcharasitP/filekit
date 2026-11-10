@@ -133,7 +133,8 @@ async function renderSheet(file, d, expectedIdx) {
   await loadLibs("xlsx");
   const bytes = new Uint8Array(await file.arrayBuffer());
   assertSheetBytes(bytes, file); // ด่านหัวไฟล์ PDF หรือรูปที่เปลี่ยนนามสกุลเป็นตาราง (filetype.js assertSheetBytes 09/11/2026)
-  const wb = XLSX.read(bytes, { type: "array", cellDates: true, raw: false, codepage: 65001 });
+  const { readXlsx } = await import("./xlsxutil.js"); // ไฟล์ใหญ่อ่านใน worker หน้าไม่ค้างตอนกดดู
+  const wb = await readXlsx(bytes, { type: "array", cellDates: true, raw: false, codepage: 65001 });
   // ‼️ ชีทที่ผู้ใช้ซ่อนไว้ต้องไม่โผล่ในตัวดูไฟล์เหมือนกัน (กฎเดียวกับ excel-to-pdf/excel-csv)
   const visible = wb.SheetNames.filter((n, i) => (wb.Workbook?.Sheets?.[i]?.Hidden || 0) === 0);
   const name = visible[0] || wb.SheetNames[0];

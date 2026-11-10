@@ -98,6 +98,37 @@ def main():
         s = read_with(b, None, small)
         ck("ไฟล์เล็กอ่านได้ครบ 51 แถว", s["rows"] == 51, f"{s['rows']} แถว reads={s['reads']}")
         ck("ไม่มี error บนหน้า", not (w["errs"] or m["errs"] or s["errs"]), str((w["errs"] + m["errs"] + s["errs"])[:2]))
+
+        # จุดอื่นที่อ่าน Excel เอง (ไม่ผ่าน readWorkbook) ต้องอ่านไฟล์ใหญ่นอกเธรดหลักด้วย และยังได้ผลจริง
+        for name, tool, do, done in (
+            ("excel-csv แปลงเป็น CSV", "excel-csv", lambda pg: fkui.act(pg, "แปลงไฟล์"),
+             "() => document.querySelector('.s2')?.dataset.state === 'result'"),
+            ("excel-to-pdf แปลงเป็น PDF", "excel-to-pdf", lambda pg: fkui.act(pg, "แปลงเป็น PDF"),
+             "() => document.querySelector('.s2')?.dataset.state === 'result'"),
+            ("ตัวดูไฟล์ (แตะชื่อไฟล์)", "excel-match-sum",
+             lambda pg: pg.locator(f'button[aria-label="ดูข้อมูลใน {big.name}"]').first.click(),
+             "() => [...document.querySelectorAll('dialog[open] td, [role=dialog] td')].length > 20"),
+        ):
+            # จอมือถือซ่อนรายการไฟล์ไว้ในลิ้นชักตัวเลือก ตัวดูไฟล์จึงใช้จอกว้าง
+            vw = {"width": 1280, "height": 900} if tool == "excel-match-sum" else {"width": 412, "height": 915}
+            ctx = b.new_context(viewport=vw, timezone_id="Asia/Bangkok")
+            ctx.add_init_script(COUNT)
+            pg = ctx.new_page()
+            errs = []
+            pg.on("pageerror", lambda e: errs.append(str(e)))
+            fkui.open_tool(pg, tool, base=BASE)
+            fkui.feed(pg, [big])
+            pg.wait_for_timeout(3000)
+            before = pg.evaluate("() => window.__mainReads")
+            do(pg)
+            try:
+                pg.wait_for_function(done, timeout=120000)
+                fin = True
+            except Exception:
+                fin = False
+            reads = pg.evaluate("() => window.__mainReads") - before
+            ck(f"{name} ไฟล์ใหญ่ทำเสร็จ และไม่อ่านบนเธรดหลัก", fin and reads == 0 and not errs, f"เสร็จ={fin} อ่านบนหน้า {reads} ครั้ง error={errs[:1]}")
+            ctx.close()
         b.close()
     print(f"สรุป: ผ่าน {ok} ตก {fail}", flush=True)
     sys.exit(1 if fail or ok == 0 else 0)

@@ -9,6 +9,7 @@ import { toolShell, statusBar, button, field, select, dropzone,
 import { smartDecode, ENC_LABEL } from "./thai.js";
 import { tr, pl } from "./i18n.js";
 import { assertSheetBytes } from "./filetype.js";
+import { readXlsx } from "./xlsxutil.js";
 
 const TEXTY = ["csv", "txt", "tsv"];
 
@@ -44,50 +45,6 @@ export function fixExcelDateSkew(wb) {
   return wb;
 }
 
-/* ‼️ ไฟล์ใหญ่อ่านใน worker (xlsx-worker.js) หน้าไม่ค้างนิ่ง ที่มา 09/11/2026 เทสเตอร์มือถือ Pixel 7 CPU ช้า 4 เท่า
- * เปิดไฟล์ 50,000 แถว หน้าค้าง 8 ถึง 11 วินาที ตัวกินเวลาคือ XLSX.read บนเธรดหลัก
- * ไฟล์เล็กกว่าเกณฑ์อ่านบนหน้าเหมือนเดิม (เปิด worker ครั้งแรกต้องโหลดไลบรารีซ้ำ ไฟล์เล็กจะช้าลงเปล่า ๆ)
- * worker ใช้ไม่ได้ (เบราว์เซอร์เก่า โหลดไลบรารีไม่ได้ อ่านไฟล์แล้ว error) คืน null ให้อ่านบนหน้าแบบเดิม ไม่มีทางพังเพิ่ม
- * เทส tests/browser_xlsx_worker.py เทียบผลสองทางทุกเซลล์ */
-const WORKER_MIN = 256 * 1024;
-let xw = null;
-let xwBroken = false;
-let xwSeq = 0;
-const xwWait = new Map();
-
-function xlsxWorker() {
-  if (xw) return xw;
-  xw = new Worker(new URL("./xlsx-worker.js", import.meta.url));
-  xw.onmessage = ({ data }) => {
-    const done = xwWait.get(data.id);
-    xwWait.delete(data.id);
-    done?.(data.wb || null);
-  };
-  xw.onerror = (e) => {
-    e.preventDefault?.();
-    xwBroken = true;
-    for (const done of xwWait.values()) done(null);
-    xwWait.clear();
-    xw?.terminate();
-    xw = null;
-  };
-  return xw;
-}
-
-async function readOffMain(data, opts) {
-  const size = typeof data === "string" ? data.length : data.byteLength;
-  if (xwBroken || typeof Worker === "undefined" || size < WORKER_MIN) return null;
-  try {
-    return await new Promise((resolve) => {
-      const id = ++xwSeq;
-      xwWait.set(id, resolve);
-      xlsxWorker().postMessage({ id, data, opts });
-    });
-  } catch {
-    return null;
-  }
-}
-
 /** อ่านไฟล์เป็นสมุดงาน — ไฟล์ข้อความจะเดาการเข้ารหัสให้เองด้วย (ไทยเพี้ยนก็อ่านออก) */
 export async function readWorkbook(file) {
   const buf = new Uint8Array(await file.arrayBuffer());
@@ -95,7 +52,7 @@ export async function readWorkbook(file) {
   const ext = (file.name.split(".").pop() || "").toLowerCase();
   if (!TEXTY.includes(ext)) {
     const opts = { type: "array", cellDates: true };
-    return { wb: fixExcelDateSkew((await readOffMain(buf, opts)) || XLSX.read(buf, opts)), encNote: null };
+    return { wb: fixExcelDateSkew(await readXlsx(buf, opts)), encNote: null };
   }
 
   const d = smartDecode(buf);
@@ -103,7 +60,7 @@ export async function readWorkbook(file) {
   if (d.undo) encNote = tr("ไฟล์นี้ไทยเพี้ยนซ้อน ซ่อมให้แล้ว", "Thai text was double-garbled, fixed automatically");
   else if (d.enc !== "utf-8") encNote = tr(`เข้ารหัส ${ENC_LABEL[d.enc] || d.enc} แปลงแล้ว`, `${ENC_LABEL[d.enc] || d.enc} encoding, converted`);
   const opts = { type: "string", cellDates: true };
-  return { wb: fixExcelDateSkew((await readOffMain(d.text, opts)) || XLSX.read(d.text, opts)), encNote };
+  return { wb: fixExcelDateSkew(await readXlsx(d.text, opts)), encNote };
 }
 
 /* ‼️ ตารางจริงจำนวนมากใช้หัวตาราง 2 ชั้น แถวบนผสานช่องเป็นชื่อหมวด แถวล่างเป็นชื่อคอลัมน์ย่อย

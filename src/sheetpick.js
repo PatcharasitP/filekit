@@ -9,7 +9,7 @@ import { toolShell, statusBar, button, field, select, dropzone,
 import { smartDecode, ENC_LABEL } from "./thai.js";
 import { tr, pl } from "./i18n.js";
 import { assertSheetBytes } from "./filetype.js";
-import { readXlsx } from "./xlsxutil.js";
+import { readXlsx, xlsxBytes } from "./xlsxutil.js";
 
 const TEXTY = ["csv", "txt", "tsv"];
 
@@ -145,7 +145,7 @@ export function tableToBlob(header, rows, sheetName = "Sheet1") {
   ws["!cols"] = autoWidths(header, rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, String(sheetName).replace(/[[\]*?/\\:]/g, "-").slice(0, 31) || "Sheet1");
-  return new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })],
+  return new Blob([xlsxBytes(wb, { bookType: "xlsx", type: "array", compression: true })],
     { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
@@ -164,7 +164,7 @@ export function tablesToBlob(sheets) {
     used.add(name);
     XLSX.utils.book_append_sheet(wb, ws, name);
   }
-  return new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })],
+  return new Blob([xlsxBytes(wb, { bookType: "xlsx", type: "array", compression: true })],
     { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 

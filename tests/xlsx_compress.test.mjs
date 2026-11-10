@@ -17,13 +17,24 @@ const ck = (name, ok, d = "") => { ok ? pass++ : F.push(`${name}  [${d}]`); cons
 // ① สแกนโค้ด
 const files = [];
 (function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); f.isDirectory() ? walk(p) : p.endsWith(".js") && files.push(p); } })(path.join(ROOT, "src"));
+// ‼️ 10/11/2026 จุดเขียนย้ายไปเรียกตัวช่วยกลาง xlsxBytes (แก้วันที่เกิน 4 วินาที) กับ writeXlsx (เขียนใน worker)
+//    ไล่ทั้งสามชื่อ ตัวช่วยที่แค่ส่ง opts ต่อ (ข้างใน xlsxutil.js กับ xlsx-worker.js) ยกเว้นแบบระบุ ไม่งั้นนับซ้ำว่าไม่บีบ
+const NAMES = ["XLSX.write(", "xlsxBytes(", "writeXlsx("];
+const PASS_THROUGH = new Set(["src/xlsxutil.js", "src/xlsx-worker.js"]);
 const calls = [];
 for (const f of files) {
   const s = fs.readFileSync(f, "utf8");
-  for (let i = s.indexOf("XLSX.write("); i >= 0; i = s.indexOf("XLSX.write(", i + 1)) {
-    let depth = 0, j = i + "XLSX.write".length;
-    for (; j < s.length; j++) { if (s[j] === "(") depth++; else if (s[j] === ")" && --depth === 0) break; }
-    calls.push({ at: path.relative(ROOT, f) + ":" + s.slice(0, i).split("\n").length, args: s.slice(i, j + 1) });
+  const rel = path.relative(ROOT, f);
+  for (const name of NAMES) {
+    for (let i = s.indexOf(name); i >= 0; i = s.indexOf(name, i + 1)) {
+      if (/[\w.]$/.test(s.slice(Math.max(0, i - 1), i)) && name !== "XLSX.write(") continue; // ชื่ออื่นที่ลงท้ายเหมือนกัน
+      if (/function\s+$/.test(s.slice(Math.max(0, i - 20), i))) continue; // ตัวนิยามฟังก์ชัน ไม่ใช่จุดเรียก
+      let depth = 0, j = i + name.length - 1;
+      for (; j < s.length; j++) { if (s[j] === "(") depth++; else if (s[j] === ")" && --depth === 0) break; }
+      const args = s.slice(i, j + 1);
+      if (PASS_THROUGH.has(rel) && /\bopts\s*\)$/.test(args)) continue; // ตัวช่วยส่งต่อค่าที่ผู้เรียกให้มา
+      calls.push({ at: rel + ":" + s.slice(0, i).split("\n").length, args });
+    }
   }
 }
 ck("ประชากร: เจอจุดเรียก XLSX.write ในโค้ดอย่างน้อย 9 จุด", calls.length >= 9, calls.length);

@@ -5,6 +5,7 @@ import { loadLibs } from "../loader.js";
 import { readWorkbook, tableToBlob } from "../sheetpick.js";
 import { decimalsOf, toInt, fromInt, groupByValue, search } from "../subsetsum.js";
 import { stateKit, shareButton } from "../statekit.js";
+import { xlsxBytes } from "../xlsxutil.js"; // XLSX.write ที่วันที่ตรงวินาที
 
 /* ‼️ ทำไมต้องมีเครื่องมือนี้
  * งานกระทบยอดเจอทุกเดือน: เงินโอนเข้าก้อนเดียว 257,425.30 แต่ในระบบเป็นใบเล็ก ๆ หลายใบ
@@ -682,7 +683,7 @@ export function mount(tool) {
   function downloadSolverFile() {
     const built = buildSolverWorkbook();
     if (!built) { st.err(tr("ยังไม่มีตัวเลขหรือยอดเป้าหมาย", "No numbers or target yet")); return; }
-    const buf = XLSX.write(built.wb, { bookType: "xlsx", type: "array", compression: true });
+    const buf = xlsxBytes(built.wb, { bookType: "xlsx", type: "array", compression: true });
     download(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
       tr("ตั้ง Solver ไว้ให้แล้ว.xlsx", "solver-ready.xlsx"));
     st.ok(built.cut > 0

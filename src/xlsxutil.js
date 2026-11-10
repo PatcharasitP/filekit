@@ -45,7 +45,7 @@ function xlsxWorker() {
   xw.onmessage = ({ data }) => {
     const done = xwWait.get(data.id);
     xwWait.delete(data.id);
-    done?.(data.wb || null);
+    done?.(data);
   };
   xw.onerror = (e) => {
     e.preventDefault?.();
@@ -58,14 +58,19 @@ function xlsxWorker() {
   return xw;
 }
 
-async function readOffMain(data, opts) {
-  const size = typeof data === "string" ? data.length : data.byteLength;
-  if (xwBroken || typeof Worker === "undefined" || size < WORKER_MIN) return null;
+/** ส่งงานให้ worker คืนคำตอบของ worker หรือ null เมื่อใช้ worker ไม่ได้ (ฝั่งเรียกทำบนหน้าแทน) */
+async function askWorker(msg, transfer) {
+  if (xwBroken || typeof Worker === "undefined") return null;
   try {
     return await new Promise((resolve) => {
       const id = ++xwSeq;
       xwWait.set(id, resolve);
-      xlsxWorker().postMessage({ id, data, opts });
+      try {
+        xlsxWorker().postMessage({ id, ...msg }, transfer || []);
+      } catch (e) {
+        xwWait.delete(id); // ส่งข้ามไม่ได้ (เช่นของในสมุดงานโคลนไม่ได้) ทำบนหน้าแทน
+        resolve(null);
+      }
     });
   } catch {
     return null;
@@ -74,5 +79,65 @@ async function readOffMain(data, opts) {
 
 /** XLSX.read ที่ไฟล์ใหญ่ทำใน worker ได้ผลเหมือน XLSX.read ทุกอย่าง (ใช้ worker ไม่ได้ก็อ่านบนหน้า error เดิม) */
 export async function readXlsx(data, opts) {
-  return (await readOffMain(data, opts)) || XLSX.read(data, opts);
+  const size = typeof data === "string" ? data.length : data.byteLength;
+  const r = size >= WORKER_MIN ? await askWorker({ op: "read", data, opts }) : null;
+  return (r && r.wb) || XLSX.read(data, opts);
+}
+
+/* ‼️ วัด 10/11/2026 Pixel 7 CPU ช้า 4 เท่า เขียน 50,000 แถว บนหน้าค้าง 2,071 ms ใน worker ค้าง 586 ms (ช่วงส่งสมุดงานข้าม)
+ * 100,000 แถว 4,300 เหลือ 1,180 ms และเสร็จเร็วกว่า (.claude/evidence/2026-11-09-fk-xlsx-worker/probe_write_run.log)
+ * เกณฑ์นับเป็นจำนวนช่องในสมุดงาน ต่ำกว่า 50,000 ช่องเขียนบนหน้าเหมือนเดิม */
+const WRITE_MIN_CELLS = 50000;
+
+function cellCount(wb) {
+  let n = 0;
+  for (const name of wb.SheetNames || []) {
+    const ref = wb.Sheets[name] && wb.Sheets[name]["!ref"];
+    if (!ref) continue;
+    const r = XLSX.utils.decode_range(ref);
+    n += (r.e.r - r.s.r + 1) * (r.e.c - r.s.c + 1);
+  }
+  return n;
+}
+
+/** XLSX.write แบบ type "array" ที่สมุดงานใหญ่ทำใน worker คืน ArrayBuffer เหมือนเดิม (ใช้ worker ไม่ได้ก็เขียนบนหน้า) */
+export async function writeXlsx(wb, opts) {
+  fixDatesForWrite(wb); // แปลงวันที่บนหน้าก่อน worker จะได้ไม่พึ่งเขตเวลาของ worker
+  if (opts.type !== "array" || cellCount(wb) < WRITE_MIN_CELLS) return XLSX.write(wb, opts);
+  const r = await askWorker({ op: "write", wb, opts });
+  return (r && r.buf) || XLSX.write(wb, opts);
+}
+
+/* ‼️ ขาเขียนของวันที่เพี้ยน 4 วินาที (คู่กับ fixExcelDateSkew ขาอ่านใน sheetpick.js) พบ 10/11/2026
+ * SheetJS แปลง Date เป็นเลขวันที่โดยอิง new Date(1899,11,30) ตามเวลาเครื่อง กรุงเทพปี 1899 ใช้ +06:42:04
+ * เที่ยงคืน 1 ม.ค. 2026 ลงไฟล์เป็น 46023.0000463 (00:00:04) Excel โชว์วันถูก แต่ค้นตรงวันที่หรือจับคู่ใน Power Query พังเงียบ
+ * แปลงเซลล์วันที่เป็นเลขวันที่เองจากเวลาท้องถิ่นที่ตาเห็น ไม่ผ่านฐาน 1899 คงรูปแบบวันที่ไว้ Excel ยังเห็นเป็นวันที่
+ * วันที่ก่อน 1 มี.ค. 1900 ปล่อยให้ SheetJS จัดเอง (ช่วงที่ Excel นับ 29 ก.พ. 1900 ผิด) เทส tests/xlsx_write_dates.test.mjs */
+const EXCEL_EPOCH = Date.UTC(1899, 11, 30);
+const SAFE_FROM = Date.UTC(1900, 2, 1);
+
+export function fixDatesForWrite(wb) {
+  for (const name of wb.SheetNames || []) {
+    const ws = wb.Sheets[name];
+    if (!ws) continue;
+    for (const addr of Object.keys(ws)) {
+      if (addr[0] === "!") continue;
+      const c = ws[addr];
+      if (!c || c.t !== "d" || !(c.v instanceof Date) || !Number.isFinite(c.v.getTime())) continue;
+      const d = c.v;
+      const ms = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+      if (ms < SAFE_FROM) continue;
+      const hasTime = ms % 86400000 !== 0;
+      c.t = "n";
+      c.v = (ms - EXCEL_EPOCH) / 86400000;
+      if (!c.z) c.z = hasTime ? "dd/mm/yyyy hh:mm:ss" : "dd/mm/yyyy";
+      delete c.w;
+    }
+  }
+  return wb;
+}
+
+/** XLSX.write ที่วันที่ตรงวินาที ใช้แทน XLSX.write ทุกจุดที่เขียนไฟล์ให้ผู้ใช้ */
+export function xlsxBytes(wb, opts) {
+  return XLSX.write(fixDatesForWrite(wb), opts);
 }

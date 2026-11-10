@@ -4,6 +4,7 @@ import { pageLines, guessColumns, rowToCells } from "../pdftext.js";
 import { openPdf, passwordBox } from "../pdfopen.js";
 import { ocrPdf, hasTextLayer } from "../ocr.js";
 import { tr, pl } from "../i18n.js";
+import { xlsxBytes } from "../xlsxutil.js"; // XLSX.write ที่วันที่ตรงวินาที
 
 export function mount(tool) {
   const { wrap, body } = toolShell(tool);
@@ -50,7 +51,7 @@ export function mount(tool) {
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), tr(`หน้า ${pg.page}`, `Page ${pg.page}`));
       }
       if (!wb.SheetNames.length) throw new Error(tr("อ่านไม่พบข้อความในไฟล์นี้เลย", "No text was found in this file"));
-      const blob = new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })],
+      const blob = new Blob([xlsxBytes(wb, { bookType: "xlsx", type: "array", compression: true })],
         { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
       st.ok(tr(`อ่านด้วย OCR สำเร็จ ${rows.toLocaleString("th-TH")} แถว, ${wb.SheetNames.length} ชีท`,
@@ -121,7 +122,7 @@ export function mount(tool) {
       }
       if (!wb.SheetNames.length) throw new Error(tr("อ่านไม่พบข้อความในไฟล์นี้เลย", "No text was found in this file"));
 
-      const out = XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true });
+      const out = xlsxBytes(wb, { bookType: "xlsx", type: "array", compression: true });
       const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       st.progress(null);
       st.ok(tr(`แปลงสำเร็จ ${totalRows.toLocaleString("th-TH")} แถว, ${wb.SheetNames.length} ชีท`,

@@ -1,7 +1,7 @@
 import { el, dropzone, toolShell, statusBar, button, field, select, download, downloadButton,
          stripExt, fmtBytes, yieldToBrowser, announceResults } from "../ui.js";
 import { smartDecode } from "../thai.js";
-import { splitSheetsByVisibility, readXlsx } from "../xlsxutil.js";
+import { splitSheetsByVisibility, readXlsx, writeXlsx } from "../xlsxutil.js";
 import { tr, pl } from "../i18n.js";
 import { assertSheetBytes } from "../filetype.js";
 
@@ -96,7 +96,7 @@ export function mount(tool) {
           st.progress(((i + 1) / files.length) * 100, `(${i + 1}/${files.length})`);
           await yieldToBrowser();
         }
-        const out = XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true });
+        const out = await writeXlsx(wb, { bookType: "xlsx", type: "array", compression: true }); // ไฟล์ใหญ่เขียนใน worker
         const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         st.progress(null);
         st.ok(tr(`รวมเป็น Excel ${wb.SheetNames.length} ชีทแล้ว` +

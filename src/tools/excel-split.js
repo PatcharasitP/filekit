@@ -10,6 +10,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select,
          downloadButton, stripExt, yieldToBrowser, fmtBytes } from "../ui.js";
 import { readWorkbook, sheetToTable, cellText, autoWidths } from "../sheetpick.js";
 import { tr, pl } from "../i18n.js";
+import { xlsxBytes } from "../xlsxutil.js"; // XLSX.write ที่วันที่ตรงวินาที
 
 const BLANK_KEY = () => tr("(ไม่ระบุ)", "(Unspecified)");
 
@@ -45,7 +46,7 @@ function makeSheet(rows, header, withHead, name, colRef) {
 }
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const toBlob = (wb) => new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true })], { type: XLSX_MIME });
+const toBlob = (wb) => new Blob([xlsxBytes(wb, { bookType: "xlsx", type: "array", compression: true })], { type: XLSX_MIME });
 
 const MAX_GROUPS = 300;       // เกินนี้แปลว่าเลือกคอลัมน์ผิด (เช่นไปเลือกคอลัมน์รหัสที่ไม่ซ้ำกันเลย)
 const PREVIEW_GROUPS = 12;

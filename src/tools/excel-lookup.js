@@ -7,6 +7,7 @@ import { lookup, applyFill, tableFromAoa, guessHeaderRow, guessKeyPair, guessPul
          colLetter, normHead, isBlank, bestDest, addonKeyCells, keyOf, lowMatch } from "../lookupkit.js";
 import { patchXlsx, contentKey } from "../xlsxpatch.js";
 import { watchDrops, handleOf, pickWritable, askWrite, writeBack, canWriteInPlace } from "../fshandle.js";
+import { xlsxBytes } from "../xlsxutil.js"; // XLSX.write ที่วันที่ตรงวินาที
 
 /* ‼️ ทำไมต้องมีเครื่องมือนี้ (พี่ปอนด์ 30/09/2026)
  * ไฟล์ Pending VAT 2026 ต้องเอาข้อมูลใบกำกับภาษีจากไฟล์ของทีมภาษีมาเติม 3 คอลัมน์ โดยจับคู่ด้วยคีย์ Mapping
@@ -899,7 +900,7 @@ export function mount(tool) {
     const wsx = XLSX.utils.aoa_to_sheet(fill.aoa, { cellDates: true, dateNF: "dd/mm/yyyy" });
     const wbx = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wbx, wsx, String(M.sheetNames[M.sheetIdx]).replace(/[[\]*?/\\:]/g, "-").slice(0, 31) || "Sheet1");
-    return { bytes: new Uint8Array(XLSX.write(wbx, { bookType: "xlsx", type: "array", compression: true })), patch: null, ext: "xlsx" };
+    return { bytes: new Uint8Array(xlsxBytes(wbx, { bookType: "xlsx", type: "array", compression: true })), patch: null, ext: "xlsx" };
   }
 
   const mimeOf = (ext) => (ext === "xlsm" ? XLSM_MIME : XLSX_MIME);

@@ -5,9 +5,15 @@
 // อ่านไม่ได้ (ไฟล์เสีย รหัสผ่าน) ตอบกลับว่าไม่ได้ ให้ฝั่งหน้าอ่านซ้ำแบบเดิม จะได้ข้อความ error เหมือนเดิมทุกตัวอักษร
 importScripts("../vendor/xlsx.full.min.js");
 
-self.onmessage = ({ data: { id, data, opts } }) => {
+// op read: อ่านไบต์หรือข้อความเป็นสมุดงาน , op write: เขียนสมุดงานเป็นไบต์ xlsx ส่งกลับแบบ transfer ไม่ต้องคัดลอก
+self.onmessage = ({ data: { id, op, data, wb, opts } }) => {
   try {
-    self.postMessage({ id, wb: XLSX.read(data, opts) });
+    if (op === "write") {
+      const buf = XLSX.write(wb, opts);
+      self.postMessage({ id, buf }, [buf]);
+    } else {
+      self.postMessage({ id, wb: XLSX.read(data, opts) });
+    }
   } catch (e) {
     self.postMessage({ id, err: String((e && e.message) || e) });
   }

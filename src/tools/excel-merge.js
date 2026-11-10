@@ -9,6 +9,7 @@ import { el, dropzone, toolShell, statusBar, button, field, select,
          downloadButton, stripExt, yieldToBrowser, eachFile, failedBox, fmtBytes } from "../ui.js";
 import { readWorkbook, sheetToTable, cellText, autoWidths } from "../sheetpick.js";
 import { tr, pl } from "../i18n.js";
+import { writeXlsx } from "../xlsxutil.js";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const PREVIEW_ROWS = 8;
@@ -279,7 +280,8 @@ export function mount(tool) {
         meta = tr(`${rows.length.toLocaleString()} แถว, ${header.length} คอลัมน์`,
                   `${pl(rows.length.toLocaleString(), "row", "rows")}, ${pl(header.length, "column", "columns")}`);
       }
-      const blob = new Blob([XLSX.write(out, { bookType: "xlsx", type: "array", compression: true })], { type: XLSX_MIME });
+      // ไฟล์ผลใหญ่เขียนใน worker หน้าไม่ค้าง (xlsxutil.js writeXlsx)
+      const blob = new Blob([await writeXlsx(out, { bookType: "xlsx", type: "array", compression: true })], { type: XLSX_MIME });
       const name = `${stripExt(read[0].name)}${tr("-รวมแล้ว.xlsx", "-merged.xlsx")}`;
       st.ok(tr(`รวมเสร็จ จาก ${read.length} ไฟล์`, `Done, merged ${pl(read.length, "file", "files")}`));
       results.appendChild(el("div", { class: "result" }, [

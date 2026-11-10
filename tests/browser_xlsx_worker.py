@@ -51,11 +51,11 @@ NO_WORKER = "window.Worker = undefined;"
 
 # อ่านผ่าน readWorkbook ของจริง แล้วแปลงทุกชีทเป็นแถว (วันที่เป็นวันตามเวลาเครื่อง) ไว้เทียบกันสองทาง
 READ = """async ([b64, name]) => {
-  const { loadLibs } = await import('/src/loader.js'); await loadLibs('xlsx');
+  const { loadLibs } = await import(new URL('src/loader.js', document.baseURI).href); await loadLibs('xlsx');
   const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   const file = new File([u], name);
   const before = window.__mainReads;
-  const { readWorkbook } = await import('/src/sheetpick.js');
+  const { readWorkbook } = await import(new URL('src/sheetpick.js', document.baseURI).href);
   const { wb } = await readWorkbook(file);
   const reads = window.__mainReads - before;
   const pad = (n) => String(n).padStart(2, '0');
@@ -87,7 +87,7 @@ def main():
     make_xlsx(small, 50)
     print(f"ไฟล์ใหญ่ {big.stat().st_size:,} ไบต์ ไฟล์เล็ก {small.stat().st_size:,} ไบต์", flush=True)
     with sync_playwright() as p:
-        b = p.chromium.launch()
+        b = getattr(p, os.environ.get("FK_ENGINE", "chromium")).launch()  # FK_ENGINE=webkit ลองแบบไอโฟน
         w = read_with(b, None, big)
         m = read_with(b, NO_WORKER, big)
         ck("ไฟล์ใหญ่ ไม่อ่านบนเธรดหลัก (XLSX.read บนหน้า 0 ครั้ง)", w["reads"] == 0, f"{w['reads']} ครั้ง")

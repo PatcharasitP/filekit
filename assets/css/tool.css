@@ -301,6 +301,8 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 .status-wrap{margin-top:var(--sp4)}
 .status{display:none;position:relative;font-size:13.5px;padding:11px 16px 11px 34px;border-radius:var(--r);font-weight:600;border:1px solid transparent}
 .status.show{display:block}
+/* สถานะที่ตั้งเป็นข้อความว่างไม่ต้องโชว์แถบเปล่ามีแต่จุด (เจอ 10/11/2026 pdf-edit tests/browser_portrait_room.py) */
+.status.show:empty{display:none}
 /* เดิมไม่มีเส้นขอบเลย มีแค่พื้นย้อมสี — ในขณะที่กล่องแจ้งเตือนแบบอื่นในหน้าเดียวกัน
    (.fail-box, .wrong-type, .stat) ทุกกล่องมีเส้นขอบย้อมสีคู่กับพื้นเสมอ ทำให้ .status ดูจางกว่าเพื่อนแบบไม่มีเหตุผล */
 .status.info{background:color-mix(in srgb,var(--brand) 14%,transparent);color:color-mix(in srgb,var(--brand) 62%,var(--text));border-color:color-mix(in srgb,var(--brand) 30%,transparent)}

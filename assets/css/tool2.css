@@ -522,3 +522,14 @@ body.tool > .pw-box .actions .btn{flex:1 1 auto; min-height:44px; justify-conten
 @media (max-width:860px){
   .s2-side.open + .s2-scrim{display:block; position:fixed; inset:0; z-index:39; background:rgba(0,0,0,.32)}
 }
+
+/* ── มือถือแนวตั้งจอแคบ แถบเครื่องมือแถวเดียวเลื่อนซ้ายขวา ──────────────────────
+ * ‼️ เทสเตอร์ U7 09/11/2026: iPhone SE 320x568 pdf-pages แถบขึ้น 5 แถว 231px เหลือที่เห็นเอกสาร 111px
+ *    (tests/browser_portrait_room.py คู่กับ browser_landscape_room.py ที่ใช้วิธีเดียวกันกับแนวนอน)
+ *    ขอบขวาจางบอกว่ายังมีปุ่มต่อ เว้นท้ายแถบ 24px ให้ปุ่มสุดท้ายพ้นขอบจางตอนเลื่อนสุด */
+@media (max-width:480px){
+  .s2-tbar{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; padding-inline-end:24px;
+    -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent)}
+  .s2-tbar::-webkit-scrollbar{display:none}
+  .s2-tbar > *{flex:none}
+}

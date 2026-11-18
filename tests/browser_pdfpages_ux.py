@@ -81,6 +81,9 @@ JS_SEEN_TEXT = """(t) => [...document.querySelectorAll('body *')].some(n =>
 # ตัวบอกที่ตาเห็นเหลือเลขตัวโตในช่องวาง (.pp-slot-mark) ข้อความยังอยู่ใน role=status ให้โปรแกรมอ่านหน้าจอ
 JS_SLOT_NUM = """(n) => { const b = document.querySelector('.pg.pp-slot .pp-slot-mark b');
    return !!b && b.textContent.trim() === String(n) && b.checkVisibility({opacityProperty: true, visibilityProperty: true}); }"""
+# 19/11/2026 พี่ปอนด์: ลากนิดเดียวการ์ดบังช่องวาง "จะไม่เห็นเลข 2" วงเลขติดมุมการ์ดที่ลาก
+JS_BUBBLE = """() => { const b = document.querySelector('.pp-move-num');
+   return b && b.checkVisibility({opacityProperty: true, visibilityProperty: true}) ? b.textContent.trim() : null; }"""
 JS_SR_STATUS = """(t) => [...document.querySelectorAll('[role=status]')].some(n => (n.textContent || '').includes(t))"""
 # การ์ดที่เลือก: พี่ปอนด์ "ตอนเลือกการ์ดแอบตะหงิด" หน้ากระดาษห้ามถูกย้อมสี และเลขหน้าเป็นป้ายทึบ
 JS_SEL_LOOK = """(i) => { const c = [...document.querySelectorAll('.pages .pg')].filter(e => e.offsetParent)[i];
@@ -271,7 +274,7 @@ def main():
                look["bw"] == 0 and look["bg"] in ("rgba(0, 0, 0, 0)", "transparent"), str(look))
             # 18/11/2026 ค่ำ พี่ปอนด์: "ให้พับเก็บได้ไหมเผื่อรก คนอยากรู้มากดดูเอง" , อยากได้ลูกศร , ชอบ Ctrl Shift เลือกหลายอัน
             ck("บอกลูกศร เลื่อนหน้าที่เลือก", "← → ↑ ↓" in keys, str(keys))
-            ck("บอก Shift+คลิก เลือกเป็นช่วง", "Shift+คลิก" in keys, str(keys))
+            ck("บอก Ctrl+Shift+คลิก แทน Shift+คลิก (พี่ปอนด์สั่ง)", "Ctrl+Shift+คลิก" in keys and "Shift+คลิก" not in keys, str(keys))
             ck("บอก Esc ยกเลิกเลือก", "Esc" in keys, str(keys))
             kh = pg.locator(".keyhints").first
             vis = pg.evaluate("() => [...document.querySelectorAll('.keyhints .kbd')].some(k => k.checkVisibility())")
@@ -325,12 +328,12 @@ def main():
             ck("เลือกหน้าเดียว ไม่มีแถบเลือกหลายหน้า", not pg.evaluate(JS_SEEN_BTN, "ยกเลิกเลือก"))
             card(pg, 2).click(modifiers=["Control"]); pg.wait_for_timeout(250)
             ck("Ctrl+คลิกใบที่สอง แถบขึ้นว่า เลือก 2 หน้า", pg.evaluate(JS_SEEN_TEXT, "เลือก 2 หน้า"))
-            pg.locator(".pp-bulk button, [role=toolbar] button").filter(has_text="หมุน").first.click()
+            pg.locator(".pp-bulk button[aria-label*='หมุน']").first.click()
             pg.wait_for_timeout(300)
             r = state(pg)["rot"]
             ck("ปุ่มหมุนบนแถบหมุนทั้งสองหน้า", r[0] == "90" and r[2] == "90" and r[1] == "0", str(r))
             n0 = state(pg)["n"]
-            pg.locator(".pp-bulk button, [role=toolbar] button").filter(has_text="ลบ").first.click()
+            pg.locator(".pp-bulk button[aria-label*='ลบ']").first.click()
             pg.wait_for_timeout(300)
             ck("ปุ่มลบบนแถบลบทั้งสองหน้า", state(pg)["n"] == n0 - 2, str(state(pg)["n"]))
             pg.keyboard.press("Control+z")
@@ -373,6 +376,74 @@ def main():
             ctx.close()
         section("④ ปุ่มบนการ์ดไม่ซ้ำแถบบน และมีแถบเลือกหลายหน้า", s4)
 
+        # ── ④ข ลูกศรลงตอนใต้หน้านั้นไม่มีใบ ────────────────────────────────
+        # 19/11/2026 พี่ปอนด์ (คลิป): แถวละ 3 ใบ แถวล่างมี 4 กับ 5 อยู่หน้า 3 กดลง ไปหน้า 5
+        #   "หน้า 3 ลงมามันต้องไปอยู่หน้า 4 สิ" ใต้ใบไม่มีใบ = ไปหน้าถัดไปตามลำดับ ไม่ใช่ใบที่ใกล้แนวที่สุด
+        def s4b():
+            ctx, pg = desk()
+            open_tool(pg, [A, B, C])
+            n = state(pg)["n"]
+            cols = pg.evaluate("""() => { const v = [...document.querySelectorAll('.pages .pg')].filter(e => e.offsetParent);
+               return v.filter(c => c.offsetTop === v[0].offsetTop).length; }""")
+            last_row = n - cols                     # ใบในแถวที่สอง
+            ck("ตั้งเคสได้: แถวสองมีมากกว่า 1 ใบแต่ไม่เต็มแถว", 1 < last_row < cols, f"{n} หน้า แถวละ {cols}")
+            card(pg, cols - 1).click(); pg.wait_for_timeout(200)
+            pg.keyboard.press("ArrowDown"); pg.wait_for_timeout(250)
+            ck(f"ใบท้ายแถวแรก (หน้า {cols}) กดลง ไปหน้าถัดไป หน้า {cols + 1}", state(pg)["sel"] == [cols], str(state(pg)["sel"]))
+            card(pg, 0).click(); pg.wait_for_timeout(200)
+            pg.keyboard.press("ArrowDown"); pg.wait_for_timeout(250)
+            ck("ใบแรกกดลง ยังไปใบที่อยู่ใต้ตรง ๆ", state(pg)["sel"] == [cols], str(state(pg)["sel"]))
+            pg.keyboard.press("ArrowDown"); pg.wait_for_timeout(250)
+            ck("แถวสุดท้ายกดลง อยู่ที่เดิม", state(pg)["sel"] == [cols], str(state(pg)["sel"]))
+            # 19/11/2026 พี่ปอนด์: "ctrl shift คลิกดีไหม" เลือกช่วงแรก แล้ว Ctrl+Shift+คลิก เพิ่มอีกช่วง ช่วงแรกต้องยังอยู่
+            card(pg, 0).click(); pg.wait_for_timeout(150)
+            card(pg, 1).click(modifiers=["Shift"]); pg.wait_for_timeout(150)
+            card(pg, 3).click(modifiers=["Control"]); pg.wait_for_timeout(150)
+            card(pg, 5).click(modifiers=["Control", "Shift"]); pg.wait_for_timeout(250)
+            ck("Ctrl+Shift+คลิก เพิ่มช่วง 4 ถึง 6 โดยช่วง 1 ถึง 2 ยังอยู่", state(pg)["sel"] == [0, 1, 3, 4, 5], str(state(pg)["sel"]))
+            keys = pg.evaluate("() => [...document.querySelectorAll('.keyhints .kbd')].map(e => e.textContent.trim())")
+            ck("แถวคีย์ลัดบอก Ctrl+Shift+คลิก", "Ctrl+Shift+คลิก" in keys, str(keys))
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            card(pg, 0).click(); pg.wait_for_timeout(150)
+            # พี่ปอนด์: "ไม่ต้องเขียนอธิบายหรอ หมุน หรือ ลบ สัญลักษณ์มันก็บอกอยู่"
+            card(pg, 1).click(modifiers=["Control"]); pg.wait_for_timeout(250)
+            txt = pg.locator(".pp-bulk").inner_text()
+            ck("แถบเลือกหลายหน้าไม่มีคำว่า หมุน ลบ เหลือไอคอน", "หมุน" not in txt and "ลบ" not in txt, txt.replace("\n", " "))
+            # พี่ปอนด์: "ย้ายได้ไหม จับมันย้ายไปมาได้ก็ดีนะ" ... "หมายถึงลากอันนี้" (แถบเลือกหลายหน้า)
+            bb = pg.locator(".pp-bulk").bounding_box()
+            pg.mouse.move(bb["x"] + 8, bb["y"] + bb["height"] / 2)
+            pg.mouse.down(); pg.mouse.move(bb["x"] + 8 - 200, bb["y"] + bb["height"] / 2 - 150, steps=8); pg.mouse.up()
+            # ‼️ รุ่นแรกแอนิเมชันโผล่ทับตำแหน่ง ปล่อยแล้วแถบเด้งกลับที่เดิมแวบหนึ่ง (ดับเบิลคลิกพลาดตกพื้นหลัง) วัด 3 จังหวะหลังปล่อย
+            jump = pg.evaluate("""() => new Promise(r => { const xs = []; let k = 0;
+               const t = () => { xs.push(Math.round(document.querySelector('.pp-bulk').getBoundingClientRect().left)); if (++k < 6) setTimeout(t, 40); else r(xs); }; t(); })""")
+            pg.wait_for_timeout(250)
+            b2 = pg.locator(".pp-bulk").bounding_box()
+            ck("ปล่อยแถบแล้วไม่เด้งกลับที่เดิมระหว่างทาง", max(jump) - min(jump) <= 2, str(jump))
+            ck("ลากแถบเลือกหลายหน้าย้ายที่ได้", abs((b2["x"] - bb["x"]) + 200) < 6 and abs((b2["y"] - bb["y"]) + 150) < 6,
+               f"{round(bb['x'])},{round(bb['y'])} -> {round(b2['x'])},{round(b2['y'])}")
+            ck("ลากแถบแล้วหน้าที่เลือกยังอยู่", len(state(pg)["sel"]) == 2, str(state(pg)["sel"]))
+            pg.mouse.down(); pg.mouse.move(-500, -500, steps=6); pg.mouse.up(); pg.wait_for_timeout(250)
+            b3 = pg.locator(".pp-bulk").bounding_box()
+            top_el = pg.evaluate("""() => { const r = document.querySelector('.pp-bulk').getBoundingClientRect();
+               const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(e && e.closest('.pp-bulk')); }""")
+            ck("ลากแถบออกนอกพื้นที่การ์ดไม่ได้ ไม่มุดใต้หัวเว็บ (จุดกลางแถบยังเป็นแถบ)", b3["x"] >= 0 and b3["y"] >= 0 and top_el,
+               f"{round(b3['x'])},{round(b3['y'])} บนสุด={top_el}")
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            card(pg, 0).click(); card(pg, 2).click(modifiers=["Control"]); pg.wait_for_timeout(250)
+            b4 = pg.locator(".pp-bulk").bounding_box()
+            ck("เลือกใหม่ แถบขึ้นที่เดิมที่ลากไว้", abs(b4["x"] - b3["x"]) < 3 and abs(b4["y"] - b3["y"]) < 3,
+               f"{round(b3['x'])},{round(b3['y'])} / {round(b4['x'])},{round(b4['y'])}")
+            pg.locator(".pp-bulk button[aria-label*='หมุน']").click(); pg.wait_for_timeout(250)
+            ck("ปุ่มบนแถบที่ย้ายแล้วยังกดได้", state(pg)["rot"][0] == "90", str(state(pg)["rot"]))
+            pg.locator(".pp-bulk-n").dblclick(); pg.wait_for_timeout(250)
+            b5 = pg.locator(".pp-bulk").bounding_box()
+            ck("ดับเบิลคลิกแถบ กลับที่เดิม", abs(b5["x"] - bb["x"]) < 3 and abs(b5["y"] - bb["y"]) < 3,
+               f"{round(bb['x'])},{round(bb['y'])} / {round(b5['x'])},{round(b5['y'])}")
+            ck("ปุ่มไอคอนยังมีชื่อให้โปรแกรมอ่านหน้าจอ", pg.locator(".pp-bulk button[aria-label*='หมุน']").count() == 1
+               and pg.locator(".pp-bulk button[aria-label*='ลบ']").count() == 1)
+            ctx.close()
+        section("④ข ลูกศรลงตอนใต้ใบไม่มีใบ และแถบเลือกเป็นไอคอน", s4b)
+
         # ── ⑤ ลากย้ายหน้า ─────────────────────────────────────────────────
         def drag_mouse(pg, src_i, dst_i, frac=0.75, probe=None):
             card(pg, 0).scroll_into_view_if_needed()
@@ -405,7 +476,7 @@ def main():
                     return c ? ((c.querySelector('.num') || {{}}).textContent || '').trim() : null; }}""")
                 return {"veil": pg.evaluate(JS_VEIL), "ds": pg.evaluate("() => window.__ds"),
                         "label": pg.evaluate(JS_SEEN_TEXT, "ย้ายไปเป็นหน้า 4"), "slot": pg.evaluate(JS_SLOT_NUM, 4),
-                        "sr": pg.evaluate(JS_SR_STATUS, "ย้ายไปเป็นหน้า 4"),
+                        "sr": pg.evaluate(JS_SR_STATUS, "ย้ายไปเป็นหน้า 4"), "bubble": pg.evaluate(JS_BUBBLE),
                         "nums": nums, "orig3": orig3}
 
             m = drag_mouse(pg, 0, 3, probe=mid)
@@ -415,6 +486,7 @@ def main():
             #    เพราะม่านขึ้นจาก dragenter ที่มี Files เท่านั้น ไม่มี native drag = ไม่มี dragenter ให้ม่านขึ้น
             ck("ลากหน้าภายในไม่ใช้ native drag ของเบราว์เซอร์ (ต้นทางของม่าน)", m["ds"] == 0, f"dragstart {m['ds']} ครั้ง")
             ck("ระหว่างลาก ช่องวางโชว์เลข 4 ตัวโต", m["slot"])
+            ck("ระหว่างลาก วงเลขติดการ์ดที่ลากบอก 4", m["bubble"] == "4", str(m["bubble"]))
             ck("ระหว่างลาก ไม่มีป้ายพิลล์ ย้ายไปเป็นหน้า 4 ให้ตาเห็นซ้ำกับเลข (พี่ปอนด์ชอบเลขมากกว่า)", not m["label"])
             ck("ระหว่างลาก โปรแกรมอ่านหน้าจอยังได้ยิน ย้ายไปเป็นหน้า 4", m["sr"])
             ck("ระหว่างลาก เลขหน้าการ์ดเปลี่ยนสด (หน้าเดิมที่ 4 ตอนนี้ขึ้นเลข 3)", m["orig3"] == "3", str(m))
@@ -423,6 +495,12 @@ def main():
             nums = pg.evaluate("""() => [...document.querySelectorAll('.pages .pg')].filter(e => e.offsetParent)
                 .map(c => ((c.querySelector('.num') || {}).textContent || '').trim())""")
             ck("หลังวาง เลขหน้าเรียง 1 ถึง 5", nums == ["1", "2", "3", "4", "5"], str(nums))
+            # ลากนิดเดียวในช่องตัวเอง การ์ดที่ยกบังเลขในช่องวาง วงเลขต้องยังบอกหน้า 2
+            sig0 = state(pg)["sig"]
+            small = drag_mouse(pg, 1, 1, frac=0.85, probe=lambda: pg.evaluate(JS_BUBBLE))
+            ck("ลากนิดเดียวในช่องเดิม วงเลขยังบอก 2", small == "2", str(small))
+            ck("ปล่อยในช่องเดิม ลำดับไม่เปลี่ยน", state(pg)["sig"] == sig0)
+            ck("ปล่อยแล้ววงเลขหายไป", pg.evaluate(JS_BUBBLE) is None)
             # ลากกลับ แล้วกด Esc กลางทาง = ยกเลิก
             a, b = card(pg, 3).bounding_box(), card(pg, 0).bounding_box()
             pg.mouse.move(a["x"] + a["width"] / 2, a["y"] + a["height"] / 2)

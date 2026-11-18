@@ -25,15 +25,6 @@ const STYLE = `
 .pp-stats{font-size:12.5px;line-height:1.6;color:var(--text-mute);padding:9px 12px;
   background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:var(--r-sm,10px)}
 .pp-stats b{color:var(--text);font-variant-numeric:tabular-nums}
-.pp-quick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}
-.pp-chip{border:1.5px solid var(--line);background:var(--bg-soft);color:var(--text);
-  border-radius:999px;padding:6px 11px;font:500 12.5px/1.4 var(--font);cursor:pointer;min-height:36px;
-  transition:border-color .12s var(--ease-snap,ease),background .12s var(--ease-snap,ease)}
-.pp-chip:hover:not(:disabled){border-color:color-mix(in srgb,var(--g-pdf,var(--brand)) 45%,var(--line))}
-.pp-chip:disabled{opacity:.45;cursor:default}
-/* จอกว้าง+เมาส์ ชิปแน่นได้อีก นิ้วสัมผัสยังได้ 36px เท่าเดิม */
-@media (min-width:1001px) and (pointer:fine){ .pp-chip{padding:4px 10px;min-height:29px} }
-.pp-quick-hint{display:block;color:var(--text-mute);font-size:11.5px;line-height:1.5;margin-bottom:6px}
 .pg.selected{outline:2px solid var(--ac,var(--brand));outline-offset:2px}
 /* แถบสีประจำไฟล์บนการ์ดหน้า กับป้ายตัวอักษรที่เป็นตัวบอกจริง */
 .pg{position:relative}
@@ -91,8 +82,14 @@ const STYLE = `
   border-radius:999px;background:var(--card);border:1px solid var(--line);
   box-shadow:0 12px 32px rgba(15,23,42,.2);animation:pp-up .2s var(--ease-snap,ease)}
 .pp-bulk[hidden]{display:none}
+.pp-bulk{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;padding-inline-start:8px}
+.pp-bulk.dragging{cursor:grabbing;box-shadow:0 20px 44px rgba(15,23,42,.3)}
+.pp-bulk button{cursor:pointer}
+.pp-bulk-grip{display:grid;place-items:center;color:var(--text-mute);margin-inline-end:2px}
+.pp-bulk-grip .pg-ico{width:16px;height:16px}
 .pp-bulk-n{font:700 13px/1.3 var(--font);margin-inline-end:6px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pp-bulk .btn{min-height:34px;white-space:nowrap}
+.pp-bulk .btn.has-ico{min-width:38px;padding-inline:10px;justify-content:center}
 .pp-help{margin:6px 2px 0;font-size:12px;color:var(--text-mute)}
 .pp-help-body{padding:2px 0 0 18px}
 .pp-help[open] > .keyhints-t::before{transform:rotate(45deg)}
@@ -102,7 +99,9 @@ const STYLE = `
 .pp-bulk-x:hover{background:var(--bg-soft);color:var(--text)}
 .pp-bulk-x:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
 .pp-bulk-x .pg-ico{width:18px;height:18px}
-@keyframes pp-up{from{opacity:0;translate:0 10px}to{opacity:1;translate:0 0}}
+/* ‼️ ใช้ transform ไม่ใช่ translate เพราะ translate คือที่เก็บตำแหน่งที่ผู้ใช้ลากแถบไปวาง (19/11/2026)
+   รุ่นแรกแอนิเมชันทับค่านั้น ปล่อยเมาส์แล้วแถบเด้งกลับที่เดิมแวบหนึ่ง ดับเบิลคลิกคลิกที่สองตกพื้นหลังแล้วยกเลิกเลือกหมด */
+@keyframes pp-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ── ลากย้ายหน้า ── */
 html.pp-grabbing,html.pp-grabbing *{cursor:grabbing !important}
 .pg.pp-ghost{position:fixed;z-index:1200;margin:0;pointer-events:none;transform-origin:50% 35%;
@@ -120,6 +119,13 @@ html.pp-grabbing,html.pp-grabbing *{cursor:grabbing !important}
   padding:6px 13px;border-radius:999px;background:color-mix(in srgb,var(--brand) 80%,#000);color:#fff;
   font:700 13px/1.2 var(--font);box-shadow:0 8px 20px rgba(0,0,0,.28)}
 .pp-move-badge.same{background:#4a5160}
+.pp-move-num{position:fixed;z-index:1202;pointer-events:none;translate:-50% -50%;min-width:46px;height:46px;padding:0 10px;
+  border-radius:999px;display:grid;place-items:center;background:color-mix(in srgb,var(--brand) 85%,#000);color:#fff;
+  font:800 24px/1 var(--font);font-variant-numeric:tabular-nums;border:3px solid #fff;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.pp-move-num:empty{display:none}
+.pp-move-num.same{background:#4a5160}
+.pp-move-num.pop{animation:pp-num-pop .32s cubic-bezier(.3,1.7,.5,1)}
+@keyframes pp-num-pop{40%{scale:1.3}}
 /* ช่องที่จะลง: การ์ดจริงกลายเป็นช่องเรืองแสง บอกเลขหน้าปลายทางตัวใหญ่ */
 .pg.pp-slot{border:2px dashed color-mix(in srgb,var(--brand) 70%,transparent);
   background:color-mix(in srgb,var(--brand) 8%,var(--bg-soft));
@@ -228,17 +234,64 @@ export function mount(tool) {
   const bulkCount = el("span", { class: "pp-bulk-n", "aria-live": "polite" });
   const bulkBar = el("div", { class: "pp-bulk", role: "toolbar", hidden: true,
     "aria-label": tr("ทำกับหน้าที่เลือก", "Act on selected pages") }, [
+    el("span", { class: "pp-bulk-grip", "aria-hidden": "true" }, [uiIcon("grip", "pg-ico")]),
     bulkCount,
-    button(tr("หมุน", "Rotate"), { ghost: true, icon: "rotateR",
+    /* ‼️ 19/11/2026 พี่ปอนด์: "ไม่ต้องเขียนอธิบายหรอ หมุน หรือ ลบ สัญลักษณ์มันก็บอกอยู่" เหลือไอคอน ชื่อเต็มอยู่ใน aria-label */
+    button("", { ghost: true, icon: "rotateR",
       label: tr("หมุนหน้าที่เลือกตามเข็ม 90 องศา", "Rotate the selected pages 90 degrees clockwise"),
       onclick: () => rotateSelected(90) }),
-    button(tr("ลบ", "Delete"), { ghost: true, icon: "trash",
+    button("", { ghost: true, icon: "trash",
       label: tr("ลบหน้าที่เลือก", "Delete the selected pages"), onclick: dropSelected }),
     /* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: "ยกเลิกเลือก แปลกไหม แค่เป็นปุ่มปิดก็เข้าใจแล้ว" ไอคอนกากบาท ชื่อเต็มอยู่ใน aria-label กับ title */
     el("button", { class: "pp-bulk-x", type: "button", "aria-label": tr("ยกเลิกเลือก", "Clear selection"),
       title: tr("ยกเลิกเลือก (Esc)", "Clear selection (Esc)"), onclick: () => { clearSel(); render(); } }, [uiIcon("close", "pg-ico")]),
   ]);
   const bulkDock = el("div", { class: "pp-bulk-dock" }, [bulkBar]);
+  /* ── ลากแถบเลือกหลายหน้าไปวางตรงไหนก็ได้ (19/11/2026 พี่ปอนด์: "จับมันย้ายไปมาได้ก็ดีนะ" "ลากเล่นอ่ะ")
+     แถบลอยทับท้ายการ์ด คนที่อยากเห็นการ์ดเต็ม ๆ จับย้ายเองได้ จำตำแหน่งไว้ในเครื่อง ดับเบิลคลิกกลับที่เดิม
+     ‼️ จับได้ทั้งแถบยกเว้นปุ่ม กดปุ่มยังเป็นการกดปุ่ม , ห้ามหลุดนอกจอ (เหลือขอบ 8px) */
+  const BULK_KEY = "filekit-pdfpages-bulk-pos";
+  let bulkPos = { x: 0, y: 0 };
+  try { const v = JSON.parse(localStorage.getItem(BULK_KEY) || "null"); if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) bulkPos = v; } catch { /* โหมดส่วนตัว */ }
+  const applyBulkPos = () => { bulkBar.style.translate = `${bulkPos.x}px ${bulkPos.y}px`; };
+  const saveBulkPos = () => { try { localStorage.setItem(BULK_KEY, JSON.stringify(bulkPos)); } catch { /* โหมดส่วนตัว */ } };
+  applyBulkPos();
+  bulkBar.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest("button")) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY, ox = bulkPos.x, oy = bulkPos.y;
+    const r0 = bulkBar.getBoundingClientRect();
+    try { bulkBar.setPointerCapture(e.pointerId); } catch { /* ไม่รองรับ */ }
+    bulkBar.classList.add("dragging");
+    /* ‼️ กรอบที่ลากได้ = พื้นที่การ์ดที่เห็นบนจอ ไม่ใช่ทั้งหน้าต่าง
+       รุ่นแรกให้ลากได้ทั้งจอ แถบมุดลงใต้แถบหัวเว็บ กดอะไรบนแถบไม่ได้อีก (เทสจับได้ header intercepts pointer events) */
+    const B = bulkBounds();
+    const move = (ev) => {
+      const dx = Math.max(B.left - r0.left, Math.min(B.right - r0.right, ev.clientX - sx));
+      const dy = Math.max(B.top - r0.top, Math.min(B.bottom - r0.bottom, ev.clientY - sy));
+      bulkPos = { x: ox + dx, y: oy + dy };
+      applyBulkPos();
+    };
+    const up = () => {
+      bulkBar.removeEventListener("pointermove", move);
+      bulkBar.removeEventListener("pointerup", up);
+      bulkBar.removeEventListener("pointercancel", up);
+      bulkBar.classList.remove("dragging");
+      saveBulkPos();
+    };
+    bulkBar.addEventListener("pointermove", move);
+    bulkBar.addEventListener("pointerup", up);
+    bulkBar.addEventListener("pointercancel", up);
+  });
+  function bulkBounds() {
+    const host = (bulkDock.closest(".s2-stage, .ws-stage, .ws-body") || ws.body).getBoundingClientRect();
+    return { left: Math.max(8, host.left + 8), top: Math.max(8, host.top + 8),
+             right: Math.min(innerWidth, host.right) - 8, bottom: Math.min(innerHeight, host.bottom) - 8 };
+  }
+  bulkBar.addEventListener("dblclick", (e) => {
+    if (e.target.closest("button")) return;
+    bulkPos = { x: 0, y: 0 }; applyBulkPos(); saveBulkPos();
+  });
   const undoDelBtn = button(tr("ย้อนการลบ", "Undo delete"), { ghost: true, icon: "undo",
     label: tr("เอาหน้าที่เพิ่งลบกลับมา", "Bring back the page you just deleted"), onclick: undoDelete });
   undoDelBtn.disabled = true;
@@ -322,43 +375,12 @@ export function mount(tool) {
      แต่งานของเครื่องมือนี้คือ "ดูภาพแล้วลากสลับ" พื้นที่ภาพจึงสำคัญที่สุด
      วัดจริงแล้วแผงขวากินไป 340px ทำให้กริดเหลือ 708px ได้แค่ 3 คอลัมน์
      ย้ายมาต่อท้ายแผงซ้ายซึ่งยังมีที่ว่าง แล้วคืนพื้นที่ให้ภาพทั้งหมด */
-  /* ‼️ ชิปเลือกเร็ว แทนที่จะให้พิมพ์รูปแบบช่วงหน้าเอง (ถอดจาก openkrua 18/09/2026)
-     หน้าใช้งานจริงของเขาไม่ให้ผู้ใช้พิมพ์อะไรเลย ให้กดเลือกจากสิ่งที่เตรียมไว้
-     ของเราช่องนี้ต้องรู้ก่อนว่ารูปแบบ 1-3,5,8- แปลว่าอะไร ซึ่งต้องเรียนก่อนใช้
-     ชิปพวกนี้คือสิ่งที่คนทำบ่อยที่สุดจริง ๆ กดครั้งเดียวได้เลย ไม่ต้องคิด
-     ช่องพิมพ์ยังอยู่ครบสำหรับคนที่ต้องการช่วงเฉพาะเจาะจง */
-  const QUICK = [
-    { id: "odd",   label: () => tr("หน้าคี่", "Odd pages"),      pick: (n) => range(n).filter((i) => i % 2 === 1) },
-    { id: "even",  label: () => tr("หน้าคู่", "Even pages"),     pick: (n) => range(n).filter((i) => i % 2 === 0) },
-    { id: "first", label: () => tr("ครึ่งแรก", "First half"),    pick: (n) => range(n).slice(0, Math.ceil(n / 2)) },
-    { id: "last",  label: () => tr("ครึ่งหลัง", "Second half"),  pick: (n) => range(n).slice(Math.ceil(n / 2)) },
-    { id: "nocover", label: () => tr("ตัดหน้าปก", "Drop cover"), pick: (n) => range(n).slice(1) },
-  ];
-  const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
-
-  const quickWrap = el("div", { class: "pp-quick" }, QUICK.map((q) =>
-    el("button", {
-      class: "pp-chip", type: "button", disabled: true, "data-q": q.id,
-      onclick: () => applyQuick(q),
-    }, q.label())));
-
-  function applyQuick(q) {
-    if (!items.length) return;
-    const keep = new Set(q.pick(items.length));
-    items.forEach((it, i) => { it.dropped = !keep.has(i + 1); });
-    removed = [];                 // เลือกใหม่ทั้งชุด การย้อนทีละหน้าจึงไม่มีความหมายอีก
-    clearSel();
-    rangeInput.value = "";
-    render();
-    st.ok(tr(`เก็บ ${keep.size} หน้า ตามที่เลือก`, `Keeping ${pl(keep.size, "page", "pages")}`));
-  }
-
+  /* ‼️ 19/11/2026 ถอดชิปเลือกเร็ว (หน้าคี่ หน้าคู่ ครึ่งแรก ครึ่งหลัง ตัดหน้าปก) พี่ปอนด์: "เอาออกเหอะจริง"
+     ถามมาก่อนแล้วว่า "มันจะมีคนมาใช้ด้วยเหรอ" งานหลักของเครื่องมือนี้คือดูภาพแล้วลาก ลบ หมุน
+     คนที่อยากเก็บบางช่วงยังพิมพ์ช่วงหน้าในช่องข้างล่างได้ */
   rightNode.append(
     el("div", {}, [
       el("h3", {}, tr("อยากเก็บหน้าไหนไว้บ้าง", "Which pages do you want to keep")),
-      quickWrap,
-      el("small", { class: "pp-quick-hint" },
-        tr("กดเลือกได้เลย หรือพิมพ์ช่วงหน้าเองด้านล่าง", "Tap one, or type a page range below")),
       field("", rangeInput, ""),
       rangeBtn,
     ]),
@@ -453,15 +475,14 @@ export function mount(tool) {
     else if (k === "ArrowLeft") n = i - 1;
     else if (k === "ArrowRight") n = i + 1;
     else {
-      const top0 = cur.offsetTop, x0 = cur.getBoundingClientRect().left;
-      const down = k === "ArrowDown";
-      const other = cards.filter((c) => (down ? c.offsetTop > top0 + 2 : c.offsetTop < top0 - 2));
-      if (other.length) {
-        const rowTop = down ? Math.min(...other.map((c) => c.offsetTop)) : Math.max(...other.map((c) => c.offsetTop));
-        const row = other.filter((c) => Math.abs(c.offsetTop - rowTop) <= 2);
-        const dist = (c) => Math.abs(c.getBoundingClientRect().left - x0);
-        n = cards.indexOf(row.reduce((a, c) => (dist(c) < dist(a) ? c : a)));
-      }
+      /* ‼️ 19/11/2026 พี่ปอนด์ (คลิป): แถวละ 3 ใบ อยู่หน้า 3 กดลง รุ่นแรกไปหน้า 5 (ใบแถวล่างที่ใกล้แนวที่สุด)
+         "หน้า 3 ลงมามันต้องไปอยู่หน้า 4 สิ" ใต้ใบมีใบ = ไปใบนั้น , ใต้ใบไม่มีใบ = ไปหน้าถัดไปตามลำดับ
+         แถวสุดท้ายกดลง อยู่ที่เดิม , ขึ้นไปใบที่อยู่เหนือตรง ๆ เสมอ (แถวบนเต็มทุกช่อง) */
+      const cols = Math.max(1, cards.filter((c) => Math.abs(c.offsetTop - cards[0].offsetTop) <= 2).length);
+      const lastRow = Math.floor((cards.length - 1) / cols);
+      if (k === "ArrowUp") n = i - cols >= 0 ? i - cols : i;
+      else if (Math.floor(i / cols) >= lastRow) n = i;
+      else n = i + cols < cards.length ? i + cols : i + 1;
     }
     n = Math.max(0, Math.min(cards.length - 1, n));
     const idx = cards[n].dataset.i;
@@ -523,7 +544,8 @@ export function mount(tool) {
       ["← → ↑ ↓", tr("เลื่อนไปหน้าข้าง ๆ", "Move to the next page")],
       ["Enter", tr("เลือก ยกเลิกเลือก", "Select, deselect")],
       [IS_MAC ? tr("⌘+คลิก", "⌘+click") : tr("Ctrl+คลิก", "Ctrl+click"), tr("เลือกหลายหน้า", "Select several pages")],
-      [tr("Shift+คลิก", "Shift+click"), tr("เลือกเป็นช่วง", "Select a range")],
+      /* 19/11/2026 พี่ปอนด์: "เอาเป็นคีย์นี้แทน Shift+คลิก" แถวคีย์ลัดบอกแค่ Ctrl+Shift+คลิก (Shift+คลิกเฉย ๆ ยังใช้ได้ แต่ไม่โชว์ให้รก) */
+      [IS_MAC ? tr("⌘+Shift+คลิก", "⌘+Shift+click") : tr("Ctrl+Shift+คลิก", "Ctrl+Shift+click"), tr("เลือกเป็นช่วง ช่วงเดิมไม่หาย", "Select a range, keep the rest")],
       ["Esc", tr("ยกเลิกเลือก", "Clear selection")],
     ]),
     helpBox,
@@ -571,7 +593,6 @@ export function mount(tool) {
   function setLoaded(on) {
     rangeInput.disabled = !on;
     rangeBtn.disabled = !on;
-    quickWrap.querySelectorAll(".pp-chip").forEach((b) => { b.disabled = !on; });
     saveBtn.disabled = !on;
     resetBtn.disabled = !on;
     // ปุ่มเรียงมีความหมายเฉพาะตอนมีมากกว่าหนึ่งไฟล์
@@ -733,7 +754,9 @@ export function mount(tool) {
         onclick: (e) => {
           if (dragJustEnded()) return;
           const touchy = lastPointerType === "touch" || lastPointerType === "pen";
-          if (e.shiftKey && anchor) selectItem(it, "range");
+          // Ctrl+Shift+คลิก = เพิ่มอีกช่วง หน้าที่เลือกไว้ยังอยู่ (พี่ปอนด์ขอ 19/11/2026 แบบ Explorer กับ Excel)
+          if (e.shiftKey && anchor && (e.ctrlKey || e.metaKey)) selectItem(it, "addrange");
+          else if (e.shiftKey && anchor) selectItem(it, "range");
           else if (e.ctrlKey || e.metaKey || (touchy && sel.size && !(sel.size === 1 && on))) selectItem(it, "toggle");
           else selectItem(it, "only");
         },
@@ -848,7 +871,14 @@ export function mount(tool) {
 
   function syncBulk() {
     const n = sel.size;
+    const wasHidden = bulkBar.hidden;
     bulkBar.hidden = n < 2;
+    // หน้าต่างหดหลังลากแถบไปไว้ขอบ แถบอาจหลุดนอกจอ โผล่ใหม่เมื่อไหร่เช็กแล้วดึงกลับที่เดิม
+    if (wasHidden && !bulkBar.hidden) {
+      const r = bulkBar.getBoundingClientRect();
+      const B = bulkBounds();
+      if (r.left < B.left - 1 || r.top < B.top - 1 || r.right > B.right + 1 || r.bottom > B.bottom + 1) { bulkPos = { x: 0, y: 0 }; applyBulkPos(); }
+    }
     bulkCount.textContent = tr(`เลือก ${n} หน้า`, `${pl(n, "page", "pages")} selected`);
   }
   /** บอกว่าไฟล์ไหนหายจากรายการ ต่อท้ายข้อความหลังลบ */
@@ -979,10 +1009,10 @@ export function mount(tool) {
     if (mode === "toggle") {
       if (sel.has(it)) { sel.delete(it); if (anchor === it) anchor = selList()[0] || null; }
       else { sel.add(it); anchor = it; }
-    } else if (mode === "range") {
+    } else if (mode === "range" || mode === "addrange") {
       const a = items.indexOf(anchor), b = items.indexOf(it);
       const [lo, hi] = a < b ? [a, b] : [b, a];
-      sel.clear();
+      if (mode === "range") sel.clear();
       items.slice(lo, hi + 1).forEach((x) => { if (!x.dropped) sel.add(x); });
     } else {
       const only = sel.size === 1 && sel.has(it);
@@ -1177,14 +1207,17 @@ export function mount(tool) {
     Object.assign(ghost.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
     // ป้าย "ย้ายไปเป็นหน้า N" ลอยเหนือการ์ด อยู่นอกการ์ดเพราะการ์ดตัดขอบ (overflow hidden) และนิ้วบังตัวการ์ด
     const badge = el("div", { class: "pp-move-badge", role: "status" });
-    document.body.append(ghost, badge);
+    /* ‼️ 19/11/2026 พี่ปอนด์: ลากนิดเดียว การ์ดที่ยกบังช่องวาง "จะไม่เห็นเลข 2 แอบเสียดายอยู่นะ"
+       วงเลขหน้าปลายทางติดมุมขวาบนของการ์ดที่ลาก ลอยชั้นบนสุด ไม่มีอะไรบังได้ ช่องวางยังมีเลขตัวโตเหมือนเดิม */
+    const bubble = el("div", { class: "pp-move-num", "aria-hidden": "true" });
+    document.body.append(ghost, badge, bubble);
     // การ์ดจริงกลายเป็น "ช่องที่จะลง" เรืองแสง พร้อมเลขหน้าปลายทางตัวใหญ่
     const mark = el("div", { class: "pp-slot-mark", "aria-hidden": "true" }, [el("b"), el("span", {}, tr("วางตรงนี้", "Drop here"))]);
     card.appendChild(mark);
     card.classList.add("pp-slot");
     pagesGrid.classList.add("pp-is-dragging");
     document.documentElement.classList.add("pp-grabbing");
-    drag = { id: p.id, type: p.type, card, ghost, badge, mark, from, at: from, slots, r0: r,
+    drag = { id: p.id, type: p.type, card, ghost, badge, bubble, mark, from, at: from, slots, r0: r,
              off: { x: x - r.left, y: y - r.top }, x, y, lx: x, tilt: 0, scroller: scrollerOf(pagesGrid), raf: 0 };
     if (!calm()) requestAnimationFrame(() => ghost.classList.add("lifted"));
     else ghost.classList.add("lifted");
@@ -1205,6 +1238,8 @@ export function mount(tool) {
     d.ghost.style.setProperty("--tilt", `${(-2.5 + d.tilt).toFixed(2)}deg`);
     d.badge.style.left = `${x - d.off.x + d.r0.width / 2}px`;
     d.badge.style.top = `${y - d.off.y - 10}px`;
+    d.bubble.style.left = `${x - d.off.x + d.r0.width - 4}px`;
+    d.bubble.style.top = `${y - d.off.y + 4}px`;
     const g = pagesGrid.getBoundingClientRect();
     const px = x - g.left, py = y - g.top;
     // ช่องที่ชี้อยู่ ถ้าไม่ได้ชี้ช่องไหนเลย (ช่องว่างระหว่างการ์ด นอกตะแกรง) เอาช่องที่ใกล้ที่สุด
@@ -1257,6 +1292,11 @@ export function mount(tool) {
     d.badge.textContent = d.at === d.from ? tr(`หน้า ${N} ที่เดิม`, `Page ${N}, unchanged`)
                                           : tr(`ย้ายไปเป็นหน้า ${N}`, `Move to page ${N}`);
     d.badge.classList.toggle("same", d.at === d.from);
+    if (d.bubble.textContent !== String(N)) {
+      d.bubble.textContent = String(N);
+      if (!first && !calm()) { d.bubble.classList.remove("pop"); void d.bubble.offsetWidth; d.bubble.classList.add("pop"); }
+    }
+    d.bubble.classList.toggle("same", d.at === d.from);
   }
 
   /* ลากถึงขอบจอ เลื่อนจอให้เอง ยิ่งชิดขอบยิ่งเร็ว ไม่งั้นย้ายหน้าไปไกล ๆ ในไฟล์ยาวไม่ได้ */
@@ -1287,6 +1327,7 @@ export function mount(tool) {
     if (cancel && d.at !== d.from) moveSlot(d.from);
     const target = d.card.getBoundingClientRect();
     d.badge.remove();
+    d.bubble.remove();
     const finish = () => {
       d.ghost.remove();
       d.mark.remove();

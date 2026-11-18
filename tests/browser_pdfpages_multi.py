@@ -97,10 +97,8 @@ def main():
         edit_link = pg.query_selector("a[href='#/pdf-edit']")
         ck(edit_link is not None, "มีทางเชื่อมไปเครื่องมือลบข้อความให้เห็นตั้งแต่แรก")
 
-        # ‼️ ชิปเลือกเร็ว ถอดแนวคิดจาก openkrua ที่หน้าใช้งานจริงไม่ให้ผู้ใช้พิมพ์อะไรเลย
-        #    ของเราเดิมต้องรู้ก่อนว่ารูปแบบ 1-3,5,8- แปลว่าอะไร ซึ่งต้องเรียนก่อนใช้
-        chips = pg.eval_on_selector_all(".pp-chip", "ns=>ns.map(n=>n.textContent.trim())")
-        ck(len(chips) >= 4, f"มีชิปเลือกเร็วให้กดโดยไม่ต้องพิมพ์ ({chips})", str(chips))
+        # 19/11/2026 พี่ปอนด์สั่งถอดชิปเลือกเร็ว ("เอาออกเหอะจริง") เหลือช่องพิมพ์ช่วงหน้า
+        ck(pg.query_selector(".pp-chip") is None, "ไม่มีชิปเลือกเร็วแล้ว (หน้าคี่ หน้าคู่ ครึ่งแรก ครึ่งหลัง ตัดหน้าปก)")
         # ‼️ ตัวเลือกย้ายไปแผงขวาตามผัง Power BI แล้ว (20/09/2026 พี่ปอนด์ขอ)
         #    และเครื่องมือนี้ตั้งให้ "เปิดมาพับไว้" เพราะงานหลักคือดูภาพหน้าแล้วลากสลับ
         #    วัดจริง พับไว้ = 4 คอลัมน์ การ์ด 249px  กางอยู่ = 3 คอลัมน์ การ์ด 215px
@@ -117,12 +115,15 @@ def main():
                 f.click(); pg.wait_for_timeout(400)
 
         open_options()
-        ck(pg.is_visible(".pp-chip"), "กางแผงตัวเลือกแล้วชิปโผล่ให้กดได้จริง")
-        pg.click(".pp-chip:has-text('หน้าคี่')")
+        # เจตนาเดิมของข้อนี้ (เก็บบางหน้าได้จริง) ยังต้องอยู่ ใช้ช่องพิมพ์ช่วงหน้าแทนชิป
+        rin = pg.locator("input[placeholder*='1-3']").first
+        ck(rin.is_visible(), "กางแผงตัวเลือกแล้วช่องพิมพ์ช่วงหน้าโผล่ให้ใช้ได้จริง")
+        rin.fill("1,3,5")
+        pg.locator("button:visible").filter(has_text="ใช้ช่วงนี้").first.click()
         pg.wait_for_timeout(400)
         left = pg.eval_on_selector_all(
             ".pg", "ns=>ns.map((n,i)=>n.classList.contains('dropped')?null:i+1).filter(Boolean)")
-        ck(left == [1, 3, 5], f"กดหน้าคี่แล้วเหลือหน้า 1 3 5 จริง (ได้ {left})", str(left))
+        ck(left == [1, 3, 5], f"พิมพ์ 1,3,5 แล้วเหลือหน้า 1 3 5 จริง (ได้ {left})", str(left))
         pg.click("button:has-text('รีเซ็ตทั้งหมด')")
         pg.wait_for_timeout(1500)
         close_options()

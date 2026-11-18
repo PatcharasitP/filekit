@@ -1,10 +1,11 @@
 import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, openPdf, passwordBox } from "../pdfopen.js";
-import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes, stashFiles, keyHints, registerCleanup } from "../ui.js";
+import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes, keyHints, registerCleanup } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
 import { attachPeek, openViewer } from "../pagezoom.js";
-import { shownBox, srcRotation, viewRectToRaw, placeRawContent } from "../pdfgeom.js";
+import { shownBox, srcRotation, viewRectToRaw, placeRawContent, viewToBase, baseLayer } from "../pdfgeom.js";
+import { createMarkEditor, stampMarks, MARK_STYLE, paintMarks, markBounds } from "../pdfmarks.js";
 
 /* ‼️ ไฟล์ไหนเป็นของใคร บอกด้วย "ตัวอักษร" ไม่ใช่ "สี" (ตัดสินจากการวัดจริง 18/09/2026)
    ลองชุดสี 4 แบบแล้ววัดด้วย src/cvd.js ไม่มีชุดไหนที่ 5 สีขึ้นไปแยกออกครบทั้งสามแบบตาบอดสี
@@ -48,6 +49,8 @@ const STYLE = `
 
 /* ── การ์ดหน้า (18/11/2026) ─────────────────────────────────────────────── */
 .pp-center{position:relative}
+/* ชั้นของที่วางในตัวดูหน้าใหญ่ ขนาดเท่าหน้าฐาน หมุนและเลื่อนด้วย transform จาก pdfgeom baseLayer (เฟส 2) */
+.pp-base{position:absolute;left:0;top:0;transform-origin:0 0}
 .pp-center .pages{user-select:none;-webkit-user-select:none}
 .pp-center .pg{cursor:grab;-webkit-touch-callout:none}
 .pp-center .pg:focus-visible{outline:2px solid var(--ac,var(--brand));outline-offset:2px}
@@ -176,6 +179,11 @@ export function mount(tool) {
     expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
     accept: "application/pdf,.pdf", multiple: true, reorder: true,
     onPickFile: (f) => pickFile(f),
+    /* ‼️ เอาไฟล์ออกหนึ่งไฟล์ ตอนนี้ยังอ่านทุกไฟล์ใหม่หมด (loadPreview) งานจัดหน้าและของที่วางบนหน้าทุกไฟล์หาย
+       จนกว่าจะเก็บงานของไฟล์ที่เหลือได้ (แผนเฟส 3 ข้อ 3) มีของที่วางอยู่ = ถามก่อน ตอบไม่ ไฟล์ยังอยู่ */
+    beforeRemove: () => !items.some((x) => x.marks && x.marks.length)
+      || confirm(tr("เอาไฟล์นี้ออกแล้ว ปิดทับ ข้อความ และลายเซ็นที่วางบนหน้าทุกไฟล์จะหายทั้งหมด ต้องการเอาออกไหม",
+                    "Removing this file also removes every cover, text and signature placed on any page. Remove it anyway?")),
     hint: tr("หลายไฟล์ได้ ลากสลับลำดับไฟล์ได้", "Multiple files, drag to reorder"),
     onChange: (f) => {
       const next = [...(f || [])];
@@ -301,17 +309,26 @@ export function mount(tool) {
   const cropAllBtn = button(tr("ครอบทุกหน้า", "Trim every page"), { ghost: true, onclick: () => autoCrop(true) });
   const blankBtn = button(tr("+ หน้าว่าง", "+ Blank page"), { ghost: true,
     label: tr("เพิ่มหน้าว่างต่อจากหน้าที่เลือก", "Add a blank page after the selected one"), onclick: addBlank });
-  /* ‼️ ทางลัดไปเครื่องมือลบ/พิมพ์ข้อความ พร้อมพาไฟล์ไปด้วย
-     ทั้งสองตัวโหลดไลบรารีชุดเดียวกัน (pdfjs + pdflib) การข้ามไปมาจึงไม่โหลดอะไรเพิ่ม
-     เย็บรอยต่อให้เนียน ดีกว่ายัดหน้าจอแก้ข้อความทีละหน้าเข้ามาในกระดานจัดการหลายไฟล์ */
+  /* ‼️ 19/11/2026 พี่ปอนด์: "ไม่อยากให้เราลิงก์ไปเครื่องมืออื่นเลย อยากทำให้มันแก้ไขได้ตั้งแต่หน้านี้เลย ... ครบจบในเครื่องมือเดียว"
+     เดิมปุ่มนี้พาไปเครื่องมือแก้ไขและเซ็น พาไปได้แค่ไฟล์ต้นฉบับ งานที่จัดไว้ (ลำดับ หมุน ครอบ ลบ หลายไฟล์) หายหมด
+     ตอนนี้เปิดตัวดูหน้าใหญ่ที่หน้าที่เลือก (ไม่ได้เลือก = หน้าแรกที่เก็บ) พร้อมกางแผงแก้ไข ไม่ออกจากหน้านี้ */
   const editTextBtn = button(tr("แก้ข้อความบนหน้า", "Edit text on a page"), { ghost: true,
-    label: tr("ไปเครื่องมือแก้ข้อความ พาไฟล์นี้ไปด้วย", "Go to the text editor, taking this file along"),
+    label: tr("เปิดหน้าใหญ่พร้อมเครื่องมือแก้ไข ปิดทับ ข้อความ ลายเซ็น", "Open the page large with the edit tools: cover, text, signature"),
     onclick: () => {
-      if (!files.length) return;
-      stashFiles(files);
-      location.hash = "#/pdf-edit";
+      const keep = items.filter((x) => !x.dropped);
+      if (!keep.length) return;
+      const pick = anchor && sel.has(anchor) && !anchor.dropped ? anchor : (selList().find((x) => !x.dropped) || keep[0]);
+      openZoom(pick, true);
     } });
-  const resetBtn = button(tr("รีเซ็ตทั้งหมด", "Reset all"), { icon: "undo", ghost: true, onclick: () => { if (files.length) loadPreview(); } });
+  /* ‼️ รีเซ็ตเมื่อมีของที่วางบนหน้าแล้ว ถามก่อน (ฟ้าเคาะ 19/11/2026) ลายเซ็นกับข้อความที่วางไว้หายทั้งหมดและย้อนไม่ได้
+     ไม่มีของที่วาง ทำเหมือนเดิมทันที */
+  const resetBtn = button(tr("รีเซ็ตทั้งหมด", "Reset all"), { icon: "undo", ghost: true, onclick: () => {
+    if (!files.length) return;
+    if (items.some((x) => x.marks && x.marks.length)
+        && !confirm(tr("รีเซ็ตแล้ว ปิดทับ ข้อความ และลายเซ็นที่วางบนหน้าจะหายทั้งหมด ต้องการรีเซ็ตไหม",
+                       "Resetting removes every cover, text and signature you placed. Reset anyway?"))) return;
+    loadPreview();
+  } });
   [cropBtn, cropAllBtn, blankBtn, editTextBtn, resetBtn].forEach((b) => { b.disabled = true; });
 
   // ── แผงขวา: เก็บเฉพาะบางหน้า + วิธีเรียงเมื่อมีหลายไฟล์ ───────────────
@@ -407,7 +424,7 @@ export function mount(tool) {
     toolbarGroups: [tr("ครอบและเพิ่มหน้า", "Trim and add"), tr("อื่น ๆ", "More")],
     footer: [st.node, saveBtn],
   });
-  ws.wrap.prepend(el("style", {}, STYLE));
+  ws.wrap.prepend(el("style", {}, STYLE + MARK_STYLE));
 
   /* ‼️ คีย์ลัดระดับหน้า (พี่ปอนด์ทัก 20/09/2026 ว่า "ปุ่มพวกคีย์ลัดยังไม่เห็นนะ")
      ผูกที่ ws.body ไม่ใช่ document เพราะเครื่องมืออื่นก็ผูกของตัวเองไว้เหมือนกัน
@@ -576,18 +593,11 @@ export function mount(tool) {
       tr("ไฟล์ที่ได้จะไม่มีสารบัญ/บุ๊กมาร์กของไฟล์เดิมติดมา",
          "The result will not carry over the original bookmarks")),
     /* ‼️ พี่ปอนด์เปิดหน้านี้แล้วถามว่า "ไหนถ้าพี่จะลบพวกข้อความ" (18/09/2026)
-       เครื่องมือนี้ลบได้แค่ทั้งหน้า ส่วนการลบข้อความบนหน้าอยู่คนละตัว
-       ชื่อสองอันใกล้กันมากจนคนเข้ามาผิดตัวเป็นเรื่องปกติ จึงชี้ทางให้เห็นตั้งแต่แรก
-       ไม่ใช่รอให้ไปเจอเองตอนทำงานเสร็จแล้ว */
-    el("div", { class: "note" }, [
-      tr("อยากลบเฉพาะข้อความบนหน้า เช่นแก้วันที่ ใช้ ",
-         "To remove just some text on a page, such as a date, use "),
-      /* ‼️ ต้องพาไฟล์ไปด้วย ไม่งั้นคนที่เข้ามาผิดตัวต้องไปเลือกไฟล์ใหม่อีกรอบ
-         การ์ด "ทำอะไรต่อดี" ท้ายหน้าทำแบบนี้อยู่แล้ว ลิงก์นี้เคยตกหล่น (เจอจริง 18/09/2026) */
-      el("a", { href: "#/pdf-edit",
-        onclick: () => { if (files.length) stashFiles(files); } },
-        tr("แก้ไขข้อความบน PDF", "Edit text on a PDF")),
-    ]),
+       เดิมชี้ไปเครื่องมือแก้ไขและเซ็นอีกตัว 19/11/2026 พี่ปอนด์ไม่อยากให้ลิงก์ออกไปเครื่องมืออื่นแล้ว
+       แก้ได้ในตัวดูหน้าใหญ่ของเครื่องมือนี้เลย จึงบอกทางเข้าแทนลิงก์ */
+    el("div", { class: "note" },
+      tr("แก้ข้อความ ปิดทับ หรือเซ็นบนหน้า กดปุ่ม แก้ข้อความบนหน้า ด้านบน",
+         "To cover text, type or sign on a page, press Edit text on a page above")),
   );
   ws.showCanvas(false);
 
@@ -666,6 +676,7 @@ export function mount(tool) {
     if (!keepOld) {
       pagesGrid.innerHTML = "";
       items = [];
+      markLog = [];
       clearSel();
       closeDocs();
       setLoaded(false);
@@ -693,6 +704,7 @@ export function mount(tool) {
           const base = page.getViewport({ scale: 1 });
           (keepOld ? fresh : items).push({ fi, index: p - 1, rotate: 0, dropped: false, crop: null,
             pw: Math.round(base.width), ph: Math.round(base.height),
+            bw: base.width, bh: base.height, marks: [],          // ขนาดหน้าฐานไม่ปัด กับของที่วาง (เฟส 2)
             thumb: canvas.toDataURL("image/jpeg", 0.7) });
           canvas.width = canvas.height = 0;
           st.progress((p / pdf.numPages) * 100,
@@ -780,7 +792,8 @@ export function mount(tool) {
         many && !it.blank ? el("span", { class: "src", title: `${srcLabel}: ${files[it.fi].name}` }, tagOf(it.fi)) : null,
         /* หน้าว่างไม่มีภาพย่อ วาดเป็นกระดาษเปล่าพร้อมป้ายบอก จะได้ไม่คิดว่าโหลดไม่ขึ้น */
         it.blank
-          ? el("div", { class: "pg-blank", style: { aspectRatio: `${it.pw} / ${it.ph}` } },
+          ? el("div", { class: "pg-blank", style: { aspectRatio: `${it.pw} / ${it.ph}`,
+              ...(it.inkThumb ? { backgroundImage: `url("${it.inkThumb}")`, backgroundSize: "100% 100%" } : {}) } },
                tr("หน้าว่าง", "Blank page"))
           : it.crop
             /* ‼️ กล่องครอบ สัดส่วนเท่ากรอบที่เก็บไว้จริง แล้วขยายภาพให้เฉพาะส่วนนั้นเต็มกล่อง
@@ -799,7 +812,7 @@ export function mount(tool) {
                     style: { aspectRatio: `${it.pw * it.crop.w} / ${it.ph * it.crop.h}`,
                              transform: `rotate(${it.rotate}deg)` } }, [
                     el("div", { class: "pg-crop", style: { inset: "0" } }, [
-                      el("img", { src: it.thumb, loading: "lazy", draggable: "false",
+                      el("img", { src: it.inkThumb || it.thumb, loading: "lazy", draggable: "false",
                         alt: tr(`หน้า ${it.index + 1} (ครอบแล้ว)`, `Page ${it.index + 1}, trimmed`),
                         style: { width: `${100 / it.crop.w}%`, height: `${100 / it.crop.h}%`,
                                  insetInlineStart: `${-(it.crop.x / it.crop.w) * 100}%`,
@@ -816,7 +829,7 @@ export function mount(tool) {
                   el("div", { class: "pg-crop",
                     style: { width: `${vw}%`, height: `${vh}%`,
                              insetInlineStart: `${(100 - vw) / 2}%`, top: `${(100 - vh) / 2}%` } }, [
-                    el("img", { src: it.thumb, loading: "lazy", draggable: "false",
+                    el("img", { src: it.inkThumb || it.thumb, loading: "lazy", draggable: "false",
                       alt: tr(`หน้า ${it.index + 1} (ครอบแล้ว)`, `Page ${it.index + 1}, trimmed`),
                       style: { width: `${100 / it.crop.w}%`, height: `${100 / it.crop.h}%`,
                                insetInlineStart: `${-(it.crop.x / it.crop.w) * 100}%`,
@@ -824,7 +837,7 @@ export function mount(tool) {
                   ]),
                 ]);
               })()
-            : el("img", { src: it.thumb, alt: tr(`หน้า ${it.index + 1}`, `Page ${it.index + 1}`), loading: "lazy", draggable: "false",
+            : el("img", { src: it.inkThumb || it.thumb, alt: tr(`หน้า ${it.index + 1}`, `Page ${it.index + 1}`), loading: "lazy", draggable: "false",
               style: { transform: `rotate(${it.rotate}deg)` } }),
         /* เลขหน้าในไฟล์ผลลัพธ์ อยู่ใต้ภาพ ไม่ทับเนื้อหา และไม่ชนป้ายไฟล์ A B C ที่มุมบนซ้าย
            (เดิมอยู่มุมบนซ้ายเหมือนกัน ป้ายไฟล์ทับจนมองไม่เห็นเลข) ระหว่างลากเลขนี้เปลี่ยนสด */
@@ -979,7 +992,16 @@ export function mount(tool) {
     for (const it of targets) {
       if (it.crop) { it.crop = null; continue; }   // กดซ้ำ = เอาการครอบออก
       const img = await loadImg(it.thumb);
-      const box = img ? findContentBox(img) : null;
+      let box = img ? findContentBox(img) : null;
+      /* ‼️ ภาพย่อไม่มีของที่วาง ตัวหาขอบจึงมองไม่เห็นลายเซ็นที่วางในที่ว่าง (แผนข้อ 1.4)
+         กรอบครอบต้องคลุมของที่วางทุกชิ้นเสมอ ไม่งั้นลายเซ็นท้ายหน้าโดนตัดหายเงียบ ๆ */
+      const mb = box ? await markBounds(it.marks, { w: it.bw || it.pw, h: it.bh || it.ph }) : null;
+      if (box && mb) {
+        const pad = 0.01;
+        const x0 = Math.max(0, Math.min(box.x, mb.x - pad)), y0 = Math.max(0, Math.min(box.y, mb.y - pad));
+        const x1 = Math.min(1, Math.max(box.x + box.w, mb.x + mb.w + pad)), y1 = Math.min(1, Math.max(box.y + box.h, mb.y + mb.h + pad));
+        box = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      }
       if (box) { it.crop = box; done++; } else already++;
     }
     render();
@@ -995,7 +1017,8 @@ export function mount(tool) {
     const after = insertPoint();
     const ref = after || items.find((i) => !i.blank) || null;
     const blank = { blank: true, rotate: 0, dropped: false, crop: null,
-                    pw: ref ? ref.pw : 595, ph: ref ? ref.ph : 842 };
+                    pw: ref ? ref.pw : 595, ph: ref ? ref.ph : 842, marks: [] };
+    blank.bw = blank.pw; blank.bh = blank.ph;
     const at = after ? items.indexOf(after) + 1 : items.length;
     items.splice(at, 0, blank);
     sel.clear(); sel.add(blank); anchor = blank;
@@ -1110,18 +1133,124 @@ export function mount(tool) {
     pagesGrid.querySelector(`.pg[data-i="${items.indexOf(mine[0])}"]`)
       ?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: calm() ? "auto" : "smooth" });
   }
-  /** เปิดดูเต็มจอ เลื่อนดูได้เฉพาะหน้าที่เก็บ ตามลำดับในไฟล์ผลลัพธ์ */
-  function openZoom(it) {
+  /* ── แก้ไขบนหน้า ในตัวดูหน้าใหญ่ (เฟส 2 19/11/2026 แผน .claude/plans/2026-11-18-merge-edit-into-pages.md ข้อ 2.0) ──
+     ตัวแก้ไขตัวเดียวกับเครื่องมือแก้ไขและเซ็นบน PDF (src/pdfmarks.js) ของที่วางเก็บใน item.marks
+     จึงตามหน้าไปเองเมื่อลากสลับ ลบ ย้อน หรือสลับลำดับไฟล์ พิกัดเป็นสัดส่วนของหน้าฐาน (พื้นที่เดียวกับ item.crop)
+     ‼️ หน้าที่หมุนหรือครอบ ชั้นของที่วางถูกหมุนครอบด้วย CSS ทั้งแผ่นแบบเดียวกับการ์ด (pdfgeom baseLayer)
+        จุดคลิกจึงต้องแปลงกลับด้วยสูตร (viewToBase) ใช้ getBoundingClientRect ของชั้นที่หมุนอยู่ไม่ได้ */
+  const est = statusBar();                 // แถบสถานะในแผงแก้ไข แถบล่างของหน้าถูกตัวดูบังอยู่
+  let edIt = null;                         // หน้าที่เปิดอยู่ในตัวดู
+  let markLog = [];                        // ลำดับที่วางทั้งเอกสาร ย้อนล่าสุดข้ามหน้าได้ แบบเครื่องมือแก้ไขและเซ็น
+  let baseH = 0, drawnKey = "";
+  const R = (it) => (it.blank ? 0 : it.rotate % 360);   // หน้าว่างในตัวดูแสดงแบบไม่หมุน
+  const ed = createMarkEditor({
+    st: est,
+    ready: () => !!edIt,
+    list: () => (edIt ? edIt.marks : []),
+    add: (m) => { edIt.marks.push(m); markLog.push({ it: edIt, m }); },
+    remove: (m) => { edIt.marks = edIt.marks.filter((x) => x !== m); markLog = markLog.filter((r) => r.m !== m); },
+    undo: () => {
+      const r = markLog.pop();
+      if (!r) return;
+      r.it.marks = r.it.marks.filter((x) => x !== r.m);
+      ed.draw(); inkLater(r.it);
+    },
+    clearPage: () => {
+      if (!edIt) return;
+      const gone = new Set(edIt.marks);
+      edIt.marks = [];
+      markLog = markLog.filter((r) => !gone.has(r.m));
+      ed.draw(); inkLater(edIt);
+    },
+    thumbs: () => { if (edIt) inkLater(edIt); },
+    sync: () => {
+      const b = ed.buttons;
+      b.placeMidBtn.disabled = !edIt;
+      b.undoBtn.disabled = !markLog.length;
+      b.clearBtn.disabled = !(edIt && edIt.marks.length);
+    },
+    point: (ev) => {
+      const r = baseEl.parentElement.getBoundingClientRect();     // กระดาษในตัวดู ไม่หมุน
+      return viewToBase((ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height, R(edIt), edIt.crop);
+    },
+    nudge: ([dx, dy]) => {
+      const a = viewToBase(0.5, 0.5, R(edIt), edIt.crop), b = viewToBase(0.5 + dx, 0.5 + dy, R(edIt), edIt.crop);
+      return [b.x - a.x, b.y - a.y];
+    },
+    up: () => (edIt ? R(edIt) : 0),
+    pxPerPt: () => baseH / (edIt.bh || edIt.ph),
+  });
+  const baseEl = el("div", { class: "pp-base" }, [ed.layer]);
+  const edPanel = el("div", { role: "region", "aria-label": tr("เครื่องมือแก้ไขบนหน้า", "Edit tools for the page") }, [
+    est.node,
+    ed.panel,
+    el("div", { class: "pz-edit-row" }, [ed.buttons.placeMidBtn, ed.buttons.undoBtn, ed.buttons.clearBtn]),
+  ]);                                      // คำเตือนว่าข้อความเดิมยังอยู่ใต้กล่องปิดทับ มีในแผงของตัวแก้ไขแล้ว ไม่ซ้ำ
+  ed.setMode("cover");
+  est.clear();
+
+  /** ภาพย่อที่มีของที่วาง (การ์ดหมุนและครอบภาพนี้ด้วย CSS อยู่แล้ว วาดลงภาพฐานทีเดียวจึงตรงทุกแบบ) */
+  const inkJobs = new Map();
+  function inkLater(it) {
+    const job = (inkJobs.get(it) || 0) + 1;
+    inkJobs.set(it, job);
+    (async () => {
+      if (!it.marks.length) { it.inkThumb = null; render(); return; }
+      let c;
+      if (it.blank) {
+        c = document.createElement("canvas");
+        c.width = Math.round(it.pw * 0.35); c.height = Math.round(it.ph * 0.35);
+        const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+      } else {
+        const img = await loadImg(it.thumb);
+        if (!img) return;
+        c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img, 0, 0);
+      }
+      await paintMarks(c.getContext("2d"), c.width, c.height, it.marks, { w: it.bw || it.pw, h: it.bh || it.ph });
+      if (inkJobs.get(it) !== job) return;          // วางชิ้นใหม่ระหว่างวาด ใช้ผลรอบล่าสุด
+      it.inkThumb = c.toDataURL("image/jpeg", 0.8);
+      c.width = c.height = 0;
+      render();
+    })();
+  }
+
+  /** เปิดดูเต็มจอ เลื่อนดูได้เฉพาะหน้าที่เก็บ ตามลำดับในไฟล์ผลลัพธ์ , editing = เปิดมาพร้อมกางแผงแก้ไข */
+  function openZoom(it, editing = false) {
     hidePeek();
     const list = items.filter((x) => !x.dropped);
     const many = files.length > 1;
+    edIt = it;
+    drawnKey = "";
+    est.clear();
     viewer = openViewer({
       list, start: list.indexOf(it), getDoc,
       label: (x, i, n) => [tr(`หน้า ${i + 1} จาก ${n}`, `Page ${i + 1} of ${n}`),
         x.blank ? tr("หน้าว่าง", "Blank page")
           : (many ? tr(`ไฟล์ ${tagOf(x.fi)} หน้า ${x.index + 1}`, `File ${tagOf(x.fi)} page ${x.index + 1}`)
                   : tr(`หน้าเดิม ${x.index + 1}`, `Original page ${x.index + 1}`))],
-      onClose: () => { viewer = null; },
+      edit: {
+        panel: edPanel, layer: baseEl, open: editing,
+        /* Ctrl+Z ในตัวดู = ย้อนของที่วางล่าสุด ไม่ใช่ย้อนการลบหน้าของตะแกรงข้างหลัง (แผนเฟส 2 ข้อ 7) */
+        key: (e) => {
+          if (!((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z")) return false;
+          if (!ed.buttons.undoBtn.disabled) ed.buttons.undoBtn.click();
+          return true;
+        },
+        onPage: (x) => { edIt = x; drawnKey = ""; },
+        onToggle: (on) => { if (on) est.info(tr("เลือกเครื่องมือ แล้วคลิกหรือลากบนหน้า", "Pick a tool, then click or drag on the page")); },
+        sync: (x, W, H) => {
+          const L = baseLayer(R(x), x.blank ? null : x.crop, W, H);
+          baseEl.style.width = `${L.Bw}px`;
+          baseEl.style.height = `${L.Bh}px`;
+          baseEl.style.transform = L.css;
+          baseH = L.Bh;
+          const key = `${Math.round(L.Bw)}x${Math.round(L.Bh)}`;
+          if (key !== drawnKey) { drawnKey = key; ed.draw(); }   // ขนาดตัวอักษรบนจอขึ้นกับขนาดกระดาษ
+        },
+      },
+      onClose: () => { viewer = null; edIt = null; ed.layer.replaceChildren(); },
     });
   }
 
@@ -1387,6 +1516,18 @@ export function mount(tool) {
         encrypted = encrypted || r.encrypted;
         hiddenLayers = hiddenLayers || r.hiddenLayers;
       }
+      /* ── ประทับของที่วางลงหน้าต้นฉบับก่อน แล้วท่อเดิม (คัดลอก ครอบ หมุน) ทำต่อ (แผนข้อ 4.1) ──
+         ของเก็บเป็นสัดส่วนของหน้าฐาน = หน้าต้นฉบับตามที่ pdf.js เห็น จึงแปลงครั้งเดียวด้วย /Rotate กับ CropBox ของต้นฉบับ
+         แล้วถูกครอบและหมุนไปพร้อมเนื้อหาเดิม ตรงกับการ์ดและตัวดูที่หมุนครอบทั้งแผ่น
+         (วัด 19/11/2026 วาดลงหน้าต้นฉบับแล้ว copyPages กับ embedPage พาไปด้วย .claude/evidence/2026-11-19-ped-merge-edit/phase0/u3_copy_embed.txt)
+         ‼️ ใช้ได้เพราะหนึ่งหน้าต้นฉบับมีการ์ดเดียว ถ้าวันหนึ่งมีทำสำเนาหน้า ต้องเปลี่ยนไปประทับที่หน้าผลลัพธ์ */
+      const inkCache = new Map(), outInk = new Map();
+      for (const it of keep) {
+        if (it.blank || !it.marks || !it.marks.length) continue;
+        const d = srcDocs.get(it.fi);
+        if (!inkCache.has(it.fi)) inkCache.set(it.fi, new Map());
+        await stampMarks(d, d.getPage(it.index), it.marks, inkCache.get(it.fi));
+      }
       // คัดลอกเป็นก้อนต่อไฟล์ แล้วค่อยเรียงกลับตามตำแหน่งเดิมที่ผู้ใช้จัดไว้
       const copiedAt = new Array(keep.length);
       for (const [fi, doc] of srcDocs) {
@@ -1407,6 +1548,8 @@ export function mount(tool) {
            กดหมุนหน้าว่างแล้วบันทึก ได้หน้าไม่หมุน (วัด 19/11/2026 tests/browser_pdfpages_rotated.py) */
         if (it.blank) {
           const bp = out.addPage([it.pw, it.ph]);
+          // ประทับก่อนหมุน ของบนหน้าว่างเก็บในพิกัดหน้าที่ยังไม่หมุน
+          if (it.marks && it.marks.length) await stampMarks(out, bp, it.marks, outInk);
           if (it.rotate) bp.setRotation(degrees(it.rotate % 360));
           continue;
         }

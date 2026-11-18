@@ -25,7 +25,7 @@ export const EN_GROUPS = {
 };
 
 export const EN_TOOLS = {
-  "pdf-pages": ["Organise PDF pages", "Keep, delete, reorder and rotate pages, with a preview of every page"],
+  "pdf-pages": ["Organise PDF pages", "Keep, delete, reorder and rotate pages, and cover, type or sign on a page, with a preview of every page"],
   "pdf-edit": ["Edit and sign a PDF", "Cover the old text, type new text, highlight, sign and place images in one pass, then save once. Full Thai support"],
   "pdf-merge": ["Merge PDF files", "Combine several files into one, drag to reorder"],
   "pdf-split": ["Split a PDF", "Split by page range, every N pages, or one file per page"],

@@ -30,7 +30,7 @@ export const GROUPS = [
 
 export const TOOLS = [
   { id:"pdf-pages",   group:"pdf", sub:"organize", icon:"📑", title:"จัดการหน้า PDF",
-    desc:"หลายไฟล์มารวมกระดานเดียว เก็บ ลบ สลับลำดับ และหมุนหน้า",
+    desc:"หลายไฟล์มารวมกระดานเดียว เก็บ ลบ สลับลำดับ หมุนหน้า และแก้ไขหรือเซ็นบนหน้าได้ในตัว",
     accepts:["pdf"],
     libs:["pdfjs","pdflib"], next:["pdf-edit","pdf-merge","pdf-compress"] },
 

@@ -1243,7 +1243,9 @@ export function dropzone(opts = {}) {
     ]);
     warn.appendChild(box);
   }
-  function remove(i) { warn.querySelectorAll(".dupe-note").forEach((n) => n.remove()); revokeThumb(files[i]); pageCounts.delete(files[i]); pagePending.delete(files[i]);
+  /* opts.beforeRemove(file) คืน false = ไม่เอาออก (เครื่องมือถามยืนยันก่อนได้ เช่น จัดการหน้า PDF มีของที่วางบนหน้าของไฟล์ที่จะหายไป 19/11/2026) */
+  function remove(i) { if (opts.beforeRemove && opts.beforeRemove(files[i]) === false) return;
+    warn.querySelectorAll(".dupe-note").forEach((n) => n.remove()); revokeThumb(files[i]); pageCounts.delete(files[i]); pagePending.delete(files[i]);
     states.delete(files[i]); files.splice(i, 1); render(); fireChange(); }
 
   /** ป้ายสถานะท้ายแถว — ยังไม่เริ่มทำ = ไม่ต้องมีป้าย (แถวเปล่าอ่านง่ายกว่าป้าย "รอ" เต็มจอ) */

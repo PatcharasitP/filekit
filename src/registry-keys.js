@@ -6,7 +6,7 @@
 import { TOOLS } from "./registry.js";
 
 export const KEYS = {
-  "pdf-pages": "page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์ เอาหน้าออก ตัดหน้า กลับหัว กลับด้าน",
+  "pdf-pages": "page manager หน้า ลบหน้า หมุน เรียง จัดการ จัดระเบียบ organize หลายไฟล์ เอาหน้าออก ตัดหน้า กลับหัว กลับด้าน ปิดทับ เซ็น ลายเซ็น พิมพ์ทับ",
   "pdf-edit": "edit แก้ไข ข้อความ ลบข้อความ ปิดทับ วันที่ พิมพ์ทับ redact ไฮไลต์ highlight เน้นข้อความ เซ็น ลายเซ็น sign วางรูป โลโก้ ตราประทับ stamp",
   "pdf-merge": "merge combine รวม ต่อ เล่ม",
   "pdf-split": "split แยก ตัด ช่วงหน้า",

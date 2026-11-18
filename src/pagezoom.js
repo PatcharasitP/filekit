@@ -45,7 +45,7 @@ const STYLE = `
 .pz-btn[aria-pressed="true"]{background:rgba(255,255,255,.24)}
 @media (max-width:760px){
   .pz-main{flex-direction:column}
-  .pz-edit{width:auto;max-height:44vh;border-radius:14px 14px 0 0}
+  .pz-edit{width:auto;max-height:40vh;border-radius:14px 14px 0 0}
 }
 .pz-blank{display:grid;place-items:center;color:#667;font:600 14px var(--font);width:100%;height:100%}
 .pz-bar{align-self:center;display:flex;align-items:center;gap:2px;margin:10px auto 16px;padding:5px;

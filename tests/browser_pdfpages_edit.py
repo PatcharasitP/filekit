@@ -457,7 +457,7 @@ def main():
             st = mp.locator(".pz-stage").bounding_box()
             eb = mp.locator(".pz-editbtn").bounding_box()
             pe = mp.locator(".pz-edit").bounding_box()
-            ck(st["height"] >= 844 * 0.33, f"⑪ มือถือ กางแผงแล้วเวทีภาพสูง {st['height']:.0f}px ({st['height'] / 844:.0%} ของจอ)", str(st))
+            ck(st["height"] >= 844 * 0.40, f"⑪ มือถือ กางแผงแล้วเวทีภาพสูง {st['height']:.0f}px ({st['height'] / 844:.0%} ของจอ)", str(st))
             ck(eb and eb["x"] >= 0 and eb["x"] + eb["width"] <= 390, "⑪ ปุ่มแก้ไขบนหน้าอยู่ในจอ", str(eb))
             ck(pe and pe["y"] >= st["y"] + st["height"] - 2, "⑪ แผงเครื่องมืออยู่ใต้ภาพ ไม่บังหน้ากระดาษ", f"{pe} {st}")
             if SHOTS:

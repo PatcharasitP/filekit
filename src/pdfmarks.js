@@ -12,7 +12,7 @@ import { signaturePad, savedSignatures, saveSignature, removeSignature,
          imageToSignature } from "./signpad.js";
 import { tr } from "./i18n.js";
 import { decodeImage } from "./imgdecode.js";
-import { shownBox, srcRotation, viewSize, viewRectToRaw, placeUpright } from "./pdfgeom.js";
+import { shownBox, srcRotation, viewSize, viewRectToRaw, placeUpright, placeAt } from "./pdfgeom.js";
 
 export const VIEW_SCALE = 1.6;    // ความละเอียดที่เรนเดอร์หน้ามาให้ดู ยิ่งสูงยิ่งวางตำแหน่งแม่น
 /* ‼️ ต้องซูมได้ เพราะข้อความในสัญญาจริงตัวเล็กมาก (พี่ปอนด์ขอเอง 18/09/2026)
@@ -175,7 +175,13 @@ export async function stampMarks(doc, page, marks, cache = new Map()) {
       png = await embed(t.dataUrl);
       w = t.w; h = t.h;
     }
-    const at = placeUpright({ x: e.x, y: e.y - h / 2 / vs.h, w: w / vs.w, h: h / vs.h }, rot, box);
+    /* ของที่วางบนหน้าที่หมุนอยู่ (up) หมุนรอบจุดยึดของตัวเอง ข้อความยึดกึ่งกลางขอบซ้าย ภาพยึดกึ่งกลาง
+       up 0 ใช้สูตรเดิมของ pdf-edit ทุกตัว ผลไฟล์ปกติจึงไม่เปลี่ยน (tests/browser_pdfedit_golden.py) */
+    const at = e.up
+      ? (e.kind === "stamp"
+        ? placeAt((e.x + e.rw / 2) * vs.w, e.y * vs.h, w, h, 0.5, 0.5, e.up, rot, box)
+        : placeAt(e.x * vs.w, e.y * vs.h, w, h, 0, 0.5, e.up, rot, box))
+      : placeUpright({ x: e.x, y: e.y - h / 2 / vs.h, w: w / vs.w, h: h / vs.h }, rot, box);
     page.drawImage(png, { x: at.x, y: at.y, width: at.width, height: at.height,
                           ...(at.rotate ? { rotate: degrees(at.rotate) } : {}) });
   }
@@ -470,6 +476,34 @@ export function createMarkEditor(host) {
   /* วาดกล่องที่แก้ไว้ทับบนหน้า
      ‼️ ใช้หน่วยเปอร์เซ็นต์ ไม่ใช่พิกเซล เพราะเวทีย่อขยายตามความกว้างจอ
         ถ้าเก็บเป็นพิกเซลของจอ พอจอเปลี่ยนขนาดกล่องจะเลื่อนไปคนละที่ */
+  /* ── จุดที่ host ปรับได้ (เฟส 2 19/11/2026 ตัวดูหน้าใหญ่ของจัดการหน้า PDF ใช้ตัวแก้ไขนี้ร่วม) ──
+     ตัวดูวางชั้นนี้ไว้ในกระดาษที่ถูกหมุนและครอบด้วย CSS ทั้งแผ่น ของเก็บเป็นสัดส่วนของ "หน้าฐาน"
+     getBoundingClientRect ของชั้นที่หมุนอยู่คืนกรอบตั้งฉากของจอ ใช้แปลงจุดคลิกไม่ได้ host จึงส่งตัวแปลงมาเอง
+     ไม่ส่งมา = แบบเดิมของ pdf-edit ทุกประการ */
+  const layerRel = (ev) => {
+    const r = layer.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height };
+  };
+  const point = (ev) => (host.point ? host.point(ev) : layerRel(ev));
+  const pxPerPt = () => (host.pxPerPt ? host.pxPerPt() : stage.clientHeight / pageSize.h);
+  /** ตำแหน่ง ขนาด และการหมุนบนจอของของหนึ่งชิ้น
+   *  up = องศาที่หน้าถูกหมุนตามเข็มตอนวาง ของจึงหมุนทวนเข็มเท่านั้นในหน้าฐาน เพื่อให้ตั้งตรงตอนวาง
+   *  ข้อความ: จุดยึดคือกึ่งกลางขอบซ้าย หมุนรอบจุดนั้น , ภาพ: จุดยึดคือกึ่งกลางภาพ (x + rw/2, y) */
+  function geo(e) {
+    const boxy = e.kind === "cover" || e.kind === "highlight";
+    const up = boxy ? 0 : (e.up || 0);
+    const g = {
+      left: `${(up && e.kind === "stamp" ? e.x + e.rw / 2 : e.x) * 100}%`, top: `${e.y * 100}%`,
+      width: boxy ? `${e.w * 100}%` : (e.kind === "stamp" ? `${e.rw * 100}%` : "auto"),
+      height: boxy ? `${e.h * 100}%` : "auto",
+    };
+    if (boxy) return g;
+    if (!up) return { ...g, transform: "translateY(-50%)" };
+    return e.kind === "stamp"
+      ? { ...g, transform: `translate(-50%,-50%) rotate(${-up}deg)`, transformOrigin: "50% 50%" }
+      : { ...g, transform: `translateY(-50%) rotate(${-up}deg)`, transformOrigin: "0 50%" };
+  }
+
   function drawOverlay() {
     layer.innerHTML = "";
     host.list().forEach((e) => {
@@ -479,19 +513,17 @@ export function createMarkEditor(host) {
         /* ‼️ ต้องโฟกัสได้ ไม่งั้นคนใช้คีย์บอร์ดแก้ของที่วางไปแล้วไม่ได้เลย (WCAG 2.5.7) */
         tabindex: "0", role: "group",
         style: {
-          left: `${e.x * 100}%`, top: `${e.y * 100}%`,
-          width: boxy ? `${e.w * 100}%` : (e.kind === "stamp" ? `${e.rw * 100}%` : "auto"),
-          height: boxy ? `${e.h * 100}%` : "auto",
+          ...geo(e),
           background: e.kind === "cover" ? e.color : (e.kind === "highlight" ? e.color : "transparent"),
           /* ‼️ จุดคลิกคือ "กึ่งกลาง" ของสิ่งที่วาง ทั้งภาพและข้อความ
              เพราะตอนบันทึกลงไฟล์ save() วางโดยให้จุดคลิกเป็นกึ่งกลางแนวตั้ง (y - h/2)
              ถ้าบนจอวางโดยเอาขอบบนไว้ที่จุดคลิก ของบนจอกับในไฟล์จะคลาดกันครึ่งบรรทัด
              วัดจริง 21/09/2026: บนจอกึ่งกลางอยู่ที่ 0.5100 แต่ในไฟล์อยู่ที่ 0.5000
              = เพี้ยน 1.4% ของหน้า หรือราว 12 พอยต์บน A4 ซึ่งพอให้วางทับวันที่เดิมไม่ลง
-             ‼️ นี่คือเครื่องมือที่ขายว่า "วางตรงไหนได้ตรงนั้น" จึงห้ามคลาดแม้แต่นิด */
-          transform: (e.kind === "stamp" || e.kind === "text") ? "translateY(-50%)" : null,
+             ‼️ นี่คือเครื่องมือที่ขายว่า "วางตรงไหนได้ตรงนั้น" จึงห้ามคลาดแม้แต่นิด
+             (ตำแหน่ง ขนาด และการหมุน อยู่ใน geo() ข้างล่าง ใช้ร่วมกับตอนลากย้าย) */
           color: e.kind === "text" ? e.color : null,
-          fontSize: e.kind === "text" ? `${(e.size / pageSize.h) * 100 * (stage.clientHeight / 100)}px` : null,
+          fontSize: e.kind === "text" ? `${e.size * pxPerPt()}px` : null,
           fontWeight: e.kind === "text" ? e.weight : null,
         },
       }, [
@@ -517,8 +549,10 @@ export function createMarkEditor(host) {
          กล่องปิดทับยังปรับขนาดด้วย Alt+ลูกศร ได้ด้วย เพราะลากมุมอย่างเดียวก็ตกเกณฑ์เหมือนกัน */
       box.addEventListener("keydown", (ev) => {
         const step = ev.shiftKey ? 0.02 : 0.004;
-        const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0],
-                    ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
+        let d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0],
+                  ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
+        /* ลูกศรคือทิศบนจอ หน้าที่หมุนอยู่ต้องแปลงเป็นทิศบนหน้าฐานก่อน (host บอก) */
+        if (d && host.nudge) d = host.nudge(d);
         if (d) {
           ev.preventDefault();
           if (ev.altKey && (e.kind === "cover" || e.kind === "highlight")) {
@@ -554,10 +588,7 @@ export function createMarkEditor(host) {
      ‼️ ต้องหยุดไม่ให้เหตุการณ์ไหลไปถึงชั้นวาด ไม่งั้นการลากย้ายจะกลายเป็นสร้างกล่องใหม่ทับ */
   function bindMove(node, e) {
     let mode0 = null, from = null, orig = null;
-    const rel = (ev) => {
-      const r = layer.getBoundingClientRect();
-      return { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height };
-    };
+    const rel = point;
     node.addEventListener("pointerdown", (ev) => {
       if (ev.target.closest(".rm")) return;
       ev.stopPropagation();
@@ -582,13 +613,13 @@ export function createMarkEditor(host) {
         e.w = Math.max(0.004, orig.w + dx);
         e.h = Math.max(0.004, orig.h + dy);
       }
-      node.style.left = `${e.x * 100}%`;
-      node.style.top = `${e.y * 100}%`;
+      const g = geo(e);
+      node.style.left = g.left; node.style.top = g.top;
       if (e.kind === "cover" || e.kind === "highlight") {
-        node.style.width = `${e.w * 100}%`;
-        node.style.height = `${e.h * 100}%`;
+        node.style.width = g.width;
+        node.style.height = g.height;
       } else if (e.kind === "stamp") {
-        node.style.width = `${e.rw * 100}%`;
+        node.style.width = g.width;
       }
     });
     /* ‼️ คลิกทับของที่วางไปแล้ว ต้องวางชิ้นใหม่ได้ (เจอจริงตอนทำเทสเฟส 6 21/09/2026)
@@ -625,10 +656,7 @@ export function createMarkEditor(host) {
 
   // ── ลากคลุมเพื่อปิดทับ กับ คลิกเพื่อวางข้อความ ─────────────────────────
   let start = null, ghost = null;
-  const rel = (ev) => {
-    const r = layer.getBoundingClientRect();
-    return { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height };
-  };
+  const rel = point;
   const isDrag = () => mode === "cover" || mode === "highlight";
   layer.addEventListener("pointerdown", (ev) => {
     if (!host.ready() || ev.target.closest(".rm")) return;
@@ -673,8 +701,11 @@ export function createMarkEditor(host) {
       return;
     }
     const rw = (+stampSize.value || 22) / 100;
-    host.add({ kind: "stamp", x: Math.max(0, p.x - rw / 2), y: p.y, rw, url: stampUrl,
-                 what: mode === "sign" ? "sign" : "image" });
+    const up = host.up ? host.up() : 0;
+    /* up ไม่ใช่ 0 = หน้าถูกหมุนอยู่ ความกว้างของภาพวิ่งคนละแกนกับหน้าฐาน ห้ามบีบ x ด้วยเกณฑ์ขอบซ้าย
+       กึ่งกลางภาพคือ x + rw/2 เสมอ (ดู geo) */
+    host.add({ kind: "stamp", x: up ? p.x - rw / 2 : Math.max(0, p.x - rw / 2), y: p.y, rw, url: stampUrl,
+                 what: mode === "sign" ? "sign" : "image", ...(up ? { up } : {}) });
     drawOverlay(); host.thumbs();
     st.ok(tr("วางแล้ว ลากเพื่อย้าย หรือลากมุมเพื่อย่อขยาย", "Placed. Drag to move, or drag the corner to resize"));
   }
@@ -682,8 +713,9 @@ export function createMarkEditor(host) {
   function placeText(p) {
     const text = textInput.value.trim();
     if (!text) { st.err(tr("พิมพ์ข้อความด้านขวาก่อน", "Type the text on the right first")); return; }
+    const up = host.up ? host.up() : 0;
     host.add({ kind: "text", x: p.x, y: p.y, text,
-                 size: +sizeSel.value, color: textColor.value, weight: +weightSel.value });
+                 size: +sizeSel.value, color: textColor.value, weight: +weightSel.value, ...(up ? { up } : {}) });
     drawOverlay(); host.thumbs();
     st.ok(tr("วางข้อความแล้ว", "Text placed"));
   }
@@ -705,4 +737,78 @@ export function createMarkEditor(host) {
     },
     hide() { stage.hidden = true; },
   };
+}
+
+/* ── วาดของที่วางลงภาพ และหากรอบของที่วาง (เฟส 2 19/11/2026 จัดการหน้า PDF) ───────────────────
+   ใช้กับภาพย่อบนการ์ด (ปิดตัวดูแล้วการ์ดต้องเห็นของที่วางทันที) และกับการครอบขอบขาว
+   ‼️ ภาพย่อคือหน้าฐาน การ์ดหมุนและครอบภาพนี้ด้วย CSS อยู่แล้ว วาดลงภาพนี้ทีเดียวจึงตรงทุกแบบของการ์ด */
+const imgCache = new Map();
+function loadImage(url) {
+  if (!imgCache.has(url)) imgCache.set(url, new Promise((ok, bad) => {
+    const im = new Image();
+    im.onload = () => ok(im);
+    im.onerror = () => bad(new Error("image"));
+    im.src = url;
+  }));
+  return imgCache.get(url);
+}
+const FONT = (weight, px) => `${weight} ${px}px "FK Sarabun","Sarabun","Noto Sans Thai",sans-serif`;
+
+/** วาดของลง canvas ขนาด W x H px ที่เป็นภาพของหน้าฐาน base = { w, h } พอยต์ */
+export async function paintMarks(ctx, W, H, marks, base) {
+  const k = W / base.w;                    // px ต่อพอยต์
+  for (const e of marks) {
+    ctx.save();
+    const rad = (-(e.up || 0) * Math.PI) / 180;
+    if (e.kind === "cover" || e.kind === "highlight") {
+      ctx.globalAlpha = e.kind === "highlight" ? 0.38 : 1;
+      ctx.fillStyle = e.color;
+      ctx.fillRect(e.x * W, e.y * H, e.w * W, e.h * H);
+    } else if (e.kind === "text") {
+      ctx.translate(e.x * W, e.y * H);
+      ctx.rotate(rad);
+      ctx.font = FONT(e.weight || 400, e.size * k);
+      ctx.fillStyle = e.color;
+      ctx.textBaseline = "middle";
+      ctx.fillText(e.text, 0.75 * k, 0);    // ขอบซ้ายเผื่อเท่า textToPng (3 px ที่ 4 เท่า = 0.75 พอยต์)
+    } else if (e.kind === "stamp") {
+      try {
+        const im = await loadImage(e.url);
+        const w = e.rw * W, h = (im.naturalHeight / im.naturalWidth) * w;
+        ctx.translate((e.x + e.rw / 2) * W, e.y * H);
+        ctx.rotate(rad);
+        ctx.drawImage(im, -w / 2, -h / 2, w, h);
+      } catch { /* ภาพเสีย ข้ามไป ไฟล์จริงยังประทับจาก url เดิม */ }
+    }
+    ctx.restore();
+  }
+}
+
+/** กรอบรวมของที่วางทุกชิ้น เป็นสัดส่วนของหน้าฐาน { x, y, w, h } ไม่มีของคืน null
+ *  ใช้ตอนครอบขอบขาว ภาพย่อไม่มีของที่วาง ตัวหาขอบจึงมองไม่เห็นลายเซ็นในที่ว่าง ถ้าไม่รวมกรอบนี้ ลายเซ็นโดนตัดหาย */
+export async function markBounds(marks, base) {
+  if (!marks || !marks.length) return null;
+  const probe = document.createElement("canvas").getContext("2d");
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = (px, py) => { x0 = Math.min(x0, px); y0 = Math.min(y0, py); x1 = Math.max(x1, px); y1 = Math.max(y1, py); };
+  for (const e of marks) {
+    if (e.kind === "cover" || e.kind === "highlight") { add(e.x * base.w, e.y * base.h); add((e.x + e.w) * base.w, (e.y + e.h) * base.h); continue; }
+    // ขนาดเป็นพอยต์ จุดยึด และมุมทั้งสี่เทียบจุดยึด (ยังไม่หมุน แกน y ชี้ลง)
+    let ax, ay, pts;
+    if (e.kind === "text") {
+      probe.font = FONT(e.weight || 400, e.size);
+      const w = probe.measureText(e.text).width + 1.5, h = e.size * 1.7;
+      ax = e.x * base.w; ay = e.y * base.h;
+      pts = [[0, -h / 2], [w, -h / 2], [0, h / 2], [w, h / 2]];
+    } else {
+      let ar = 1;
+      try { const im = await loadImage(e.url); ar = im.naturalHeight / im.naturalWidth; } catch { /* ใช้สี่เหลี่ยมจัตุรัสแทน */ }
+      const w = e.rw * base.w, h = ar * w;
+      ax = (e.x + e.rw / 2) * base.w; ay = e.y * base.h;
+      pts = [[-w / 2, -h / 2], [w / 2, -h / 2], [-w / 2, h / 2], [w / 2, h / 2]];
+    }
+    const t = (-(e.up || 0) * Math.PI) / 180, c = Math.cos(t), s = Math.sin(t);
+    for (const [px, py] of pts) add(ax + px * c - py * s, ay + px * s + py * c);
+  }
+  return { x: x0 / base.w, y: y0 / base.h, w: (x1 - x0) / base.w, h: (y1 - y0) / base.h };
 }

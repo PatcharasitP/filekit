@@ -86,5 +86,47 @@ for (const rot of [0, 90, 180, 270]) {
     "⑤ หน้าปกติ ตำแหน่งภาพเท่าสูตรเดิม x = e.x*pw , y = ph - e.y*ph - h/2");
 }
 
+// ⑥ หน้าฐานกับหน้าที่เห็น: ไปกลับได้ตรง และตรงกับการแปลง CSS ที่ใช้วางชั้นของบนกระดาษจริง (คิดแยกจากนิยามของ CSS)
+{
+  const crops = [null, { x: 0.1, y: 0.2, w: 0.6, h: 0.5 }];
+  for (const crop of crops) for (const R of [0, 90, 180, 270]) {
+    const tag = `หมุน ${R} ${crop ? "ครอบ" : "ไม่ครอบ"}`;
+    const pts = [[0.2, 0.3], [0.7, 0.6], [0.15, 0.65]].map(([x, y]) => crop ? [crop.x + x * crop.w, crop.y + y * crop.h] : [x, y]);
+    const back = pts.every(([x, y]) => { const v = G.baseToView(x, y, R, crop); const b = G.viewToBase(v.u, v.v, R, crop); return near(b.x, x) && near(b.y, y); });
+    ck(back, `⑥ ${tag}: หน้าฐานไปหน้าที่เห็นแล้วกลับมาที่เดิม`);
+    // CSS: translate(tx,ty) rotate(R) translate(ox,oy) กับจุด (x*Bw, y*Bh) แกน y ชี้ลง rotate บวกตามเข็ม
+    const W = 300, H = 420, L = G.baseLayer(R, crop, W, H);
+    const t = (L.r * Math.PI) / 180, co = Math.cos(t), si = Math.sin(t);
+    const css = (x, y) => { const px = x * L.Bw + L.ox, py = y * L.Bh + L.oy;
+      return { u: (L.tx + px * co - py * si) / W, v: (L.ty + px * si + py * co) / H }; };
+    const same = pts.every(([x, y]) => { const a = css(x, y), b = G.baseToView(x, y, R, crop); return near(a.u, b.u) && near(a.v, b.v); });
+    ck(same, `⑥ ${tag}: ชั้นของบนจอ (CSS) ตรงกับสูตร`);
+    const c = crop || { x: 0, y: 0, w: 1, h: 1 };
+    const corners = [[c.x, c.y], [c.x + c.w, c.y], [c.x, c.y + c.h], [c.x + c.w, c.y + c.h]].map(([x, y]) => css(x, y));
+    ck(near(Math.min(...corners.map((p) => p.u)), 0) && near(Math.max(...corners.map((p) => p.u)), 1)
+      && near(Math.min(...corners.map((p) => p.v)), 0) && near(Math.max(...corners.map((p) => p.v)), 1),
+      `⑥ ${tag}: ส่วนที่ครอบเต็มกระดาษพอดี`);
+  }
+}
+
+// ⑦ วางภาพหมุนตามที่ตาเห็น: จุดยึดตรง , ขอบล่างของภาพวิ่งไปทางที่หมุนทวนเข็ม up องศา , up 0 เท่าสูตรเดิม
+for (const box of BOXES) for (const rot of [0, 90, 180, 270]) for (const up of [0, 90, 180, 270]) {
+  const vs = G.viewSize(box, rot), w = 90, h = 30, ax = 0.4 * vs.w, ay = 0.35 * vs.h;
+  const p = G.placeAt(ax, ay, w, h, 0.5, 0.5, up, rot, box);
+  const own = (ox, oy) => { const q = rotAbout(ox, oy, p.rotate, p.x, p.y); const v = rawToView(q.x, q.y, rot, box); return { x: v.u * vs.w, y: v.v * vs.h }; };
+  const ctr = own(w / 2, h / 2), right = own(w, h / 2);
+  const t = (up * Math.PI) / 180;
+  const dir = { x: Math.cos(t), y: -Math.sin(t) };            // ทวนเข็มตามที่ตาเห็น แกน y ชี้ลง
+  const got = { x: (right.x - ctr.x) / (w / 2), y: (right.y - ctr.y) / (w / 2) };
+  ck(near(ctr.x, ax, 1e-6) && near(ctr.y, ay, 1e-6) && near(got.x, dir.x, 1e-6) && near(got.y, dir.y, 1e-6),
+    `⑦ กรอบ ${box.x} หน้าหมุน ${rot} ของหมุน ${up}: กึ่งกลางตรงจุดคลิก และหันตามที่ตาเห็น`);
+}
+{
+  const box = BOXES[1], vs = G.viewSize(box, 90), w = 80, h = 20;
+  const a = G.placeAt(0.3 * vs.w, 0.4 * vs.h, w, h, 0, 0.5, 0, 90, box);
+  const b = G.placeUpright({ x: 0.3, y: 0.4 - h / 2 / vs.h, w: w / vs.w, h: h / vs.h }, 90, box);
+  ck(near(a.x, b.x, 1e-6) && near(a.y, b.y, 1e-6) && a.rotate === b.rotate, "⑦ up 0 ได้เท่าสูตรเดิมที่ pdf-edit ใช้");
+}
+
 console.log(`\nผ่าน ${pass} , ตก ${fail.length}`);
 process.exit(fail.length ? 1 : 0);

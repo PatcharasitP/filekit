@@ -84,3 +84,53 @@ export function placeRawContent(d, rot) {
   if (rot === 270) return { x: d.x + d.w, y: d.y, rotate: -270 };
   return { x: d.x, y: d.y, rotate: 0 };
 }
+
+/* ── หน้าฐาน กับ หน้าที่เห็นหลังหมุนและครอบของเครื่องมือจัดการหน้า (เฟส 2 19/11/2026) ─────────────
+ * หน้าฐาน = ภาพที่ pdf.js วาดหน้าต้นฉบับ (ภาพย่อบนการ์ด) ก่อนผู้ใช้หมุนและครอบ ของที่วางเก็บในพื้นที่นี้
+ *           หมุนหรือครอบทีหลัง ค่าที่เก็บไม่ต้องแก้ (แผนข้อ 1.3)
+ * หน้าที่เห็น = ส่วนที่ครอบ (crop) แล้วหมุนตามเข็ม R องศา (item.rotate) แบบเดียวกับการ์ดและ renderItem
+ * ทั้งสองแบบเป็นสัดส่วนนับจากมุมซ้ายบน */
+
+/** จุดบนหน้าที่เห็น (u, v) -> จุดบนหน้าฐาน (x, y) */
+export function viewToBase(u, v, R, crop) {
+  const c = crop || { x: 0, y: 0, w: 1, h: 1 };
+  const r = ((R % 360) + 360) % 360;
+  // ส่วนที่ครอบหมุนตามเข็ม r ไปเป็นหน้าที่เห็น ย้อนกลับก่อน ได้ (a, b) บนส่วนที่ครอบ
+  const [a, b] = r === 90 ? [v, 1 - u] : r === 180 ? [1 - u, 1 - v] : r === 270 ? [1 - v, u] : [u, v];
+  return { x: c.x + a * c.w, y: c.y + b * c.h };
+}
+
+/** จุดบนหน้าฐาน (x, y) -> จุดบนหน้าที่เห็น (u, v) */
+export function baseToView(x, y, R, crop) {
+  const c = crop || { x: 0, y: 0, w: 1, h: 1 };
+  const r = ((R % 360) + 360) % 360;
+  const a = (x - c.x) / c.w, b = (y - c.y) / c.h;
+  return r === 90 ? { u: 1 - b, v: a } : r === 180 ? { u: 1 - a, v: 1 - b } : r === 270 ? { u: b, v: 1 - a } : { u: a, v: b };
+}
+
+/** วางภาพขนาด w x h พอยต์ ให้จุด (ox, oy) ของภาพ (สัดส่วนของภาพ นับจากบนซ้าย) อยู่ที่ (ax, ay) พอยต์บนหน้าที่เห็นของ pdf.js
+ *  ภาพหมุนทวนเข็มตามที่ตาเห็น up องศา (ของที่วางตอนหน้าถูกหมุนตามเข็ม up องศา ต้องหมุนกลับเพื่อให้ตั้งตรงตอนนั้น)
+ *  คืนค่าให้ drawImage ‼️ ภาพของ pdf-lib หมุนรอบมุมล่างซ้ายของตัวเอง จึงหามุมนั้นก่อน */
+export function placeAt(ax, ay, w, h, ox, oy, up, rot, box) {
+  const t = (up * Math.PI) / 180, c = Math.cos(t), s = Math.sin(t);
+  const dx = -ox * w, dy = (1 - oy) * h;            // มุมล่างซ้ายของภาพ เทียบกับจุดยึด แกน y ชี้ลง
+  const vx = ax + c * dx + s * dy, vy = ay - s * dx + c * dy;
+  const vs = viewSize(box, rot);
+  const at = viewPtToRaw(vx / vs.w, vy / vs.h, rot, box);
+  return { x: at.x, y: at.y, width: w, height: h, rotate: (rot + up) % 360 };
+}
+
+/** ขนาดและการแปลงของ "ชั้นหน้าฐาน" ที่ซ้อนในกระดาษบนจอขนาด W x H px ให้ส่วนที่ครอบหมุน R แล้วพอดีกระดาษ
+ *  ใช้ทำ CSS: width Bw, height Bh, transform-origin 0 0,
+ *  transform: translate(tx px, ty px) rotate(R deg) translate(-c.x*Bw px, -c.y*Bh px)
+ *  ‼️ CSS rotate บวกคือตามเข็ม เหมือน /Rotate และ item.rotate */
+export function baseLayer(R, crop, W, H) {
+  const c = crop || { x: 0, y: 0, w: 1, h: 1 };
+  const r = ((R % 360) + 360) % 360;
+  const side = r % 180 !== 0;
+  const Bw = (side ? H : W) / c.w, Bh = (side ? W : H) / c.h;
+  const cw = c.w * Bw, ch = c.h * Bh;               // ส่วนที่ครอบเป็น px ก่อนหมุน
+  const [tx, ty] = r === 90 ? [ch, 0] : r === 180 ? [cw, ch] : r === 270 ? [0, cw] : [0, 0];
+  return { Bw, Bh, tx, ty, r, ox: -c.x * Bw, oy: -c.y * Bh,
+    css: `translate(${tx}px,${ty}px) rotate(${r}deg) translate(${-c.x * Bw}px,${-c.y * Bh}px)` };
+}

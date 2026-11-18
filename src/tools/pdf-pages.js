@@ -4,6 +4,7 @@ import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
 import { attachPeek, openViewer } from "../pagezoom.js";
+import { shownBox, srcRotation, viewRectToRaw, placeRawContent } from "../pdfgeom.js";
 
 /* ‼️ ไฟล์ไหนเป็นของใคร บอกด้วย "ตัวอักษร" ไม่ใช่ "สี" (ตัดสินจากการวัดจริง 18/09/2026)
    ลองชุดสี 4 แบบแล้ววัดด้วย src/cvd.js ไม่มีชุดไหนที่ 5 สีขึ้นไปแยกออกครบทั้งสามแบบตาบอดสี
@@ -1402,7 +1403,22 @@ export function mount(tool) {
       for (let i = 0; i < keep.length; i++) {
         const page = copiedAt[i];
         const it = keep[i];
-        if (it.blank) { out.addPage([it.pw, it.ph]); continue; }   // หน้าว่าง สร้างใหม่ตรงนี้
+        /* หน้าว่าง สร้างใหม่ตรงนี้ ‼️ หมุนตามที่กดด้วย รุ่นเดิม continue ก่อนถึงคำสั่งหมุน
+           กดหมุนหน้าว่างแล้วบันทึก ได้หน้าไม่หมุน (วัด 19/11/2026 tests/browser_pdfpages_rotated.py) */
+        if (it.blank) {
+          const bp = out.addPage([it.pw, it.ph]);
+          if (it.rotate) bp.setRotation(degrees(it.rotate % 360));
+          continue;
+        }
+        /* ‼️ กรอบครอบเป็นสัดส่วนของภาพย่อ ซึ่ง pdf.js หมุนตาม /Rotate และตัดตาม CropBox ของไฟล์ต้นฉบับแล้ว
+           รุ่นเดิมคูณกับ MediaBox ก่อนหมุนตรง ๆ ไฟล์สแกนจากมือถือที่หมุนหน้าไว้จึงครอบผิดมุม (วัด 19/11/2026)
+           แปลงผ่าน src/pdfgeom.js ตัวเดียวกับเครื่องมือครอบตัดขอบ PDF ที่พิสูจน์แล้ว
+           อ่านเรขาคณิตจากหน้าต้นฉบับ ไม่ใช่หน้าที่คัดลอก เพราะ copyPages สืบทอดค่าข้าม /Rotate null */
+        const src = srcDocs.get(it.fi).getPage(it.index);
+        const rot = srcRotation(src), box = shownBox(src);
+        const turn = (pg) => {
+          if (it.rotate || srcRotation(pg) !== rot) pg.setRotation(degrees((rot + it.rotate) % 360));
+        };
 
         /* ── หน้าที่ครอบ: ตัดเนื้อหาแล้วขยายให้เต็มหน้ากระดาษขนาดเดิม ─────────
            ‼️ ทำแบบนี้ทุกหน้าในไฟล์จึงมีขนาดเท่ากัน ซึ่งสำคัญตอนสั่งพิมพ์
@@ -1411,36 +1427,29 @@ export function mount(tool) {
            ‼️ ขยายแบบรักษาสัดส่วน แล้วจัดกลางหน้า ไม่ยืดบิด ไม่งั้นตัวหนังสือเพี้ยน */
         if (it.crop && modeOf(it) === "tight") {
           /* หน้ากระดาษหดพอดีเนื้อหา ใช้ setCropBox ซึ่งไม่แตะพิกเซลเลย ไม่เสียคุณภาพ */
-          const mb = page.getMediaBox();
-          page.setCropBox(mb.x + it.crop.x * mb.width,
-                          mb.y + (1 - it.crop.y - it.crop.h) * mb.height,
-                          it.crop.w * mb.width, it.crop.h * mb.height);
-          if (it.rotate) {
-            const base = page.getRotation().angle;
-            page.setRotation(degrees((base + it.rotate) % 360));
-          }
+          const q = viewRectToRaw(it.crop, rot, box);
+          page.setCropBox(q.x, q.y, q.w, q.h);
+          turn(page);
           out.addPage(page);
           continue;
         }
         if (it.crop) {
-          const src = srcDocs.get(it.fi).getPage(it.index);
-          const mb = src.getMediaBox();
-          const left = mb.x + it.crop.x * mb.width;
-          const right = left + it.crop.w * mb.width;
-          const top = mb.y + (1 - it.crop.y) * mb.height;
-          const bottom = top - it.crop.h * mb.height;
-          const emb = await out.embedPage(src, { left, bottom, right, top });
+          const q = viewRectToRaw(it.crop, rot, box);
+          const emb = await out.embedPage(src, { left: q.x, bottom: q.y, right: q.x + q.w, top: q.y + q.h });
           const np = out.addPage([it.pw, it.ph]);
-          const k = Math.min(it.pw / emb.width, it.ph / emb.height);
-          const w = emb.width * k, h = emb.height * k;
-          np.drawPage(emb, { x: (it.pw - w) / 2, y: (it.ph - h) / 2, width: w, height: h });
+          /* เนื้อหาที่ฝังเป็นหน้าดิบก่อนหมุน ต้องหมุนตาม /Rotate ของต้นฉบับตอนวาด ให้หน้าตาเหมือนการ์ด
+             ขนาดที่เห็นจึงสลับกว้างสูงเมื่อต้นฉบับหมุน 90 หรือ 270 */
+          const sideways = rot % 180 !== 0;
+          const cw = sideways ? emb.height : emb.width, ch = sideways ? emb.width : emb.height;
+          const k = Math.min(it.pw / cw, it.ph / ch);
+          const dw = cw * k, dh = ch * k;
+          const at = placeRawContent({ x: (it.pw - dw) / 2, y: (it.ph - dh) / 2, w: dw, h: dh }, rot);
+          np.drawPage(emb, { x: at.x, y: at.y, width: emb.width * k, height: emb.height * k,
+                             ...(at.rotate ? { rotate: degrees(at.rotate) } : {}) });
           if (it.rotate) np.setRotation(degrees(it.rotate % 360));
           continue;
         }
-        if (it.rotate) {
-          const base = page.getRotation().angle;
-          page.setRotation(degrees((base + it.rotate) % 360));
-        }
+        turn(page);
         out.addPage(page);
       }
 

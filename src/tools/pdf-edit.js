@@ -21,6 +21,7 @@ import { signaturePad, savedSignatures, saveSignature, removeSignature,
          imageToSignature } from "../signpad.js";
 import { tr, pl } from "../i18n.js";
 import { decodeImage } from "../imgdecode.js";
+import { shownBox, srcRotation, viewSize, viewRectToRaw, placeUpright } from "../pdfgeom.js";
 
 const VIEW_SCALE = 1.6;    // ความละเอียดที่เรนเดอร์หน้ามาให้ดู ยิ่งสูงยิ่งวางตำแหน่งแม่น
 /* ‼️ ต้องซูมได้ เพราะข้อความในสัญญาจริงตัวเล็กมาก (พี่ปอนด์ขอเอง 18/09/2026)
@@ -800,37 +801,44 @@ export function mount(tool) {
     ws.setBusy(true);
     st.info(tr("กำลังบันทึก…", "Saving…"));
     try {
-      const { PDFDocument, rgb } = PDFLib;
+      const { rgb, degrees } = PDFLib;
       const { doc, encrypted } = await loadPdfLib(file);
       const pages = doc.getPages();
       for (const e of edits) {
         const page = pages[e.page];
         if (!page) continue;
-        const { width: pw, height: ph } = page.getSize();
+        /* ‼️ ตำแหน่งที่เก็บเป็นสัดส่วนของ "หน้าที่เห็น" ซึ่ง pdf.js หมุนตาม /Rotate และตัดตาม CropBox แล้ว
+           รุ่นเดิมคูณกับ getSize() ตรง ๆ หน้าหมุน 90 ลายเซ็นคลาดจากที่เห็น 48% ของหน้า หน้าที่ CropBox ไม่เริ่มที่ 0 คลาด 3%
+           (วัดจริง 19/11/2026 tests/browser_pdfedit_rotated.py) จึงแปลงผ่าน src/pdfgeom.js ทุกชิ้น
+           หน้าปกติได้ตัวเลขเท่าสูตรเดิมทุกตัว (tests/pdfgeom.test.mjs ข้อ ⑤) */
+        const rot = srcRotation(page), box = shownBox(page), vs = viewSize(box, rot);
         if (e.kind === "cover" || e.kind === "highlight") {
           const c = hexToRgb01(e.color);
-          /* ‼️ PDF นับแกนตั้งจากล่างขึ้นบน ส่วนหน้าจอนับจากบนลงล่าง
-             ต้องกลับด้าน ไม่งั้นกล่องไปโผล่คนละที่กับที่ผู้ใช้ลาก */
+          const q = viewRectToRaw({ x: e.x, y: e.y, w: e.w, h: e.h }, rot, box);
           page.drawRectangle({
-            x: e.x * pw, y: ph - (e.y + e.h) * ph,
-            width: e.w * pw, height: e.h * ph,
+            x: q.x, y: q.y, width: q.w, height: q.h,
             color: rgb(c.r, c.g, c.b),
             /* ‼️ ไฮไลต์ต้องโปร่งจริงในไฟล์ด้วย ไม่ใช่แค่บนจอ
                ถ้าทึบ ตัวหนังสือใต้แถบจะหายไปเลย ซึ่งไม่ใช่สิ่งที่คำว่าไฮไลต์หมายถึง
                0.38 มาจากการลองพิมพ์ดู ต่ำกว่านี้แทบไม่เห็นแถบ สูงกว่านี้เริ่มกลืนตัวอักษร */
             opacity: e.kind === "highlight" ? 0.38 : 1,
           });
-        } else if (e.kind === "stamp") {
+        } else {
           /* ภาพ PNG พื้นโปร่ง วางโดยให้จุดที่ผู้ใช้คลิกเป็นกึ่งกลางแนวตั้ง
              ความสูงคำนวณจากสัดส่วนจริงของภาพ ไม่ใช่เดา ไม่งั้นลายเซ็นจะแบนหรือยืด */
-          const png = await doc.embedPng(e.url);
-          const w = e.rw * pw;
-          const h = (png.height / png.width) * w;
-          page.drawImage(png, { x: e.x * pw, y: ph - e.y * ph - h / 2, width: w, height: h });
-        } else {
-          const { dataUrl, w, h } = textToPng(e.text, { fontSize: e.size, color: e.color, weight: e.weight });
-          const png = await doc.embedPng(dataUrl);
-          page.drawImage(png, { x: e.x * pw, y: ph - e.y * ph - h / 2, width: w, height: h });
+          let png, w, h;
+          if (e.kind === "stamp") {
+            png = await doc.embedPng(e.url);
+            w = e.rw * vs.w;
+            h = (png.height / png.width) * w;
+          } else {
+            const t = textToPng(e.text, { fontSize: e.size, color: e.color, weight: e.weight });
+            png = await doc.embedPng(t.dataUrl);
+            w = t.w; h = t.h;
+          }
+          const at = placeUpright({ x: e.x, y: e.y - h / 2 / vs.h, w: w / vs.w, h: h / vs.h }, rot, box);
+          page.drawImage(png, { x: at.x, y: at.y, width: at.width, height: at.height,
+                                ...(at.rotate ? { rotate: degrees(at.rotate) } : {}) });
         }
         await yieldToBrowser();
       }

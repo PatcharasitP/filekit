@@ -49,6 +49,14 @@ const STYLE = `
 
 /* ── การ์ดหน้า (18/11/2026) ─────────────────────────────────────────────── */
 .pp-center{position:relative}
+/* แถบภาพย่อในแผงแก้ไข จอแคบซ่อน (เฟส 3) */
+.pp-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
+.pp-strip button{flex:none;width:50px;height:62px;padding:3px;border:1px solid var(--line);border-radius:6px;
+  background:#fff;display:grid;place-items:center;cursor:pointer;overflow:hidden}
+.pp-strip button[aria-current="true"]{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 35%,transparent)}
+.pp-strip img{max-width:100%;max-height:100%;display:block}
+.pp-strip-blank{width:70%;height:80%;background:#fff;border:1px dashed var(--line)}
+@media (max-width:760px){ .pp-strip{display:none} }
 /* ชั้นของที่วางในตัวดูหน้าใหญ่ ขนาดเท่าหน้าฐาน หมุนและเลื่อนด้วย transform จาก pdfgeom baseLayer (เฟส 2) */
 .pp-base{position:absolute;left:0;top:0;transform-origin:0 0}
 .pp-center .pages{user-select:none;-webkit-user-select:none}
@@ -179,11 +187,14 @@ export function mount(tool) {
     expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
     accept: "application/pdf,.pdf", multiple: true, reorder: true,
     onPickFile: (f) => pickFile(f),
-    /* ‼️ เอาไฟล์ออกหนึ่งไฟล์ ตอนนี้ยังอ่านทุกไฟล์ใหม่หมด (loadPreview) งานจัดหน้าและของที่วางบนหน้าทุกไฟล์หาย
-       จนกว่าจะเก็บงานของไฟล์ที่เหลือได้ (แผนเฟส 3 ข้อ 3) มีของที่วางอยู่ = ถามก่อน ตอบไม่ ไฟล์ยังอยู่ */
-    beforeRemove: () => !items.some((x) => x.marks && x.marks.length)
-      || confirm(tr("เอาไฟล์นี้ออกแล้ว ปิดทับ ข้อความ และลายเซ็นที่วางบนหน้าทุกไฟล์จะหายทั้งหมด ต้องการเอาออกไหม",
-                    "Removing this file also removes every cover, text and signature placed on any page. Remove it anyway?")),
+    /* ‼️ เอาไฟล์ออก งานของไฟล์ที่เหลือยังอยู่ครบ (แผนเฟส 3 ข้อ 3 ดู removeFiles ข้างล่าง)
+       ที่หายคือหน้าของไฟล์ที่เอาออกเท่านั้น ถ้าหน้าพวกนั้นมีของที่วางไว้ ถามก่อน ตอบไม่ ไฟล์ยังอยู่ */
+    beforeRemove: (file) => {
+      const fi = files.indexOf(file);
+      if (!items.some((x) => !x.blank && x.fi === fi && x.marks && x.marks.length)) return true;
+      return confirm(tr("ไฟล์นี้มีปิดทับ ข้อความ หรือลายเซ็นที่วางไว้บนหน้า เอาออกแล้วของพวกนั้นจะหายไปด้วย ต้องการเอาออกไหม",
+                        "This file has covers, text or signatures placed on its pages. Removing it removes them too. Remove it anyway?"));
+    },
     hint: tr("หลายไฟล์ได้ ลากสลับลำดับไฟล์ได้", "Multiple files, drag to reorder"),
     onChange: (f) => {
       const next = [...(f || [])];
@@ -217,6 +228,8 @@ export function mount(tool) {
         loadPreview({ fromFile: from, insertAfter: insertPoint() });
         return;
       }
+      const shrunk = next.length > 0 && next.length < files.length && next.every((x) => files.includes(x));
+      if (shrunk && items.length) { removeFiles(next); return; }
       files = next;
       if (files.length) loadPreview();
       else { items = []; clearSel(); closeDocs(); pagesGrid.innerHTML = ""; st.clear(); setLoaded(false); renderFiles(); updateSummary(); ws.showCanvas(false); }
@@ -1113,12 +1126,44 @@ export function mount(tool) {
              `Set range ${rangeInput.value} (${pl(pages.length, "page", "pages")})`));
   }
 
+  /* ── เอาไฟล์ออกบางไฟล์ เก็บงานของไฟล์ที่เหลือ (เฟส 3 19/11/2026 แผนข้อ 3) ─────────────────────────
+     เดิมอ่านทุกไฟล์ใหม่หมด (loadPreview) ลำดับ หมุน ครอบ หน้าว่าง และของที่วางบนหน้าทุกไฟล์หายทั้งชุด
+     ตอนนี้ตัดเฉพาะหน้าของไฟล์ที่ออก แล้วแก้เลขไฟล์ (fi) ของที่เหลือ เอกสาร pdf.js ผูกกับตัวไฟล์ จึงไม่ต้องเปิดใหม่ */
+  function removeFiles(next) {
+    const gone = files.filter((f) => !next.includes(f));
+    const remap = new Map(files.map((f, i) => [i, next.indexOf(f)]));
+    const keep = (it) => it.blank || remap.get(it.fi) >= 0;
+    const out = new Set(items.filter((it) => !keep(it)));
+    items = items.filter(keep);
+    items.forEach((it) => { if (!it.blank) it.fi = remap.get(it.fi); });
+    for (const f of gone) { const d = docs.get(f); if (d) { try { d.destroy(); } catch { /* ปิดไปแล้ว */ } docs.delete(f); } }
+    out.forEach((it) => sel.delete(it));
+    if (anchor && out.has(anchor)) anchor = null;
+    markLog = markLog.filter((r) => !out.has(r.it));
+    for (let i = removed.length - 1; i >= 0; i--) {
+      removed[i] = removed[i].filter((it) => !out.has(it));
+      if (!removed[i].length) removed.splice(i, 1);
+    }
+    files = next;
+    hiddenNow = new Set([...hiddenNow].filter((f) => next.includes(f)));
+    dz.hide(hiddenNow);
+    renderFiles();
+    render();
+    updateSummary();
+    st.ok(tr(`เอาไฟล์ออกแล้ว หน้าที่จัดไว้ของไฟล์ที่เหลือยังอยู่ครบ`, `File removed. Your work on the other files is kept`));
+  }
+
   /* ── ดูหน้าใหญ่ (18/11/2026 พี่ปอนด์: ภาพย่อเล็กจนมองไม่เห็น) ───────────────────────────── */
   let viewer = null;
   const hidePeek = attachPeek(pagesGrid, {
     itemOf: (card) => (card.classList.contains("dropped") ? null : items[+card.dataset.i]),
     getDoc,
     blocked: () => !!drag || !!pending || !!viewer,
+    /* ภาพลอยต้องเห็นของที่วางเหมือนการ์ดและไฟล์ (แผนเฟส 3 ข้อ 1) วาดลงหน้าฐานก่อนครอบหมุน */
+    paint: (it) => (it.marks && it.marks.length
+      ? (ctx, W, H) => paintMarks(ctx, W, H, it.marks, { w: it.bw || it.pw, h: it.bh || it.ph }) : null),
+    inkKey: (it) => it.inkRev || 0,
+    blankPic: (it) => it.inkThumb || null,
   });
   /* คลิกแถวไฟล์ = เลือกทุกหน้าของไฟล์นั้นในตะแกรง แล้วเลื่อนไปหาหน้าแรกของไฟล์ (18/11/2026 พี่ปอนด์ถามว่าจุดหกจุดกดได้ไหม)
      จะได้ลบหรือหมุนทั้งไฟล์ทีเดียวด้วยแถบเลือกหลายหน้า หน้าที่ลบไว้แล้วไม่ถูกเลือกกลับมา */
@@ -1181,7 +1226,27 @@ export function mount(tool) {
     pxPerPt: () => baseH / (edIt.bh || edIt.ph),
   });
   const baseEl = el("div", { class: "pp-base" }, [ed.layer]);
+  /* แถบภาพย่อในแผงแก้ไข เลือกหน้าจากภาพแทนกดถัดไปทีละหน้า (แผนเฟส 3 ข้อ 2)
+     จอแคบซ่อน แผงอยู่ใต้ภาพและสูงได้ไม่เกิน 40% ของจอ ใส่แถบเพิ่มจะเบียดเครื่องมือจนต้องเลื่อน ใช้ปุ่มถัดไปแทน */
+  const strip = (() => {
+    const node = el("div", { class: "pp-strip", role: "group", "aria-label": tr("เลือกหน้าที่จะแก้", "Pick a page to edit") });
+    let list = [];
+    const sync = () => {
+      if (!viewer || !list.length) return;
+      node.replaceChildren(...list.map((x, i) => {
+        const deg = x.blank ? 0 : x.rotate % 360;
+        const src = x.inkThumb || (x.blank ? null : x.thumb);
+        return el("button", { type: "button", "aria-current": x === edIt ? "true" : "false",
+          "aria-label": tr(`ไปหน้า ${i + 1}`, `Go to page ${i + 1}`), title: tr(`หน้า ${i + 1}`, `Page ${i + 1}`),
+          onclick: () => viewer && viewer.goTo(i) },
+        [src ? el("img", { src, alt: "", style: deg ? { transform: `rotate(${deg}deg)` } : null }) : el("span", { class: "pp-strip-blank" })]);
+      }));
+      node.querySelector("[aria-current=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+    return { node, sync, set: (l) => { list = l; } };
+  })();
   const edPanel = el("div", { role: "region", "aria-label": tr("เครื่องมือแก้ไขบนหน้า", "Edit tools for the page") }, [
+    strip.node,
     est.node,
     ed.panel,
     el("div", { class: "pz-edit-row" }, [ed.buttons.placeMidBtn, ed.buttons.undoBtn, ed.buttons.clearBtn]),
@@ -1195,7 +1260,8 @@ export function mount(tool) {
     const job = (inkJobs.get(it) || 0) + 1;
     inkJobs.set(it, job);
     (async () => {
-      if (!it.marks.length) { it.inkThumb = null; render(); return; }
+      it.inkRev = (it.inkRev || 0) + 1;              // ภาพลอยที่จำไว้ของหน้านี้ใช้ไม่ได้แล้ว
+      if (!it.marks.length) { it.inkThumb = null; render(); strip.sync(); return; }
       let c;
       if (it.blank) {
         c = document.createElement("canvas");
@@ -1213,6 +1279,7 @@ export function mount(tool) {
       it.inkThumb = c.toDataURL("image/jpeg", 0.8);
       c.width = c.height = 0;
       render();
+      strip.sync();
     })();
   }
 
@@ -1224,6 +1291,7 @@ export function mount(tool) {
     edIt = it;
     drawnKey = "";
     est.clear();
+    strip.set(list);
     viewer = openViewer({
       list, start: list.indexOf(it), getDoc,
       label: (x, i, n) => [tr(`หน้า ${i + 1} จาก ${n}`, `Page ${i + 1} of ${n}`),
@@ -1238,7 +1306,7 @@ export function mount(tool) {
           if (!ed.buttons.undoBtn.disabled) ed.buttons.undoBtn.click();
           return true;
         },
-        onPage: (x) => { edIt = x; drawnKey = ""; },
+        onPage: (x) => { edIt = x; drawnKey = ""; strip.sync(); },
         onToggle: (on) => { if (on) est.info(tr("เลือกเครื่องมือ แล้วคลิกหรือลากบนหน้า", "Pick a tool, then click or drag on the page")); },
         sync: (x, W, H) => {
           const L = baseLayer(R(x), x.blank ? null : x.crop, W, H);
@@ -1252,6 +1320,7 @@ export function mount(tool) {
       },
       onClose: () => { viewer = null; edIt = null; ed.layer.replaceChildren(); },
     });
+    strip.sync();                          // ตอนตัวดูวาดหน้าแรก viewer ยังไม่ถูกตั้งค่า แถบจึงวาดตรงนี้
   }
 
   /* ── ลากย้ายหน้า (18/11/2026 จุดขายที่พี่ปอนด์ขอให้ทำเต็มที่) ────────────────────────────

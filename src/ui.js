@@ -466,8 +466,12 @@ export function toolFaq(tool) {
 export function keyHints(pairs) {
   return el("div", { class: "keyhints" }, [
     el("span", { class: "keyhints-t" }, tr("คีย์ลัด", "Shortcuts")),
+    /* key เป็นอาร์เรย์ได้ = กดได้หลายปุ่ม เช่น ["Del", "Backspace"] โน้ตบุ๊กหลายรุ่นไม่มีปุ่ม Delete แยก (18/11/2026) */
     ...pairs.map(([key, what]) =>
-      el("span", { class: "keyhint" }, [el("kbd", { class: "kbd" }, key), el("span", {}, what)])),
+      el("span", { class: "keyhint" }, [
+        ...[].concat(key).flatMap((k, i) => [i ? el("span", { class: "kh-or" }, tr("หรือ", "or")) : null,
+                                              el("kbd", { class: "kbd" }, k)]),
+        el("span", {}, what)])),
   ]);
 }
 
@@ -959,7 +963,7 @@ export function dropzone(opts = {}) {
   let files = [];
   /* ‼️ ประกาศออกไปทุกครั้งที่รายการไฟล์เปลี่ยน ไม่ใช่แค่บอกเครื่องมือเจ้าของกล่อง
      เพื่อให้แถบ "ทำต่อกับไฟล์นี้" รู้ว่าตอนนี้ถือไฟล์อะไรอยู่ */
-  const fireChange = () => { setInputFiles(files); onChange(files); };
+  const fireChange = () => { setInputFiles(shown()); onChange(files); };
   // ‼️ ภาพย่อคงอยู่ข้าม render() (คีย์ด้วยตัว File เอง) — ไม่งั้นทุกครั้งที่มีไฟล์เพิ่ม/ลบ/สลับลำดับ
   //    list.innerHTML="" ใน render() จะล้างภาพที่คำนวณไปแล้วทิ้ง ต้องมาคำนวณใหม่ทุกรอบ
   const thumbCache = new Map();  // File -> { kind, node, pending }
@@ -967,6 +971,10 @@ export function dropzone(opts = {}) {
   const pagePending = new Set(); // ไฟล์ที่กำลังนับหน้าอยู่ กันยิงซ้ำระหว่าง render รอบถัดไป
   const thumbUrls  = new Map();  // File -> objectURL ของรูป (เฉพาะรูป) — ต้อง revoke ตอนไฟล์หลุดจากลิสต์
   const states = new Map();      // File -> "working" | "done" | "error" (ไม่มีในทะเบียน = ยังไม่เริ่ม)
+  /* ไฟล์ที่เครื่องมือขอซ่อนจากรายการ (ยังถืออยู่ ไม่ได้เอาออก) เช่น pdf-pages ซ่อนไฟล์ที่ทุกหน้าถูกลบ
+     ‼️ ซ่อน ไม่ใช่เอาออก เพื่อให้ย้อนการลบแล้วแถวกลับมาที่เดิมได้ทันที (18/11/2026) */
+  let hiddenFiles = new Set();
+  const shown = () => files.filter((f) => !hiddenFiles.has(f));
   const input = el("input", {
     type: "file", accept, multiple: multiple || null, hidden: true,
     onchange: (e) => { add([...e.target.files]); input.value = ""; },
@@ -1298,15 +1306,19 @@ export function dropzone(opts = {}) {
     syncActionButtons();
     ensureRowStyle();
     list.innerHTML = "";
+    const vis = shown();
     files.forEach((f, i) => {
+      if (hiddenFiles.has(f)) return;
+      const vi = vis.indexOf(f);
       // ‼️ การลากวางแบบ HTML5 ใช้ไม่ได้เลยบนมือถือและกับคนที่ใช้คีย์บอร์ดอย่างเดียว
       //    จึงต้องมีปุ่มขึ้น-ลงคู่กันเสมอ ไม่ใช่ทางเลือกเสริม
-      const move = (d) => { const j = i + d; if (j < 0 || j >= files.length) return;
+      // ‼️ สลับกับแถวที่ "มองเห็น" ข้างกัน ข้ามแถวที่ซ่อนอยู่ ไม่งั้นกดแล้วไม่เห็นอะไรเปลี่ยน
+      const move = (d) => { const g = vis[vi + d]; if (!g) return; const j = files.indexOf(g);
         [files[i], files[j]] = [files[j], files[i]]; render(); fireChange(); };
       /* ‼️ มีไฟล์เดียวก็ไม่มีอะไรให้สลับ (เจอจริง 18/09/2026)
          ปุ่มขึ้นลงกับที่จับลากยังโผล่อยู่ทั้งที่กดแล้วไม่เกิดอะไร
          และมันเบียดแถวจนขนาดไฟล์ตกบรรทัดเป็น "4.5" กับ "KB" คนละบรรทัด */
-      const canReorder = reorder && files.length > 1;
+      const canReorder = reorder && vis.length > 1;
       const row = el("div", { class: "file-row", draggable: canReorder || null, "data-i": i,
         "data-state": states.get(f) || "pending" }, [
         canReorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
@@ -1331,9 +1343,9 @@ export function dropzone(opts = {}) {
         ]),
         stateBadge(states.get(f)),
         canReorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
-          title: tr("เลื่อนขึ้น", "Move up"), disabled: i === 0 || null, onclick: () => move(-1) }, "↑") : null,
+          title: tr("เลื่อนขึ้น", "Move up"), disabled: vi === 0 || null, onclick: () => move(-1) }, "↑") : null,
         canReorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
-          title: tr("เลื่อนลง", "Move down"), disabled: i === files.length - 1 || null, onclick: () => move(1) }, "↓") : null,
+          title: tr("เลื่อนลง", "Move down"), disabled: vi === vis.length - 1 || null, onclick: () => move(1) }, "↓") : null,
         el("button", { class: "icon-btn danger file-x", type: "button", title: tr("เอาออก", "Remove"),
           "aria-label": tr(`เอา ${f.name} ออก`, `Remove ${f.name}`), onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),
       ]);
@@ -1341,9 +1353,9 @@ export function dropzone(opts = {}) {
       if (thumbs) ensureThumb(f, row);   // วาดไอคอนทั่วไปทันที แล้วเติมภาพจริงทีหลังถ้าทำได้
       ensurePageCount(f);                // จำนวนหน้าของ PDF เติมทีหลังเช่นกัน ไม่หน่วงการวาดแถว
     });
-    count.textContent = !files.length ? ""
-      : tr(`${files.length} ไฟล์, รวม ${fmtBytes(files.reduce((a, f) => a + f.size, 0))}`,
-           `${pl(files.length, "file", "files")}, ${fmtBytes(files.reduce((a, f) => a + f.size, 0))} total`);
+    count.textContent = !vis.length ? ""
+      : tr(`${vis.length} ไฟล์, รวม ${fmtBytes(vis.reduce((a, f) => a + f.size, 0))}`,
+           `${pl(vis.length, "file", "files")}, ${fmtBytes(vis.reduce((a, f) => a + f.size, 0))} total`);
   }
 
   if (reorder) {
@@ -1463,7 +1475,9 @@ export function dropzone(opts = {}) {
      (การหยิบเป็น microtask จึงมาทีหลังเสมอ) กล่องเดียวต่อหนึ่งหน้าเครื่องมืออยู่แล้ว */
   setInputFiles(files);
   return { container, get files() { return files; },
-           clear() { files = []; warn.innerHTML = ""; render(); fireChange(); } };
+           clear() { files = []; warn.innerHTML = ""; render(); fireChange(); },
+           /** ซ่อนไฟล์ชุดนี้จากรายการ (ยังถืออยู่) ส่งชุดว่าง = โชว์ทุกไฟล์ · ไม่แจ้ง onChange เพราะไฟล์ไม่ได้เปลี่ยน */
+           hide(set) { hiddenFiles = new Set(set || []); render(); setInputFiles(shown()); } };
 }
 
 /** แปลง "1-3,5,8-"เป็นอาร์เรย์เลขหน้า (ฐาน 1) — ใช้ร่วมหลายเครื่องมือ */

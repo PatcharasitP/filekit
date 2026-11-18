@@ -69,6 +69,7 @@ const PRECACHE = [
   "src/tools/map-coverage.js",
   "src/pdfimpose.js", /* pdf-nup, pdf-resize */
   "src/trimbox.js",   /* pdf-crop ตัดขอบขาวอัตโนมัติ */
+  "src/pagezoom.js",  /* pdf-pages ภาพลอยกับดูหน้าเต็มจอซูมได้ */
   "src/textdiff.js",  /* pdf-compare */
   "src/sqlgen.js",       /* pq-group-concat, pq-pick-date, pq-to-date */
   "src/pqcombine.js",    /* pq-combine */

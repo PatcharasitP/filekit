@@ -1,8 +1,9 @@
 import { loadPdfLib, ENCRYPTED_WARNING, HIDDEN_LAYERS_WARNING, openPdf, passwordBox } from "../pdfopen.js";
-import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes, stashFiles, keyHints } from "../ui.js";
+import { el, dropzone, statusBar, button, field, downloadButton, stripExt, parsePages, yieldToBrowser, fmtBytes, stashFiles, keyHints, registerCleanup } from "../ui.js";
 import { workspace } from "../workspace.js";
 import { uiIcon } from "../icons.js";
 import { tr, pl } from "../i18n.js";
+import { attachPeek, openViewer } from "../pagezoom.js";
 
 /* ‼️ ไฟล์ไหนเป็นของใคร บอกด้วย "ตัวอักษร" ไม่ใช่ "สี" (ตัดสินจากการวัดจริง 18/09/2026)
    ลองชุดสี 4 แบบแล้ววัดด้วย src/cvd.js ไม่มีชุดไหนที่ 5 สีขึ้นไปแยกออกครบทั้งสามแบบตาบอดสี
@@ -52,6 +53,83 @@ const STYLE = `
   min-width:17px;height:17px;padding:0 4px;border-radius:5px;
   background:color-mix(in srgb,var(--fc,#666) 68%,#000);color:#fff;font-size:10.5px;font-weight:700;line-height:17px;text-align:center;
   box-shadow:0 1px 3px rgba(0,0,0,.3)}
+
+/* ── การ์ดหน้า (18/11/2026) ─────────────────────────────────────────────── */
+.pp-center{position:relative}
+.pp-center .pages{user-select:none;-webkit-user-select:none}
+.pp-center .pg{cursor:grab;-webkit-touch-callout:none}
+.pp-center .pg:focus-visible{outline:2px solid var(--ac,var(--brand));outline-offset:2px}
+.pg.selected::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:color-mix(in srgb,var(--ac,var(--brand)) 9%,transparent)}
+/* เลขหน้าในไฟล์ผลลัพธ์ แถบบางใต้ภาพ ไม่ทับเนื้อหา */
+.pg .pp-foot{display:flex;justify-content:center;padding:3px 0 4px;background:var(--bg-soft);border-top:1px solid var(--line-soft)}
+.pg .pp-foot .num{position:static;display:inline-block;background:none;color:var(--text);padding:0;
+  font:700 12px/1.35 var(--font);font-variant-numeric:tabular-nums;min-width:2ch;text-align:center}
+.pp-center .pg .pg-cropped{top:auto;bottom:30px}
+/* ปุ่มบนการ์ด 3 ปุ่ม มุมบนขวา โผล่ตอนชี้ ตอนเลือก หรือตอนโฟกัสด้วยคีย์บอร์ด */
+.pp-center .pg .tools{inset:6px 6px auto auto;padding:0;gap:4px;background:none;z-index:3;
+  opacity:0;pointer-events:none;transition:opacity .14s ease}
+.pp-center .pg .tools button{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;padding:0;
+  background:color-mix(in srgb,var(--card,#fff) 94%,transparent);color:var(--text);
+  border:1px solid var(--line-soft);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.pp-center .pg .tools button:hover{background:var(--card,#fff)}
+.pp-center .pg .tools .pp-del:hover{color:var(--err,#c62828)}
+/* ‼️ เครื่องที่มีเมาส์ กดได้ตลอด เมาส์จะไปถึงปุ่มได้ก็ต้องชี้อยู่บนการ์ด ซึ่งปุ่มโผล่แล้ว
+   (เครื่องมืออัตโนมัติที่เช็คก่อนเลื่อนเมาส์ก็กดได้ด้วย) ส่วนจอสัมผัสห้ามกดปุ่มที่มองไม่เห็น แตะพลาดแล้วลบหน้าโดยไม่รู้ตัว */
+@media (hover:hover){ .pp-center .pg .tools{pointer-events:auto} .pp-center .pg:hover .tools{opacity:1} }
+.pp-center .pg:focus-within .tools,.pp-center .pg.selected .tools{opacity:1;pointer-events:auto}
+@media (pointer:coarse){ .pp-center .pg .tools button{width:36px;height:36px} }
+.pp-is-dragging .pg .tools{opacity:0 !important;pointer-events:none !important}
+/* ── แถบเลือกหลายหน้า ลอยที่ขอบล่างของพื้นที่การ์ด ไม่ดันการ์ด ── */
+.pp-bulk-dock{position:sticky;bottom:14px;height:0;z-index:20;display:flex;justify-content:center}
+.pp-bulk{position:absolute;bottom:0;display:flex;align-items:center;gap:4px;padding:5px 5px 5px 16px;
+  border-radius:999px;background:var(--card);border:1px solid var(--line);
+  box-shadow:0 12px 32px rgba(15,23,42,.2);animation:pp-up .2s var(--ease-snap,ease)}
+.pp-bulk[hidden]{display:none}
+.pp-bulk-n{font:700 13px/1.3 var(--font);margin-inline-end:6px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pp-bulk .btn{min-height:34px;white-space:nowrap}
+@keyframes pp-up{from{opacity:0;translate:0 10px}to{opacity:1;translate:0 0}}
+/* ── ลากย้ายหน้า ── */
+html.pp-grabbing,html.pp-grabbing *{cursor:grabbing !important}
+.pg.pp-ghost{position:fixed;z-index:1200;margin:0;pointer-events:none;transform-origin:50% 35%;
+  transition:scale .2s cubic-bezier(.2,.9,.3,1.35),rotate .14s ease-out,box-shadow .2s ease;
+  box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.pg.pp-ghost .tools{display:none}
+.pg.pp-ghost.lifted{scale:1.07;rotate:var(--tilt,-2.5deg);border-color:var(--brand);
+  box-shadow:0 28px 50px -10px rgba(15,23,42,.45),0 10px 20px rgba(15,23,42,.18)}
+.pg.pp-ghost.landing{transition:translate .34s cubic-bezier(.34,1.56,.64,1),scale .34s cubic-bezier(.34,1.56,.64,1),
+  rotate .28s ease,box-shadow .3s ease}
+.pp-move-badge{position:fixed;z-index:1201;pointer-events:none;translate:-50% -100%;white-space:nowrap;
+  padding:6px 13px;border-radius:999px;background:color-mix(in srgb,var(--brand) 80%,#000);color:#fff;
+  font:700 13px/1.2 var(--font);box-shadow:0 8px 20px rgba(0,0,0,.28)}
+.pp-move-badge.same{background:#4a5160}
+/* ช่องที่จะลง: การ์ดจริงกลายเป็นช่องเรืองแสง บอกเลขหน้าปลายทางตัวใหญ่ */
+.pg.pp-slot{border:2px dashed color-mix(in srgb,var(--brand) 70%,transparent);
+  background:color-mix(in srgb,var(--brand) 8%,var(--bg-soft));
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 14%,transparent),0 0 22px 2px color-mix(in srgb,var(--brand) 32%,transparent);
+  animation:pp-glow 1.3s ease-in-out infinite}
+.pg.pp-slot > :not(.pp-slot-mark){visibility:hidden}
+.pg.pp-slot::before{display:none}
+.pp-slot-mark{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;color:color-mix(in srgb,var(--brand) 85%,var(--text))}
+.pp-slot-mark b{font:800 42px/1 var(--font);font-variant-numeric:tabular-nums}
+.pp-slot-mark span{font:600 12px/1.3 var(--font)}
+@keyframes pp-glow{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--brand) 9%,transparent),0 0 34px 6px color-mix(in srgb,var(--brand) 45%,transparent)}}
+.pp-pop{animation:pp-pop .34s cubic-bezier(.3,1.7,.5,1)}
+@keyframes pp-pop{40%{transform:scale(1.5);color:var(--brand)}}
+.pg.pp-landed{animation:pp-land .9s ease-out}
+@keyframes pp-land{0%{box-shadow:0 0 0 3px var(--brand),0 0 28px 6px color-mix(in srgb,var(--brand) 55%,transparent)}
+  100%{box-shadow:0 0 0 0 transparent}}
+/* กดลบหรือหมุนโดยยังไม่เลือกหน้า การ์ดกะพริบขอบเบา ๆ บอกว่าต้องเลือกตรงนี้ก่อน */
+.pages.pp-nudge .pg:not(.dropped){animation:pp-nudge .6s ease-out}
+@keyframes pp-nudge{30%{border-color:var(--ac,var(--brand));box-shadow:0 0 0 3px color-mix(in srgb,var(--ac,var(--brand)) 25%,transparent)}}
+@media (prefers-reduced-motion:reduce){
+  .pg.pp-slot,.pp-pop,.pages.pp-nudge .pg{animation:none}
+  .pg.pp-landed{animation:none;outline:3px solid var(--brand);outline-offset:2px}
+  .pg.pp-ghost,.pg.pp-ghost.landing{transition:none}
+  .pg.pp-ghost.lifted{rotate:none;scale:none}
+  .pp-bulk{animation:none}
+}
 `;
 
 export function mount(tool) {
@@ -62,7 +140,13 @@ export function mount(tool) {
   const summary = el("div", { class: "pp-stats" }, tr("ยังไม่ได้เลือกไฟล์", "No file chosen yet"));
   let files = [];
   let items = []; // {fi, index, rotate, dropped, thumb}
-  let selected = null; // อ้างถึงสมาชิกใน items ที่กำลังเลือกอยู่ (ไม่ใช่ index กันหลุดตอนลากสลับ)
+  /* ‼️ เลือกได้หลายหน้า (18/11/2026 พี่ปอนด์ว่าปุ่มบนแถบซ้ำกับปุ่มบนการ์ด เลยย้ายไปเป็นแถบเลือกหลายหน้า)
+     เก็บตัว item ไม่ใช่ index กันหลุดตอนลากสลับ · anchor = ใบที่คลิกล่าสุด ใช้เป็นจุดแทรกกับจุดตั้งต้นของ Shift+คลิก */
+  const sel = new Set();
+  let anchor = null;
+  const selList = () => items.filter((it) => sel.has(it));          // เรียงตามลำดับบนจอ
+  const clearSel = () => { sel.clear(); anchor = null; };
+  const insertPoint = () => (anchor && sel.has(anchor) ? anchor : selList().pop() || null);
 
   const dz = dropzone({
     expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
@@ -97,12 +181,12 @@ export function mount(tool) {
       if (added && items.length) {
         const from = files.length;
         files = next;
-        loadPreview({ fromFile: from, insertAfter: selected });
+        loadPreview({ fromFile: from, insertAfter: insertPoint() });
         return;
       }
       files = next;
       if (files.length) loadPreview();
-      else { items = []; selected = null; pagesGrid.innerHTML = ""; st.clear(); setLoaded(false); renderFiles(); updateSummary(); ws.showCanvas(false); }
+      else { items = []; clearSel(); closeDocs(); pagesGrid.innerHTML = ""; st.clear(); setLoaded(false); renderFiles(); updateSummary(); ws.showCanvas(false); }
     },
   });
 
@@ -118,14 +202,23 @@ export function mount(tool) {
    *   ความสม่ำเสมอสำคัญกว่าการปรับจูนรายตัว เพราะคนใช้หลายเครื่องมือในวันเดียวกัน */
   const rightNode = el("div", {});
 
-  // ── แถบเครื่องมือลอย: ทำงานกับหน้าที่เลือกอยู่ ──────────────────────
-  const rotateLBtn = button("", { icon: "rotateL", ghost: true, label: tr("หมุนซ้าย", "Rotate left"), onclick: () => rotateSelected(270) });
-  const rotateRBtn = button("", { icon: "rotateR", ghost: true, label: tr("หมุนขวา", "Rotate right"), onclick: () => rotateSelected(90) });
-  /* ‼️ เปลี่ยนจาก "สลับลบ/เอากลับ" เป็น "ลบ" ตรง ๆ (20/09/2026 พี่ปอนด์เจอเอง)
-     พี่ปอนด์: "พอไปกดปุ่มลบ หน้ากระดาษขึ้นจาง ๆ มันควรหายไปเลย"
-     ของเดิมแค่ติดธงว่าจะลบตอนบันทึก แล้วทำให้จาง ซึ่งอ่านได้หลายแบบเกินไป
-     คำว่าลบต้องแปลว่าหายไป ส่วนการเอากลับย้ายไปเป็นปุ่มของตัวเองที่เห็นชัด */
-  const toggleBtn = button("", { icon: "trash", ghost: true, label: tr("ลบหน้านี้", "Delete this page"), onclick: dropSelected });
+  /* ── แถบเลือกหลายหน้า (18/11/2026) ──────────────────────────────────────
+     ‼️ พี่ปอนด์: แถบบนมี หมุนซ้าย หมุนขวา ลบ ซ้ำกับปุ่มบนการ์ดทุกใบ "มันงงไหมหล่ะ มีมันซ้ำซ้อนเกิน"
+     กลุ่มนั้นบนแถบบนจึงถอดออก การ์ดเหลือ หมุน กับ ลบ ของตัวเอง
+     ส่วนงานกับหลายหน้าพร้อมกันย้ายมาอยู่แถบนี้ ซึ่งโผล่เฉพาะตอนเลือกตั้งแต่ 2 หน้า ไม่เลือกก็ไม่มี
+     ลอยที่ขอบล่างของพื้นที่การ์ด ไม่ดันการ์ดเลื่อน (ดันแล้วคนที่กำลัง Ctrl+คลิกจะคลิกพลาดใบ) */
+  const bulkCount = el("span", { class: "pp-bulk-n", "aria-live": "polite" });
+  const bulkBar = el("div", { class: "pp-bulk", role: "toolbar", hidden: true,
+    "aria-label": tr("ทำกับหน้าที่เลือก", "Act on selected pages") }, [
+    bulkCount,
+    button(tr("หมุน", "Rotate"), { ghost: true, icon: "rotateR",
+      label: tr("หมุนหน้าที่เลือกตามเข็ม 90 องศา", "Rotate the selected pages 90 degrees clockwise"),
+      onclick: () => rotateSelected(90) }),
+    button(tr("ลบ", "Delete"), { ghost: true, icon: "trash",
+      label: tr("ลบหน้าที่เลือก", "Delete the selected pages"), onclick: dropSelected }),
+    button(tr("ยกเลิกเลือก", "Clear selection"), { ghost: true, onclick: () => { clearSel(); render(); } }),
+  ]);
+  const bulkDock = el("div", { class: "pp-bulk-dock" }, [bulkBar]);
   const undoDelBtn = button(tr("ย้อนการลบ", "Undo delete"), { ghost: true, icon: "undo",
     label: tr("เอาหน้าที่เพิ่งลบกลับมา", "Bring back the page you just deleted"), onclick: undoDelete });
   undoDelBtn.disabled = true;
@@ -145,7 +238,7 @@ export function mount(tool) {
       location.hash = "#/pdf-edit";
     } });
   const resetBtn = button(tr("รีเซ็ตทั้งหมด", "Reset all"), { icon: "undo", ghost: true, onclick: () => { if (files.length) loadPreview(); } });
-  [rotateLBtn, rotateRBtn, toggleBtn, cropBtn, cropAllBtn, blankBtn, editTextBtn, resetBtn].forEach((b) => { b.disabled = true; });
+  [cropBtn, cropAllBtn, blankBtn, editTextBtn, resetBtn].forEach((b) => { b.disabled = true; });
 
   // ── แผงขวา: เก็บเฉพาะบางหน้า + วิธีเรียงเมื่อมีหลายไฟล์ ───────────────
   const rangeInput = el("input", { type: "text", placeholder: tr("เช่น 1-3,5,8-", "e.g. 1-3,5,8-"), disabled: true });
@@ -217,7 +310,7 @@ export function mount(tool) {
     const keep = new Set(q.pick(items.length));
     items.forEach((it, i) => { it.dropped = !keep.has(i + 1); });
     removed = [];                 // เลือกใหม่ทั้งชุด การย้อนทีละหน้าจึงไม่มีความหมายอีก
-    selected = null;
+    clearSel();
     rangeInput.value = "";
     render();
     st.ok(tr(`เก็บ ${keep.size} หน้า ตามที่เลือก`, `Keeping ${pl(keep.size, "page", "pages")}`));
@@ -245,14 +338,13 @@ export function mount(tool) {
        วัดจริง แผงขวากาง = 3 คอลัมน์ การ์ด 215px · พับไว้ = 4 คอลัมน์ การ์ด 249px
        ตัวเลือกยังอยู่ครบในแถบไอคอนขวา กดครั้งเดียวกางออกมา และจำที่ผู้ใช้เลือกไว้ */
     right: { title: tr("ตัวเลือก", "Options"), node: rightNode, folded: true },
-    center: { node: pagesGrid, empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูตัวอย่าง", "No file yet. Choose a PDF to preview") },
-    toolbar: [rotateLBtn, rotateRBtn, toggleBtn, el("div", { class: "sep" }),
-              cropBtn, cropAllBtn, blankBtn, el("div", { class: "sep" }),
+    center: { node: el("div", { class: "pp-center" }, [pagesGrid, bulkDock]), empty: tr("ยังไม่มีไฟล์ เลือก PDF เพื่อดูตัวอย่าง", "No file yet. Choose a PDF to preview") },
+    toolbar: [cropBtn, cropAllBtn, blankBtn, el("div", { class: "sep" }),
               undoDelBtn, editTextBtn, resetBtn],
     /* ‼️ ชื่อกลุ่มตอบคำถามที่ปุ่มตอบเองไม่ได้ คือ "ทำกับอะไร"
        ครอบขอบขาว อยู่กลุ่มทั้งเล่ม ส่วนหมุนกับลบ อยู่กลุ่มหน้าที่เลือก
        ก่อนมีชื่อกลุ่ม สองอย่างนี้หน้าตาเหมือนกันหมด ต้องกดลองเองถึงจะรู้ */
-    toolbarGroups: [tr("หน้าที่เลือก", "Selected pages"), tr("ทั้งเล่ม", "Whole document"), tr("อื่น ๆ", "More")],
+    toolbarGroups: [tr("ครอบและเพิ่มหน้า", "Trim and add"), tr("อื่น ๆ", "More")],
     footer: [st.node, saveBtn],
   });
   ws.wrap.prepend(el("style", {}, STYLE));
@@ -261,37 +353,81 @@ export function mount(tool) {
      ผูกที่ ws.body ไม่ใช่ document เพราะเครื่องมืออื่นก็ผูกของตัวเองไว้เหมือนกัน
      ผูกที่ document จะได้คีย์ลัดข้ามเครื่องมือกันมั่วเมื่อผู้ใช้สลับไปมา
      ‼️ ต้องไม่ทำงานตอนกำลังพิมพ์อยู่ในช่อง ไม่งั้น Ctrl+Z ในช่องพิมพ์ช่วงหน้าจะถูกขโมย */
-  ws.body.addEventListener("keydown", (e) => {
-    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
-    if (typing) return;
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-      if (!removed.length) return;
+  /* ‼️ ผูกที่ document แต่รับเฉพาะตอนเครื่องมือนี้อยู่บนจอ (แก้ 18/11/2026 พี่ปอนด์ว่า "ไม่เห็นกดได้เลย")
+     รุ่นเดิมผูกที่ ws.body คีย์จึงทำงานเฉพาะตอนโฟกัสอยู่บนการ์ด
+     คลิกพื้นที่ว่างหรือยังไม่ได้คลิกอะไร โฟกัสอยู่ที่ <body> อีเวนต์ไม่เคยวิ่งลงมาถึง ws.body จึงเงียบสนิท
+     ‼️ ไม่ยุ่งกับคีย์ตอนพิมพ์ในช่อง ตอนอยู่ในกล่องอื่นที่ลอยทับ (ตัวดูหน้า เมนู) และตอนโฟกัสอยู่ที่ส่วนอื่นของเว็บ
+     ‼️ Mac ใช้ Cmd+Z , โน้ตบุ๊กหลายรุ่นไม่มีปุ่ม Delete แยก ต้องรับ Backspace ด้วย */
+  const IS_MAC = /Mac|iPhone|iPad/i.test(navigator.userAgentData?.platform || navigator.platform || "");
+  /* คนที่เดินด้วย Tab หรือลูกศร = ใช้คีย์บอร์ด , คลิกหรือแตะ = ใช้เมาส์
+     ‼️ ไม่ใช้ :focus-visible เพราะหลังกดปุ่มบนการ์ด render() คืนโฟกัสให้การ์ดด้วย focus() ซึ่ง Chrome นับเป็น focus-visible */
+  let navByKey = false;
+  const onNavKey = (e) => { if (e.key === "Tab" || e.key.startsWith("Arrow")) navByKey = true; };
+  const onNavPointer = () => { navByKey = false; };
+  document.addEventListener("keydown", onNavKey, true);
+  document.addEventListener("pointerdown", onNavPointer, true);
+  const onDocKey = (e) => {
+    if (!ws.wrap.isConnected) return;
+    if (e.defaultPrevented || e.isComposing) return;
+    const t = e.target;
+    const free = t === document.body || t === document.documentElement || ws.wrap.contains(t);
+    if (!free) return;
+    if (t.closest?.("input, textarea, select, [contenteditable=''], [contenteditable='true'], dialog, [role=dialog]")) return;
+    if (!items.length) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z") {
       e.preventDefault();
-      undoDelete();
+      if (removed.length) undoDelete();
+      else st.info(tr("ยังไม่มีหน้าที่ลบ ไม่มีอะไรให้ย้อน", "Nothing deleted yet, nothing to undo"));
       return;
     }
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if ((e.key === "Delete" || e.key === "Backspace") && selected) { e.preventDefault(); dropSelected(); }
-    else if (e.key === "[") { e.preventDefault(); rotateSelected(270); }
-    else if (e.key === "]") { e.preventDefault(); rotateSelected(90); }
-  });
+    if (mod || e.altKey) return;
+    // ปุ่มบนการ์ด (หมุน ลบ แว่นขยาย) ให้ Enter กับ Space ทำหน้าที่ของปุ่มเอง
+    const onBtn = t.closest?.("button, a");
+    const k = e.key;
+    if (k === "Delete" || k === "Backspace") {
+      if (onBtn && k === "Backspace") return;
+      e.preventDefault();
+      if (sel.size) dropSelected();
+      else needPick(tr("ลบ", "delete"));
+    } else if (k === "[" || k === "]") {
+      e.preventDefault();
+      if (sel.size) rotateSelected(k === "]" ? 90 : 270);
+      else needPick(tr("หมุน", "rotate"));
+    }
+  };
+  document.addEventListener("keydown", onDocKey);
+  function needPick(what) {
+    st.info(tr(`คลิกเลือกหน้าก่อน แล้วค่อยกด${what}`, `Click a page to select it first, then ${what}`));
+    pagesGrid.classList.remove("pp-nudge");
+    void pagesGrid.offsetWidth;                // เริ่มแอนิเมชันใหม่ทุกครั้ง
+    pagesGrid.classList.add("pp-nudge");
+  }
+  registerCleanup(ws.wrap, { dispose: () => {
+    document.removeEventListener("keydown", onDocKey);
+    document.removeEventListener("keydown", onNavKey, true);
+    document.removeEventListener("pointerdown", onNavPointer, true);
+    closeDocs(); hidePeek();
+  } });
   ws.body.append(
     results,
+    /* ปุ่มที่บอกต้องตรงกับคีย์บอร์ดที่คนนั่งกดอยู่ Mac ไม่มีคำว่า Ctrl กับ Del บนแป้น */
     keyHints([
-      ["Del", tr("ลบหน้าที่เลือก", "Delete selected page")],
-      ["Ctrl+Z", tr("ย้อนการลบ", "Undo delete")],
+      [IS_MAC ? ["delete ⌫"] : ["Del", "Backspace"], tr("ลบหน้าที่เลือก", "Delete selected page")],
+      [IS_MAC ? "⌘Z" : "Ctrl+Z", tr("ย้อนการลบ", "Undo delete")],
       ["[ ]", tr("หมุนซ้าย ขวา", "Rotate left, right")],
       ["Enter", tr("เลือก ยกเลิกเลือก", "Select, deselect")],
+      [IS_MAC ? tr("⌘+คลิก", "⌘+click") : tr("Ctrl+คลิก", "Ctrl+click"), tr("เลือกหลายหน้า", "Select several pages")],
     ]),
     el("div", { class: "note s2-only-wide" },
       // ‼️ เครื่องมือนี้สร้างไฟล์ใหม่แล้วคัดลอกหน้าที่เก็บเข้าไป สารบัญ/บุ๊กมาร์กของไฟล์เดิม
       //    จึงไม่ติดมาด้วย แม้ผู้ใช้จะไม่ได้แก้อะไรเลย · บอกไว้ตรง ๆ เหมือนที่ pdf-merge บอก
-      tr("คลิกหน้าเพื่อเลือก ลากเพื่อสลับลำดับ หรือพิมพ์ช่วงหน้าด้านขวาเพื่อเก็บเฉพาะบางหน้า",
-         "Click a page to select, drag to reorder, or type a range on the right to keep pages")),
+      tr("คลิกหน้าเพื่อเลือก ลากเพื่อสลับลำดับ ชี้ค้างดูภาพใหญ่ หรือพิมพ์ช่วงหน้าด้านขวาเพื่อเก็บบางหน้า",
+         "Click to select, drag to move, hover to see it larger, or type a range on the right to keep pages")),
     // ‼️ จอแคบไม่มีแผงขวาและไม่มีเมาส์ (เทสเตอร์ B4 09/11/2026 , tests/browser_side_wording.py)
     el("div", { class: "note s2-only-narrow" },
-      tr("แตะหน้าเพื่อเลือก ลากเพื่อสลับลำดับ หรือกดปุ่ม ตัวเลือก เพื่อพิมพ์ช่วงหน้าที่จะเก็บ",
-         "Tap a page to select, drag to reorder, or tap Options to type a range to keep")),
+      tr("แตะหน้าเพื่อเลือก กดค้างแล้วลากเพื่อสลับลำดับ หรือกดปุ่ม ตัวเลือก เพื่อพิมพ์ช่วงหน้าที่จะเก็บ",
+         "Tap to select, press and hold then drag to move, or tap Options to type a range to keep")),
     // แยกเป็นอีกก้อนเพราะข้อความบนหน้าจอก้อนเดียวห้ามยาวเกิน 100 ตัวอักษร (มีเทสจับ)
     el("div", { class: "note" },
       tr("ใส่หลายไฟล์ได้ ป้าย A B C บอกว่าหน้านั้นมาจากไฟล์ไหน",
@@ -333,13 +469,36 @@ export function mount(tool) {
         ต้องติดใหม่หลังทุกครั้งที่รายการเปลี่ยน ไม่ใช่ติดครั้งเดียวตอนเริ่ม */
   function renderFiles() {
     const rows = leftNode.querySelectorAll(".file-row");
-    rows.forEach((row, i) => {
+    rows.forEach((row) => {
+      const i = +row.dataset.i;              // ‼️ เลขไฟล์จริง ไม่ใช่ลำดับแถว แถวของไฟล์ที่ซ่อนไม่ถูกวาด
       row.querySelector(".pp-tag")?.remove();
       row.classList.remove("pp-has-tag");
       if (files.length < 2) return;   // ไฟล์เดียวไม่ต้องมีป้าย ไม่มีอะไรให้แยก
       row.classList.add("pp-has-tag");
       row.prepend(el("span", { class: "pp-tag", style: { "--fc": colorOf(i) } }, tagOf(i)));
     });
+  }
+
+  /* ‼️ ไฟล์ที่ทุกหน้าถูกลบ ต้องหายจากรายการไฟล์ (18/11/2026 พี่ปอนด์ลบหน้าเดียวของ C แล้วการ์ด C ยังค้าง)
+     ซ่อน ไม่ใช่เอาไฟล์ออก และคำนวณจากสภาพหน้าทุกครั้ง ไม่จดแยก
+     ผลคือทุกทางที่หน้ากลับมา (Ctrl+Z ปุ่มย้อนการลบ ช่วงหน้า ชิป รีเซ็ต) คืนแถวไฟล์ที่เดิมเองโดยไม่ต้องเขียนเพิ่ม
+     เลขไฟล์ A B C ไม่เลื่อน ป้ายบนการ์ดที่ย้อนกลับมาจึงยังตรงกับแถวไฟล์ */
+  let hiddenNow = new Set();
+  function syncEmptyFiles() {
+    let empty = new Set(files.filter((f, fi) => {
+      const mine = items.filter((it) => !it.blank && it.fi === fi);
+      return mine.length > 0 && mine.every((it) => it.dropped);
+    }));
+    /* ‼️ ทุกไฟล์ว่างหมด (หรือมีไฟล์เดียว) ไม่ซ่อน ไม่งั้นรายการไฟล์โล่งทั้งที่เครื่องมือยังถือไฟล์อยู่
+       คนจะไม่รู้ว่าต้องเพิ่มไฟล์ใหม่หรือกดย้อน ปล่อยแถวไว้ให้เห็นว่ายังมีไฟล์ */
+    if (empty.size >= files.length) empty = new Set();
+    const same = empty.size === hiddenNow.size && [...empty].every((f) => hiddenNow.has(f));
+    if (same) return [];
+    const fresh = [...empty].filter((f) => !hiddenNow.has(f));
+    hiddenNow = empty;
+    dz.hide(empty);
+    renderFiles();
+    return fresh;
   }
 
   function updateSummary() {
@@ -354,6 +513,12 @@ export function mount(tool) {
 
   /** @param opts {fromFile} อ่านเฉพาะไฟล์ตั้งแต่ตำแหน่งนี้ไป (ไม่ล้างของเดิม)
    *              {insertAfter} แทรกหน้าใหม่ต่อจากรายการนี้ ไม่ใส่ = ต่อท้าย */
+  /* เอกสาร pdf.js ที่เปิดค้างไว้ ต่อไฟล์ ให้ภาพลอยกับตัวดูหน้าเรนเดอร์ความละเอียดสูงได้
+     ‼️ ปิดทุกครั้งที่โหลดใหม่ทั้งชุดและตอนออกจากเครื่องมือ ไม่งั้นโหลดซ้ำแล้วหน่วยความจำไต่ (tests/browser_leak.py ข้อ 5) */
+  const docs = new Map();
+  function closeDocs() { for (const d of docs.values()) { try { d.destroy(); } catch { /* ปิดไปแล้ว */ } } docs.clear(); }
+  const getDoc = async (fi) => docs.get(files[fi]) || null;
+
   async function loadPreview(opts = {}) {
     const startFile = opts.fromFile || 0;
     const keepOld = startFile > 0;
@@ -362,7 +527,8 @@ export function mount(tool) {
     if (!keepOld) {
       pagesGrid.innerHTML = "";
       items = [];
-      selected = null;
+      clearSel();
+      closeDocs();
       setLoaded(false);
       ws.showCanvas(false);
     }
@@ -394,7 +560,7 @@ export function mount(tool) {
             files.length > 1 ? `${tagOf(fi)} (${p}/${pdf.numPages})` : `(${p}/${pdf.numPages})`);
           await yieldToBrowser();
         }
-        pdf.destroy();
+        docs.set(files[fi], pdf);          // เก็บไว้ให้ภาพลอยกับตัวดูหน้าเรนเดอร์ใหม่ได้ ไม่ต้องถามรหัสผ่านซ้ำ
       }
       /* ‼️ แทรกหน้าใหม่ต่อจากหน้าที่ผู้ใช้เลือกไว้ตอนกดเพิ่มไฟล์ ไม่ใช่ต่อท้ายเสมอ
          หาตำแหน่งด้วย indexOf ตอนนี้ ไม่ใช่จำเลขไว้ตั้งแต่ต้น เพราะระหว่างอ่านไฟล์
@@ -402,7 +568,7 @@ export function mount(tool) {
       if (keepOld && fresh.length) {
         const at = opts.insertAfter ? items.indexOf(opts.insertAfter) + 1 : items.length;
         items.splice(at > 0 ? at : items.length, 0, ...fresh);
-        selected = null;
+        clearSel();
       }
       ws.setBusy(false);
       st.progress(null);
@@ -433,22 +599,41 @@ export function mount(tool) {
     const focusAt = hadFocus ? +hadFocus.dataset.i : null;
     const many = files.length > 1;
     pagesGrid.innerHTML = "";
+    let outNo = 0;                       // เลขหน้าในไฟล์ผลลัพธ์ นับเฉพาะหน้าที่เก็บ
     items.forEach((it, i) => {
       const srcLabel = tr(`ไฟล์ ${tagOf(it.fi)}`, `File ${tagOf(it.fi)}`);
+      const no = it.dropped ? 0 : ++outNo;
+      const on = sel.has(it);
       const card = el("div", {
-        class: "pg" + (many ? " multi" : "") + (it.dropped ? " dropped" : "") + (it === selected ? " selected" : ""),
+        class: "pg" + (many ? " multi" : "") + (it.dropped ? " dropped" : "") + (on ? " selected" : ""),
         style: many ? { "--fc": colorOf(it.fi) } : null,
-        draggable: "true", "data-i": i, tabindex: "0", role: "button",
-        "aria-pressed": it === selected ? "true" : "false",
-        "aria-label": tr(`หน้า ${i + 1}${many ? " จาก" + srcLabel : ""}${it.dropped ? " (ทำเครื่องหมายลบไว้)" : ""}`,
-                         `Page ${i + 1}${many ? " from " + srcLabel : ""}${it.dropped ? " (marked for removal)" : ""}`),
-        onclick: () => { selectItem(it === selected ? null : it); },
+        "data-i": i, tabindex: "0", role: "button",
+        "aria-pressed": on ? "true" : "false",
+        "aria-label": tr(`หน้า ${no || i + 1}${many ? " จาก" + srcLabel : ""}${it.dropped ? " (ทำเครื่องหมายลบไว้)" : ""}`,
+                         `Page ${no || i + 1}${many ? " from " + srcLabel : ""}${it.dropped ? " (marked for removal)" : ""}`),
+        /* คลิก = เลือกใบนี้ใบเดียว (คลิกซ้ำ = ยกเลิก) , Ctrl/⌘+คลิก = เพิ่มหรือถอนจากชุด , Shift+คลิก = เลือกเป็นช่วง
+           ‼️ จอสัมผัสไม่มีปุ่ม Ctrl พอมีใบที่เลือกอยู่แล้ว แตะใบอื่น = เพิ่มเข้าชุด */
+        onclick: (e) => {
+          if (dragJustEnded()) return;
+          const touchy = lastPointerType === "touch" || lastPointerType === "pen";
+          if (e.shiftKey && anchor) selectItem(it, "range");
+          else if (e.ctrlKey || e.metaKey || (touchy && sel.size && !(sel.size === 1 && on))) selectItem(it, "toggle");
+          else selectItem(it, "only");
+        },
         /* ‼️ พี่ปอนด์กด Delete แล้วไม่มีอะไรเกิดขึ้น เพราะของเดิมรับแค่ Enter กับ Space
            ปุ่ม Delete คือสิ่งที่ทุกคนลองเป็นอย่างแรกกับของที่เลือกไว้ ต้องทำงาน
            Backspace ด้วย เพราะบนแม็คคีย์บอร์ดหลายรุ่นไม่มีปุ่ม Delete แยก */
         onkeydown: (e) => {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectItem(it === selected ? null : it); return; }
-          if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); dropItem(it); }
+          if (e.target !== card) return;      // Enter บนปุ่มในการ์ด ให้ปุ่มทำงานเอง
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectItem(it, e.ctrlKey || e.metaKey ? "toggle" : "only"); return; }
+          /* ‼️ ลบ "สิ่งที่ตาเห็นว่าเลือกอยู่" (ขอบไฮไลต์) ไม่ใช่ใบที่โฟกัสแฝงอยู่หลังคลิกปุ่มบนการ์ด
+             รุ่นเดิมตัวฟังของการ์ดลบใบที่โฟกัส แล้วตัวฟังของหน้าลบใบที่เลือกซ้ำอีกใบ กด Del ครั้งเดียวหายสองหน้า
+             ยกเว้นคนใช้คีย์บอร์ดที่ Tab มาถึงใบนี้ (มีวงโฟกัสให้เห็น) ลบใบนี้ตามที่เขาเห็น */
+          if (e.key === "Delete" || e.key === "Backspace") {
+            e.preventDefault();
+            if (sel.size && !(navByKey && !sel.has(it))) dropSelected();
+            else dropItem(it);
+          }
         },
       }, [
         many && !it.blank ? el("span", { class: "src", title: `${srcLabel}: ${files[it.fi].name}` }, tagOf(it.fi)) : null,
@@ -473,7 +658,7 @@ export function mount(tool) {
                     style: { aspectRatio: `${it.pw * it.crop.w} / ${it.ph * it.crop.h}`,
                              transform: `rotate(${it.rotate}deg)` } }, [
                     el("div", { class: "pg-crop", style: { inset: "0" } }, [
-                      el("img", { src: it.thumb, loading: "lazy",
+                      el("img", { src: it.thumb, loading: "lazy", draggable: "false",
                         alt: tr(`หน้า ${it.index + 1} (ครอบแล้ว)`, `Page ${it.index + 1}, trimmed`),
                         style: { width: `${100 / it.crop.w}%`, height: `${100 / it.crop.h}%`,
                                  insetInlineStart: `${-(it.crop.x / it.crop.w) * 100}%`,
@@ -490,7 +675,7 @@ export function mount(tool) {
                   el("div", { class: "pg-crop",
                     style: { width: `${vw}%`, height: `${vh}%`,
                              insetInlineStart: `${(100 - vw) / 2}%`, top: `${(100 - vh) / 2}%` } }, [
-                    el("img", { src: it.thumb, loading: "lazy",
+                    el("img", { src: it.thumb, loading: "lazy", draggable: "false",
                       alt: tr(`หน้า ${it.index + 1} (ครอบแล้ว)`, `Page ${it.index + 1}, trimmed`),
                       style: { width: `${100 / it.crop.w}%`, height: `${100 / it.crop.h}%`,
                                insetInlineStart: `${-(it.crop.x / it.crop.w) * 100}%`,
@@ -498,28 +683,35 @@ export function mount(tool) {
                   ]),
                 ]);
               })()
-            : el("img", { src: it.thumb, alt: tr(`หน้า ${it.index + 1}`, `Page ${it.index + 1}`), loading: "lazy",
+            : el("img", { src: it.thumb, alt: tr(`หน้า ${it.index + 1}`, `Page ${it.index + 1}`), loading: "lazy", draggable: "false",
               style: { transform: `rotate(${it.rotate}deg)` } }),
-        el("span", { class: "num" }, String(i + 1)),
+        /* เลขหน้าในไฟล์ผลลัพธ์ อยู่ใต้ภาพ ไม่ทับเนื้อหา และไม่ชนป้ายไฟล์ A B C ที่มุมบนซ้าย
+           (เดิมอยู่มุมบนซ้ายเหมือนกัน ป้ายไฟล์ทับจนมองไม่เห็นเลข) ระหว่างลากเลขนี้เปลี่ยนสด */
+        el("div", { class: "pp-foot" }, [el("span", { class: "num" }, String(no || ""))]),
         it.crop ? el("span", { class: "pg-cropped", title: tr("ครอบขอบขาวไว้", "White edge trimmed") },
                      tr("ครอบแล้ว", "trimmed")) : null,
+        /* ‼️ เหลือ 3 ปุ่ม (18/11/2026) พี่ปอนด์ชี้ปุ่มหมุนซ้ายขวาว่า "อันเดียว พอมั้ง"
+           หมุนตามเข็มทีละ 90 กดซ้ำวนครบรอบ หมุนทวนยังมีคีย์ [ ให้คนที่ต้องการ
+           โผล่ตอนชี้หรือเลือกการ์ด ไม่โชว์ค้างทุกใบ */
         el("div", { class: "tools" }, [
-          el("button", { type: "button",
-            title: tr(`หมุนซ้าย (หน้า ${i + 1})`, `Rotate left (page ${i + 1})`),
-            "aria-label": tr(`หมุนหน้า ${i + 1} ไปทางซ้าย`, `Rotate page ${i + 1} left`),
-            onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 270) % 360; render(); } }, [uiIcon("rotateL", "pg-ico")]),
-          el("button", { type: "button",
-            title: tr(`หมุนขวา (หน้า ${i + 1})`, `Rotate right (page ${i + 1})`),
-            "aria-label": tr(`หมุนหน้า ${i + 1} ไปทางขวา`, `Rotate page ${i + 1} right`),
+          it.blank ? null : el("button", { type: "button", class: "pp-zoom",
+            title: tr(`ดูหน้า ${no} ขนาดใหญ่`, `View page ${no} larger`),
+            "aria-label": tr(`ดูหน้า ${no} ขนาดใหญ่`, `View page ${no} larger`),
+            onclick: (e) => { e.stopPropagation(); openZoom(it); } }, [uiIcon("search", "pg-ico")]),
+          el("button", { type: "button", class: "pp-rot",
+            title: tr(`หมุนขวา ตามเข็มนาฬิกา (หน้า ${no})`, `Rotate right, clockwise (page ${no})`),
+            "aria-label": tr(`หมุนหน้า ${no} ไปทางขวา`, `Rotate page ${no} right`),
             onclick: (e) => { e.stopPropagation(); it.rotate = (it.rotate + 90) % 360; render(); } }, [uiIcon("rotateR", "pg-ico")]),
-          el("button", { type: "button",
-            title: tr(`ลบหน้านี้ (หน้า ${i + 1})`, `Delete page ${i + 1}`),
-            "aria-label": tr(`ลบหน้า ${i + 1}`, `Delete page ${i + 1}`),
+          el("button", { type: "button", class: "pp-del",
+            title: tr(`ลบหน้านี้ (หน้า ${no})`, `Delete page ${no}`),
+            "aria-label": tr(`ลบหน้า ${no}`, `Delete page ${no}`),
             onclick: (e) => { e.stopPropagation(); dropItem(it); } }, [uiIcon("trash", "pg-ico")]),
         ]),
       ]);
+      if (it === flashItem) { card.classList.add("pp-landed"); setTimeout(() => card.classList.remove("pp-landed"), 950); }
       pagesGrid.appendChild(card);
     });
+    flashItem = null;
     if (focusAt !== null) {
       const same = pagesGrid.querySelector(`.pg[data-i="${focusAt}"]:not(.dropped)`);
       const cards = [...pagesGrid.querySelectorAll(".pg:not(.dropped)")];
@@ -530,6 +722,26 @@ export function mount(tool) {
     st.info(tr(`เหลือ ${items.filter((i) => !i.dropped).length}/${items.length} หน้า`,
                 `${items.filter((i) => !i.dropped).length}/${pl(items.length, "page", "pages")} left`));
     syncToolbar();
+    syncBulk();
+    lastVanished = syncEmptyFiles();
+  }
+  let flashItem = null;          // ใบที่เพิ่งวางจากการลาก ให้กะพริบไฮไลต์สั้น ๆ หลังวาดใหม่
+  let lastVanished = [];         // ไฟล์ที่เพิ่งหายจากรายการเพราะไม่เหลือหน้า (บอกผู้ใช้ทันที)
+
+  function syncBulk() {
+    const n = sel.size;
+    bulkBar.hidden = n < 2;
+    bulkCount.textContent = tr(`เลือก ${n} หน้า`, `${pl(n, "page", "pages")} selected`);
+  }
+  /** บอกว่าไฟล์ไหนหายจากรายการ ต่อท้ายข้อความหลังลบ */
+  function vanishNote() {
+    if (!lastVanished.length) return "";
+    const tags = lastVanished.map((f) => tagOf(files.indexOf(f))).join(", ");
+    const undoKey = IS_MAC ? "⌘Z" : "Ctrl+Z";
+    return files.length > 1
+      ? tr(` ไฟล์ ${tags} ไม่เหลือหน้าแล้ว เอาออกจากรายการ กด ${undoKey} เพื่อเอากลับ`,
+           ` File ${tags} has no pages left, removed from the list. Press ${undoKey} to bring it back`)
+      : "";
   }
 
   /* เรียงใหม่ 2 แบบ
@@ -612,7 +824,7 @@ export function mount(tool) {
   /** ครอบตัดหน้าที่เลือก หรือทุกหน้าที่ยังไม่ถูกลบ */
   async function autoCrop(all) {
     const targets = all ? items.filter((i) => !i.dropped && !i.blank)
-                        : (selected && !selected.blank ? [selected] : []);
+                        : selList().filter((i) => !i.blank);
     if (!targets.length) return st.err(tr("เลือกหน้าก่อน", "Pick a page first"));
     let done = 0, already = 0;
     for (const it of targets) {
@@ -631,79 +843,86 @@ export function mount(tool) {
   /* ── หน้าว่าง ─────────────────────────────────────────────────────────
      ขนาดเท่าหน้าที่เลือกอยู่ ถ้าไม่ได้เลือกใช้ขนาดหน้าแรก ไม่มีเลยใช้ A4 */
   function addBlank() {
-    const ref = selected || items.find((i) => !i.blank) || null;
+    const after = insertPoint();
+    const ref = after || items.find((i) => !i.blank) || null;
     const blank = { blank: true, rotate: 0, dropped: false, crop: null,
                     pw: ref ? ref.pw : 595, ph: ref ? ref.ph : 842 };
-    const at = selected ? items.indexOf(selected) + 1 : items.length;
+    const at = after ? items.indexOf(after) + 1 : items.length;
     items.splice(at, 0, blank);
-    selected = blank;
+    sel.clear(); sel.add(blank); anchor = blank;
     render();
     st.ok(tr(`เพิ่มหน้าว่างที่ตำแหน่ง ${at + 1}`, `Blank page added at position ${at + 1}`));
   }
 
-  function selectItem(it) {
-    /* ‼️ ต้องคืนโฟกัสให้การ์ดที่เลือก (แก้ 20/09/2026)
-       render() วาดการ์ดใหม่ทั้งตะแกรงทุกครั้ง การ์ดที่เพิ่งคลิกจึงถูกโยนทิ้ง
-       โฟกัสตกไปที่ <body> ทันที ซึ่งทำให้เกิดสองปัญหาพร้อมกัน
-       ① คีย์ลัดบนการ์ด (Delete, Enter) ไม่มีวันทำงาน เพราะอีเวนต์เกิดที่ body
-          แล้ววิ่งขึ้นไป document อีเวนต์ไม่เคยวิ่งลงมาหา ws.body ที่เป็นลูก
-       ② คนใช้คีย์บอร์ดต้อง Tab ใหม่จากต้นหน้าทุกครั้งที่คลิกเลือกหน้า
-       ‼️ คืนโฟกัสเฉพาะตอนที่โฟกัสยังไม่ได้อยู่ในช่องกรอกที่อื่น
-          ไม่งั้นการวาดใหม่ระหว่างผู้ใช้พิมพ์ช่วงหน้าจะไปแย่งโฟกัสจากช่องพิมพ์ */
-    selected = it;
+  /** mode: only = ใบนี้ใบเดียว (ถ้าเป็นใบเดียวที่เลือกอยู่แล้ว = ยกเลิก) , toggle = เพิ่มหรือถอน , range = จาก anchor ถึงใบนี้
+   *  ‼️ render() วาดการ์ดใหม่ทั้งตะแกรง แล้วคืนโฟกัสให้ใบที่โฟกัสอยู่เอง (ดูหัว render) คีย์ลัดจึงยังทำงานต่อ */
+  function selectItem(it, mode = "only") {
+    if (!it) { clearSel(); render(); return; }
+    if (mode === "toggle") {
+      if (sel.has(it)) { sel.delete(it); if (anchor === it) anchor = selList()[0] || null; }
+      else { sel.add(it); anchor = it; }
+    } else if (mode === "range") {
+      const a = items.indexOf(anchor), b = items.indexOf(it);
+      const [lo, hi] = a < b ? [a, b] : [b, a];
+      sel.clear();
+      items.slice(lo, hi + 1).forEach((x) => { if (!x.dropped) sel.add(x); });
+    } else {
+      const only = sel.size === 1 && sel.has(it);
+      sel.clear();
+      if (!only) { sel.add(it); anchor = it; } else anchor = null;
+    }
     render();
   }
 
   function rotateSelected(delta) {
-    if (!selected) return;
-    selected.rotate = (selected.rotate + delta) % 360;
+    if (!sel.size) return needPick(tr("หมุน", "rotate"));
+    sel.forEach((it) => { it.rotate = (it.rotate + delta) % 360; });
     render();
   }
 
-  /* ‼️ กองซ้อนไว้ย้อนการลบทีละครั้ง เก็บทั้งตัวหน้าและลำดับที่มันอยู่
+  /* ‼️ กองซ้อนไว้ย้อนการลบทีละครั้ง เก็บเป็นชุด (ลบหลายหน้าพร้อมกัน = ย้อนทีเดียวกลับมาทั้งชุด)
      ไม่ได้เก็บแค่ "ตัวล่าสุด" เพราะคนกดลบรัว ๆ แล้วเผลอเกินไปหนึ่งหน้าเป็นเรื่องปกติ
      ‼️ ชิปเลือกเร็วกับช่องพิมพ์ช่วงหน้าเป็นการ "เลือกใหม่ทั้งชุด" จึงล้างกองนี้ทิ้ง
      ไม่งั้นย้อนกลับแล้วจะได้สภาพลูกผสมที่อธิบายให้ผู้ใช้ไม่ได้ */
   let removed = [];
 
   function dropSelected() {
-    if (!selected || selected.dropped) return;
-    dropItem(selected);
+    const batch = selList().filter((it) => !it.dropped);
+    if (!batch.length) return needPick(tr("ลบ", "delete"));
+    dropBatch(batch);
   }
+  const dropItem = (it) => { if (!it.dropped) dropBatch([it]); };
 
-  function dropItem(it) {
-    /* ‼️ ต้องจำว่ากำลังใช้คีย์บอร์ดอยู่หรือเปล่า ก่อนที่ render() จะล้างการ์ดทิ้ง
-       เพราะการ์ดที่โฟกัสอยู่หายไป โฟกัสจะตกกลับไปที่ <body> ทันที
-       คนที่ลบด้วยคีย์บอร์ดต้อง Tab ใหม่จากต้นหน้าทุกครั้งที่ลบหนึ่งหน้า
-       จึงย้ายโฟกัสไปใบถัดไป ถ้าลบใบสุดท้ายก็ถอยไปใบก่อนหน้า */
-    it.dropped = true;
-    removed.push(it);
-    if (selected === it) selected = null;
-    render();                       // render() ย้ายโฟกัสไปใบถัดไปให้เองแล้ว
-    st.info(tr(`ลบหน้าแล้ว เหลือ ${items.filter((x) => !x.dropped).length} หน้า`,
-               `Page deleted, ${pl(items.filter((x) => !x.dropped).length, "page", "pages")} left`));
+  function dropBatch(batch) {
+    /* ‼️ render() ย้ายโฟกัสไปใบถัดไปให้เอง คนลบด้วยคีย์บอร์ดจะได้ไม่ต้อง Tab ใหม่จากต้นหน้า */
+    batch.forEach((it) => { it.dropped = true; sel.delete(it); });
+    if (anchor && anchor.dropped) anchor = null;
+    removed.push(batch);
+    render();
+    const left = items.filter((x) => !x.dropped).length;
+    st.info(tr(`ลบ ${batch.length} หน้าแล้ว เหลือ ${left} หน้า`, `Deleted ${pl(batch.length, "page", "pages")}, ${left} left`) + vanishNote());
   }
 
   function undoDelete() {
-    const it = removed.pop();
-    if (!it) return;
-    it.dropped = false;
-    selected = it;
+    const batch = removed.pop();
+    if (!batch) return;
+    batch.forEach((it) => { it.dropped = false; });
+    sel.clear();
+    batch.forEach((it) => sel.add(it));
+    anchor = batch[0];
+    const back = [...hiddenNow];
     render();
-    st.ok(tr("เอาหน้าที่ลบกลับมาแล้ว", "Brought the deleted page back"));
+    const revived = back.filter((f) => !hiddenNow.has(f)).map((f) => tagOf(files.indexOf(f)));
+    st.ok(tr(`เอาหน้าที่ลบกลับมาแล้ว ${batch.length} หน้า`, `Brought back ${pl(batch.length, "page", "pages")}`)
+      + (revived.length ? tr(` ไฟล์ ${revived.join(", ")} กลับมาในรายการ`, `, file ${revived.join(", ")} is back in the list`) : ""));
   }
 
   function syncToolbar() {
-    const has = !!selected;
-    cropBtn.disabled = !has || !!(selected && selected.blank);
+    const pick = selList();
+    cropBtn.disabled = !pick.some((x) => !x.blank);
     cropAllBtn.disabled = !items.length;
     blankBtn.disabled = !items.length;
     editTextBtn.disabled = !files.length;
-    rotateLBtn.disabled = !has;
-    rotateRBtn.disabled = !has;
-    toggleBtn.disabled = !has;
-    // ‼️ ใช้ ariaLabel อย่างเดียว เว็บนี้ไม่ใช้ tooltip ของเบราว์เซอร์
-    toggleBtn.ariaLabel = tr("ลบหน้านี้", "Delete this page");
     undoDelBtn.disabled = removed.length === 0;
   }
 
@@ -716,52 +935,259 @@ export function mount(tool) {
     const keepSet = new Set(pages.map((p) => p - 1));
     items.forEach((it, i) => { it.dropped = !keepSet.has(i); });
     removed = [];                 // เลือกใหม่ทั้งชุด เหมือนชิปเลือกเร็ว
-    selected = null;
+    clearSel();
     render();
     st.ok(tr(`ตั้งช่วง ${rangeInput.value} (${pages.length} หน้า)`,
              `Set range ${rangeInput.value} (${pl(pages.length, "page", "pages")})`));
   }
 
-  let dragging = null;
-  pagesGrid.addEventListener("dragstart", (e) => {
-    dragging = e.target.closest(".pg");
-    dragging?.classList.add("dragging");
-    pagesGrid.classList.add("is-dragging");
+  /* ── ดูหน้าใหญ่ (18/11/2026 พี่ปอนด์: ภาพย่อเล็กจนมองไม่เห็น) ───────────────────────────── */
+  let viewer = null;
+  const hidePeek = attachPeek(pagesGrid, {
+    itemOf: (card) => (card.classList.contains("dropped") ? null : items[+card.dataset.i]),
+    getDoc,
+    blocked: () => !!drag || !!pending || !!viewer,
   });
-  pagesGrid.addEventListener("dragend", () => {
-    pagesGrid.querySelectorAll(".pg").forEach((n) => n.classList.remove("dragging", "over", "after"));
-    pagesGrid.classList.remove("is-dragging");
-    dragging = null;
+  /** เปิดดูเต็มจอ เลื่อนดูได้เฉพาะหน้าที่เก็บ ตามลำดับในไฟล์ผลลัพธ์ */
+  function openZoom(it) {
+    hidePeek();
+    const list = items.filter((x) => !x.dropped);
+    const many = files.length > 1;
+    viewer = openViewer({
+      list, start: list.indexOf(it), getDoc,
+      label: (x, i, n) => [tr(`หน้า ${i + 1} จาก ${n}`, `Page ${i + 1} of ${n}`),
+        x.blank ? tr("หน้าว่าง", "Blank page")
+          : (many ? tr(`ไฟล์ ${tagOf(x.fi)} หน้า ${x.index + 1}`, `File ${tagOf(x.fi)} page ${x.index + 1}`)
+                  : tr(`หน้าเดิม ${x.index + 1}`, `Original page ${x.index + 1}`))],
+      onClose: () => { viewer = null; },
+    });
+  }
+
+  /* ── ลากย้ายหน้า (18/11/2026 จุดขายที่พี่ปอนด์ขอให้ทำเต็มที่) ────────────────────────────
+     พี่ปอนด์: ลากแล้วคนดูไม่ออกว่าจะไปลงตรงไหน
+     ‼️ ใช้ pointer events ของเราเอง ไม่ใช้ HTML5 draggable
+        ① HTML5 ลาก <img> ในการ์ด Chrome ใส่ชนิด "Files" มาด้วย ม่าน "ปล่อยไฟล์ได้เลย" ของกล่องรับไฟล์จึงขึ้นทั้งที่ลากภายใน
+           (จับได้จริง ดู tests/browser_pdfpages_drag.py) ไม่มี native drag = ไม่มีทางขึ้นม่านโดยโครงสร้าง
+        ② HTML5 ลากไม่ได้บนนิ้วหลายเครื่อง และจัดภาพตอนลากเองไม่ได้ (ภาพลากเป็นภาพจางของเบราว์เซอร์)
+     ภาพที่ได้: การ์ดยกลอยตามนิ้ว เอียงตามแรงเหวี่ยง การ์ดอื่นเลื่อนหลบเปิดช่อง (FLIP) ช่องที่จะลงเรืองแสงพร้อมเลขหน้า
+     ทุกการ์ดเปลี่ยนเลขสด ปล่อยแล้วเด้งเข้าช่องแบบสปริงแล้วกะพริบ
+     ‼️ ช่องวางคำนวณจากตำแหน่ง "ตอนเริ่มลาก" (slots) ไม่ใช่ตำแหน่งปัจจุบัน
+        ตำแหน่งปัจจุบันขยับตามช่องว่างที่เปิด ถ้าใช้คำนวณ ช่องจะสลับไปมาใต้เมาส์ที่อยู่นิ่ง */
+  let lastPointerType = "mouse";
+  let dragEndedAt = 0;
+  const dragJustEnded = () => performance.now() - dragEndedAt < 300;
+  const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let pending = null, drag = null;
+
+  pagesGrid.addEventListener("pointerdown", (e) => {
+    lastPointerType = e.pointerType || "mouse";
+    if (drag || pending || (e.pointerType === "mouse" && e.button !== 0)) return;
+    const card = e.target.closest(".pg");
+    if (!card || card.classList.contains("dropped") || e.target.closest(".tools")) return;
+    const p = { x: e.clientX, y: e.clientY, id: e.pointerId, card, type: e.pointerType };
+    pending = p;
+    /* นิ้ว: กดค้าง 280 ms ถึงเริ่มลาก ปัดเร็ว ๆ ยังเลื่อนหน้าจอได้ตามปกติ */
+    if (e.pointerType !== "mouse") p.timer = setTimeout(() => { if (pending === p) beginDrag(p, p.x, p.y); }, 280);
   });
-  /* ‼️ ต้องรู้ว่าจะแทรก "ก่อน" หรือ "หลัง" ใบที่ชี้อยู่ ไม่ใช่แค่ชี้โดน
-     ตัดสินจากตำแหน่งเมาส์เทียบกับกึ่งกลางใบนั้น แล้วขีดเส้นฝั่งที่ตรงกัน
-     ไม่งั้นผู้ใช้ลากไปวางแล้วผลไม่ตรงกับที่เห็น ซึ่งคือที่พี่ปอนด์บอกว่าไม่รู้ว่าเปลี่ยนไหม */
-  const dropSide = (e, node) => {
-    const r = node.getBoundingClientRect();
-    return e.clientX > r.left + r.width / 2 ? "after" : "before";
+  const onMove = (e) => {
+    if (pending && e.pointerId === pending.id) {
+      const d = Math.hypot(e.clientX - pending.x, e.clientY - pending.y);
+      if (pending.type === "mouse" ? d > 6 : false) beginDrag(pending, e.clientX, e.clientY);
+      else if (pending.type !== "mouse" && d > 10) { clearTimeout(pending.timer); pending = null; }   // ปัดเลื่อนจอ ไม่ใช่ลาก
+    }
+    if (drag && e.pointerId === drag.id) { e.preventDefault(); moveDrag(e.clientX, e.clientY); }
   };
-  pagesGrid.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    const over = e.target.closest(".pg");
-    if (!over || over === dragging) return;
-    pagesGrid.querySelectorAll(".pg").forEach((n) => n.classList.remove("over", "after"));
-    over.classList.add("over");
-    if (dropSide(e, over) === "after") over.classList.add("after");
-  });
-  pagesGrid.addEventListener("drop", (e) => {
-    e.preventDefault();
-    const over = e.target.closest(".pg");
-    if (!over || !dragging) return;
-    const from = +dragging.dataset.i;
-    let to = +over.dataset.i;
-    if (dropSide(e, over) === "after") to += 1;
-    if (to > from) to -= 1;          // ถอนของเดิมออกก่อน ตำแหน่งปลายทางจึงเลื่อนมาหนึ่ง
-    if (to === from) return;
-    items.splice(to, 0, items.splice(from, 1)[0]);
-    selected = null;
-    render();
-    st.ok(tr(`ย้ายหน้าไปตำแหน่งที่ ${to + 1} แล้ว`, `Moved to position ${to + 1}`));
-  });
+  const onUp = (e) => {
+    if (pending && e.pointerId === pending.id) { clearTimeout(pending.timer); pending = null; }
+    if (drag && e.pointerId === drag.id) endDrag(e.type === "pointercancel");
+  };
+  addEventListener("pointermove", onMove, { passive: false });
+  addEventListener("pointerup", onUp);
+  addEventListener("pointercancel", onUp);
+  // ‼️ ต้องมีตัวกันเลื่อนจอแบบ non-passive อยู่ที่ตะแกรงตั้งแต่ก่อนแตะ Chrome จึงยอมให้ยกเลิกการเลื่อนกลางทาง
+  pagesGrid.addEventListener("touchmove", (e) => { if (drag) e.preventDefault(); }, { passive: false });
+  pagesGrid.addEventListener("contextmenu", (e) => { if (drag || pending?.type === "touch") e.preventDefault(); });
+  const onDragKey = (e) => { if (drag && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); endDrag(true); } };
+  addEventListener("keydown", onDragKey, true);
+  registerCleanup(ws.wrap, { dispose: () => {
+    removeEventListener("pointermove", onMove); removeEventListener("pointerup", onUp);
+    removeEventListener("pointercancel", onUp); removeEventListener("keydown", onDragKey, true);
+  } });
+
+  const visCards = () => [...pagesGrid.querySelectorAll(".pg:not(.dropped)")];
+  function scrollerOf(node) {
+    for (let n = node.parentElement; n && n !== document.body; n = n.parentElement) {
+      const oy = getComputedStyle(n).overflowY;
+      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 1) return n;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+
+  function beginDrag(p, x, y) {
+    pending = null;
+    clearTimeout(p.timer);
+    const card = p.card;
+    if (!card.isConnected) return;
+    const cards = visCards();
+    const from = cards.indexOf(card);
+    if (from < 0 || cards.length < 2) return;
+    hidePeek();
+    cards.forEach((c) => c.getAnimations().forEach((a) => a.cancel()));
+    const g = pagesGrid.getBoundingClientRect();
+    const r = card.getBoundingClientRect();
+    const slots = cards.map((c) => { const q = c.getBoundingClientRect();
+      return { x: q.left - g.left, y: q.top - g.top, w: q.width, h: q.height }; });
+    // การ์ดลอย = สำเนาของการ์ดจริง ลอยอยู่ชั้นบนสุด ตามนิ้วทุกพิกเซล
+    const ghost = card.cloneNode(true);
+    ghost.classList.add("pp-ghost");
+    ghost.classList.remove("selected", "pp-landed");
+    ghost.removeAttribute("tabindex");
+    ghost.setAttribute("aria-hidden", "true");
+    Object.assign(ghost.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    // ป้าย "ย้ายไปเป็นหน้า N" ลอยเหนือการ์ด อยู่นอกการ์ดเพราะการ์ดตัดขอบ (overflow hidden) และนิ้วบังตัวการ์ด
+    const badge = el("div", { class: "pp-move-badge", role: "status" });
+    document.body.append(ghost, badge);
+    // การ์ดจริงกลายเป็น "ช่องที่จะลง" เรืองแสง พร้อมเลขหน้าปลายทางตัวใหญ่
+    const mark = el("div", { class: "pp-slot-mark", "aria-hidden": "true" }, [el("b"), el("span", {}, tr("วางตรงนี้", "Drop here"))]);
+    card.appendChild(mark);
+    card.classList.add("pp-slot");
+    pagesGrid.classList.add("pp-is-dragging");
+    document.documentElement.classList.add("pp-grabbing");
+    drag = { id: p.id, type: p.type, card, ghost, badge, mark, from, at: from, slots, r0: r,
+             off: { x: x - r.left, y: y - r.top }, x, y, lx: x, tilt: 0, scroller: scrollerOf(pagesGrid), raf: 0 };
+    if (!calm()) requestAnimationFrame(() => ghost.classList.add("lifted"));
+    else ghost.classList.add("lifted");
+    if (navigator.vibrate && p.type === "touch") { try { navigator.vibrate(12); } catch { /* ไม่รองรับ */ } }
+    renumber(true);
+    moveDrag(x, y);
+    drag.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function moveDrag(x, y) {
+    const d = drag;
+    d.x = x; d.y = y;
+    const vx = x - d.lx;
+    d.lx = x;
+    // เอียงตามแรงเหวี่ยงแนวนอน แล้วค่อยคืนกลับ ให้รู้สึกว่าถือของจริงอยู่
+    d.tilt = calm() ? 0 : Math.max(-9, Math.min(9, d.tilt * 0.7 + vx * 0.35));
+    d.ghost.style.translate = `${x - d.off.x - d.r0.left}px ${y - d.off.y - d.r0.top}px`;
+    d.ghost.style.setProperty("--tilt", `${(-2.5 + d.tilt).toFixed(2)}deg`);
+    d.badge.style.left = `${x - d.off.x + d.r0.width / 2}px`;
+    d.badge.style.top = `${y - d.off.y - 10}px`;
+    const g = pagesGrid.getBoundingClientRect();
+    const px = x - g.left, py = y - g.top;
+    // ช่องที่ชี้อยู่ ถ้าไม่ได้ชี้ช่องไหนเลย (ช่องว่างระหว่างการ์ด นอกตะแกรง) เอาช่องที่ใกล้ที่สุด
+    let best = 0, bestD = Infinity;
+    d.slots.forEach((s, i) => {
+      const dx = px < s.x ? s.x - px : px > s.x + s.w ? px - s.x - s.w : 0;
+      const dy = py < s.y ? s.y - py : py > s.y + s.h ? py - s.y - s.h : 0;
+      const dist = dx * dx + dy * dy * 1.5;
+      if (dist < bestD) { bestD = dist; best = i; }
+    });
+    if (best !== d.at) moveSlot(best);
+  }
+
+  /* FLIP: จดตำแหน่งเดิม ย้ายช่องใน DOM จดตำแหน่งใหม่ แล้วเล่นจากเดิมไปใหม่
+     ‼️ อ่านตำแหน่งเดิม "ก่อน" ยกเลิกแอนิเมชันที่ค้างอยู่ การ์ดที่กำลังเลื่อนจะเลื่อนต่อจากจุดที่เห็นจริง ไม่กระตุกกลับ */
+  function moveSlot(to) {
+    const d = drag;
+    const cards = visCards();
+    const before = new Map(cards.map((c) => [c, c.getBoundingClientRect()]));
+    cards.forEach((c) => c.getAnimations().forEach((a) => a.cancel()));
+    const others = cards.filter((c) => c !== d.card);
+    if (to >= others.length) others[others.length - 1].after(d.card);
+    else others[to].before(d.card);
+    d.at = to;
+    if (!calm()) {
+      visCards().forEach((c) => {
+        const a = before.get(c), b = c.getBoundingClientRect();
+        const dx = a.left - b.left, dy = a.top - b.top;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+        c.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }],
+                  { duration: 280, easing: "cubic-bezier(.2,.9,.25,1.12)" });
+      });
+    }
+    renumber(false);
+  }
+
+  /** เลขหน้าบนทุกการ์ดตามตำแหน่งตอนนี้ ใบไหนเลขเปลี่ยนเด้งให้เห็น */
+  function renumber(first) {
+    const d = drag;
+    visCards().forEach((c, i) => {
+      const n = c.querySelector(".pp-foot .num");
+      if (!n || n.textContent === String(i + 1)) return;
+      n.textContent = String(i + 1);
+      if (!first && !calm()) { n.classList.remove("pp-pop"); void n.offsetWidth; n.classList.add("pp-pop"); }
+    });
+    const N = d.at + 1;
+    d.mark.firstChild.textContent = String(N);
+    const gn = d.ghost.querySelector(".pp-foot .num");
+    if (gn) gn.textContent = String(N);
+    d.badge.textContent = d.at === d.from ? tr(`หน้า ${N} ที่เดิม`, `Page ${N}, unchanged`)
+                                          : tr(`ย้ายไปเป็นหน้า ${N}`, `Move to page ${N}`);
+    d.badge.classList.toggle("same", d.at === d.from);
+  }
+
+  /* ลากถึงขอบจอ เลื่อนจอให้เอง ยิ่งชิดขอบยิ่งเร็ว ไม่งั้นย้ายหน้าไปไกล ๆ ในไฟล์ยาวไม่ได้ */
+  function autoScroll() {
+    const d = drag;
+    if (!d) return;
+    const sc = d.scroller;
+    const docLike = sc === document.scrollingElement || sc === document.documentElement;
+    const top = docLike ? 0 : sc.getBoundingClientRect().top;
+    const bottom = docLike ? innerHeight : sc.getBoundingClientRect().bottom;
+    const edge = 70;
+    let v = 0;
+    if (d.y < top + edge) v = -Math.ceil(((top + edge - d.y) / edge) * 18);
+    else if (d.y > bottom - edge) v = Math.ceil(((d.y - (bottom - edge)) / edge) * 18);
+    if (v) {
+      const was = sc.scrollTop;
+      sc.scrollTop += v;
+      if (sc.scrollTop !== was) moveDrag(d.x, d.y);
+    }
+    d.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function endDrag(cancel) {
+    const d = drag;
+    if (!d || d.ending) return;
+    d.ending = true;
+    cancelAnimationFrame(d.raf);
+    if (cancel && d.at !== d.from) moveSlot(d.from);
+    const target = d.card.getBoundingClientRect();
+    d.badge.remove();
+    const finish = () => {
+      d.ghost.remove();
+      d.mark.remove();
+      d.card.classList.remove("pp-slot");
+      pagesGrid.classList.remove("pp-is-dragging");
+      document.documentElement.classList.remove("pp-grabbing");
+      drag = null;
+      dragEndedAt = performance.now();
+      if (cancel || d.at === d.from) {
+        render();
+        if (!cancel) st.info(tr(`หน้า ${d.from + 1} อยู่ที่เดิม`, `Page ${d.from + 1} stays where it was`));
+        return;
+      }
+      // ลำดับใหม่อ่านจาก DOM ตรง ๆ รวมการ์ดที่ลบไว้ (ซ่อนอยู่) ให้อยู่ตำแหน่งเดิมของมัน
+      const moved = items[+d.card.dataset.i];
+      items = [...pagesGrid.querySelectorAll(".pg")].map((c) => items[+c.dataset.i]);
+      flashItem = moved;
+      render();
+      st.ok(tr(`ย้ายไปเป็นหน้า ${d.at + 1} แล้ว`, `Moved to page ${d.at + 1}`));
+    };
+    // เด้งเข้าช่องแบบสปริง: ภาพลอยบินไปทับช่อง คืนขนาดและมุมเอียง แล้วค่อยวาดจริง
+    if (calm()) { finish(); return; }
+    const gs = d.ghost.style;
+    d.ghost.classList.remove("lifted");
+    d.ghost.classList.add("landing");
+    gs.setProperty("--tilt", "0deg");
+    gs.translate = `${target.left - d.r0.left}px ${target.top - d.r0.top}px`;
+    let done = false;
+    const once = () => { if (!done) { done = true; finish(); } };
+    d.ghost.addEventListener("transitionend", (e) => { if (e.propertyName === "translate") once(); });
+    setTimeout(once, 380);
+  }
 
   async function save() {
     const keep = items.filter((i) => !i.dropped);
@@ -853,9 +1279,11 @@ export function mount(tool) {
       // ‼️ ชั้นที่ผู้ใช้ซ่อนไว้จะกลายเป็นมองเห็นได้ในไฟล์ผลลัพธ์ ต้องบอกก่อนไฟล์หลุดไป
       if (hiddenLayers) results.appendChild(el("div", { class: "note warn" }, HIDDEN_LAYERS_WARNING));
       // หลายไฟล์ใช้ชื่อกลาง ๆ เพราะเอาชื่อไฟล์แรกมาตั้งจะเข้าใจผิดว่าได้แค่ไฟล์นั้น
-      const name = files.length > 1
+      // ‼️ นับเฉพาะไฟล์ที่ยังมีหน้าเหลือ ใส่ A B แต่ลบ B หมด ไฟล์ที่ได้คือของ A ล้วน ตั้งชื่อตาม A
+      const live = [...new Set(keep.filter((k) => !k.blank).map((k) => k.fi))];
+      const name = live.length !== 1
         ? tr("รวมจัดหน้าใหม่.pdf", "combined-pages.pdf")
-        : stripExt(files[0].name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
+        : stripExt(files[live[0]].name) + tr("-จัดหน้าใหม่.pdf", "-edited.pdf");
       results.appendChild(el("div", { class: "result" }, [
         el("div", { class: "r-name" }, [el("strong", {}, name), el("small", {}, tr(`${keep.length} หน้า`, `${pl(keep.length, "page", "pages")}`))]),
         el("span", { class: "r-size" }, fmtBytes(blob.size)),

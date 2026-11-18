@@ -1675,8 +1675,10 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
 }
 .keyhints-t{font-weight:700;color:var(--text-dim)}
 .keyhint{display:inline-flex; align-items:center; gap:6px}
+/* ‼️ เป็นคำแนะนำ ไม่ใช่ปุ่ม (18/11/2026 พี่ปอนด์ทักว่า "ไม่เห็นกดได้เลย")
+   รุ่นเดิมมีกรอบกับพื้นเหมือนปุ่ม คนจึงลองคลิกแล้วไม่มีอะไรเกิด ตอนนี้เหลือแค่ตัวหนา ไม่มีกรอบไม่มีพื้น */
 .keyhints .kbd{
-  display:inline-flex; align-items:center; flex:none;
-  font-size:11px; color:var(--text-dim); border:1px solid var(--line); border-radius:6px;
-  padding:2px 7px; background:var(--bg-soft); font-family:inherit; white-space:nowrap;
+  display:inline; flex:none; font-size:11.5px; font-weight:700; color:var(--text-dim);
+  border:0; padding:0; background:none; font-family:inherit; white-space:nowrap; cursor:default;
 }
+.keyhints .kh-or{color:var(--text-mute);font-size:11px}

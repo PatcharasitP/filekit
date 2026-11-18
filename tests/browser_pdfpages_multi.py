@@ -228,15 +228,13 @@ def main():
             pg.mouse.down()
             pg.mouse.move(c3["x"] + c3["width"] * 0.8, c3["y"] + c3["height"] / 2, steps=10)
             pg.wait_for_timeout(250)
-            mark = pg.evaluate("""() => {
-              const o = document.querySelector('.pg.over');
-              if (!o) return null;
-              const cs = getComputedStyle(o, '::after');
-              return {side: o.classList.contains('after') ? 'after' : 'before',
-                      w: cs.width, shown: cs.content !== 'none'};
-            }""")
-            ck(bool(mark) and mark["shown"] and mark["side"] == "after",
-               f"ตอนลากมีเส้นบอกตำแหน่งวาง และบอกฝั่งถูก (ได้ {mark})", str(mark))
+            # ‼️ 18/11/2026 ตัวบอกตำแหน่งเปลี่ยนจากเส้นขอบ (.pg.over::after) เป็นช่องว่างที่เปิดให้
+            #    กับป้าย "ย้ายไปเป็นหน้า N" ตามที่พี่ปอนด์ขอ เจตนาเดิม "เห็นว่าจะไปวางตรงไหน" ยังตรวจอยู่
+            #    แค่ถามจากสิ่งที่ผู้ใช้เห็น (ป้ายบอกเลขหน้าปลายทาง) แทนชื่อคลาสของรุ่นเก่า
+            mark = pg.evaluate("""() => [...document.querySelectorAll('body *')].some(n =>
+              n.childElementCount === 0 && (n.textContent || '').includes('ย้ายไปเป็นหน้า 4') &&
+              n.checkVisibility({opacityProperty: true, visibilityProperty: true}))""")
+            ck(bool(mark), f"ตอนลากบอกตำแหน่งวางเป็นเลขหน้า ย้ายไปเป็นหน้า 4 (ได้ {mark})", str(mark))
             pg.mouse.up()
             pg.wait_for_timeout(500)
             after_alt = pg.eval_on_selector_all(".pg img", JS_ALT)

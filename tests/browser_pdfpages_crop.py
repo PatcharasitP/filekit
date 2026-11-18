@@ -115,7 +115,9 @@ with tempfile.TemporaryDirectory() as td:
         d2.close()
         pg.locator(".pg").nth(1).click()          # เลือกหน้า 2 แล้วลบทิ้ง
         pg.wait_for_timeout(400)
-        bar.nth(2).click()
+        # ‼️ 18/11/2026 ปุ่มลบบนแถบบนถูกถอด (พี่ปอนด์: ซ้ำกับปุ่มบนการ์ด) ลบหน้าที่เลือกด้วยคีย์ Delete แทน
+        #    เจตนาของข้อนี้คือ "มีหน้าที่ลบไว้ก่อนเพิ่มไฟล์" ไม่ใช่ทดสอบปุ่มบนแถบ
+        pg.keyboard.press("Delete")
         pg.wait_for_timeout(800)
         dropped_before = pg.locator(".pg.dropped").count()
         pg.locator(".pg").nth(0).click()          # เลือกหน้า 1 ไว้เป็นจุดแทรก

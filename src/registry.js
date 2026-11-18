@@ -32,7 +32,7 @@ export const TOOLS = [
   { id:"pdf-pages",   group:"pdf", sub:"organize", icon:"📑", title:"จัดการหน้า PDF",
     desc:"หลายไฟล์มารวมกระดานเดียว เก็บ ลบ สลับลำดับ หมุนหน้า และแก้ไขหรือเซ็นบนหน้าได้ในตัว",
     accepts:["pdf"],
-    libs:["pdfjs","pdflib"], next:["pdf-edit","pdf-merge","pdf-compress"] },
+    libs:["pdfjs","pdflib"], next:["pdf-merge","pdf-compress"] },
 
   { id:"pdf-edit",    group:"pdf", sub:"stamp", icon:"✏️", title:"แก้ไขและเซ็นบน PDF",
     desc:"ปิดทับข้อความเดิม พิมพ์ใหม่ ไฮไลต์ เซ็นชื่อ และวางรูป ครบในรอบเดียว บันทึกครั้งเดียว ภาษาไทยได้",

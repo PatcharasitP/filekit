@@ -958,9 +958,13 @@ export function dropzone(opts = {}) {
     expect = null,                 // เช่น ["pdf"] — ชนิดไฟล์ที่เครื่องมือนี้รับ
     thumbs = true,                 // false = เครื่องมือมีแกลเลอรีภาพของตัวเองแล้ว อย่าโชว์ซ้ำ
     expectLabel = tr("ไฟล์ชนิดที่รองรับ", "a supported file type"),
+    /* คลิกที่พื้นแถวไฟล์ (ไม่ใช่ปุ่ม ไม่ใช่การลาก) ให้เครื่องมือทำอะไรกับไฟล์นั้น เช่น จัดการหน้า PDF เลือกทุกหน้าของไฟล์
+       ไม่ใส่ = แถวไม่มีพฤติกรรมคลิก */
+    onPickFile = null,
   } = opts;
 
   let files = [];
+  let rowDragCancel = null;   // ฟังก์ชันยกเลิกการลากแถวที่ค้างอยู่ (ถ้ามี) render() เรียกก่อนล้างรายการเสมอ
   /* ‼️ ประกาศออกไปทุกครั้งที่รายการไฟล์เปลี่ยน ไม่ใช่แค่บอกเครื่องมือเจ้าของกล่อง
      เพื่อให้แถบ "ทำต่อกับไฟล์นี้" รู้ว่าตอนนี้ถือไฟล์อะไรอยู่ */
   const fireChange = () => { setInputFiles(shown()); onChange(files); };
@@ -1254,7 +1258,7 @@ export function dropzone(opts = {}) {
       row.dataset.state = state;
       row.querySelector(".state")?.remove();
       const badge = stateBadge(state);
-      if (badge) row.insertBefore(badge, row.querySelector(".icon-btn"));
+      if (badge) row.insertBefore(badge, row.querySelector(":scope > .mv-pair, :scope > .icon-btn"));
     },
   });
 
@@ -1305,6 +1309,7 @@ export function dropzone(opts = {}) {
     container.classList.toggle("has-files", files.length > 0);
     syncActionButtons();
     ensureRowStyle();
+    if (rowDragCancel) rowDragCancel();   // รายการถูกวาดใหม่กลางการลาก (เช่นภาพย่อโหลดเสร็จ) แถวที่ยกอยู่จะหายไปด้วย จึงเลิกลากก่อน
     list.innerHTML = "";
     const vis = shown();
     files.forEach((f, i) => {
@@ -1319,7 +1324,7 @@ export function dropzone(opts = {}) {
          ปุ่มขึ้นลงกับที่จับลากยังโผล่อยู่ทั้งที่กดแล้วไม่เกิดอะไร
          และมันเบียดแถวจนขนาดไฟล์ตกบรรทัดเป็น "4.5" กับ "KB" คนละบรรทัด */
       const canReorder = reorder && vis.length > 1;
-      const row = el("div", { class: "file-row", draggable: canReorder || null, "data-i": i,
+      const row = el("div", { class: (canReorder ? "file-row fr-can" : "file-row") + (onPickFile ? " fr-pick" : ""), "data-i": i,
         "data-state": states.get(f) || "pending" }, [
         canReorder ? el("span", { class: "grip", title: tr("ลากเพื่อสลับลำดับ", "Drag to reorder"), "aria-hidden": "true" }, [uiIcon("grip", "grip-svg")]) : null,
         thumbs ? thumbBox(f) : null,
@@ -1342,10 +1347,14 @@ export function dropzone(opts = {}) {
           ]),
         ]),
         stateBadge(states.get(f)),
-        canReorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
-          title: tr("เลื่อนขึ้น", "Move up"), disabled: vi === 0 || null, onclick: () => move(-1) }, "↑") : null,
-        canReorder ? el("button", { class: "icon-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
-          title: tr("เลื่อนลง", "Move down"), disabled: vi === vis.length - 1 || null, onclick: () => move(1) }, "↓") : null,
+        /* ปุ่มขึ้นลงเป็นปุ่มคู่เดียวกัน (segmented) ไอคอน chevron SVG ไม่ใช่ตัวอักษร ↑ ↓
+           ‼️ aria-label ห้ามเปลี่ยน เทสหาปุ่มด้วยข้อความนี้ (browser_pdfpages_multi) */
+        canReorder ? el("span", { class: "mv-pair", role: "group", "aria-label": tr(`ลำดับของ ${f.name}`, `Order of ${f.name}`) }, [
+          el("button", { class: "icon-btn mv-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ขึ้น`, `Move ${f.name} up`),
+            title: tr("เลื่อนขึ้น", "Move up"), disabled: vi === 0 || null, onclick: () => move(-1) }, [uiIcon("chevUp", "mv-ico")]),
+          el("button", { class: "icon-btn mv-btn", type: "button", "aria-label": tr(`เลื่อน ${f.name} ลง`, `Move ${f.name} down`),
+            title: tr("เลื่อนลง", "Move down"), disabled: vi === vis.length - 1 || null, onclick: () => move(1) }, [uiIcon("chev", "mv-ico")]),
+        ]) : null,
         el("button", { class: "icon-btn danger file-x", type: "button", title: tr("เอาออก", "Remove"),
           "aria-label": tr(`เอา ${f.name} ออก`, `Remove ${f.name}`), onclick: () => remove(i) }, [uiIcon("close", "pg-ico")]),
       ]);
@@ -1358,28 +1367,177 @@ export function dropzone(opts = {}) {
            `${pl(vis.length, "file", "files")}, ${fmtBytes(vis.reduce((a, f) => a + f.size, 0))} total`);
   }
 
+  /* ── ลากแถวไฟล์สลับลำดับ ด้วย pointer events (18/11/2026) ─────────────────
+   * ‼️ ที่มา พี่ปอนด์ลองบนเว็บจริง: ลากแถวขึ้นแล้วตัวที่ลากจางจนแทบมองไม่เห็น (ภาพลากของเบราว์เซอร์เอง)
+   *    ตัวหนังสือโดนคลุมสีฟ้าเพราะเลือกข้อความ และขึ้นเคอร์เซอร์รูปห้าม "ดูแทบไม่ออกว่าลากได้"
+   *    ลากแบบ HTML5 คุมภาพที่ลากไม่ได้เลย จึงเลิกใช้ ไม่มี draggable ไม่มี dragstart
+   * แนวคิดเดียวกับการ์ดหน้าใน pdf-pages แต่เบากว่า (แนวตั้งอย่างเดียว):
+   *   สำเนาลอย (ทึบ มีเงา เอียงนิด) ตามเมาส์ , แถวจริงกลายเป็นช่องว่างที่จะวาง แล้วเลื่อนขึ้นลงตามเมาส์
+   *   ส่วนแถวอื่นเลื่อนหลบ ปล่อยแล้วสำเนาเด้งเข้าช่อง ค่อยสลับลำดับไฟล์จริง
+   * ‼️ จอสัมผัสไม่รับการลาก (นิ้วต้องใช้เลื่อนหน้า) ใช้ปุ่มขึ้นลงคู่กัน ซึ่งมีให้เสมอ
+   * ‼️ กดบนปุ่ม (ขึ้น ลง เอาออก) ไม่ถือเป็นการลาก ส่วนชื่อไฟล์กับภาพย่อซึ่งเป็นปุ่มเปิดดูไฟล์ ลากได้
+   *    ขยับถึง 5px ถึงนับว่าลาก ปล่อยแล้วกลืนคลิกทิ้ง ไม่เปิดตัวดูไฟล์ผิดจังหวะ */
   if (reorder) {
-    let dragging = null;
-    list.addEventListener("dragstart", (e) => {
-      dragging = e.target.closest(".file-row");
-      if (dragging) dragging.classList.add("dragging");
-    });
-    list.addEventListener("dragend", () => {
-      list.querySelectorAll(".file-row").forEach((n) => n.classList.remove("dragging", "over"));
-      dragging = null;
-    });
-    list.addEventListener("dragover", (e) => {
+    const THRESH = 5;
+    const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rowsNow = () => [...list.querySelectorAll(":scope > .file-row")];
+    const root = document.documentElement;
+    let ds = null;   // สถานะการลากที่กำลังดำเนินอยู่ (null = ไม่ได้ลาก)
+
+    function offListeners() {
+      window.removeEventListener("pointermove", onMove, true);
+      window.removeEventListener("pointerup", onUp, true);
+      window.removeEventListener("pointercancel", onCancel, true);
+      window.removeEventListener("keydown", onKey, true);
+    }
+
+    /* เลื่อนแถวไปที่ใหม่ แล้วให้แถวอื่นไหลไปที่เดิมของมันแบบ FLIP (ปิดเมื่อผู้ใช้ขอลดการเคลื่อนไหว) */
+    function slide(mutate, skip) {
+      const rows = rowsNow();
+      rows.forEach((r) => r.getAnimations().forEach((a) => a.cancel()));
+      const first = new Map(rows.map((r) => [r, r.getBoundingClientRect().top]));
+      mutate();
+      if (calm()) return;
+      rows.forEach((r) => {
+        if (r === skip) return;
+        const dy = first.get(r) - r.getBoundingClientRect().top;
+        if (dy) r.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }],
+          { duration: 170, easing: "cubic-bezier(.2,.8,.2,1)" });
+      });
+    }
+
+    function begin(e) {
+      const row = ds.row;
+      const r = row.getBoundingClientRect();
+      const ghost = row.cloneNode(true);
+      ghost.classList.remove("fr-can");
+      ghost.classList.add("fr-ghost");
+      ghost.removeAttribute("data-i");
+      ghost.setAttribute("aria-hidden", "true");
+      ghost.querySelectorAll("button, a, input").forEach((n) => { n.tabIndex = -1; });
+      // cloneNode ไม่คัดลอกพิกเซลของ canvas ภาพย่อจึงว่าง ต้องวาดทับให้
+      const src = row.querySelectorAll("canvas"), dst = ghost.querySelectorAll("canvas");
+      src.forEach((c, k) => { try { dst[k].getContext("2d").drawImage(c, 0, 0); } catch { /* ภาพย่อยังไม่พร้อม */ } });
+      Object.assign(ghost.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+      const ac = getComputedStyle(row).getPropertyValue("--ac");
+      if (ac) ghost.style.setProperty("--ac", ac);   // ลอยอยู่นอกกล่องเครื่องมือ ต้องพาสีตระกูลเครื่องมือไปเอง
+      document.body.appendChild(ghost);
+      row.classList.add("fr-slot");
+      root.classList.add("fr-grabbing");
+      try { getSelection().removeAllRanges(); } catch { /* ไม่มีอะไรให้ล้าง */ }
+      Object.assign(ds, { on: true, ghost, h: r.height, offY: ds.y0 - r.top, left: r.left, top: r.top,
+        nextAtStart: row.nextElementSibling });
+      if (calm()) ghost.classList.add("lifted"); else requestAnimationFrame(() => ghost.classList.add("lifted"));
+      // กดชื่อไฟล์แล้วลาก ปล่อยเมื่อไหร่ต้องไม่เปิดตัวดูไฟล์ (เบราว์เซอร์ยิง click ตามหลัง pointerup)
+      window.addEventListener("click", swallow, true);
+      setTimeout(() => window.removeEventListener("click", swallow, true), 400);
+      rowDragCancel = () => finish(false, true);
+    }
+    function swallow(e) { e.stopPropagation(); e.preventDefault(); }
+
+    function onMove(e) {
+      if (!ds || e.pointerId !== ds.id) return;
+      if (!list.isConnected) { finish(false, true); return; }
+      if (!ds.on) {
+        if (Math.hypot(e.clientX - ds.x0, e.clientY - ds.y0) < THRESH) return;
+        begin(e);
+      }
       e.preventDefault();
-      const over = e.target.closest(".file-row");
-      if (!over || over === dragging) return;
-      list.querySelectorAll(".file-row").forEach((n) => n.classList.remove("over"));
-      over.classList.add("over");
+      ds.top = e.clientY - ds.offY;
+      ds.ghost.style.top = `${ds.top}px`;
+      // แถวไหนอยู่ใต้จุดกึ่งกลางของสำเนา ช่องว่างต้องไปอยู่เหนือแถวแรกที่ว่า
+      const cy = ds.top + ds.h / 2;
+      const others = rowsNow().filter((x) => x !== ds.row);
+      let before = null;
+      for (const o of others) {
+        const b = o.getBoundingClientRect();
+        if (cy < b.top + b.height / 2) { before = o; break; }
+      }
+      if (before !== ds.row.nextElementSibling) slide(() => list.insertBefore(ds.row, before), ds.row);
+    }
+
+    function onUp(e) { if (ds && e.pointerId === ds.id) finish(ds.on); }
+    function onCancel(e) { if (ds && e.pointerId === ds.id) finish(false); }
+    function onKey(e) { if (ds && ds.on && e.key === "Escape") { e.stopPropagation(); finish(false); } }
+
+    /* commit = สลับลำดับไฟล์จริง , instant = ไม่ต้องเด้งเข้าช่อง (ถูกยกเลิกเพราะรายการถูกวาดใหม่) */
+    function finish(commit, instant = false) {
+      const s = ds;
+      if (!s) return;
+      ds = null;
+      rowDragCancel = null;
+      offListeners();
+      if (!s.on) return;   // ยังไม่ขยับถึงเกณฑ์ = แค่คลิกธรรมดา ปล่อยให้คลิกทำงานตามปกติ
+      let changed = false;
+      if (commit) {
+        const rows = rowsNow(), k = rows.indexOf(s.row);
+        const f = files[+s.row.dataset.i];
+        const nf = rows[k + 1] ? files[+rows[k + 1].dataset.i] : null;
+        const pf = rows[k - 1] ? files[+rows[k - 1].dataset.i] : null;
+        const before = files.slice();
+        files.splice(files.indexOf(f), 1);
+        if (nf) files.splice(files.indexOf(nf), 0, f);
+        else files.splice(files.indexOf(pf) + 1, 0, f);   // ท้ายสุด วางต่อจากแถวที่เห็นก่อนหน้า
+        changed = files.some((x, j) => x !== before[j]);
+      } else {
+        slide(() => list.insertBefore(s.row, s.nextAtStart), s.row);   // ยกเลิก คืนช่องกลับที่เดิม
+      }
+      const done = () => {
+        if (done.ran) return;
+        done.ran = true;
+        s.ghost.remove();
+        s.row.classList.remove("fr-slot");
+        root.classList.remove("fr-grabbing");
+        if (changed) { render(); fireChange(); }
+      };
+      if (instant || calm()) { done(); return; }
+      // เด้งเข้าช่อง: สำเนาบินไปทับช่องว่าง คืนขนาดกับมุมเอียง แล้วค่อยวาดรายการจริง
+      s.row.getAnimations().forEach((a) => a.cancel());
+      const target = s.row.getBoundingClientRect();
+      s.ghost.classList.remove("lifted");
+      s.ghost.classList.add("landing");
+      s.ghost.style.translate = `0 ${target.top - s.top}px`;
+      s.ghost.addEventListener("transitionend", (ev) => { if (ev.propertyName === "translate") done(); });
+      setTimeout(done, 340);
+    }
+
+    list.addEventListener("pointerdown", (e) => {
+      if (ds || e.button !== 0 || e.pointerType === "touch") return;
+      const row = e.target.closest(".file-row.fr-can");
+      if (!row || !list.contains(row)) return;
+      if (e.target.closest(".icon-btn, .mv-pair, a, input, select, textarea")) return;
+      ds = { row, id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false };
+      window.addEventListener("pointermove", onMove, true);
+      window.addEventListener("pointerup", onUp, true);
+      window.addEventListener("pointercancel", onCancel, true);
+      window.addEventListener("keydown", onKey, true);
     });
-    list.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const over = e.target.closest(".file-row");
-      if (!over || !dragging) return;
-      move(+dragging.dataset.i, +over.dataset.i);
+  }
+
+  /* คลิกพื้นแถว = onPickFile (18/11/2026 พี่ปอนด์: จุดหกจุด "ถ้ากดได้น่าจะเจ๋ง")
+     ปุ่มในแถวทำงานของมันเอง และการลากไม่ใช่คลิก (ตัวลากกลืนคลิกที่ตามหลังการลากไปแล้ว ดูบล็อกลากด้านบน)
+     ‼️ บอกผู้ใช้ด้วยเคอร์เซอร์ (grab) กับขอบแถวที่เข้มขึ้นตอนชี้ ไม่ใช่ title เพราะ el() ถอด tooltip ของเบราว์เซอร์ทิ้งตามที่พี่ปอนด์สั่ง
+     ‼️ หยุดฟองไว้ที่นี่ เครื่องมือบางตัวมีตัวฟังคลิกระดับพื้นที่ทำงานที่ "ล้างการเลือก" เมื่อคลิกที่ว่าง */
+  if (onPickFile) {
+    list.addEventListener("click", (e) => {
+      const row = e.target.closest(".file-row");
+      if (!row || !list.contains(row) || e.target.closest("button, a, input, select, textarea")) return;
+      const f = files[+row.dataset.i];
+      if (!f) return;
+      e.stopPropagation();
+      onPickFile(f);
+    });
+  }
+  /* ชี้ค้างบนภาพย่อของ PDF ภาพหน้าแรกใหญ่ลอยขึ้นข้างแถว (เครื่องที่มีเมาส์) ตัวนี้อยู่ใน filezoom.js โหลดตอนมีเมาส์ผ่านเท่านั้น */
+  if (matchMedia("(hover:hover) and (pointer:fine)").matches) {
+    list.addEventListener("pointerover", async function once(e) {
+      if (!e.target.closest?.(".file-row .thumb")) return;
+      list.removeEventListener("pointerover", once);
+      const { attachFilePeek } = await import("./filezoom.js");
+      attachFilePeek(list, {
+        fileOf: (t) => { const f = files[+t.closest(".file-row")?.dataset.i]; return f && detectType(f) === "pdf" ? f : null; },
+        blocked: () => document.documentElement.classList.contains("fr-grabbing") || !!document.querySelector(".pz"),
+      });
     });
   }
 

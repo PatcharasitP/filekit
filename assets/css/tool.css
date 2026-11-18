@@ -177,8 +177,45 @@ a.tm-chip:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-sm);
   background:var(--bg-soft);border:1px solid var(--line-soft);font-size:13.5px;
 }
-.file-row.dragging{opacity:.45}
-.file-row.over{border-color:var(--brand)}
+/* ── ลากแถวไฟล์สลับลำดับ (ui.js บล็อก pointer events) 18/11/2026 ──
+   ‼️ เดิมเป็นภาพลากของเบราว์เซอร์ จางจนมองแทบไม่เห็น ข้อความถูกเลือกเป็นสีฟ้า เคอร์เซอร์รูปห้าม
+   สำเนาลอยทึบ มีเงา เอียงนิด / แถวจริงกลายเป็นช่องว่างที่จะวาง สีเดียวกับกรอบสำเนา */
+.file-row.fr-can{cursor:grab;user-select:none;-webkit-user-select:none}
+.file-row img{-webkit-user-drag:none;user-drag:none}
+html.fr-grabbing,html.fr-grabbing *{cursor:grabbing !important;user-select:none !important;-webkit-user-select:none !important}
+.file-row.fr-ghost{position:fixed;z-index:1200;margin:0;box-sizing:border-box;pointer-events:none;opacity:1;
+  background:var(--card);border-color:var(--brand);transform-origin:50% 50%;
+  transition:scale .18s cubic-bezier(.2,.9,.3,1.35),rotate .14s ease-out,box-shadow .18s ease;
+  box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.file-row.fr-ghost.lifted{scale:1.025;rotate:-1.2deg;
+  box-shadow:0 22px 38px -10px rgba(15,23,42,.45),0 8px 16px rgba(15,23,42,.18)}
+.file-row.fr-ghost.landing{transition:translate .26s cubic-bezier(.34,1.4,.64,1),scale .26s cubic-bezier(.34,1.4,.64,1),
+  rotate .22s ease,box-shadow .26s ease}
+.file-row.fr-slot{border-style:dashed;border-color:color-mix(in srgb,var(--brand) 70%,transparent);
+  background:color-mix(in srgb,var(--brand) 8%,var(--bg-soft));
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 14%,transparent)}
+.file-row.fr-slot > *{visibility:hidden}
+/* แถวที่คลิกได้ (เครื่องมือส่ง onPickFile) ชี้แล้วขอบเข้มขึ้นนิดเดียว บอกว่ามีอะไรให้กดนอกจากปุ่ม */
+.file-row.fr-pick:hover:not(.fr-slot):not(.fr-ghost){border-color:color-mix(in srgb,var(--brand) 55%,var(--line-soft))}
+/* ภาพหน้าแรกลอยข้างแถวตอนชี้ค้างบนภาพย่อ (filezoom.js) หน้าตาเหมือนภาพลอยของการ์ดหน้า (.pp-peek) */
+.fr-peek{position:fixed;z-index:900;pointer-events:none;background:#fff;border-radius:10px;
+  box-shadow:0 22px 60px rgba(0,0,0,.28),0 0 0 1px rgba(0,0,0,.06);overflow:hidden;
+  opacity:0;transform:scale(.96);transition:opacity .14s ease,transform .16s var(--ease-snap,ease)}
+.fr-peek.on{opacity:1;transform:none}
+.fr-peek img{display:block;width:100%;height:auto}
+@media (prefers-reduced-motion:reduce){ .fr-peek{transition:none} }
+@media (prefers-reduced-motion:reduce){
+  .file-row.fr-ghost,.file-row.fr-ghost.landing{transition:none}
+  .file-row.fr-ghost.lifted{rotate:none;scale:none}
+}
+/* ปุ่มขึ้นลงเป็นปุ่มคู่เดียวกัน ไอคอน chevron เส้นหนาพอดี (เดิมเป็นตัวอักษร ↑ ↓ ดูเล็กเรียบแปลก) */
+.mv-pair{display:inline-flex;flex:none;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.mv-pair .icon-btn{border:0;border-radius:0;background:transparent;width:34px;height:34px}
+.mv-pair .icon-btn + .icon-btn{border-inline-start:1px solid var(--line)}
+.mv-pair .icon-btn:hover:not(:disabled){background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);border-color:var(--line)}
+.mv-pair .icon-btn:active:not(:disabled){background:color-mix(in srgb,var(--brand) 22%,transparent)}
+.mv-pair .icon-btn:focus-visible{outline:2.5px solid var(--brand);outline-offset:-3px}
+.mv-ico{width:18px;height:18px;display:block;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .grip{cursor:grab;color:var(--text-mute);font-size:15px}
 @media (hover:none){.grip{display:none}}  /* มือถือใช้ปุ่มลูกศรแทน ลากไม่ได้อยู่แล้ว */
 .icon-btn:disabled{opacity:.3;cursor:not-allowed}

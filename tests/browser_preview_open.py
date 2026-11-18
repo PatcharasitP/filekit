@@ -13,7 +13,8 @@ def check(name, ok, d=""):
     bad += 0 if ok else 1
     print(("  ✅ " if ok else "  ❌ ") + name + (f"  [{str(d)[:200]}]" if not ok else ""), flush=True)
 
-OPEN = "() => !!document.querySelector('dialog.pv[open]')"
+# ‼️ 18/11/2026 PDF เปิดตัวดูหน้าใหญ่ของ pagezoom (.pz) ไม่ใช่ dialog.pv แล้ว ส่วน Excel Word รูป ยังเป็น dialog.pv
+OPEN = "() => !!document.querySelector('dialog.pv[open], .pz')"
 with sync_playwright() as pw:
     b = pw.chromium.launch(); errs = []
     for tid in ("pdf-split", "pdf-protect", "pdf-watermark", "pdf-merge", "excel-lookup"):
@@ -30,7 +31,7 @@ with sync_playwright() as pw:
         # PDF วาดหน้าหลังกล่องเปิด รอเนื้อไฟล์อีกไม่เกิน 6 วินาที (canvas ต้องมีขนาดจริง ไม่ใช่กรอบเปล่า)
         has_canvas = False
         for _ in range(60 if opened else 0):
-            has_canvas = p.evaluate("""() => [...document.querySelectorAll('dialog.pv[open] canvas, dialog.pv[open] img, dialog.pv[open] table')]
+            has_canvas = p.evaluate("""() => [...document.querySelectorAll('dialog.pv[open] canvas, dialog.pv[open] img, dialog.pv[open] table, .pz canvas')]
               .some(e => e.getBoundingClientRect().width > 50 && e.getBoundingClientRect().height > 50)""")
             if has_canvas: break
             p.wait_for_timeout(100)

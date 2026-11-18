@@ -597,6 +597,14 @@ export async function viewFile(file, allFiles) {
   if (detectType(file) === "pdf" && !window.pdfjsLib) {
     try { const { loadLibs } = await import("./loader.js"); await loadLibs("pdfjs"); } catch { /* โหลดไม่ได้ ตกไปตามเดิม */ }
   }
+  /* ‼️ 18/11/2026 พี่ปอนด์: ตัวดู coverflow "ฟีเจอร์อันนี้ไม่คือ" (ไฟล์ข้างโผล่เป็นกล่องจาง ๆ ปุ่มกากบาทแปลก)
+     ส่วนตัวดูหน้าใหญ่ของการ์ดหน้าใน "จัดการหน้า PDF" พี่ชมว่า "ดีมาก ๆ" PDF จึงเปิดตัวนั้น ดูได้ทุกหน้าของไฟล์
+     รูปกับเอกสารอื่น (Excel Word CSV) ยังใช้ตัวดูข้างล่างนี้เหมือนเดิม
+     เปิดไม่ได้ (ไฟล์เสียหรือมีรหัสผ่าน) ตกไปตัวเดิมต่อ เพื่อให้ยังเห็นข้อความบอกสาเหตุแบบเดิม */
+  if (detectType(file) === "pdf" && window.pdfjsLib) {
+    const { openPdfFile } = await import("./filezoom.js");
+    if (await openPdfFile(file)) return true;
+  }
   if (!canView(file)) return false;
   const pool = Array.isArray(allFiles) && allFiles.length ? allFiles : [file];
   const newList = pool.filter(canView);

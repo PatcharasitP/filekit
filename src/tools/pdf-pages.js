@@ -151,6 +151,7 @@ export function mount(tool) {
   const dz = dropzone({
     expect: ["pdf"], expectLabel: tr("ไฟล์ PDF", "PDF files"),
     accept: "application/pdf,.pdf", multiple: true, reorder: true,
+    onPickFile: (f) => pickFile(f),
     hint: tr("หลายไฟล์ได้ ลากสลับลำดับไฟล์ได้", "Multiple files, drag to reorder"),
     onChange: (f) => {
       const next = [...(f || [])];
@@ -948,6 +949,19 @@ export function mount(tool) {
     getDoc,
     blocked: () => !!drag || !!pending || !!viewer,
   });
+  /* คลิกแถวไฟล์ = เลือกทุกหน้าของไฟล์นั้นในตะแกรง แล้วเลื่อนไปหาหน้าแรกของไฟล์ (18/11/2026 พี่ปอนด์ถามว่าจุดหกจุดกดได้ไหม)
+     จะได้ลบหรือหมุนทั้งไฟล์ทีเดียวด้วยแถบเลือกหลายหน้า หน้าที่ลบไว้แล้วไม่ถูกเลือกกลับมา */
+  function pickFile(file) {
+    const fi = files.indexOf(file);
+    const mine = items.filter((it) => !it.blank && it.fi === fi && !it.dropped);
+    if (fi < 0 || !mine.length) return;
+    sel.clear();
+    mine.forEach((it) => sel.add(it));
+    anchor = mine[0];
+    render();
+    pagesGrid.querySelector(`.pg[data-i="${items.indexOf(mine[0])}"]`)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: calm() ? "auto" : "smooth" });
+  }
   /** เปิดดูเต็มจอ เลื่อนดูได้เฉพาะหน้าที่เก็บ ตามลำดับในไฟล์ผลลัพธ์ */
   function openZoom(it) {
     hidePeek();

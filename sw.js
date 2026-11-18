@@ -72,6 +72,7 @@ const PRECACHE = [
   "src/pagezoom.js",  /* pdf-pages ภาพลอยกับดูหน้าเต็มจอซูมได้ */
   "src/filezoom.js",  /* แถวไฟล์ PDF ชี้ค้างเห็นหน้าแรก (ui.js ใช้ ทุกเครื่องมือ) */
   "src/pdfgeom.js",   /* pdf-edit, pdf-pages แปลงตำแหน่งบนจอเป็นพิกัดหน้าที่หมุนหรือครอบไว้ */
+  "src/pdfmarks.js",  /* ตัวแก้ไขบนหน้า PDF ใช้ร่วม (pdf-edit ตอนนี้ pdf-pages ในเฟสถัดไป) */
   "src/textdiff.js",  /* pdf-compare */
   "src/sqlgen.js",       /* pq-group-concat, pq-pick-date, pq-to-date */
   "src/pqcombine.js",    /* pq-combine */

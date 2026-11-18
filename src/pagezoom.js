@@ -30,6 +30,23 @@ const STYLE = `
 .pz-paper{position:absolute;left:0;top:0;transform-origin:0 0;background:#fff;
   box-shadow:0 18px 50px rgba(0,0,0,.45);will-change:transform}
 .pz-paper canvas,.pz-paper img{display:block;width:100%;height:100%}
+/* ── แก้ไขบนหน้าในตัวดู (เฟส 2 19/11/2026) ชั้นของที่วางซ้อนบนภาพ แผงเครื่องมือด้านขวา จอแคบอยู่ใต้ภาพ ── */
+.pz-paper{overflow:hidden}
+.pz-media{position:absolute;inset:0}
+.pz-paper .pe-box img{height:auto}
+.pz-main{flex:1;min-height:0;display:flex}
+.pz-main > .pz-stage{min-width:0}
+.pz-edit{width:340px;flex:none;overflow:auto;background:var(--card,#fff);color:var(--text,#111);
+  border-radius:14px 0 0 14px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px}
+.pz:not(.editing) .pz-edit{display:none}
+.pz:not(.editing) .pe-layer{pointer-events:none}
+.pz:not(.editing) .pe-box .rm,.pz:not(.editing) .pe-grip{display:none}
+.pz-edit .pz-edit-row{display:flex;flex-wrap:wrap;gap:6px}
+.pz-btn[aria-pressed="true"]{background:rgba(255,255,255,.24)}
+@media (max-width:760px){
+  .pz-main{flex-direction:column}
+  .pz-edit{width:auto;max-height:44vh;border-radius:14px 14px 0 0}
+}
 .pz-blank{display:grid;place-items:center;color:#667;font:600 14px var(--font);width:100%;height:100%}
 .pz-bar{align-self:center;display:flex;align-items:center;gap:2px;margin:10px auto 16px;padding:5px;
   border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16)}
@@ -224,7 +241,11 @@ export function attachPeek(grid, { itemOf, getDoc, blocked }) {
 
 /* ── ② ดูเต็มจอ ซูมได้ ─────────────────────────────────────────────── */
 /** @param opts {list: item[], start: number, getDoc(fi), label(it, i, n) -> [title, sub]} */
-export function openViewer({ list, start, getDoc, label, onClose }) {
+/** edit (ไม่ใส่ = ดูอย่างเดียวแบบเดิม) { panel, layer, sync(it, W, H), onPage(it), onToggle(on), open }
+ *  panel = แผงเครื่องมือแก้ไข , layer = ชั้นของที่วาง (วางซ้อนบนภาพ host จัดตำแหน่งเองใน sync)
+ *  sync เรียกทุกครั้งที่ขนาดกระดาษบนจอเปลี่ยน ส่งขนาดเป็น px , open = เปิดมาพร้อมกางแผงแก้ไข
+ *  key(e) คีย์ลัดตอนกำลังแก้ไข คืน true = ใช้แล้ว */
+export function openViewer({ list, start, getDoc, label, onClose, edit }) {
   ensureStyle();
   const back = document.activeElement;
   let at = Math.max(0, Math.min(list.length - 1, start));
@@ -235,7 +256,8 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   const title = el("div", { class: "pz-title", id: "pz-title" });
   const closeBtn = el("button", { class: "pz-btn pz-close", type: "button", "aria-label": tr("ปิด", "Close"),
     title: tr("ปิด (Esc)", "Close (Esc)"), onclick: () => close() }, [ico("close")]);
-  const paper = el("div", { class: "pz-paper" });
+  const media = el("div", { class: "pz-media" });
+  const paper = el("div", { class: "pz-paper" }, [media, edit ? edit.layer : null]);
   const busy = el("div", { class: "pz-busy", "aria-live": "polite" });
   const stage = el("div", { class: "pz-stage" }, [paper, busy]);
   const pct = el("span", { class: "pz-pct", "aria-live": "polite" });
@@ -253,9 +275,26 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   const bar = el("div", { class: "pz-bar", role: "toolbar", "aria-label": tr("ซูมและเปลี่ยนหน้า", "Zoom and pages") }, [
     prevBtn, pageNo, nextBtn, el("span", { class: "pz-sep" }), outBtn, pct, inBtn, el("span", { class: "pz-sep pz-wide" }), toggleBtn,
   ]);
+  /* ‼️ 19/11/2026 พี่ปอนด์: "ไม่อยากให้เราลิงก์ไปเครื่องมืออื่นเลย อยากทำให้มันแก้ไขได้ตั้งแต่หน้านี้เลย"
+     ปุ่มนี้กางแผงเครื่องมือแก้ไข (ปิดทับ ข้อความ ไฮไลต์ ลายเซ็น รูป) ข้างภาพ กดอีกทีพับ กลับไปลากเลื่อนดูได้ */
+  const editBtn = edit ? el("button", { class: "pz-btn pz-editbtn", type: "button", "aria-pressed": "false",
+    title: tr("แก้ไขบนหน้า ปิดทับ ข้อความ ไฮไลต์ ลายเซ็น รูป", "Edit on the page: cover, text, highlight, signature, image"),
+    onclick: () => setEditing(!editing) }, tr("แก้ไขบนหน้า", "Edit on page")) : null;
+  const main = el("div", { class: "pz-main" }, [stage, edit ? edit.panel : null]);
+  if (edit) edit.panel.classList.add("pz-edit");
   const wrap = el("div", { class: "pz", role: "dialog", "aria-modal": "true", "aria-labelledby": "pz-title" }, [
-    el("div", { class: "pz-top" }, [title, closeBtn]), stage, bar,
+    el("div", { class: "pz-top" }, [title, editBtn, closeBtn]), main, bar,
   ]);
+  let editing = false;
+  function setEditing(on) {
+    if (!edit) return;
+    editing = !!on;
+    wrap.classList.toggle("editing", editing);
+    editBtn.setAttribute("aria-pressed", String(editing));
+    edit.onToggle?.(editing);
+    // แผงกางหรือพับ เวทีเปลี่ยนขนาด ต้องคิดพอดีจอใหม่
+    requestAnimationFrame(() => { if (wrap.isConnected) { if (isFit()) fit(); else apply(); } });
+  }
 
   const stageSize = () => ({ w: stage.clientWidth, h: stage.clientHeight });
   const minZ = () => Math.min(fitZ, PT2CSS * 0.25);
@@ -273,6 +312,7 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
     paper.style.width = `${pw * z}px`;
     paper.style.height = `${ph * z}px`;
     paper.style.transform = `translate(${tx}px,${ty}px)`;
+    if (edit && list[at]) edit.sync(list[at], pw * z, ph * z);
     pct.textContent = `${Math.round((z / PT2CSS) * 100)}%`;
     outBtn.disabled = z <= minZ() + 1e-6;
     inBtn.disabled = z >= PT2CSS * MAX_ZOOM - 1e-6;
@@ -323,8 +363,8 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
       if (my !== renderToken || !doc) return;
       const c = await renderItem(doc, it, Math.round(want));
       if (my !== renderToken) { c.width = c.height = 0; return; }
-      const old = paper.querySelector("canvas");
-      paper.replaceChildren(c);
+      const old = media.querySelector("canvas");
+      media.replaceChildren(c);
       if (old) old.width = old.height = 0;
       renderedZ = want;
       paper.dataset.px = String(c.width);       // เทสอ่านความละเอียดจริงจากตรงนี้
@@ -344,8 +384,9 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
     renderToken++;
     const [t, sub] = label(it, at, list.length);
     title.replaceChildren(...[t, sub ? el("small", {}, sub) : null].filter(Boolean));
-    const old = paper.querySelector("canvas");
-    paper.replaceChildren(it.blank ? blankNode(it) : pre || el("img", { src: it.thumb, alt: t }));
+    const old = media.querySelector("canvas");
+    media.replaceChildren(it.blank ? blankNode(it) : pre || el("img", { src: it.thumb, alt: t }));
+    edit?.onPage?.(it);
     if (old && old !== pre) old.width = old.height = 0;
     renderedZ = pre ? pre.width : 0;
     if (pre) paper.dataset.px = String(pre.width);
@@ -392,7 +433,11 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   /* ── นิ้วกับเมาส์: ลากเลื่อน , สองนิ้วบีบซูม , ปัดซ้ายขวาตอนพอดีจอ = เปลี่ยนหน้า ─────────── */
   const pts = new Map();
   let startPinch = null, pan = null, swipe = null, lastTap = 0;
+  /* ‼️ กำลังแก้ไข แตะหรือลากบนชั้นของที่วาง = วางของ ไม่ใช่เลื่อนหรือปัดเปลี่ยนหน้า
+     ถ้าเวทีจับนิ้วไว้ด้วย (setPointerCapture) การลากคลุมปิดทับจะไปเป็นการเลื่อนภาพแทน */
+  const onInk = (e) => editing && !!e.target.closest?.(".pe-layer");
   stage.addEventListener("pointerdown", (e) => {
+    if (onInk(e)) return;
     if (e.button !== 0 && e.pointerType === "mouse") return;
     stage.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -443,9 +488,16 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
     const target = z > fitZ * 1.05 ? fitZ : Math.max(fitZ * 2, PT2CSS);
     if (target === fitZ) fit(); else zoomTo(target, e.clientX - r.left, e.clientY - r.top);
   }
-  stage.addEventListener("dblclick", (e) => { e.preventDefault(); toggleZoom(e); });
+  stage.addEventListener("dblclick", (e) => { if (onInk(e)) return; e.preventDefault(); toggleZoom(e); });
 
   function onKey(e) {
+    /* ‼️ ช่องพิมพ์ ปุ่มในแผงแก้ไข และของที่วาง (ลูกศรขยับ Delete เอาออก) ต้องได้คีย์ของตัวเอง
+       จึงไม่ดักที่นี่ ปล่อยไปถึงตัวมัน แล้วตัวดูหยุดไว้ตอนไหลกลับขึ้นมา (ตัวฟังที่ wrap ข้างล่าง)
+       คีย์ลัดของเครื่องมือข้างหลังจึงยังไม่เห็นอะไรเลย Esc กับ Tab ยังเป็นของตัวดูเสมอ */
+    const t = e.target;
+    // คีย์ลัดของโหมดแก้ไข (Ctrl+Z ย้อนของที่วาง) ยกเว้นในช่องพิมพ์ ที่ต้องย้อนตัวอักษรของมันเอง
+    if (editing && edit.key && !t.closest?.("input, textarea, select") && edit.key(e)) { e.preventDefault(); e.stopPropagation(); return; }
+    if (e.key !== "Escape" && e.key !== "Tab" && wrap.contains(t) && t.closest?.(".pz-edit, .pe-layer")) return;
     // ‼️ กันคีย์ลัดของเครื่องมือข้างหลัง (Del ลบหน้า) ทำงานขณะดูอยู่
     e.stopPropagation();
     if (e.key === "Escape") { e.preventDefault(); close(); }
@@ -455,7 +507,8 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
     else if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomBy(1 / 1.25); }
     else if (e.key === "0") { e.preventDefault(); fit(); }
     else if (e.key === "Tab") {             // วนโฟกัสอยู่ในตัวดู
-      const f = [...wrap.querySelectorAll("button:not(:disabled)")];
+      const f = [...wrap.querySelectorAll("button:not(:disabled), input:not([type=file]), select, [tabindex='0']")]
+        .filter((n) => n.offsetParent || n === document.activeElement);
       const i = f.indexOf(document.activeElement);
       if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
       else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
@@ -464,6 +517,7 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   /* ‼️ ฟังที่ window ชั้น capture ไม่ใช่ที่ตัวดู ดับเบิลคลิกหรือลากบนภาพ โฟกัสตกไปที่ body
      คีย์ลูกศรกับ Esc จะไม่วิ่งผ่านตัวดูเลย (เจอในเทส 18/11/2026) และกันคีย์ลัดของเครื่องมือข้างหลังได้ทั้งหมด */
   addEventListener("keydown", onKey, true);
+  wrap.addEventListener("keydown", (e) => e.stopPropagation());   // คีย์ที่ปล่อยให้แผงแก้ไขใช้ ห้ามไหลต่อไปถึงคีย์ลัดของหน้า
   const onResize = () => { const keep = z === fitZ; if (keep) fit(); else apply(); };
   addEventListener("resize", onResize);
 
@@ -484,5 +538,6 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   // เปิดครั้งแรกก็วาดภาพคมก่อนโชว์ ไม่โชว์ภาพย่อเบลอ (ต้องอยู่หลัง appendChild เพราะต้องรู้ขนาดเวที)
   goTo(at);
   closeBtn.focus();
-  return { close };
+  if (edit?.open) setEditing(true);
+  return { close, setEditing };
 }

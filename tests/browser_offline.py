@@ -11,7 +11,7 @@ import urllib.request, urllib.error, urllib.parse
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-BASE = os.environ.get("FK_BASE", "http://localhost:8899")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง
+BASE = os.environ.get("FK_BASE", "http://localhost:8899").rstrip("/")  # ตั้ง FK_BASE เพื่อยิงใส่เว็บจริง , 19/11/2026 ฟ้า ตัด / ท้าย หน้าแรกเปิดเป็น BASE/ เพราะ GitHub Pages ส่ง /filekit ต่อไป /filekit/ ซึ่งทำไม่ได้ตอนตัดเน็ต
 
 t0 = time.time()
 P, F = 0, []
@@ -314,7 +314,7 @@ with sync_playwright() as p:
     print("\n━━ DoD-proof (b): ไม่กดเตรียมออฟไลน์ก่อน → ตัดเน็ต → เปิดเครื่องมือต้องไม่ได้ (baseline) ━━")
     ctx0 = browser.new_context(viewport={"width": 1280, "height": 1000})
     pg0 = ctx0.new_page()
-    pg0.goto(BASE, wait_until="networkidle", timeout=30000)
+    pg0.goto(f"{BASE}/", wait_until="networkidle", timeout=30000)
     sw_ok0 = pg0.evaluate(SW_READY_JS)
     ck("DoD-proof (b): service worker ควบคุมหน้าได้ (ตั้งฐานให้ยุติธรรมกับกรณีจริง)", sw_ok0)
     go_truly_offline(ctx0)
@@ -346,7 +346,7 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" else None)
 
-    pg.goto(BASE, wait_until="networkidle", timeout=30000)
+    pg.goto(f"{BASE}/", wait_until="networkidle", timeout=30000)
     sw_ok = pg.evaluate(SW_READY_JS)
     ck("service worker ควบคุมหน้าได้ก่อนกดปุ่มเตรียมออฟไลน์ (ไม่งั้นแคชจะไม่ติดจริง)", sw_ok)
 
@@ -366,7 +366,7 @@ with sync_playwright() as p:
 
     errs.clear()
     pg.goto("about:blank")
-    pg.goto(BASE, wait_until="networkidle", timeout=30000)
+    pg.goto(f"{BASE}/", wait_until="networkidle", timeout=30000)
     home_errs = [e for e in errs if "favicon" not in e.lower()]
     ck(f"ตัดเน็ตจริงแล้วเปิดหน้าแรกใหม่ → ป้ายเครื่องมือขึ้นครบ {len(tool_ids)} ใบ",
        pg.locator("button.pill").count() == len(tool_ids),

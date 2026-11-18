@@ -39,6 +39,7 @@ const STYLE = `
 .pz-btn:focus-visible{outline:2px solid #fff;outline-offset:1px}
 .pz-btn:disabled{opacity:.35;cursor:default}
 .pz-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pz-pgno{min-width:54px;text-align:center;font:600 13px/1 var(--font);font-variant-numeric:tabular-nums;opacity:.9}
 .pz-pct{min-width:58px;text-align:center;font:600 13px/1 var(--font);font-variant-numeric:tabular-nums}
 .pz-sep{width:1px;height:22px;background:rgba(255,255,255,.2);margin:0 4px}
 .pz-close{margin-inline-start:auto}
@@ -244,10 +245,13 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   const nextBtn = b("next", "", tr("หน้าถัดไป (→)", "Next page (→)"), () => go(1));
   const outBtn = b("minus", "", tr("ซูมออก (−)", "Zoom out (−)"), () => zoomBy(1 / 1.25));
   const inBtn = b("plus", "", tr("ซูมเข้า (+)", "Zoom in (+)"), () => zoomBy(1.25));
-  const fitBtn = b("fit", tr("พอดีจอ", "Fit"), tr("พอดีจอ (0)", "Fit to screen (0)"), () => fit(), "pz-wide");
-  const realBtn = b(null, "100%", tr("ขนาดจริง 100%", "Actual size 100%"), () => zoomTo(PT2CSS), "pz-wide");
+  /* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: "พอดีจอ กับ 100% ยุบเหลือสักอันนึงพอ" ปุ่มเดียวสลับ
+     อยู่พอดีจอ = ปุ่มพาไป 100% , ซูมอยู่ระดับอื่น = ปุ่มพากลับพอดีจอ ป้ายบอกสิ่งที่จะเกิดเมื่อกด */
+  const toggleBtn = b(null, "100%", "", () => (isFit() ? zoomTo(PT2CSS) : fit()), "pz-wide pz-toggle");
+  /* พี่ปอนด์: "ควรมีบอกไว้สักที่ไหมว่าที่เปิดอยู่มันคือหน้าไหน" เลขหน้าอยู่ระหว่างปุ่มก่อนหน้ากับถัดไป */
+  const pageNo = el("span", { class: "pz-pgno", "aria-live": "polite" });
   const bar = el("div", { class: "pz-bar", role: "toolbar", "aria-label": tr("ซูมและเปลี่ยนหน้า", "Zoom and pages") }, [
-    prevBtn, nextBtn, el("span", { class: "pz-sep" }), outBtn, pct, inBtn, el("span", { class: "pz-sep pz-wide" }), fitBtn, realBtn,
+    prevBtn, pageNo, nextBtn, el("span", { class: "pz-sep" }), outBtn, pct, inBtn, el("span", { class: "pz-sep pz-wide" }), toggleBtn,
   ]);
   const wrap = el("div", { class: "pz", role: "dialog", "aria-modal": "true", "aria-labelledby": "pz-title" }, [
     el("div", { class: "pz-top" }, [title, closeBtn]), stage, bar,
@@ -255,6 +259,7 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
 
   const stageSize = () => ({ w: stage.clientWidth, h: stage.clientHeight });
   const minZ = () => Math.min(fitZ, PT2CSS * 0.25);
+  const isFit = () => Math.abs(z - fitZ) < 1e-6;
   function clampPan() {
     const { w, h } = stageSize();
     const cw = pw * z, ch = ph * z;
@@ -272,6 +277,10 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
     outBtn.disabled = z <= minZ() + 1e-6;
     inBtn.disabled = z >= PT2CSS * MAX_ZOOM - 1e-6;
     wrap.dataset.zoom = String(Math.round((z / PT2CSS) * 100));
+    const toReal = isFit();
+    toggleBtn.textContent = toReal ? "100%" : tr("พอดีจอ", "Fit");
+    toggleBtn.title = toReal ? tr("ขนาดจริง 100%", "Actual size 100%") : tr("พอดีจอ (0)", "Fit to screen (0)");
+    toggleBtn.setAttribute("aria-label", toggleBtn.title);
     scheduleRender();
   }
   function zoomTo(nz, cx, cy) {
@@ -287,6 +296,7 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   }
   const zoomBy = (k, cx, cy) => zoomTo(z * k, cx, cy);
   function fit() {
+    if (!pw || !ph) return;                 // ยังวาดหน้าแรกไม่เสร็จ (เปิดตัวดูแล้วย่อขยายหน้าต่างทันที)
     const { w, h } = stageSize();
     fitZ = Math.min((w - 32) / pw, (h - 24) / ph);
     z = fitZ;
@@ -307,7 +317,7 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
     const want = pw * z * dpr;
     if (renderedZ && Math.abs(renderedZ - want) / want < 0.04) return;   // คมพอแล้ว ไม่วาดซ้ำ
     const my = ++renderToken;
-    busy.textContent = tr("กำลังทำให้คม…", "Sharpening…");
+    /* ‼️ ไม่ขึ้นข้อความ "กำลังทำให้คม" แล้ว พี่ปอนด์: "ไม่ต้องเขียนขึ้นบอกก็ได้" ภาพคมขึ้นเองในเสี้ยววินาที */
     try {
       const doc = await getDoc(it.fi);
       if (my !== renderToken || !doc) return;
@@ -323,25 +333,50 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
     }
   }
 
-  function show() {
+  /* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: "ตอนเปลี่ยนหน้ามันเห็นกระดาษลาง ๆ ก่อน"
+     รุ่นแรกโชว์ภาพย่อ (ความละเอียด 0.35) ขยายเต็มจอก่อน แล้วค่อยเปลี่ยนเป็นภาพคม ตาเห็นเบลอแวบหนึ่งทุกครั้ง
+     ตอนนี้วาดภาพคมของหน้าใหม่ให้เสร็จก่อน ระหว่างนั้นหน้าเดิมค้างอยู่ แล้วสลับทีเดียว
+     ภาพย่อใช้เฉพาะตอนวาดไม่สำเร็จ (ไฟล์อ่านไม่ได้) จะได้ไม่เห็นจอว่าง */
+  function show(pre) {
     const it = list[at];
     const s = it.blank ? { w: it.pw, h: it.ph } : shownSize(it);
     pw = s.w; ph = s.h;
-    renderedZ = 0;
     renderToken++;
     const [t, sub] = label(it, at, list.length);
     title.replaceChildren(...[t, sub ? el("small", {}, sub) : null].filter(Boolean));
-    paper.replaceChildren(it.blank ? blankNode(it) : el("img", { src: it.thumb, alt: t }));
+    const old = paper.querySelector("canvas");
+    paper.replaceChildren(it.blank ? blankNode(it) : pre || el("img", { src: it.thumb, alt: t }));
+    if (old && old !== pre) old.width = old.height = 0;
+    renderedZ = pre ? pre.width : 0;
+    if (pre) paper.dataset.px = String(pre.width);
+    pageNo.textContent = `${at + 1} / ${list.length}`;
     prevBtn.disabled = at === 0;
     nextBtn.disabled = at === list.length - 1;
     fit();
   }
-  function go(d) {
-    const n = at + d;
+  let goToken = 0, target = null;
+  async function goTo(n) {
     if (n < 0 || n >= list.length) return;
+    const my = ++goToken;
+    target = n;
+    const it = list[n];
+    let pre = null;
+    if (!it.blank) {
+      try {
+        const s = shownSize(it);
+        const { w, h } = stageSize();
+        const fz = Math.min((w - 32) / s.w, (h - 24) / s.h);
+        const doc = await getDoc(it.fi);
+        if (doc && my === goToken) pre = await renderItem(doc, it, Math.round(s.w * fz * Math.min(3, devicePixelRatio || 1)));
+      } catch { pre = null; }
+      if (my !== goToken) { if (pre) pre.width = pre.height = 0; return; }
+    }
+    target = null;
     at = n;
-    show();
+    show(pre);
   }
+  // กดรัว ๆ ต้องนับต่อจากหน้าที่กำลังจะไป ไม่ใช่หน้าที่ยังโชว์อยู่
+  const go = (d) => goTo((target ?? at) + d);
 
   /* ── ล้อเมาส์: ล้อหรือบีบทัชแพด = ซูม , ปัดสองนิ้วบนทัชแพดตอนซูมอยู่ = เลื่อน ─────────── */
   stage.addEventListener("wheel", (e) => {
@@ -446,7 +481,8 @@ export function openViewer({ list, start, getDoc, label, onClose }) {
   const prevOverflow = document.documentElement.style.overflow;
   document.documentElement.style.overflow = "hidden";
   document.body.appendChild(wrap);
-  show();
+  // เปิดครั้งแรกก็วาดภาพคมก่อนโชว์ ไม่โชว์ภาพย่อเบลอ (ต้องอยู่หลัง appendChild เพราะต้องรู้ขนาดเวที)
+  goTo(at);
   closeBtn.focus();
   return { close };
 }

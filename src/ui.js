@@ -463,16 +463,29 @@ export function toolFaq(tool) {
  *   บอกไปก็เป็นแค่ตัวหนังสือที่กินที่เปล่า ๆ (กติกาอยู่ใน CSS .keyhints)
  * ‼️ แต่ละคู่สั้น ๆ ไม่ใช่ประโยคยาว เพราะกติกาโปรเจกต์จำกัดข้อความบนจอ 100 ตัวอักษรต่อก้อน
  */
+/* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: "ให้พับเก็บได้ไหมเผื่อรก แบบเผื่อคนอยากรู้มากดดูอ่านเองดีไหม"
+   เปิดมาพับอยู่ เห็นแค่หัวข้อ คีย์ลัด กดแล้วกาง และจำไว้ในเครื่องของคนนั้น (ทุกเครื่องมือใช้ค่าเดียวกัน) */
+const KH_KEY = "filekit-keyhints-open";
 export function keyHints(pairs) {
-  return el("div", { class: "keyhints" }, [
-    el("span", { class: "keyhints-t" }, tr("คีย์ลัด", "Shortcuts")),
+  let open = false;
+  try { open = localStorage.getItem(KH_KEY) === "1"; } catch { /* โหมดส่วนตัว */ }
+  const box = el("details", { class: "keyhints" }, [
+    el("summary", { class: "keyhints-t" }, tr("คีย์ลัด", "Shortcuts")),
+    el("div", { class: "keyhints-list" }, keyHintItems(pairs)),
+  ]);
+  box.open = open;
+  box.addEventListener("toggle", () => { try { localStorage.setItem(KH_KEY, box.open ? "1" : "0"); } catch { /* โหมดส่วนตัว */ } });
+  return box;
+}
+function keyHintItems(pairs) {
+  return [
     /* key เป็นอาร์เรย์ได้ = กดได้หลายปุ่ม เช่น ["Del", "Backspace"] โน้ตบุ๊กหลายรุ่นไม่มีปุ่ม Delete แยก (18/11/2026) */
     ...pairs.map(([key, what]) =>
       el("span", { class: "keyhint" }, [
         ...[].concat(key).flatMap((k, i) => [i ? el("span", { class: "kh-or" }, tr("หรือ", "or")) : null,
                                               el("kbd", { class: "kbd" }, k)]),
         el("span", {}, what)])),
-  ]);
+  ];
 }
 
 export function toolMeta(tool) {

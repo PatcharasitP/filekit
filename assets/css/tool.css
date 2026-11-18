@@ -1705,12 +1705,18 @@ button.thumb:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px}
       ใช้กติกาเดียวกับ .kbd ของช่องค้นหาบนหน้าแรกที่ทำไว้ก่อนแล้ว */
 .keyhints{display:none}
 @media (hover:hover) and (pointer:fine){
-  .keyhints{
-    display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px;
-    margin:10px 2px 0; font-size:12px; color:var(--text-mute); line-height:1.6;
-  }
+  .keyhints{display:block; margin:10px 2px 0; font-size:12px; color:var(--text-mute); line-height:1.6}
+  .keyhints-list{display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; padding:4px 0 0 18px}
 }
-.keyhints-t{font-weight:700;color:var(--text-dim)}
+/* หัวข้อพับได้ มีลูกศรเล็กหมุนตามสถานะ ‼️ ปิดสามเหลี่ยมเดิมของเบราว์เซอร์ (หน้าตาต่างกันทุกเบราว์เซอร์) */
+.keyhints-t{font-weight:700;color:var(--text-dim);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;
+  border-radius:6px;padding:1px 4px 1px 0;user-select:none}
+.keyhints-t::-webkit-details-marker{display:none}
+.keyhints-t::before{content:"";width:6px;height:6px;border:solid currentColor;border-width:0 1.8px 1.8px 0;
+  transform:rotate(-45deg);transition:transform .15s ease;margin-inline:3px 1px}
+.keyhints[open] > .keyhints-t::before{transform:rotate(45deg)}
+.keyhints-t:hover{color:var(--text)}
+.keyhints-t:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .keyhint{display:inline-flex; align-items:center; gap:6px}
 /* ‼️ เป็นคำแนะนำ ไม่ใช่ปุ่ม (18/11/2026 พี่ปอนด์ทักว่า "ไม่เห็นกดได้เลย")
    รุ่นเดิมมีกรอบกับพื้นเหมือนปุ่ม คนจึงลองคลิกแล้วไม่มีอะไรเกิด ตอนนี้เหลือแค่ตัวหนา ไม่มีกรอบไม่มีพื้น */

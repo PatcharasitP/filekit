@@ -77,6 +77,19 @@ JS_SEEN_TEXT = """(t) => [...document.querySelectorAll('body *')].some(n =>
    n.childElementCount === 0 && (n.textContent || '').includes(t) &&
    n.checkVisibility({opacityProperty: true, visibilityProperty: true}))"""
 
+# 18/11/2026 ค่ำ พี่ปอนด์ดูเว็บจริง v241: "ชอบแบบเลข เห็นเลขด้วย ดูสวยดีกว่าคำพูดว่า ย้ายไปหน้าไหน" ป้ายพิลล์ ย้ายไปเป็นหน้า N เอาออกจากตา
+# ตัวบอกที่ตาเห็นเหลือเลขตัวโตในช่องวาง (.pp-slot-mark) ข้อความยังอยู่ใน role=status ให้โปรแกรมอ่านหน้าจอ
+JS_SLOT_NUM = """(n) => { const b = document.querySelector('.pg.pp-slot .pp-slot-mark b');
+   return !!b && b.textContent.trim() === String(n) && b.checkVisibility({opacityProperty: true, visibilityProperty: true}); }"""
+JS_SR_STATUS = """(t) => [...document.querySelectorAll('[role=status]')].some(n => (n.textContent || '').includes(t))"""
+# การ์ดที่เลือก: พี่ปอนด์ "ตอนเลือกการ์ดแอบตะหงิด" หน้ากระดาษห้ามถูกย้อมสี และเลขหน้าเป็นป้ายทึบ
+JS_SEL_LOOK = """(i) => { const c = [...document.querySelectorAll('.pages .pg')].filter(e => e.offsetParent)[i];
+   const bf = getComputedStyle(c, '::before'); const num = c.querySelector('.pp-foot .num');
+   const tinted = bf.content !== 'none' && bf.backgroundColor !== 'rgba(0, 0, 0, 0)' && bf.backgroundColor !== 'transparent';
+   const nb = getComputedStyle(num).backgroundColor;
+   return {tinted, numFilled: nb !== 'rgba(0, 0, 0, 0)' && nb !== 'transparent', numBg: nb, ring: getComputedStyle(c).outlineColor,
+           brand: getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()}; }"""
+
 
 def open_tool(pg, files):
     pg.goto(f"{BASE}/#pdf-pages", wait_until="domcontentloaded", timeout=60000)
@@ -148,6 +161,9 @@ def main():
             if not card(pg, 5).evaluate("n => n.classList.contains('selected')"):
                 card(pg, 5).click()
                 pg.wait_for_timeout(200)
+            look = pg.evaluate(JS_SEL_LOOK, 5)
+            ck("การ์ดที่เลือก หน้ากระดาษไม่ถูกย้อมสี", not look["tinted"], str(look))
+            ck("การ์ดที่เลือก เลขหน้าเป็นป้ายทึบ", look["numFilled"], str(look))
             pg.keyboard.press("Delete")
             pg.wait_for_timeout(400)
             pg.locator(".ws-toolbar button, .s2-tbar button").filter(has_text="ย้อนการลบ").first.click()
@@ -178,8 +194,8 @@ def main():
             # ค เลือกหน้า แล้วคลิกพื้นที่ว่าง (โฟกัสตกไปที่ body) แล้วกด
             card(pg, 1).click()
             pg.wait_for_timeout(200)
+            # ‼️ 19/11/2026 คลิกที่ว่างตอนนี้ตั้งใจให้ยกเลิกเลือก (พี่ปอนด์ขอ) เจตนาข้อนี้คือ "โฟกัสไม่อยู่บนการ์ด" จึงใช้ blur แทนคลิก
             pg.evaluate("() => document.activeElement && document.activeElement.blur()")
-            pg.mouse.click(5, 940)
             pg.wait_for_timeout(200)
             act = pg.evaluate("() => document.activeElement.tagName")
             pg.keyboard.press("]")
@@ -192,7 +208,7 @@ def main():
             pg.wait_for_timeout(300)
             ck("ค คลิกที่ว่างแล้วกด Ctrl+Z หน้ากลับมา", state(pg)["n"] == s0["n"], f"{state(pg)['n']}")
             # ง Backspace แทน Del (โน้ตบุ๊ก) , จ Cmd+Z (Mac)
-            pg.mouse.click(5, 940)
+            pg.evaluate("() => document.activeElement && document.activeElement.blur()")
             pg.keyboard.press("Backspace")
             pg.wait_for_timeout(300)
             ck("ง Backspace ลบหน้าที่เลือกได้เหมือน Del", state(pg)["n"] == s0["n"] - 1, f"{state(pg)['n']}")
@@ -253,6 +269,25 @@ def main():
                return {bw: parseFloat(cs.borderTopWidth), bg: cs.backgroundColor}; }""")
             ck("ป้ายคีย์ไม่มีกรอบและพื้น (ไม่ดูเหมือนปุ่มให้คลิก)",
                look["bw"] == 0 and look["bg"] in ("rgba(0, 0, 0, 0)", "transparent"), str(look))
+            # 18/11/2026 ค่ำ พี่ปอนด์: "ให้พับเก็บได้ไหมเผื่อรก คนอยากรู้มากดดูเอง" , อยากได้ลูกศร , ชอบ Ctrl Shift เลือกหลายอัน
+            ck("บอกลูกศร เลื่อนหน้าที่เลือก", "← → ↑ ↓" in keys, str(keys))
+            ck("บอก Shift+คลิก เลือกเป็นช่วง", "Shift+คลิก" in keys, str(keys))
+            ck("บอก Esc ยกเลิกเลือก", "Esc" in keys, str(keys))
+            kh = pg.locator(".keyhints").first
+            vis = pg.evaluate("() => [...document.querySelectorAll('.keyhints .kbd')].some(k => k.checkVisibility())")
+            ck("เปิดมาแถวคีย์ลัดพับอยู่ (ไม่เห็นรายการคีย์)", not vis)
+            ck("ยังเห็นหัวข้อ คีย์ลัด ให้กดเปิด", pg.evaluate(JS_SEEN_TEXT, "คีย์ลัด"))
+            pg.locator(".keyhints-t").first.click(); pg.wait_for_timeout(200)
+            ck("กดหัวข้อแล้วรายการคีย์กางออก",
+               pg.evaluate("() => [...document.querySelectorAll('.keyhints .kbd')].some(k => k.checkVisibility())"))
+            # พี่ปอนด์: ข้อความอธิบายใต้การ์ด "อยากรู้ก็มากดอ่านเอง ทำเป็นหัวข้อสั้น ๆ"
+            ck("ข้อความวิธีใช้พับอยู่ตอนเปิด", not pg.evaluate(JS_SEEN_TEXT, "ใส่หลายไฟล์ได้"))
+            ck("เห็นหัวข้อ วิธีใช้ ให้กดเปิด", pg.evaluate(JS_SEEN_TEXT, "วิธีใช้"))
+            pg.locator(".pp-help > summary").first.click(); pg.wait_for_timeout(200)
+            ck("กด วิธีใช้ แล้วเห็นคำอธิบาย", pg.evaluate(JS_SEEN_TEXT, "ใส่หลายไฟล์ได้"))
+            pg.reload(); open_tool(pg, [A])
+            ck("รีโหลดแล้วจำว่าเคยกางไว้",
+               pg.evaluate("() => [...document.querySelectorAll('.keyhints .kbd')].some(k => k.checkVisibility())"))
             ctx.close()
             ctx, pg = desk()
             pg.add_init_script("""Object.defineProperty(navigator, 'platform', {get: () => 'MacIntel'});
@@ -303,9 +338,38 @@ def main():
             ck("Ctrl+Z ครั้งเดียวคืนทั้งสองหน้า", state(pg)["n"] == n0, str(state(pg)["n"]))
             card(pg, 4).click(modifiers=["Shift"]); pg.wait_for_timeout(250)
             ck("Shift+คลิกเลือกเป็นช่วง", len(state(pg)["sel"]) >= 3, str(state(pg)["sel"]))
-            pg.locator(".pp-bulk button").filter(has_text="ยกเลิกเลือก").first.click()
+            # 18/11/2026 ค่ำ พี่ปอนด์: "ยกเลิกเลือก แปลกไหม แค่เป็นปุ่มปิดก็เข้าใจแล้ว" และ "คลิกที่โล่ง ๆ มันก็ควรหายไป"
+            ck("แถบเลือกหลายหน้าไม่มีปุ่มคำว่า ยกเลิกเลือก", not pg.evaluate(JS_SEEN_BTN, "ยกเลิกเลือก"))
+            xb = pg.locator(".pp-bulk button[aria-label='ยกเลิกเลือก']")
+            ck("แถบมีปุ่มปิด (ไอคอน) ไว้ยกเลิกเลือก", xb.count() == 1 and xb.first.inner_text().strip() == "",
+               str(xb.count()))
+            xb.first.click()
             pg.wait_for_timeout(250)
-            ck("ยกเลิกเลือกแล้วแถบหาย", not pg.evaluate(JS_SEEN_BTN, "ยกเลิกเลือก") and not state(pg)["sel"])
+            ck("กดปุ่มปิดแล้วยกเลิกเลือก แถบหาย", not state(pg)["sel"] and not pg.evaluate(JS_SEEN_TEXT, "เลือก 3 หน้า"))
+            card(pg, 0).click(); card(pg, 2).click(modifiers=["Control"]); pg.wait_for_timeout(250)
+            gb = pg.locator(".pages").bounding_box(); lc = card(pg, 4).bounding_box()
+            pg.mouse.click(lc["x"] + lc["width"] + 60, lc["y"] + lc["height"] / 2)   # ที่ว่างข้างการ์ดใบสุดท้าย
+            pg.wait_for_timeout(250)
+            ck("คลิกที่ว่างในพื้นที่การ์ดแล้วยกเลิกเลือก", not state(pg)["sel"], str(state(pg)["sel"]))
+            card(pg, 1).click(); pg.wait_for_timeout(150)
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
+            ck("กด Esc แล้วยกเลิกเลือก และยังอยู่ในเครื่องมือ (ไม่เด้งกลับหน้าแรก)",
+               not state(pg)["sel"] and state(pg)["n"] > 0 and "pdf-pages" in pg.evaluate("() => location.hash"),
+               f"{state(pg)['sel']} n={state(pg)['n']} {pg.evaluate('() => location.hash')}")
+            # ลูกศรสี่ทิศเลื่อนหน้าที่เลือก
+            card(pg, 0).click(); pg.wait_for_timeout(150)
+            pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(200)
+            ck("ลูกศรขวาเลือกหน้าถัดไป", state(pg)["sel"] == [1], str(state(pg)["sel"]))
+            pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(200)
+            ck("ลูกศรซ้ายกลับหน้าก่อน", state(pg)["sel"] == [0], str(state(pg)["sel"]))
+            cols = pg.evaluate("""() => { const v = [...document.querySelectorAll('.pages .pg')].filter(e => e.offsetParent);
+               return v.filter(c => c.offsetTop === v[0].offsetTop).length; }""")
+            pg.keyboard.press("ArrowDown"); pg.wait_for_timeout(200)
+            ck(f"ลูกศรลงเลือกใบแถวถัดไปที่อยู่ใต้กัน (แถวละ {cols} ใบ)", state(pg)["sel"] == [cols], str(state(pg)["sel"]))
+            pg.keyboard.press("ArrowUp"); pg.wait_for_timeout(200)
+            ck("ลูกศรขึ้นกลับแถวบน", state(pg)["sel"] == [0], str(state(pg)["sel"]))
+            ck("หลังกดลูกศร โฟกัสอยู่บนการ์ดที่เลือก (กด Del ต่อได้)",
+               pg.evaluate("() => document.activeElement?.classList.contains('selected')"))
             ctx.close()
         section("④ ปุ่มบนการ์ดไม่ซ้ำแถบบน และมีแถบเลือกหลายหน้า", s4)
 
@@ -340,7 +404,8 @@ def main():
                     ((c.querySelector('.src')||{{}}).textContent||'').trim() + ':' + ((c.querySelector('img')||{{getAttribute:()=>''}}).getAttribute('alt')) === {before[3]!r});
                     return c ? ((c.querySelector('.num') || {{}}).textContent || '').trim() : null; }}""")
                 return {"veil": pg.evaluate(JS_VEIL), "ds": pg.evaluate("() => window.__ds"),
-                        "label": pg.evaluate(JS_SEEN_TEXT, "ย้ายไปเป็นหน้า 4"),
+                        "label": pg.evaluate(JS_SEEN_TEXT, "ย้ายไปเป็นหน้า 4"), "slot": pg.evaluate(JS_SLOT_NUM, 4),
+                        "sr": pg.evaluate(JS_SR_STATUS, "ย้ายไปเป็นหน้า 4"),
                         "nums": nums, "orig3": orig3}
 
             m = drag_mouse(pg, 0, 3, probe=mid)
@@ -349,7 +414,9 @@ def main():
             #    ข้อบนจึงจับม่านของเบราว์เซอร์จริงไม่ได้ ข้อนี้คือตัวกันจริง: ลากภายในต้องไม่เกิด native drag เลย
             #    เพราะม่านขึ้นจาก dragenter ที่มี Files เท่านั้น ไม่มี native drag = ไม่มี dragenter ให้ม่านขึ้น
             ck("ลากหน้าภายในไม่ใช้ native drag ของเบราว์เซอร์ (ต้นทางของม่าน)", m["ds"] == 0, f"dragstart {m['ds']} ครั้ง")
-            ck("ระหว่างลากเห็นป้าย ย้ายไปเป็นหน้า 4", m["label"])
+            ck("ระหว่างลาก ช่องวางโชว์เลข 4 ตัวโต", m["slot"])
+            ck("ระหว่างลาก ไม่มีป้ายพิลล์ ย้ายไปเป็นหน้า 4 ให้ตาเห็นซ้ำกับเลข (พี่ปอนด์ชอบเลขมากกว่า)", not m["label"])
+            ck("ระหว่างลาก โปรแกรมอ่านหน้าจอยังได้ยิน ย้ายไปเป็นหน้า 4", m["sr"])
             ck("ระหว่างลาก เลขหน้าการ์ดเปลี่ยนสด (หน้าเดิมที่ 4 ตอนนี้ขึ้นเลข 3)", m["orig3"] == "3", str(m))
             after = state(pg)["sig"]
             ck("ปล่อยแล้วหน้าไปอยู่ตำแหน่งที่ 4 ตามป้าย", after.index(before[0]) == 3, f"{before} -> {after}")
@@ -394,10 +461,10 @@ def main():
                          "touchPoints": [{"x": x0 + (x1 - x0) * k / 12, "y": y0 + (y1 - y0) * k / 12}]})
                 mp.wait_for_timeout(30)
             mp.wait_for_timeout(300)
-            label = mp.evaluate(JS_SEEN_TEXT, "ย้ายไปเป็นหน้า 3")
+            label = mp.evaluate(JS_SLOT_NUM, 3)
             cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
             mp.wait_for_timeout(800)
-            ck("มือถือ กดค้างแล้วลาก เห็นป้าย ย้ายไปเป็นหน้า 3", label)
+            ck("มือถือ กดค้างแล้วลาก ช่องวางโชว์เลข 3 ตัวโต", label)
             ck("มือถือ ลากด้วยนิ้วแล้วหน้าย้ายจริง", state(mp)["sig"].index(b0[0]) == 2, f"{b0} -> {state(mp)['sig']}")
             mctx.close()
         section("⑤ ลากย้ายหน้า เห็นว่าจะไปลงหน้าไหน ไม่มีม่านไฟล์", s5)
@@ -439,17 +506,35 @@ def main():
             pg.wait_for_timeout(300)
             pct2 = pg.locator(".pz-pct").inner_text()
             ck("ล้อเมาส์ลงแล้วซูมออก", int(pct2.rstrip('%')) < int(pct1.rstrip('%')), f"{pct1} -> {pct2}")
-            pg.get_by_role("button", name="พอดีจอ").first.click()
+            # 18/11/2026 ค่ำ พี่ปอนด์: "พอดีจอ กับ 100% ยุบเหลือสักอันนึงพอ" ปุ่มเดียวสลับไปมา
+            #   และ "กำลังทำให้คม ไม่ต้องเขียนขึ้นบอกก็ได้" กับ "ควรบอกว่าที่เปิดอยู่คือหน้าไหน" ที่แถบล่าง
+            ck("ระหว่างซูมไม่มีข้อความ กำลังทำให้คม ขึ้นบนจอ", not pg.evaluate(JS_SEEN_TEXT, "กำลังทำให้คม"))
+            ck("แถบล่างบอกหน้าที่เปิดอยู่ 2 / 5", "2 / 5" in pg.locator(".pz-bar").inner_text(), pg.locator(".pz-bar").inner_text())
+            zbtns = [t for t in pg.locator(".pz-bar button").all_inner_texts() if t.strip() in ("พอดีจอ", "100%")]
+            ck("ปุ่มพอดีจอกับ 100% รวมเหลือปุ่มเดียว", len(zbtns) == 1, str(zbtns))
+            pg.locator(".pz-bar button.pz-toggle").click()       # ตอนนี้ซูมอยู่ ปุ่มต้องพากลับพอดีจอ
             pg.wait_for_timeout(200)
             pct_fit = pg.locator(".pz-pct").inner_text()
-            pg.get_by_role("button", name="ขนาดจริง 100%").click()
+            ck("ซูมอยู่แล้วกดปุ่มสลับ กลับพอดีจอ และปุ่มเปลี่ยนเป็น 100%",
+               pg.locator(".pz-bar button.pz-toggle").inner_text().strip() == "100%", pct_fit)
+            pg.locator(".pz-bar button.pz-toggle").click()
             pg.wait_for_timeout(200)
             ck("ปุ่ม 100% ได้ 100%", pg.locator(".pz-pct").inner_text() == "100%", pg.locator(".pz-pct").inner_text())
+            ck("ที่ 100% ปุ่มสลับเปลี่ยนเป็น พอดีจอ", pg.locator(".pz-bar button.pz-toggle").inner_text().strip() == "พอดีจอ")
             pg.mouse.dblclick(st["x"] + st["width"] / 2, st["y"] + st["height"] / 2)
             pg.wait_for_timeout(300)
             ck("ดับเบิลคลิกแล้วระดับซูมเปลี่ยน", pg.locator(".pz-pct").inner_text() != "100%", pg.locator(".pz-pct").inner_text())
+            # พี่ปอนด์ "ตอนเปลี่ยนหน้ามันเห็นกระดาษลาง ๆ ก่อน" ภาพย่อความละเอียดต่ำถูกขยายโชว์ก่อนภาพคม
+            #   ต้องค้างภาพคมของหน้าเดิมไว้จนภาพคมของหน้าใหม่พร้อม ห้ามมี <img> ภาพย่อแทรกเข้ากระดาษระหว่างเปลี่ยนหน้า
+            pg.evaluate("""() => { window.__thumbFlash = 0; const p = document.querySelector('.pz-paper');
+               new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.tagName === 'IMG') window.__thumbFlash++; })))
+               .observe(p, {childList: true}); }""")
             pg.keyboard.press("ArrowRight")
-            pg.wait_for_timeout(400)
+            pg.wait_for_timeout(900)
+            ck("เปลี่ยนหน้าแล้วไม่โชว์ภาพย่อเบลอคั่นก่อนภาพคม", pg.evaluate("() => window.__thumbFlash") == 0,
+               f"ภาพย่อแทรก {pg.evaluate('() => window.__thumbFlash')} ครั้ง")
+            ck("เปลี่ยนหน้าแล้วกระดาษเป็นภาพคม (canvas)", pg.evaluate("() => !!document.querySelector('.pz-paper canvas')"))
+            ck("แถบล่างเปลี่ยนเป็น 3 / 5", "3 / 5" in pg.locator(".pz-bar").inner_text(), pg.locator(".pz-bar").inner_text())
             ck("ลูกศรขวาไปหน้า 3", "หน้า 3" in dlg.inner_text(), dlg.inner_text()[:40])
             pg.keyboard.press("ArrowLeft")
             pg.wait_for_timeout(300)

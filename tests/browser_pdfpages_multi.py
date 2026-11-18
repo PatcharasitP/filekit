@@ -231,10 +231,10 @@ def main():
             # ‼️ 18/11/2026 ตัวบอกตำแหน่งเปลี่ยนจากเส้นขอบ (.pg.over::after) เป็นช่องว่างที่เปิดให้
             #    กับป้าย "ย้ายไปเป็นหน้า N" ตามที่พี่ปอนด์ขอ เจตนาเดิม "เห็นว่าจะไปวางตรงไหน" ยังตรวจอยู่
             #    แค่ถามจากสิ่งที่ผู้ใช้เห็น (ป้ายบอกเลขหน้าปลายทาง) แทนชื่อคลาสของรุ่นเก่า
-            mark = pg.evaluate("""() => [...document.querySelectorAll('body *')].some(n =>
-              n.childElementCount === 0 && (n.textContent || '').includes('ย้ายไปเป็นหน้า 4') &&
-              n.checkVisibility({opacityProperty: true, visibilityProperty: true}))""")
-            ck(bool(mark), f"ตอนลากบอกตำแหน่งวางเป็นเลขหน้า ย้ายไปเป็นหน้า 4 (ได้ {mark})", str(mark))
+            # 18/11/2026 ค่ำ พี่ปอนด์ชอบเลขตัวโตในช่องวางมากกว่าป้ายคำพูด ป้ายพิลล์เอาออกจากตา เลยถามเลขในช่องวางแทน
+            mark = pg.evaluate("""() => { const b = document.querySelector('.pg.pp-slot .pp-slot-mark b');
+              return !!b && b.textContent.trim() === '4' && b.checkVisibility({opacityProperty: true, visibilityProperty: true}); }""")
+            ck(bool(mark), f"ตอนลากบอกตำแหน่งวางเป็นเลขหน้า 4 ตัวโตในช่องวาง (ได้ {mark})", str(mark))
             pg.mouse.up()
             pg.wait_for_timeout(500)
             after_alt = pg.eval_on_selector_all(".pg img", JS_ALT)

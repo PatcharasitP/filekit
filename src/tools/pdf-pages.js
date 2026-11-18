@@ -59,8 +59,13 @@ const STYLE = `
 .pp-center .pages{user-select:none;-webkit-user-select:none}
 .pp-center .pg{cursor:grab;-webkit-touch-callout:none}
 .pp-center .pg:focus-visible{outline:2px solid var(--ac,var(--brand));outline-offset:2px}
-.pg.selected::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:color-mix(in srgb,var(--ac,var(--brand)) 9%,transparent)}
+/* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: "ตอนเลือกการ์ดแอบตะหงิด" รุ่นแรกย้อมสีทับทั้งหน้ากระดาษ หน้าดูเหมือนกระดาษสีชมพู
+   ตอนนี้กระดาษคงสีจริง บอกว่าเลือกด้วยวงขอบกับแสงรอบการ์ด และเลขหน้าเปลี่ยนเป็นป้ายทึบ */
+.pp-center .pg.selected{outline:2px solid var(--ac,var(--brand));outline-offset:2px;
+  box-shadow:0 0 0 6px color-mix(in srgb,var(--ac,var(--brand)) 16%,transparent),0 10px 22px -12px rgba(15,23,42,.35)}
+.pg.selected .pp-foot{background:var(--bg-soft)}
+.pg.selected .pp-foot .num{background:color-mix(in srgb,var(--ac,var(--brand)) 82%,#000);color:#fff;
+  border-radius:999px;padding:1px 9px}
 /* เลขหน้าในไฟล์ผลลัพธ์ แถบบางใต้ภาพ ไม่ทับเนื้อหา */
 .pg .pp-foot{display:flex;justify-content:center;padding:3px 0 4px;background:var(--bg-soft);border-top:1px solid var(--line-soft)}
 .pg .pp-foot .num{position:static;display:inline-block;background:none;color:var(--text);padding:0;
@@ -88,6 +93,15 @@ const STYLE = `
 .pp-bulk[hidden]{display:none}
 .pp-bulk-n{font:700 13px/1.3 var(--font);margin-inline-end:6px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pp-bulk .btn{min-height:34px;white-space:nowrap}
+.pp-help{margin:6px 2px 0;font-size:12px;color:var(--text-mute)}
+.pp-help-body{padding:2px 0 0 18px}
+.pp-help[open] > .keyhints-t::before{transform:rotate(45deg)}
+.pp-help-body .note{margin:3px 0}
+.pp-bulk-x{appearance:none;border:0;background:transparent;color:var(--text-dim);width:34px;height:34px;border-radius:999px;
+  display:grid;place-items:center;cursor:pointer;margin-inline-start:2px}
+.pp-bulk-x:hover{background:var(--bg-soft);color:var(--text)}
+.pp-bulk-x:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.pp-bulk-x .pg-ico{width:18px;height:18px}
 @keyframes pp-up{from{opacity:0;translate:0 10px}to{opacity:1;translate:0 0}}
 /* ── ลากย้ายหน้า ── */
 html.pp-grabbing,html.pp-grabbing *{cursor:grabbing !important}
@@ -99,6 +113,9 @@ html.pp-grabbing,html.pp-grabbing *{cursor:grabbing !important}
   box-shadow:0 28px 50px -10px rgba(15,23,42,.45),0 10px 20px rgba(15,23,42,.18)}
 .pg.pp-ghost.landing{transition:translate .34s cubic-bezier(.34,1.56,.64,1),scale .34s cubic-bezier(.34,1.56,.64,1),
   rotate .28s ease,box-shadow .3s ease}
+/* ‼️ 18/11/2026 ค่ำ พี่ปอนด์ชอบเลขตัวโตในช่องวาง "ดีกว่าคำพูดว่าย้ายไปหน้าไหน" ป้ายนี้จึงเหลือให้โปรแกรมอ่านหน้าจอเท่านั้น
+   opacity 0 ยังอยู่ในต้นไม้ accessibility (role=status ยังประกาศ) แต่ตาไม่เห็น */
+.pp-move-badge{opacity:0}
 .pp-move-badge{position:fixed;z-index:1201;pointer-events:none;translate:-50% -100%;white-space:nowrap;
   padding:6px 13px;border-radius:999px;background:color-mix(in srgb,var(--brand) 80%,#000);color:#fff;
   font:700 13px/1.2 var(--font);box-shadow:0 8px 20px rgba(0,0,0,.28)}
@@ -217,7 +234,9 @@ export function mount(tool) {
       onclick: () => rotateSelected(90) }),
     button(tr("ลบ", "Delete"), { ghost: true, icon: "trash",
       label: tr("ลบหน้าที่เลือก", "Delete the selected pages"), onclick: dropSelected }),
-    button(tr("ยกเลิกเลือก", "Clear selection"), { ghost: true, onclick: () => { clearSel(); render(); } }),
+    /* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: "ยกเลิกเลือก แปลกไหม แค่เป็นปุ่มปิดก็เข้าใจแล้ว" ไอคอนกากบาท ชื่อเต็มอยู่ใน aria-label กับ title */
+    el("button", { class: "pp-bulk-x", type: "button", "aria-label": tr("ยกเลิกเลือก", "Clear selection"),
+      title: tr("ยกเลิกเลือก (Esc)", "Clear selection (Esc)"), onclick: () => { clearSel(); render(); } }, [uiIcon("close", "pg-ico")]),
   ]);
   const bulkDock = el("div", { class: "pp-bulk-dock" }, [bulkBar]);
   const undoDelBtn = button(tr("ย้อนการลบ", "Undo delete"), { ghost: true, icon: "undo",
@@ -254,14 +273,31 @@ export function mount(tool) {
         จะให้ "หน้าเท่ากัน" และ "ไม่มีที่ว่าง" พร้อมกันต้องยืดบิดหรือตัดข้างทิ้ง
      ค่าตั้งต้นคือหน้าเท่ากัน เพราะไฟล์ที่หน้าหลายขนาดปนกัน สั่งพิมพ์แล้วเครื่องย่อขยายมั่ว */
   let cropMode = "same";
+  /* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: "อันนี้เหมือนมาจัดการเขา เขาควรอิสระได้สิ" บางคนอยากได้หน้า 1 เต็มกระดาษ หน้า 2 หดพอดีเนื้อหา
+     ข้อขัดกันเชิงเรขาคณิตยังจริงอยู่ แต่ขัดกัน "ในหน้าเดียว" ไม่ใช่ทั้งไฟล์ แต่ละหน้าเลือกเองได้
+     เลือกหน้าไว้แล้วกด = ใช้กับหน้าที่เลือก , ไม่ได้เลือก = ใช้ทุกหน้า (ล้างที่ตั้งรายหน้าทิ้ง) */
+  const modeOf = (it) => it.cropMode || cropMode;
   const sameBtn = button(tr("หน้าเท่ากันทุกหน้า", "Same page size"), { ghost: true,
     onclick: () => setCropMode("same") });
   const tightBtn = button(tr("ตัดหน้าให้พอดีเนื้อหา", "Page hugs the content"), { ghost: true,
     onclick: () => setCropMode("tight") });
-  function setCropMode(m) {
-    cropMode = m;
+  function syncCropBtns() {
+    let m = cropMode;
+    if (sel.size) { const ms = new Set([...sel].map(modeOf)); m = ms.size === 1 ? [...ms][0] : null; }
     sameBtn.classList.toggle("on", m === "same");
     tightBtn.classList.toggle("on", m === "tight");
+  }
+  function setCropMode(m) {
+    if (sel.size) {
+      sel.forEach((it) => { it.cropMode = m; });
+      st.info(m === "same"
+        ? tr(`${sel.size} หน้าที่เลือกจะเต็มกระดาษขนาดเดิม`, `The ${pl(sel.size, "selected page", "selected pages")} keep the full paper size`)
+        : tr(`${sel.size} หน้าที่เลือกจะหดพอดีเนื้อหา`, `The ${pl(sel.size, "selected page", "selected pages")} shrink to the content`));
+      render();
+      return;
+    }
+    cropMode = m;
+    items.forEach((it) => { delete it.cropMode; });
     st.info(m === "same"
       ? tr("ทุกหน้าจะได้ขนาดเท่ากัน เนื้อหาที่ครอบจัดกลางหน้า เหลือขอบขาวบ้าง",
            "Every page keeps the same size, trimmed content sits centred with some white margin")
@@ -272,8 +308,8 @@ export function mount(tool) {
   const cropGroup = el("div", {}, [
     el("h3", {}, tr("ครอบแล้วเอาหน้ากระดาษแบบไหน", "After trimming, what happens to the paper")),
     el("div", { class: "row" }, [sameBtn, tightBtn]),
-    el("small", {}, tr("เลือกได้อย่างเดียว เพราะเนื้อหามักกว้างเต็มหน้าอยู่แล้ว จะให้เท่ากันและไม่มีที่ว่างพร้อมกันไม่ได้",
-                       "Only one is possible, trimmed content usually already spans the full width")),
+    el("small", {}, tr("เลือกหน้าไว้ก่อนแล้วกด = ใช้เฉพาะหน้านั้น , ไม่ได้เลือก = ใช้ทุกหน้า",
+                       "Select pages first to apply to them only, or nothing selected to apply to all")),
   ]);
 
   const sortGroup = el("div", {}, [
@@ -395,17 +431,84 @@ export function mount(tool) {
       e.preventDefault();
       if (sel.size) rotateSelected(k === "]" ? 90 : 270);
       else needPick(tr("หมุน", "rotate"));
+    } else if (k.startsWith("Arrow")) {
+      arrowMove(e, t);
     }
   };
+  /* ── ลูกศรสี่ทิศ (18/11/2026 ค่ำ พี่ปอนด์ขอ) ซ้ายขวา = ใบก่อน ใบถัดไป , ขึ้นลง = ใบที่อยู่ตรงกันในแถวบนแถวล่าง
+     Shift+ลูกศร = ขยายช่วงที่เลือกจากใบตั้งต้น แบบเดียวกับ Shift+คลิก
+     ‼️ ยังไม่ได้เลือกอะไรและโฟกัสไม่อยู่บนการ์ด ลูกศรขึ้นลงปล่อยให้เลื่อนหน้าเว็บตามปกติ ไม่แย่งไป */
+  function arrowMove(e, t) {
+    const cards = [...pagesGrid.querySelectorAll(".pg:not(.dropped)")];
+    if (!cards.length) return;
+    const k = e.key;
+    const onCard = t.closest?.(".pg");
+    const anchorCard = anchor ? pagesGrid.querySelector(`.pg[data-i="${items.indexOf(anchor)}"]`) : null;
+    const cur = onCard || (sel.size ? (anchorCard || pagesGrid.querySelector(".pg.selected")) : null);
+    if (!cur && (k === "ArrowUp" || k === "ArrowDown")) return;
+    e.preventDefault();
+    const i = cur ? cards.indexOf(cur) : -1;
+    let n = i;
+    if (i < 0) n = 0;
+    else if (k === "ArrowLeft") n = i - 1;
+    else if (k === "ArrowRight") n = i + 1;
+    else {
+      const top0 = cur.offsetTop, x0 = cur.getBoundingClientRect().left;
+      const down = k === "ArrowDown";
+      const other = cards.filter((c) => (down ? c.offsetTop > top0 + 2 : c.offsetTop < top0 - 2));
+      if (other.length) {
+        const rowTop = down ? Math.min(...other.map((c) => c.offsetTop)) : Math.max(...other.map((c) => c.offsetTop));
+        const row = other.filter((c) => Math.abs(c.offsetTop - rowTop) <= 2);
+        const dist = (c) => Math.abs(c.getBoundingClientRect().left - x0);
+        n = cards.indexOf(row.reduce((a, c) => (dist(c) < dist(a) ? c : a)));
+      }
+    }
+    n = Math.max(0, Math.min(cards.length - 1, n));
+    const idx = cards[n].dataset.i;
+    const it = items[+idx];
+    if (e.shiftKey && anchor) selectItem(it, "range");
+    else { sel.clear(); sel.add(it); anchor = it; render(); }
+    const card = pagesGrid.querySelector(`.pg[data-i="${idx}"]`);
+    card?.focus({ preventScroll: true });
+    card?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+  /* ‼️ คลิกที่ว่างในพื้นที่การ์ด = ยกเลิกเลือก (พี่ปอนด์: "คลิกที่ส่วนอื่นโล่ง ๆ มันก็ควรหายไป")
+     นับเฉพาะพื้นที่การ์ดกับพื้นโล่งใต้การ์ด ไม่นับแถบเครื่องมือ (ครอบขอบขาว ทำกับหน้าที่เลือก) และแผงขวา */
+  ws.body.addEventListener("click", (e) => {
+    if (!sel.size || dragJustEnded()) return;
+    if (e.target.closest("button, a, input, select, textarea, label, summary, details, .pg, .pp-bulk, [role=dialog]")) return;
+    clearSel(); render();
+  });
   document.addEventListener("keydown", onDocKey);
+  /* ‼️ Esc = ยกเลิกเลือก ต้องดักชั้น capture
+     app.js มีตัวรับ Esc ระดับทั้งเว็บที่ "พาออกจากเครื่องมือกลับหน้าแรก" ผูกไว้ก่อนเรา จึงได้อีเวนต์ก่อน
+     รุ่นแรกฟ้าใส่ไว้ใน onDocKey ผลคือกด Esc แล้วหลุดออกจากเครื่องมือ หน้าที่จัดไว้หายหมด (เทส cropmix จับได้ 19/11/2026)
+     ดักเฉพาะตอนมีหน้าที่เลือกอยู่ ไม่มีอะไรเลือก Esc ทำงานแบบเดิมของเว็บ */
+  const onEscKey = (e) => {
+    if (e.key !== "Escape" || !sel.size || !ws.wrap.isConnected || e.isComposing) return;
+    const t = e.target;
+    if (!(t === document.body || t === document.documentElement || ws.wrap.contains(t))) return;
+    if (t.closest?.("input, textarea, select, [contenteditable=''], [contenteditable='true'], dialog, [role=dialog]")) return;
+    if (document.querySelector(".pz[role=dialog]")) return;     // ตัวดูหน้าใหญ่เปิดอยู่ ให้มันปิดตัวเองก่อน
+    e.preventDefault();
+    e.stopPropagation();
+    clearSel(); render();
+  };
+  document.addEventListener("keydown", onEscKey, true);
   function needPick(what) {
     st.info(tr(`คลิกเลือกหน้าก่อน แล้วค่อยกด${what}`, `Click a page to select it first, then ${what}`));
     pagesGrid.classList.remove("pp-nudge");
     void pagesGrid.offsetWidth;                // เริ่มแอนิเมชันใหม่ทุกครั้ง
     pagesGrid.classList.add("pp-nudge");
   }
+  const HELP_KEY = "filekit-pdfpages-help-open";
+  const helpBody = el("div", { class: "pp-help-body" });
+  const helpBox = el("details", { class: "pp-help" }, [el("summary", { class: "keyhints-t" }, tr("วิธีใช้", "How to use")), helpBody]);
+  try { helpBox.open = localStorage.getItem(HELP_KEY) === "1"; } catch { /* โหมดส่วนตัว */ }
+  helpBox.addEventListener("toggle", () => { try { localStorage.setItem(HELP_KEY, helpBox.open ? "1" : "0"); } catch { /* โหมดส่วนตัว */ } });
   registerCleanup(ws.wrap, { dispose: () => {
     document.removeEventListener("keydown", onDocKey);
+    document.removeEventListener("keydown", onEscKey, true);
     document.removeEventListener("keydown", onNavKey, true);
     document.removeEventListener("pointerdown", onNavPointer, true);
     closeDocs(); hidePeek();
@@ -417,9 +520,18 @@ export function mount(tool) {
       [IS_MAC ? ["delete ⌫"] : ["Del", "Backspace"], tr("ลบหน้าที่เลือก", "Delete selected page")],
       [IS_MAC ? "⌘Z" : "Ctrl+Z", tr("ย้อนการลบ", "Undo delete")],
       ["[ ]", tr("หมุนซ้าย ขวา", "Rotate left, right")],
+      ["← → ↑ ↓", tr("เลื่อนไปหน้าข้าง ๆ", "Move to the next page")],
       ["Enter", tr("เลือก ยกเลิกเลือก", "Select, deselect")],
       [IS_MAC ? tr("⌘+คลิก", "⌘+click") : tr("Ctrl+คลิก", "Ctrl+click"), tr("เลือกหลายหน้า", "Select several pages")],
+      [tr("Shift+คลิก", "Shift+click"), tr("เลือกเป็นช่วง", "Select a range")],
+      ["Esc", tr("ยกเลิกเลือก", "Clear selection")],
     ]),
+    helpBox,
+  );
+  /* ‼️ 18/11/2026 ค่ำ พี่ปอนด์: ข้อความอธิบายใต้การ์ด "ถ้าเขาอยากรู้ก็มากดอ่านเอง ทำเป็นหัวข้อสั้น ๆ"
+     พับไว้ตั้งแต่เปิด เหลือแค่หัวข้อ วิธีใช้ แบบเดียวกับแถวคีย์ลัด จำในเครื่องว่าเคยกางไว้
+     ‼️ ลิงก์ไปเครื่องมือแก้ข้อความย้ายเข้าไปในนี้ได้ เพราะแถบเครื่องมือมีปุ่ม แก้ข้อความบนหน้า ให้เห็นอยู่แล้ว */
+  helpBody.append(
     el("div", { class: "note s2-only-wide" },
       // ‼️ เครื่องมือนี้สร้างไฟล์ใหม่แล้วคัดลอกหน้าที่เก็บเข้าไป สารบัญ/บุ๊กมาร์กของไฟล์เดิม
       //    จึงไม่ติดมาด้วย แม้ผู้ใช้จะไม่ได้แก้อะไรเลย · บอกไว้ตรง ๆ เหมือนที่ pdf-merge บอก
@@ -433,6 +545,10 @@ export function mount(tool) {
     el("div", { class: "note" },
       tr("ใส่หลายไฟล์ได้ ป้าย A B C บอกว่าหน้านั้นมาจากไฟล์ไหน",
          "Multiple files welcome. The A B C tag shows which file a page came from")),
+    // พี่ปอนด์อยากให้จุดหกจุดกดได้ (19/11/2026) el() ถอด title ทิ้งทุกที่ จึงบอกไว้ตรงนี้แทน
+    el("div", { class: "note" },
+      tr("คลิกแถวไฟล์ด้านขวา เลือกทุกหน้าของไฟล์นั้น ลากแถวเพื่อสลับลำดับไฟล์",
+         "Click a file row on the right to select all its pages, drag it to reorder files")),
     el("div", { class: "note" },
       tr("ไฟล์ที่ได้จะไม่มีสารบัญ/บุ๊กมาร์กของไฟล์เดิมติดมา",
          "The result will not carry over the original bookmarks")),
@@ -654,7 +770,7 @@ export function mount(tool) {
                 const cropAR = (it.pw * it.crop.w) / (it.ph * it.crop.h);
                 /* โหมด "พอดีเนื้อหา" การ์ดหดตามกรอบที่ครอบ ไม่มีกระดาษขาวเหลือ
                    ต้องให้พรีวิวต่างกันตามโหมด ไม่งั้นพรีวิวโกหกอีกแบบหนึ่ง */
-                if (cropMode === "tight") {
+                if (modeOf(it) === "tight") {
                   return el("div", { class: "pg-page",
                     style: { aspectRatio: `${it.pw * it.crop.w} / ${it.ph * it.crop.h}`,
                              transform: `rotate(${it.rotate}deg)` } }, [
@@ -724,6 +840,7 @@ export function mount(tool) {
                 `${items.filter((i) => !i.dropped).length}/${pl(items.length, "page", "pages")} left`));
     syncToolbar();
     syncBulk();
+    syncCropBtns();
     lastVanished = syncEmptyFiles();
   }
   let flashItem = null;          // ใบที่เพิ่งวางจากการลาก ให้กะพริบไฮไลต์สั้น ๆ หลังวาดใหม่
@@ -1233,9 +1350,8 @@ export function mount(tool) {
       for (const [fi, doc] of srcDocs) {
         /* ‼️ โหมด "หน้าเท่ากัน" ไม่คัดลอกหน้าที่ครอบมา เพราะจะฝังด้วย embedPage แทน
            แต่โหมด "พอดีเนื้อหา" ต้องคัดลอกมาปกติ เพราะใช้ setCropBox กับหน้าที่คัดลอกแล้ว */
-        const skipCrop = cropMode === "same";
         const slots = keep.map((k, i) =>
-          (!k.blank && !(skipCrop && k.crop) && k.fi === fi ? i : -1)).filter((i) => i >= 0);
+          (!k.blank && !(modeOf(k) === "same" && k.crop) && k.fi === fi ? i : -1)).filter((i) => i >= 0);
         const pages = await out.copyPages(doc, slots.map((i) => keep[i].index));
         slots.forEach((slot, j) => { copiedAt[slot] = pages[j]; });
       }
@@ -1252,7 +1368,7 @@ export function mount(tool) {
               ถ้าใช้ setCropBox หน้ากระดาษจะเล็กลงตามเนื้อหา แล้วเครื่องพิมพ์จะย่อขยายมั่ว
            ‼️ พิกัด PDF นับจากมุมล่างซ้าย ส่วนค่าที่เก็บไว้นับจากมุมบนซ้ายแบบภาพ ต้องกลับแกน y
            ‼️ ขยายแบบรักษาสัดส่วน แล้วจัดกลางหน้า ไม่ยืดบิด ไม่งั้นตัวหนังสือเพี้ยน */
-        if (it.crop && cropMode === "tight") {
+        if (it.crop && modeOf(it) === "tight") {
           /* หน้ากระดาษหดพอดีเนื้อหา ใช้ setCropBox ซึ่งไม่แตะพิกเซลเลย ไม่เสียคุณภาพ */
           const mb = page.getMediaBox();
           page.setCropBox(mb.x + it.crop.x * mb.width,

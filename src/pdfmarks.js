@@ -47,6 +47,15 @@ export const hexToRgb01 = (hex) => {
 };
 
 export const MARK_STYLE = `
+/* ช่องสีเป็นวงมีขอบเทาพร้อมชื่อสี (ฟ้าเคาะ 19/11/2026) สีขาวบนแผงขาวเดิมดูเหมือนช่องว่าง ไม่รู้ว่ากดเลือกสีได้
+   ‼️ ขอบต้องต่างจากพื้นแผงชัด วัดคอนทราสต์ใน tests/browser_pdfpages_edit.py */
+.pe-swatch{display:flex;align-items:center;gap:10px;min-height:40px}
+.field .pe-swatch input[type=color]{width:38px;height:38px;flex:none;padding:0;border-radius:50%;
+  border:1.5px solid #6b7280;background:transparent;overflow:hidden;cursor:pointer}
+.field .pe-swatch input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.field .pe-swatch input[type=color]::-webkit-color-swatch{border:none;border-radius:50%}
+.field .pe-swatch input[type=color]::-moz-color-swatch{border:none;border-radius:50%}
+.pe-swatch-name{font-size:.9rem;color:var(--text,#111)}
 .pe-left,.pe-right{display:flex;flex-direction:column;gap:10px}
 .pe-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px;
   max-height:330px;overflow:auto;padding:2px}
@@ -224,6 +233,17 @@ export function createMarkEditor(host) {
   const textColor = el("input", { type: "color", value: "#000000" });
   const coverColor = el("input", { type: "color", value: "#ffffff" });
   const hlColor = el("input", { type: "color", value: "#ffe14d" });
+  const COLOR_NAMES = { "#ffffff": ["ขาว", "White"], "#000000": ["ดำ", "Black"], "#ffe14d": ["เหลือง", "Yellow"],
+                        "#ff0000": ["แดง", "Red"], "#0000ff": ["น้ำเงิน", "Blue"] };
+  /** วงสีพร้อมชื่อสี สีที่ไม่มีชื่อแสดงรหัสสี */
+  const swatch = (input) => {
+    const name = el("span", { class: "pe-swatch-name" });
+    const sync = () => { const n = COLOR_NAMES[input.value.toLowerCase()]; name.textContent = n ? tr(n[0], n[1]) : input.value.toUpperCase(); };
+    input.addEventListener("input", sync);
+    input.addEventListener("change", sync);
+    sync();
+    return el("span", { class: "pe-swatch" }, [input, name]);
+  };
   /* ‼️ ความกว้างของลายเซ็นกับรูป เก็บเป็นสัดส่วนของหน้า ไม่ใช่พิกเซล
      หน้ากระดาษบนจอย่อขยายได้ ถ้าเก็บเป็นพิกเซลของจอ ขนาดที่ได้ในไฟล์จะไม่ตรงกับที่เห็น */
   const stampSize = el("input", { type: "range", min: "5", max: "60", value: "22", step: "1" });
@@ -428,12 +448,12 @@ export function createMarkEditor(host) {
       el("div", { class: "row" }, [
         field(tr("ขนาด", "Size"), sizeSel),
         field(tr("น้ำหนัก", "Weight"), weightSel),
-        field(tr("สีตัวอักษร", "Text colour"), textColor),
+        field(tr("สีตัวอักษร", "Text colour"), swatch(textColor)),
       ]),
     ]),
     grp(["cover"], [
       el("h3", {}, tr("สีที่ใช้ปิดทับ", "Cover colour")),
-      field(tr("สี", "Colour"), coverColor,
+      field(tr("สี", "Colour"), swatch(coverColor),
         tr("ปกติใช้สีขาวให้กลืนกับกระดาษ", "White usually blends with the paper")),
       el("div", { class: "pe-hint" },
         tr("ปิดทับคือวางสี่เหลี่ยมทับข้อความเดิม ตัวอักษรเดิมยังอยู่ในไฟล์",
@@ -441,7 +461,7 @@ export function createMarkEditor(host) {
     ]),
     grp(["highlight"], [
       el("h3", {}, tr("สีไฮไลต์", "Highlight colour")),
-      field(tr("สี", "Colour"), hlColor),
+      field(tr("สี", "Colour"), swatch(hlColor)),
       el("div", { class: "pe-hint" },
         tr("แถบไฮไลต์โปร่งแสง ตัวหนังสือใต้แถบยังอ่านออกและยังค้นหาเจอ",
            "The band is translucent, so the text underneath stays readable and searchable")),

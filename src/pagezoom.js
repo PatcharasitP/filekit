@@ -21,6 +21,9 @@ const STYLE = `
   background:rgba(12,14,20,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#fff;
   animation:pz-in .18s var(--ease-snap,ease)}
 @keyframes pz-in{from{opacity:0}to{opacity:1}}
+/* ‼️ จอแคบ พื้นตัวดูทึบ (ฟ้าเคาะ 19/11/2026) พื้นโปร่งเบลอทำให้ปุ่มแดงของหน้าข้างหลังซึมขึ้นมาที่หัวและแถบล่าง ดูเหมือนรอยเปื้อน
+   จอกว้างพื้นที่รอบหน้ากว้าง ความโปร่งยังบอกว่าเป็นชั้นซ้อน จึงคงไว้ */
+@media (max-width:760px){ .pz{background:#0e1016;-webkit-backdrop-filter:none;backdrop-filter:none} }
 .pz-top{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:52px}
 .pz-title{flex:1;min-width:0;font:600 14px/1.4 var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pz-title small{font-weight:500;opacity:.72;margin-inline-start:8px}
@@ -107,7 +110,7 @@ export function shownSize(it) {
 /** เรนเดอร์หน้าเป็น canvas ที่ความกว้างเป้าหมาย (px จริง) พร้อมครอบและหมุนตามที่ผู้ใช้จัด
  *  ‼️ ค่าครอบเก็บเป็นสัดส่วนของภาพที่ pdf.js วาดตามการหมุนเดิมของไฟล์ จึงเรนเดอร์แบบไม่ใส่การหมุนของเราก่อน
  *     ตัดส่วนที่ครอบ แล้วค่อยหมุนตอนวาดลงใบสุดท้าย */
-export async function renderItem(doc, it, targetW) {
+export async function renderItem(doc, it, targetW, paint) {
   const page = await doc.getPage(it.index + 1);
   const base = page.getViewport({ scale: 1 });
   // ด้านกว้างที่เห็นหลังครอบและหมุน = targetW
@@ -126,6 +129,8 @@ export async function renderItem(doc, it, targetW) {
   ctx.fillRect(0, 0, full.width, full.height);
   await page.render({ canvasContext: ctx, viewport: vp }).promise;
   page.cleanup();
+  /* paint(ctx, W, H) วาดของเพิ่มลงภาพหน้าฐานก่อนครอบและหมุน (ของที่วางของจัดการหน้า PDF เก็บในพื้นที่นี้) */
+  if (paint) await paint(ctx, full.width, full.height);
   const sx = it.crop ? Math.floor(it.crop.x * full.width) : 0;
   const sy = it.crop ? Math.floor(it.crop.y * full.height) : 0;
   const sw = it.crop ? Math.max(1, Math.round(it.crop.w * full.width)) : full.width;
@@ -148,13 +153,15 @@ function blankNode(it) {
 }
 
 /* ── ① ภาพลอยตอนชี้ค้าง ───────────────────────────────────────────── */
-/** @param grid ตะแกรงการ์ด  @param opts {itemOf(card), getDoc(fi), blocked()} */
-export function attachPeek(grid, { itemOf, getDoc, blocked }) {
+/** @param grid ตะแกรงการ์ด  @param opts {itemOf(card), getDoc(fi), blocked(), paint?, inkKey?, blankPic?}
+ *  paint(it) คืนตัววาดของเพิ่มให้ renderItem หรือ null , inkKey(it) ค่าที่เปลี่ยนเมื่อของที่วางเปลี่ยน (ล้างภาพที่จำไว้)
+ *  blankPic(it) ภาพของหน้าว่างที่มีของวาง คืน null = กระดาษเปล่าแบบเดิม */
+export function attachPeek(grid, { itemOf, getDoc, blocked, paint, inkKey, blankPic }) {
   ensureStyle();
   if (!matchMedia("(hover:hover) and (pointer:fine)").matches) return () => {};
   let timer = 0, shownFor = null, node = null, token = 0;
   const cache = new Map();    // คีย์ = ตัว item + การหมุน + การครอบ -> canvas (เก็บล่าสุด 12 ใบ)
-  const keyOf = (it) => `${it.rotate}|${it.crop ? [it.crop.x, it.crop.y, it.crop.w, it.crop.h].join(",") : ""}`;
+  const keyOf = (it) => `${it.rotate}|${it.crop ? [it.crop.x, it.crop.y, it.crop.w, it.crop.h].join(",") : ""}|${inkKey ? inkKey(it) : ""}`;
   const hide = () => {
     clearTimeout(timer);
     token++;
@@ -182,14 +189,15 @@ export function attachPeek(grid, { itemOf, getDoc, blocked }) {
     const left = roomR >= roomL ? r.right + 12 : r.left - 12 - w;
     const top = Math.max(12, Math.min(innerHeight - h - 12, r.top + r.height / 2 - h / 2));
     let pic;
-    if (it.blank) pic = blankNode(it);
+    const bp = it.blank && blankPic ? blankPic(it) : null;
+    if (it.blank) pic = bp ? el("img", { src: bp, alt: "" }) : blankNode(it);
     else {
       const k = keyOf(it);
       let entry = cache.get(it);
       if (!entry || entry.k !== k) {
         const doc = await getDoc(it.fi);
         if (my !== token || !doc) return;
-        const c = await renderItem(doc, it, Math.round(w * Math.min(2, devicePixelRatio || 1)));
+        const c = await renderItem(doc, it, Math.round(w * Math.min(2, devicePixelRatio || 1)), paint ? paint(it) : null);
         if (my !== token) return;
         entry = { k, c };
         cache.delete(it);
@@ -539,5 +547,5 @@ export function openViewer({ list, start, getDoc, label, onClose, edit }) {
   goTo(at);
   closeBtn.focus();
   if (edit?.open) setEditing(true);
-  return { close, setEditing };
+  return { close, setEditing, goTo: (i) => { if (i !== at) goTo(i); } };
 }

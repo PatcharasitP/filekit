@@ -48,11 +48,12 @@ def load_sample(pg, tool):
 def pdf_edit(pg, bad):
     load_sample(pg, "pdf-edit")
     pg.wait_for_selector(".pe-stage:not([hidden])", timeout=60000)
-    pg.get_by_role("button", name="รูป", exact=True).filter(visible=True).first.click()
+    # รอบ 6 (19/11/2026) เครื่องมือรูปรวมกับลายเซ็นเป็นปุ่มเดียว
+    pg.get_by_role("button", name="ลายเซ็นและรูป", exact=True).filter(visible=True).first.click()
     pg.wait_for_timeout(500)
     inputs = pg.locator("input[type=file][accept='image/*']")
     inputs.nth(inputs.count() - 1).set_input_files(str(bad))
-    return wait_status(pg, "อ่านรูปไม่ได้|เลือกรูปแล้ว")
+    return wait_status(pg, "อ่านรูปไม่ได้|เลือกรูปแล้ว|เพิ่มในที่บันทึกไว้แล้ว")
 
 
 def pdf_sign(pg, bad):

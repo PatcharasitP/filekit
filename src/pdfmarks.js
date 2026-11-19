@@ -165,12 +165,29 @@ export const MARK_STYLE = `
 .pe-box.stamp{line-height:0}
 .pe-box.stamp img{width:100%;height:auto;display:block;pointer-events:none}
 .pe-sign{display:flex;flex-direction:column;gap:8px}
+.pe-right .row.pe-modes,.row.pe-modes{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp3,12px) var(--sp2,8px);align-items:stretch}
+/* แถวห่าง 12px เพราะปุ่มที่เลือกอยู่ลอยขึ้น 2px ระยะที่ตาเห็นจึงยังเกิน 8px */
+.pe-modes > .btn{width:100%;min-width:0;justify-content:center;white-space:nowrap;padding-inline:10px;margin:0}
 .pe-sign .sign-canvas{border:1px dashed var(--line);border-radius:var(--r-sm,10px);background:#fff;touch-action:none}
 .pe-saved{display:flex;flex-wrap:wrap;gap:8px}
 .pe-saved figure{position:relative;margin:0;border:1px solid var(--line);border-radius:8px;
   padding:4px 6px;background:#fff;cursor:pointer;line-height:0}
 .pe-saved figure.on{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent)}
-.pe-saved img{height:34px;width:auto;display:block}
+.pe-saved img{height:34px;width:auto;display:block;
+  background:repeating-conic-gradient(#e9ecf1 0 25%,#fff 0 50%) 0 0/8px 8px}
+/* ลายตารางหลังภาพย่อ ให้เห็นว่าส่วนไหนโปร่ง (สวิตช์ลบพื้นขาว รอบ 6) */
+.pe-up{display:flex;flex-direction:column;gap:var(--sp1,4px)}
+.pe-uprow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp2,8px) var(--sp3,12px)}
+.pe-switch{display:inline-flex;align-items:center;gap:var(--sp2,8px);font-size:13.5px;cursor:pointer}
+.pe-switch-in{appearance:none;width:34px;height:20px;border-radius:999px;background:var(--line,#c9ced6);
+  position:relative;cursor:pointer;margin:0;transition:background .15s;flex:none}
+.pe-switch-in::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.pe-switch-in:checked{background:var(--brand)}
+.pe-switch-in:checked::after{transform:translateX(14px)}
+.pe-switch-in:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.pe-upname{font-size:12.5px;color:var(--text-mute,#667);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pe-oneline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
 .pe-saved .x{position:absolute;inset-block-start:-7px;inset-inline-end:-7px;width:17px;height:17px;
   border-radius:50%;border:0;background:var(--danger,#c0392b);color:#fff;font-size:10px;line-height:17px;
   padding:0;cursor:pointer}
@@ -310,7 +327,7 @@ export function createMarkEditor(host) {
   const padUse = button(tr("ใช้ลายเซ็นนี้", "Use this signature"), { onclick: () => {
     const url = pad.toDataURL();
     if (!url) return st.err(tr("ยังไม่ได้วาดลายเซ็น", "Nothing drawn yet"));
-    saveSignature(url); pad.clear();
+    keep(url); pad.clear();
     pickStamp(url); renderSaved();
   } });
   padUse.disabled = true;
@@ -319,34 +336,74 @@ export function createMarkEditor(host) {
   const padClear = el("button", { class: "pe-padclear", type: "button", disabled: "",
     title: tr("ลบเส้นที่วาด", "Erase the drawing"), "aria-label": tr("ลบเส้นที่วาด", "Erase the drawing"),
     onclick: () => { pad.clear(); } }, [uiIcon("trash")]);
-  const signUpInput = el("input", { type: "file", accept: "image/*", hidden: true,
-    onchange: async (ev) => {
-      const f = ev.target.files[0]; ev.target.value = "";
-      if (!f) return;
-      try {
-        st.info(tr("กำลังเตรียมรูปลายเซ็น…", "Preparing the signature image…"));
-        const url = await imageToSignature(f);
-        saveSignature(url); pickStamp(url); renderSaved(); st.clear();
-      } catch (e) { st.err(tr("อ่านรูปไม่ได้: ", "Couldn't read the image: ") + e.message); }
-    } });
-  const signUpBtn = button(tr("อัปโหลดรูปลายเซ็น", "Upload a signature image"),
-    { ghost: true, icon: "upload", onclick: () => signUpInput.click() });
-  const savedBox = el("div", { class: "pe-saved" });
-
-  const imgInput = el("input", { type: "file", accept: "image/*", hidden: true,
+  /* ── ลายเซ็นกับรูปรวมเป็นเครื่องมือเดียว (รอบ 6 พี่ปอนด์: "รูปกับลายเซ็นคล้ายกันมาก รวมกันอันเดียวดีไหม") ──
+     อัปโหลดปุ่มเดียวรับทั้งรูปทั่วไปและรูปลายเซ็นสแกน สวิตช์ลบพื้นขาวปิดไว้ก่อน
+     ‼️ เดิมปุ่มอัปโหลดลายเซ็นถอดพื้นขาวเสมอ ส่วนปุ่มรูปไม่ถอดเลย เพราะโลโก้ที่มีพื้นขาวจงใจจะเป็นรู
+        รวมแล้วจึงให้คนเลือกเอง และเห็นผลในภาพย่อก่อนวาง สลับสวิตช์หลังอัปโหลดก็ทำรูปล่าสุดใหม่ให้
+     ของที่วาดและที่อัปโหลดอยู่ช่อง "ที่บันทึกไว้" ช่องเดียว เก็บในที่เก็บเดิมของลายเซ็น (filekit-signatures)
+     ของเดิมของผู้ใช้จึงอยู่ครบโดยไม่ต้องย้าย รูปใหญ่จนที่เก็บของเบราว์เซอร์ไม่พอ ยังอยู่ในช่องจนปิดหน้า */
+  const sessionOnly = [];                 // อัปโหลดแล้วเก็บลงเครื่องไม่ได้ (ใหญ่เกินที่เก็บ) ใช้ได้จนปิดหน้า
+  const uploaded = new Set();             // ชิ้นที่มาจากการอัปโหลด (ป้ายบอกว่าเป็นรูป ไม่ใช่ลายเซ็น)
+  let lastUpload = null;                  // { file, url } รูปล่าสุด ไว้ทำใหม่ตอนสลับสวิตช์
+  const allSaved = () => [...new Set([...sessionOnly, ...savedSignatures()])];
+  function keep(url) {
+    saveSignature(url);
+    if (!savedSignatures().includes(url)) sessionOnly.unshift(url);
+  }
+  function forget(url) {
+    removeSignature(url);
+    const i = sessionOnly.indexOf(url); if (i >= 0) sessionOnly.splice(i, 1);
+  }
+  const whiteOff = el("input", { type: "checkbox", class: "pe-switch-in" });
+  const whiteSwitch = el("label", { class: "pe-switch" }, [whiteOff, el("span", {}, tr("ลบพื้นขาว", "Remove white background"))]);
+  const upName = el("span", { class: "pe-upname", hidden: true });
+  async function prepUpload(file) {
+    const url = whiteOff.checked ? await imageToSignature(file) : await fileToPng(file);
+    return shrink(url, 1600);
+  }
+  const upInput = el("input", { type: "file", accept: "image/*", hidden: true,
     onchange: async (ev) => {
       const f = ev.target.files[0]; ev.target.value = "";
       if (!f) return;
       try {
         st.info(tr("กำลังเตรียมรูป…", "Preparing the image…"));
-        /* ‼️ รูปทั่วไปไม่ถอดพื้นขาว ต่างจากลายเซ็น เพราะโลโก้หรือตราที่มีพื้นขาวจงใจ
-           ถ้าไปถอดให้ จะได้รูปโหว่เป็นรูโดยที่ผู้ใช้ไม่ได้สั่ง */
-        pickStamp(await fileToPng(f)); st.clear();
-        st.ok(tr("เลือกรูปแล้ว ลากกรอบบนหน้าให้รูปลงพอดีกรอบ หรือคลิกเพื่อวาง", "Image ready. Drag a box on the page to fit it, or click to place it"));
+        const url = await prepUpload(f);
+        lastUpload = { file: f, url };
+        uploaded.add(url); keep(url);
+        upName.textContent = f.name || ""; upName.hidden = !f.name;
+        pickStamp(url); st.clear();
+        st.ok(tr("เพิ่มในที่บันทึกไว้แล้ว ลากมาวางบนหน้า หรือลากกรอบบนหน้าให้รูปลงพอดีกรอบ",
+                 "Added to Saved. Drag it onto the page, or drag a box on the page to fit it"));
       } catch (e) { st.err(tr("อ่านรูปไม่ได้: ", "Couldn't read the image: ") + e.message); }
     } });
-  const imgBtn = button(tr("เลือกไฟล์รูป", "Choose an image"), { icon: "upload", onclick: () => imgInput.click() });
-  const imgPreview = el("div", { class: "pe-saved" });
+  whiteOff.addEventListener("change", async () => {
+    if (!lastUpload) return;
+    try {
+      const old = lastUpload.url, url = await prepUpload(lastUpload.file);
+      forget(old); uploaded.delete(old);
+      lastUpload.url = url; uploaded.add(url); keep(url);
+      if (stampUrl === old || !stampUrl) pickStamp(url); else renderSaved();
+    } catch (e) { st.err(tr("อ่านรูปไม่ได้: ", "Couldn't read the image: ") + e.message); }
+  });
+  const upBtn = button(tr("อัปโหลดรูป", "Upload an image"), { ghost: true, icon: "upload", onclick: () => upInput.click() });
+  const savedBox = el("div", { class: "pe-saved" });
+
+  /** ย่อรูปที่ด้านยาวเกิน max ให้เหลือ max พิกเซล (เก็บลงเครื่องได้ ไฟล์ไม่บวม) */
+  function shrink(url, max) {
+    return new Promise((ok) => {
+      const im = new Image();
+      im.onload = () => {
+        const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+        if (k >= 1) return ok(url);
+        const c = document.createElement("canvas");
+        c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        ok(c.toDataURL("image/png"));
+      };
+      im.onerror = () => ok(url);
+      im.src = url;
+    });
+  }
 
   /** แปลงไฟล์รูปอะไรก็ได้เป็น PNG (pdf-lib ฝังได้แน่นอนทั้ง PNG และ JPEG แต่ PNG เก็บความโปร่งไว้) */
   async function fileToPng(file) {
@@ -359,38 +416,37 @@ export function createMarkEditor(host) {
     return c.toDataURL("image/png");
   }
 
+  /* ‼️ รอบ 6 เอาช่องตัวอย่างรูปแยกออก เดิม replaceChildren(null) พิมพ์คำว่า null ใต้ปุ่มเลือกไฟล์รูป
+     (จับจริงบน v248: กดใช้ลายเซ็นนี้แล้วสลับไปเครื่องมือรูป ช่องนั้นขึ้น "null") ตอนนี้ทุกชิ้นอยู่ช่องที่บันทึกไว้ */
   function pickStamp(url) {
     stampUrl = url;
     renderSaved();
-    const fig = url && mode === "image"
-      ? el("figure", { class: "on", title: tr("ลากไปปล่อยบนหน้าเพื่อวางได้", "Drag it onto the page to place it") },
-          [el("img", { src: url, alt: tr("รูปที่เลือก", "Chosen image") })]) : null;
-    if (fig) dragToPage(fig, url, "image", () => {});
-    imgPreview.replaceChildren(fig);
   }
+  const whatOf = (url) => (uploaded.has(url) ? "image" : "sign");
 
   function renderSaved() {
-    const list = savedSignatures();
-    savedBox.replaceChildren(...(list.length ? list : []).map((url) => {
+    const list = allSaved();
+    savedBox.replaceChildren(...list.map((url) => {
       const fig = el("figure", { class: url === stampUrl ? "on" : "", role: "button", tabindex: "0",
-        "aria-label": tr("ใช้ลายเซ็นนี้ ลากไปปล่อยบนหน้าเพื่อวางได้", "Use this signature, or drag it onto the page"),
+        "aria-label": tr("ใช้ชิ้นนี้ ลากไปปล่อยบนหน้าเพื่อวางได้", "Use this one, or drag it onto the page"),
         title: tr("คลิกเพื่อเลือก หรือลากไปปล่อยบนหน้า", "Click to pick, or drag onto the page"),
         onkeydown: (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pickStamp(url); } } }, [
-        el("img", { src: url, alt: tr("ลายเซ็นที่บันทึกไว้", "Saved signature") }),
-        el("button", { class: "x", type: "button", "aria-label": tr("ลบลายเซ็นนี้", "Delete this signature"),
-          onclick: (ev) => { ev.stopPropagation(); removeSignature(url);
+        el("img", { src: url, alt: tr("ที่บันทึกไว้", "Saved item") }),
+        el("button", { class: "x", type: "button", "aria-label": tr("ลบชิ้นนี้ออกจากที่บันทึกไว้", "Remove this from Saved"),
+          onclick: (ev) => { ev.stopPropagation(); forget(url);
             if (stampUrl === url) stampUrl = null; renderSaved(); } }, "\u2715"),
       ]);
-      dragToPage(fig, url, "sign", () => pickStamp(url));
+      dragToPage(fig, url, whatOf(url), () => pickStamp(url));
       return fig;
     }));
     if (!list.length) savedBox.replaceChildren(el("div", { class: "pe-hint" },
-      tr("ยังไม่มีลายเซ็นที่บันทึกไว้ วาดในกรอบด้านบนหรืออัปโหลดรูปได้",
-         "No saved signatures yet. Draw in the box above or upload an image")));
+      tr("ยังไม่มี วาดลายเซ็นในกรอบด้านบน หรืออัปโหลดรูป",
+         "Nothing yet. Draw a signature above, or upload an image")));
   }
 
   function segmentedModes() {
-    const wrap = el("div", { class: "row" });
+    /* รอบ 6 เหลือ 4 เครื่องมือ เรียงตาราง 2x2 ทั้งตัวดูและหน้าแก้ไขและเซ็น */
+    const wrap = el("div", { class: "row pe-modes" });
     const mk = (v, label, icon) => {
       const b = button(label, { icon, ghost: true, onclick: () => setMode(v) });
       b.dataset.mode = v;
@@ -404,8 +460,7 @@ export function createMarkEditor(host) {
       mk("cover", tr("ปิดทับ", "Cover"), "trash"),
       mk("text", tr("ข้อความ", "Text"), "edit"),
       mk("highlight", tr("ไฮไลต์", "Highlight"), "rows"),
-      mk("sign", tr("ลายเซ็น", "Signature"), "check"),
-      mk("image", tr("รูป", "Image"), "stack"),
+      mk("sign", tr("ลายเซ็นและรูป", "Signature and image"), "stack"),
     );
     return wrap;
   }
@@ -415,12 +470,11 @@ export function createMarkEditor(host) {
     text: tr("ลากกรอบหรือคลิกบนหน้า แล้วพิมพ์ได้เลย กด Enter เมื่อเสร็จ", "Drag a box or click on the page, then type. Press Enter when done"),
     highlight: tr("ลากคลุมข้อความที่อยากเน้น ตัวหนังสือใต้แถบยังอ่านออก",
                   "Drag over the text you want to mark. The text underneath stays readable"),
-    sign: tr("เลือกหรือวาดลายเซ็นด้านขวา แล้วลากกรอบบนหน้า ลายเซ็นจะลงพอดีกรอบ หรือคลิกเพื่อวางขนาดปกติ",
-             "Pick or draw your signature, then drag a box on the page to fit it, or click to place it"),
-    image: tr("เลือกไฟล์รูปด้านขวา แล้วลากกรอบบนหน้า รูปจะลงพอดีกรอบ หรือคลิกเพื่อวางขนาดปกติ",
-              "Choose an image, then drag a box on the page to fit it, or click to place it"),
+    sign: tr("วาดลายเซ็นหรืออัปโหลดรูปด้านขวา ลากจากที่บันทึกไว้มาวางบนหน้า หรือเลือกแล้วลากกรอบบนหน้า",
+             "Draw a signature or upload an image, then drag it from Saved onto the page, or pick it and drag a box"),
   }[mode] || "");
   function setMode(v) {
+    if (v === "image") v = "sign";      // เครื่องมือรูปเดิมรวมเข้าลายเซ็นแล้ว (รอบ 6) ที่เรียกชื่อเดิมยังเปิดได้
     mode = v;
     layer.classList.toggle("text-mode", v === "text");
     modeSeg.querySelectorAll("button").forEach((b) => {
@@ -434,7 +488,9 @@ export function createMarkEditor(host) {
     for (const g of groups) g.node.hidden = !g.modes.includes(v);
     /* ‼️ เปิดแผงลายเซ็นแล้วกระดานต้องอยู่ในจอโดยไม่ต้องเลื่อน (รอบ 5 พี่ปอนด์กดล้างแล้ว "ไม่มีอะไรเกิดขึ้น"
        เพราะกระดานอยู่เหนือส่วนที่เห็นของแผง) เลื่อนเฉพาะกล่องแผงที่เลื่อนได้ ไม่เลื่อนทั้งหน้าเว็บ */
-    if (v === "sign") requestAnimationFrame(() => revealInPanel(pad.node.parentElement));
+    /* ‼️ วาดช่องที่บันทึกไว้ใหม่ทุกครั้งที่เปิดเครื่องมือนี้ (รอบ 6 จับได้: v248 ไม่เคยวาดตอนเปิดหน้า
+       ของที่บันทึกไว้จากครั้งก่อนจึงไม่โผล่จนกว่าจะวาดหรืออัปโหลดชิ้นใหม่) */
+    if (v === "sign") { renderSaved(); requestAnimationFrame(() => revealInPanel(pad.node.parentElement)); }
     if (v !== "text" && selected && selected.kind === "text") setSelected(null);
     st.info(MODE_HINT());
   }
@@ -548,25 +604,14 @@ export function createMarkEditor(host) {
            "The band is translucent, so the text underneath stays readable and searchable")),
     ]),
     grp(["sign"], [
-      el("h3", {}, tr("ลายเซ็นของคุณ", "Your signature")),
+      el("h3", {}, tr("ลายเซ็นและรูป", "Signature and image")),
       el("div", { class: "pe-sign" }, [el("div", { class: "pe-pad" }, [pad.node, padClear]),
-        el("div", { class: "row" }, [padUse]), signUpBtn, signUpInput]),
+        el("div", { class: "row" }, [padUse]),
+        el("div", { class: "pe-up" }, [el("div", { class: "pe-uprow" }, [upBtn, whiteSwitch]), upName, upInput])]),
       el("h3", {}, tr("ที่บันทึกไว้", "Saved")),
       savedBox,
-      el("div", { class: "pe-hint" },
-        tr("เป็นภาพวางทับหน้าเอกสาร ไม่ใช่ลายเซ็นดิจิทัลที่มีใบรับรองทางกฎหมาย",
-           "This is an image on top of the page, not a certificate-based digital signature")),
-    ]),
-    grp(["image"], [
-      el("h3", {}, tr("รูปที่จะวาง", "Image to place")),
-      el("div", { class: "row" }, [imgBtn, imgInput]),
-      imgPreview,
-    ]),
-    /* ‼️ แถบปรับความกว้างใช้ร่วมกันทั้งลายเซ็นและรูป จึงต้องเป็น "กลุ่มของตัวเอง"
-       ที่โชว์สองโหมด ห้ามเอา node ตัวเดียวไปใส่สองกลุ่ม เพราะ element หนึ่งตัว
-       อยู่ได้ที่เดียวใน DOM กลุ่มหลังจะดึงมันออกจากกลุ่มแรกเงียบ ๆ
-       (จับได้จากการไล่สายพ่อแม่: แถบเลื่อนไปโผล่ในกลุ่มที่ถูกซ่อน จึงกว้าง 0) */
-    grp(["sign", "image"], [
+      el("div", { class: "pe-hint pe-oneline" },
+        tr("ภาพวางทับ ไม่ใช่ลายเซ็นดิจิทัลที่มีใบรับรอง", "An image on the page, not a certified digital signature")),
       el("div", { class: "row" }, [field(tr("ความกว้างบนหน้า", "Width on the page"), stampSize), stampSizeVal]),
       el("div", { class: "row" }, [field(tr("ความทึบ", "Opacity"), stampPct.input), stampPct.out]),
     ]),
@@ -611,7 +656,7 @@ export function createMarkEditor(host) {
      คลิกของบนหน้า = เลือก แผงเปลี่ยนเป็นค่าของชิ้นนั้น เปลี่ยนค่าในแผงแล้วชิ้นที่เลือกเปลี่ยนทันที
      ค่าในแผงยังเป็นค่าเริ่มต้นของชิ้นถัดไปด้วย เหมือนโปรแกรมวาดทั่วไป */
   let selected = null;
-  const kindMode = (e) => (e.kind === "stamp" ? (e.what === "sign" ? "sign" : "image") : e.kind);
+  const kindMode = (e) => (e.kind === "stamp" ? "sign" : e.kind);
   const toolKind = (m) => (m === "sign" || m === "image" ? "stamp" : m);
   const psz = () => (host.size ? host.size() : pageSize);
 
@@ -1099,14 +1144,13 @@ export function createMarkEditor(host) {
   });
 
   const stampMsg = () => tr("วางแล้ว ลากเพื่อย้าย ลากจุดที่มุมเพื่อย่อขยาย", "Placed. Drag to move, drag a corner to resize");
-  const noStamp = () => st.err(mode === "sign"
-    ? tr("เลือกหรือวาดลายเซ็นด้านขวาก่อน", "Pick or draw a signature on the right first")
-    : tr("เลือกไฟล์รูปด้านขวาก่อน", "Choose an image on the right first"));
+  const noStamp = () => st.err(tr("วาดลายเซ็น อัปโหลดรูป หรือเลือกจากที่บันทึกไว้ด้านขวาก่อน",
+                                   "Draw a signature, upload an image, or pick one from Saved first"));
   const alphaNow = () => (+stampPct.input.value < 100 ? { alpha: +stampPct.input.value / 100 } : {});
   /** วางลายเซ็นหรือรูปให้พอดีกรอบที่ลาก (กรอบเป็นพิกเซลบนจอ) รักษาสัดส่วนภาพ อยู่กึ่งกลางกรอบ */
   async function placeStampBox(cb) {
     if (!stampUrl) return noStamp();
-    const url = stampUrl, what = mode === "sign" ? "sign" : "image";
+    const url = stampUrl, what = whatOf(url);
     const ar = await aspectOf(url);
     const ppp = pxPerPt();
     const wPt = Math.min(cb.w / ppp, (cb.h / ppp) / ar);
@@ -1121,7 +1165,7 @@ export function createMarkEditor(host) {
   }
 
   /** วางลายเซ็นหรือรูปที่จุดที่คลิก (จุดคลิก = กึ่งกลางของภาพ) ทั้งชิ้นต้องอยู่ในหน้า */
-  async function placeStamp(p, url = stampUrl, what = mode === "sign" ? "sign" : "image") {
+  async function placeStamp(p, url = stampUrl, what = whatOf(url)) {
     if (!url) return noStamp();
     await aspectOf(url);
     const rw = (+stampSize.value || 20) / 100;
@@ -1177,7 +1221,7 @@ export function createMarkEditor(host) {
           return;
         }
         if (editing) finishEdit(false);
-        if (mode !== what) setMode(what);
+        if (mode !== "sign") setMode("sign");
         stampUrl = url; renderSaved();
         await placeStamp(point(u), url, what);
       };

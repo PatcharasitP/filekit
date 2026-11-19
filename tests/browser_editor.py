@@ -90,6 +90,9 @@ def open_editor(pg, src):
 
 
 def mode(pg, name):
+    # รอบ 6 (19/11/2026) เครื่องมือรูปรวมเข้ากับลายเซ็น ปุ่มเดียว data-mode=sign
+    if name == "image":
+        name = "sign"
     pg.locator(f"[data-mode={name}]").first.click()
     pg.wait_for_timeout(300)
 

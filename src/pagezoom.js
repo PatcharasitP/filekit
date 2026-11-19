@@ -45,7 +45,8 @@ const STYLE = `
 .pz:not(.editing) .pz-edit{display:none}
 .pz:not(.editing) .pe-layer{pointer-events:none}
 .pz:not(.editing) .pe-box .rm,.pz:not(.editing) .pe-grip{display:none}
-.pz-edit .pz-edit-row{display:flex;flex-wrap:wrap;gap:6px}
+/* ‼️ ระยะระหว่างปุ่มอย่างน้อย 8px ตาม token --sp2 (รอบ 6 พี่ปอนด์: "ชิดกันเกินไหม" วัดได้ 6px) */
+.pz-edit .pz-edit-row{display:flex;flex-wrap:wrap;gap:var(--sp2,8px)}
 .pz-btn[aria-pressed="true"]{background:rgba(255,255,255,.24)}
 @media (max-width:760px){
   .pz-main{flex-direction:column}

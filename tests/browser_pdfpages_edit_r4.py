@@ -209,8 +209,8 @@ def main():
 
         # ③ รูป: ลากกรอบแล้วพอดีกรอบ , คลิกเฉย ๆ ขนาดปกติ
         def s3s():
-            fresh(); open_edit(); mode("image")
-            pg.locator(".pz-edit input[type=file]").nth(1).set_input_files(str(RED)); pg.wait_for_timeout(700)
+            fresh(); open_edit(); mode("sign")  # รอบ 6 (19/11/2026) รูปกับลายเซ็นรวมเป็นเครื่องมือเดียว data-mode=sign มีช่องอัปโหลดช่องเดียว (ตัวสุดท้าย)
+            pg.locator(".pz-edit input[type=file]").last.set_input_files(str(RED)); pg.wait_for_timeout(700)
             # กรอบกว้าง 0.40 สูง 0.10 ของหน้า (238 x 84 พอยต์) รูปกว้างเป็น 2 เท่าของสูง ต้องได้สูงเต็ม 84 กว้าง 168
             hold = (lambda: pg.screenshot(path=str(SHOTS / "dragging_box_1440.png"))) if SHOTS else None
             drag((0.30, 0.45), (0.70, 0.55), hold=hold)
@@ -296,8 +296,8 @@ def main():
 
         # ⑤⑥ ความทึบรูป
         def s6():
-            fresh(); open_edit(); mode("image")
-            pg.locator(".pz-edit input[type=file]").nth(1).set_input_files(str(RED)); pg.wait_for_timeout(700)
+            fresh(); open_edit(); mode("sign")  # รอบ 6 (19/11/2026) รูปกับลายเซ็นรวมเป็นเครื่องมือเดียว data-mode=sign มีช่องอัปโหลดช่องเดียว (ตัวสุดท้าย)
+            pg.locator(".pz-edit input[type=file]").last.set_input_files(str(RED)); pg.wait_for_timeout(700)
             pg.mouse.click(*paper_at(0.5, 0.75)); pg.wait_for_timeout(400)
             pg.locator(".pz .pe-box.stamp").first.click(); pg.wait_for_timeout(400)
             ck("sel" in (pg.locator(".pz .pe-box.stamp").first.get_attribute("class") or ""), "⑤ คลิกรูปตอนถือเครื่องมือรูป = เลือก ไม่วางซ้ำ")

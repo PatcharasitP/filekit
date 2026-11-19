@@ -19,6 +19,9 @@ const tagOf = (fi) => String.fromCharCode(65 + (fi % 26)) + (fi >= 26 ? String(M
 
 // สไตล์เสริมเฉพาะหน้านี้ — ห้ามแก้ assets/css/tool.css จึงฝังไว้ในโมดูลแทน
 const STYLE = `
+.pp-range{display:flex;flex-wrap:wrap;align-items:stretch;gap:var(--sp2,8px);margin-top:var(--sp2,8px)}
+.pp-range input{flex:1 1 150px;min-width:0;width:auto}
+.pp-range .btn{flex:none}
 .pp-left{display:flex;flex-direction:column;gap:10px}
 /* ‼️ มีที่มากขึ้นแล้วจากการเลิกใช้แผงขวา จึงตั้งการ์ดขั้นต่ำให้ใหญ่ขึ้นด้วย
    ที่ 210px บนพื้นที่ราว 1060px จะได้ 4 คอลัมน์ การ์ดกว้างราว 255px
@@ -337,7 +340,8 @@ export function mount(tool) {
   [cropBtn, cropAllBtn, blankBtn, editTextBtn, resetBtn].forEach((b) => { b.disabled = true; });
 
   // ── แผงขวา: เก็บเฉพาะบางหน้า + วิธีเรียงเมื่อมีหลายไฟล์ ───────────────
-  const rangeInput = el("input", { type: "text", placeholder: tr("เช่น 1-3,5,8-", "e.g. 1-3,5,8-"), disabled: true });
+  const rangeInput = el("input", { type: "text", placeholder: tr("เช่น 1-3,5,8-", "e.g. 1-3,5,8-"), disabled: true,
+    "aria-label": tr("หน้าที่อยากเก็บ", "Pages to keep") });
   const rangeBtn = button(tr("ใช้ช่วงนี้", "Apply range"), { ghost: true, onclick: applyRange });
   rangeBtn.disabled = true;
   const byFileBtn = button(tr("เรียงทีละไฟล์", "Group by file"), { ghost: true, onclick: () => reorder("byfile") });
@@ -404,8 +408,9 @@ export function mount(tool) {
   rightNode.append(
     el("div", {}, [
       el("h3", {}, tr("อยากเก็บหน้าไหนไว้บ้าง", "Which pages do you want to keep")),
-      field("", rangeInput, ""),
-      rangeBtn,
+      /* ‼️ ช่องกับปุ่มอยู่แถวเดียวกัน สูงเท่ากัน ห่าง 8px (token --sp2) จอแคบปุ่มลงบรรทัดล่างโดยยังห่าง 8px
+         (รอบ 6 พี่ปอนด์: "ชิดกันเกินไหม" วัดจริงบน v248 ปุ่มอยู่ใต้ช่องห่าง 3px ที่ 1440 และ 5px ที่ 390) */
+      el("div", { class: "pp-range" }, [rangeInput, rangeBtn]),
     ]),
     sortGroup,
     cropGroup,

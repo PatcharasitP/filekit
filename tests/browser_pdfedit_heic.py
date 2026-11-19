@@ -59,14 +59,15 @@ def choose_image(pg, path):
     pg.wait_for_timeout(2500)
     pg.get_by_role("button", name="ลองด้วยไฟล์ตัวอย่าง").filter(visible=True).first.click()
     pg.wait_for_selector(".pe-stage:not([hidden])", timeout=60000)
-    pg.get_by_role("button", name="รูป", exact=True).filter(visible=True).first.click()
+    # รอบ 6 (19/11/2026) เครื่องมือรูปรวมกับลายเซ็นเป็นปุ่มเดียว
+    pg.get_by_role("button", name="ลายเซ็นและรูป", exact=True).filter(visible=True).first.click()
     pg.wait_for_timeout(500)
     inputs = pg.locator("input[type=file]")
     n = inputs.count()
     inputs.nth(n - 1).set_input_files(str(path))
     pg.wait_for_function(
         "() => { const s = document.querySelector('.status.show, .status'); "
-        "return s && /เลือกรูปแล้ว|อ่านรูปไม่ได้/.test(s.innerText); }", timeout=40000)
+        "return s && /เลือกรูปแล้ว|เพิ่มในที่บันทึกไว้แล้ว|อ่านรูปไม่ได้/.test(s.innerText); }", timeout=40000)
     status = pg.locator(".status").last.inner_text().replace("\n", " ")
     prev = pg.evaluate("() => { const i = document.querySelector('.pe-saved figure.on img');"
                        " return i ? { w: i.naturalWidth, h: i.naturalHeight } : null; }")
@@ -87,7 +88,7 @@ def main():
                     status, prev = choose_image(pg, f)
                 except Exception as e:
                     status, prev = "รอสถานะไม่ทัน: " + str(e).splitlines()[0][:60], None
-                ck(f"[{name}] pdf-edit รับรูป {label} ได้", status.startswith("เลือกรูปแล้ว"), status[:80])
+                ck(f"[{name}] pdf-edit รับรูป {label} ได้", status.startswith(("เลือกรูปแล้ว", "เพิ่มในที่บันทึกไว้แล้ว")), status[:80])
                 ck(f"[{name}] {label}: พรีวิวรูปขึ้นและขนาดตรงต้นฉบับ {W}x{H}",
                    bool(prev) and (prev["w"], prev["h"]) == (W, H), str(prev))
                 ctx.close()

@@ -131,14 +131,18 @@ def play(out):
         mode("highlight"); drag((0.13, 0.195), (0.70, 0.212))
         # หน้า 2 ลายเซ็นจากรูป (ผ่านตัวถอดพื้นขาว) กับข้อความหนา
         pg.locator(".pe-thumb").nth(1).click(); pg.wait_for_timeout(800)
-        mode("sign"); pg.locator(".pe-right input[type=file]").nth(0).set_input_files(str(sig)); pg.wait_for_timeout(1200)
+        # รอบ 6 (19/11/2026) รูปกับลายเซ็นรวมเป็นเครื่องมือเดียว data-mode=sign มีช่องอัปโหลดช่องเดียว (ตัวสุดท้าย)
+        # รูปลายเซ็นเดิมผ่านตัวถอดพื้นขาวเสมอ ตอนนี้เปิดสวิตช์ลบพื้นขาวก่อนอัปโหลดให้ได้ผลเดิม
+        mode("sign"); pg.locator(".pe-right .pe-switch input").check()
+        pg.locator(".pe-right input[type=file]").last.set_input_files(str(sig)); pg.wait_for_timeout(1200)
         pg.mouse.click(*at(0.65, 0.80)); pg.wait_for_timeout(250)
         mode("text"); pg.fill(".pe-right input[type=text]", "อนุมัติ")
         pg.select_option(".pe-right select >> nth=1", "700")
         pg.mouse.click(*at(0.20, 0.82)); pg.wait_for_timeout(250)
         # หน้า 3 รูป สองชิ้น ชิ้นหนึ่งวางทับอีกชิ้น
         pg.locator(".pe-thumb").nth(2).click(); pg.wait_for_timeout(800)
-        mode("image"); pg.locator(".pe-right input[type=file]").nth(1).set_input_files(str(logo)); pg.wait_for_timeout(800)
+        mode("sign"); pg.locator(".pe-right .pe-switch input").uncheck(); pg.wait_for_timeout(600)
+        pg.locator(".pe-right input[type=file]").last.set_input_files(str(logo)); pg.wait_for_timeout(800)
         pg.mouse.click(*at(0.30, 0.30)); pg.wait_for_timeout(250)
         # รอบ 4 (19/11/2026) คลิกบนรูปตอนถือเครื่องมือรูป = เลือกรูปนั้นมาแก้ ไม่วางซ้ำแล้ว
         # จุดคลิกที่สองจึงย้ายออกนอกรูปแรก (รูปแรกกว้าง 0.19 ถึง 0.41) รูปที่สองยังซ้อนทับรูปแรกบางส่วน

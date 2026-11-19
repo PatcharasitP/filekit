@@ -150,9 +150,10 @@ def main():
             return r["x"] + r["width"] * fx, r["y"] + r["height"] * fy
 
         def stamp_at(fx, fy):
-            pg.click(".pz-edit button[data-mode=image]")
+            # รอบ 6 (19/11/2026) รูปกับลายเซ็นรวมเป็นเครื่องมือเดียว data-mode=sign มีช่องอัปโหลดช่องเดียว (ตัวสุดท้าย)
+            pg.click(".pz-edit button[data-mode=sign]")
             if not pg.evaluate("() => !!document.querySelector('.pz-edit .pe-saved figure.on')"):
-                pg.locator(".pz-edit input[type=file]").nth(1).set_input_files(str(RED))
+                pg.locator(".pz-edit input[type=file]").last.set_input_files(str(RED))
                 pg.wait_for_timeout(700)
             pg.mouse.click(*paper_at(fx, fy))
             pg.wait_for_timeout(300)

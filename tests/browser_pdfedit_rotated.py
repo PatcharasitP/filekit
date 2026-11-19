@@ -116,8 +116,9 @@ def main():
         pg.set_input_files(".dz input[type=file]", [str(src)])
         pg.wait_for_selector(".pe-stage:not([hidden])", timeout=60000)
         pg.wait_for_timeout(1000)
-        pg.click(".pe-right button[data-mode=image]")
-        pg.locator(".pe-right input[type=file]").nth(1).set_input_files(str(red))
+        # รอบ 6 (19/11/2026) รูปกับลายเซ็นรวมเป็นเครื่องมือเดียว data-mode=sign มีช่องอัปโหลดช่องเดียว (ตัวสุดท้าย)
+        pg.click(".pe-right button[data-mode=sign]")
+        pg.locator(".pe-right input[type=file]").last.set_input_files(str(red))
         pg.wait_for_timeout(800)
         for i, (name, _, _) in enumerate(CASES):
             pg.locator(".pe-thumb").nth(i).click()

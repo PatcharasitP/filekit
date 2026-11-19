@@ -140,7 +140,10 @@ def play(out):
         pg.locator(".pe-thumb").nth(2).click(); pg.wait_for_timeout(800)
         mode("image"); pg.locator(".pe-right input[type=file]").nth(1).set_input_files(str(logo)); pg.wait_for_timeout(800)
         pg.mouse.click(*at(0.30, 0.30)); pg.wait_for_timeout(250)
-        pg.mouse.click(*at(0.33, 0.31)); pg.wait_for_timeout(250)
+        # รอบ 4 (19/11/2026) คลิกบนรูปตอนถือเครื่องมือรูป = เลือกรูปนั้นมาแก้ ไม่วางซ้ำแล้ว
+        # จุดคลิกที่สองจึงย้ายออกนอกรูปแรก (รูปแรกกว้าง 0.19 ถึง 0.41) รูปที่สองยังซ้อนทับรูปแรกบางส่วน
+        # ค่าอ้างอิงบันทึกใหม่จาก v246 (90a3003) ที่วางรูปที่สองตรงนี้เหมือนกัน
+        pg.mouse.click(*at(0.45, 0.33)); pg.wait_for_timeout(250)
         mode("cover"); drag((0.55, 0.55), (0.80, 0.62))
         n = pg.eval_on_selector_all(".pe-box", "n => n.length")
         with pg.expect_download(timeout=60000) as dl:

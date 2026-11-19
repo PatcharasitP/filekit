@@ -49,14 +49,6 @@ const STYLE = `
 
 /* ── การ์ดหน้า (18/11/2026) ─────────────────────────────────────────────── */
 .pp-center{position:relative}
-/* แถบภาพย่อในแผงแก้ไข จอแคบซ่อน (เฟส 3) */
-.pp-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:thin}
-.pp-strip button{flex:none;width:50px;height:62px;padding:3px;border:1px solid var(--line);border-radius:6px;
-  background:#fff;display:grid;place-items:center;cursor:pointer;overflow:hidden}
-.pp-strip button[aria-current="true"]{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 35%,transparent)}
-.pp-strip img{max-width:100%;max-height:100%;display:block}
-.pp-strip-blank{width:70%;height:80%;background:#fff;border:1px dashed var(--line)}
-@media (max-width:760px){ .pp-strip{display:none} }
 /* ชั้นของที่วางในตัวดูหน้าใหญ่ ขนาดเท่าหน้าฐาน หมุนและเลื่อนด้วย transform จาก pdfgeom baseLayer (เฟส 2) */
 .pp-base{position:absolute;left:0;top:0;transform-origin:0 0}
 .pp-center .pages{user-select:none;-webkit-user-select:none}
@@ -1224,29 +1216,12 @@ export function mount(tool) {
     },
     up: () => (edIt ? R(edIt) : 0),
     pxPerPt: () => baseH / (edIt.bh || edIt.ph),
+    size: () => ({ w: edIt.bw || edIt.pw, h: edIt.bh || edIt.ph }),
   });
   const baseEl = el("div", { class: "pp-base" }, [ed.layer]);
-  /* แถบภาพย่อในแผงแก้ไข เลือกหน้าจากภาพแทนกดถัดไปทีละหน้า (แผนเฟส 3 ข้อ 2)
-     จอแคบซ่อน แผงอยู่ใต้ภาพและสูงได้ไม่เกิน 40% ของจอ ใส่แถบเพิ่มจะเบียดเครื่องมือจนต้องเลื่อน ใช้ปุ่มถัดไปแทน */
-  const strip = (() => {
-    const node = el("div", { class: "pp-strip", role: "group", "aria-label": tr("เลือกหน้าที่จะแก้", "Pick a page to edit") });
-    let list = [];
-    const sync = () => {
-      if (!viewer || !list.length) return;
-      node.replaceChildren(...list.map((x, i) => {
-        const deg = x.blank ? 0 : x.rotate % 360;
-        const src = x.inkThumb || (x.blank ? null : x.thumb);
-        return el("button", { type: "button", "aria-current": x === edIt ? "true" : "false",
-          "aria-label": tr(`ไปหน้า ${i + 1}`, `Go to page ${i + 1}`), title: tr(`หน้า ${i + 1}`, `Page ${i + 1}`),
-          onclick: () => viewer && viewer.goTo(i) },
-        [src ? el("img", { src, alt: "", style: deg ? { transform: `rotate(${deg}deg)` } : null }) : el("span", { class: "pp-strip-blank" })]);
-      }));
-      node.querySelector("[aria-current=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
-    };
-    return { node, sync, set: (l) => { list = l; } };
-  })();
+  /* รอบ 4 (19/11/2026) เอาแถบภาพย่อบนสุดของแผงออก พี่ปอนด์: "มันไม่ค่อยสวย แปลก ๆ" (images/44.png 45.png)
+     ภาพย่อหน้าขาวดูเป็นกล่องว่าง และมีปุ่มเลื่อนของเบราว์เซอร์โผล่ ตัวดูมีก่อนหน้า ถัดไป และเลขหน้าอยู่แล้ว */
   const edPanel = el("div", { role: "region", "aria-label": tr("เครื่องมือแก้ไขบนหน้า", "Edit tools for the page") }, [
-    strip.node,
     est.node,
     ed.panel,
     el("div", { class: "pz-edit-row" }, [ed.buttons.placeMidBtn, ed.buttons.undoBtn, ed.buttons.clearBtn]),
@@ -1261,7 +1236,7 @@ export function mount(tool) {
     inkJobs.set(it, job);
     (async () => {
       it.inkRev = (it.inkRev || 0) + 1;              // ภาพลอยที่จำไว้ของหน้านี้ใช้ไม่ได้แล้ว
-      if (!it.marks.length) { it.inkThumb = null; render(); strip.sync(); return; }
+      if (!it.marks.length) { it.inkThumb = null; render(); return; }
       let c;
       if (it.blank) {
         c = document.createElement("canvas");
@@ -1279,7 +1254,6 @@ export function mount(tool) {
       it.inkThumb = c.toDataURL("image/jpeg", 0.8);
       c.width = c.height = 0;
       render();
-      strip.sync();
     })();
   }
 
@@ -1291,7 +1265,6 @@ export function mount(tool) {
     edIt = it;
     drawnKey = "";
     est.clear();
-    strip.set(list);
     viewer = openViewer({
       list, start: list.indexOf(it), getDoc,
       label: (x, i, n) => [tr(`หน้า ${i + 1} จาก ${n}`, `Page ${i + 1} of ${n}`),
@@ -1306,7 +1279,7 @@ export function mount(tool) {
           if (!ed.buttons.undoBtn.disabled) ed.buttons.undoBtn.click();
           return true;
         },
-        onPage: (x) => { edIt = x; drawnKey = ""; strip.sync(); },
+        onPage: (x) => { edIt = x; drawnKey = ""; },
         onToggle: (on) => { if (on) est.info(tr("เลือกเครื่องมือ แล้วคลิกหรือลากบนหน้า", "Pick a tool, then click or drag on the page")); },
         sync: (x, W, H) => {
           const L = baseLayer(R(x), x.blank ? null : x.crop, W, H);
@@ -1320,7 +1293,6 @@ export function mount(tool) {
       },
       onClose: () => { viewer = null; edIt = null; ed.layer.replaceChildren(); },
     });
-    strip.sync();                          // ตอนตัวดูวาดหน้าแรก viewer ยังไม่ถูกตั้งค่า แถบจึงวาดตรงนี้
   }
 
   /* ── ลากย้ายหน้า (18/11/2026 จุดขายที่พี่ปอนด์ขอให้ทำเต็มที่) ────────────────────────────

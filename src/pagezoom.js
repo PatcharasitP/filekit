@@ -503,6 +503,9 @@ export function openViewer({ list, start, getDoc, label, onClose, edit }) {
        จึงไม่ดักที่นี่ ปล่อยไปถึงตัวมัน แล้วตัวดูหยุดไว้ตอนไหลกลับขึ้นมา (ตัวฟังที่ wrap ข้างล่าง)
        คีย์ลัดของเครื่องมือข้างหลังจึงยังไม่เห็นอะไรเลย Esc กับ Tab ยังเป็นของตัวดูเสมอ */
     const t = e.target;
+    /* ‼️ ช่องพิมพ์ข้อความบนหน้า (contenteditable รอบ 4) ได้ทุกคีย์รวม Esc (ยกเลิกการพิมพ์ ไม่ใช่ปิดตัวดู)
+       ช่องพิมพ์หยุดคีย์ไว้เองแล้ว ตัวดูไม่ต้องทำอะไร */
+    if (t && t.isContentEditable && wrap.contains(t)) return;
     // คีย์ลัดของโหมดแก้ไข (Ctrl+Z ย้อนของที่วาง) ยกเว้นในช่องพิมพ์ ที่ต้องย้อนตัวอักษรของมันเอง
     if (editing && edit.key && !t.closest?.("input, textarea, select") && edit.key(e)) { e.preventDefault(); e.stopPropagation(); return; }
     if (e.key !== "Escape" && e.key !== "Tab" && wrap.contains(t) && t.closest?.(".pz-edit, .pe-layer")) return;

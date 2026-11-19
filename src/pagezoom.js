@@ -39,8 +39,9 @@ const STYLE = `
 .pz-paper .pe-box img{height:auto}
 .pz-main{flex:1;min-height:0;display:flex}
 .pz-main > .pz-stage{min-width:0}
+/* ‼️ แผงเว้นขอบขวาและขอบล่างเท่าระยะขอบของแถบบน (14px) ไม่ชิดขอบหน้าต่าง (รอบ 5 พี่ปอนด์: "อยู่ชิดจอมากเกิน") */
 .pz-edit{width:340px;flex:none;overflow:auto;background:var(--card,#fff);color:var(--text,#111);
-  border-radius:14px 0 0 14px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px}
+  border-radius:14px;margin:0 14px 14px 0;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px}
 .pz:not(.editing) .pz-edit{display:none}
 .pz:not(.editing) .pe-layer{pointer-events:none}
 .pz:not(.editing) .pe-box .rm,.pz:not(.editing) .pe-grip{display:none}
@@ -48,7 +49,7 @@ const STYLE = `
 .pz-btn[aria-pressed="true"]{background:rgba(255,255,255,.24)}
 @media (max-width:760px){
   .pz-main{flex-direction:column}
-  .pz-edit{width:auto;max-height:40vh;border-radius:14px 14px 0 0}
+  .pz-edit{width:auto;max-height:40vh;border-radius:14px 14px 0 0;margin:0}
 }
 .pz-blank{display:grid;place-items:center;color:#667;font:600 14px var(--font);width:100%;height:100%}
 .pz-bar{align-self:center;display:flex;align-items:center;gap:2px;margin:10px auto 16px;padding:5px;

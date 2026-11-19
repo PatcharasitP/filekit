@@ -8,6 +8,7 @@
 //    pdf-lib ฝังฟอนต์ไทยเองไม่ได้ถ้าไม่มี fontkit ซึ่งเราไม่โหลดเพราะหนัก
 //    จึงวาดข้อความลง canvas แล้วฝังเป็น PNG ได้ภาษาไทยครบทุกตัวรวมสระและวรรณยุกต์
 import { el, button, field, select } from "./ui.js";
+import { uiIcon } from "./icons.js";
 import { signaturePad, savedSignatures, saveSignature, removeSignature,
          imageToSignature } from "./signpad.js";
 import { tr } from "./i18n.js";
@@ -117,19 +118,36 @@ export const MARK_STYLE = `
 .pe-grip.ne{inset-block-start:-6px;inset-inline-end:-6px;cursor:nesw-resize}
 .pe-grip.nw{inset-block-start:-6px;inset-inline-start:-6px;cursor:nwse-resize}
 .pe-box:hover .pe-grip,.pe-box.sel .pe-grip,.pe-box:focus-visible .pe-grip{opacity:1}
+/* ข้อความตัวเล็ก จุดจับที่ขอบพอดีจะทับตัวอักษร (เห็นในภาพเทสรอบ 5 มือถือ) จึงดันจุดจับและกรอบออกนอกตัวอักษรอีกนิด */
+.pe-box.text{outline-offset:3px}
+.pe-box.text .pe-grip.se{inset-block-end:-11px;inset-inline-end:-11px}
+.pe-box.text .pe-grip.sw{inset-block-end:-11px;inset-inline-start:-11px}
+.pe-box.text .pe-grip.ne{inset-block-start:-11px;inset-inline-end:-11px}
+.pe-box.text .pe-grip.nw{inset-block-start:-11px;inset-inline-start:-11px}
+.pe-box.text .rm{inset-block-start:-30px;inset-inline-end:-8px}
 @media (hover:none){ .pe-box.sel .pe-grip{opacity:1} }
 /* ‼️ กล่องปิดทับมักเป็นสีขาวเพื่อกลืนกับกระดาษ ซึ่งแปลว่าบนจอก็มองไม่เห็นเหมือนกัน
    จึงมีเส้นประบาง ๆ รอบนอก (outline ไม่กินเนื้อกล่อง) ให้รู้ว่าปิดไปตรงไหน เส้นนี้อยู่แค่บนจอ ไม่ลงไฟล์ */
 .pe-box.cover,.pe-box.highlight{outline:1px dashed color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:0}
 .pe-box.text:hover,.pe-box.stamp:hover{outline:1px dashed color-mix(in srgb,var(--brand) 45%,transparent)}
 .pe-box.sel{outline:1.5px solid var(--brand);outline-offset:1px}
+.pe-box.text.sel,.pe-box.text:hover{outline-offset:4px}
 .pe-box.text{display:flex;align-items:center;white-space:pre;overflow:visible;
   font-family:"FK Sarabun","Sarabun","Noto Sans Thai",sans-serif;line-height:1.2}
-/* ช่องพิมพ์ข้อความบนหน้า (ลากกรอบหรือคลิกด้วยเครื่องมือข้อความ ดับเบิลคลิกข้อความเพื่อแก้) */
-.pe-edit{position:absolute;box-sizing:border-box;white-space:pre;outline:1.5px solid var(--brand);outline-offset:2px;
-  font-family:"FK Sarabun","Sarabun","Noto Sans Thai",sans-serif;line-height:1.2;min-width:2em;
-  background:color-mix(in srgb,#fff 70%,transparent);cursor:text;caret-color:var(--brand)}
 .pe-ghost{position:absolute;box-sizing:border-box;pointer-events:none}
+/* ข้อความที่กำลังพิมพ์ = ชิ้นจริงบนหน้า มีปุ่มลบกับจุดจับครบ (รอบ 5) ตอนว่างโชว์คำแนะนำจาง ๆ ให้รู้ว่าพิมพ์ตรงนี้ */
+.pe-box.text.editing{background:color-mix(in srgb,#fff 72%,transparent);cursor:text}
+.pe-txt.pe-edit{display:inline-block;position:relative;min-width:6em;min-height:1.2em;outline:none;
+  white-space:pre;cursor:text;caret-color:var(--brand)}
+.pe-txt.pe-edit:empty::before{content:attr(data-ph);position:absolute;inset-inline-start:0;opacity:.4;pointer-events:none}
+.pe-pad{position:relative}
+.pe-padclear{position:absolute;inset-block-start:6px;inset-inline-end:6px;width:32px;height:32px;padding:6px;
+  border-radius:8px;border:1px solid var(--line,#d0d5dd);background:var(--card,#fff);color:var(--text,#111);
+  cursor:pointer;display:grid;place-items:center}
+.pe-padclear svg{width:18px;height:18px}
+.pe-padclear:disabled{opacity:.35;cursor:default}
+.pe-saved figure{touch-action:none;cursor:grab}
+.pe-float{position:fixed;left:0;top:0;width:110px;pointer-events:none;opacity:.7;z-index:2000}
 .pe-ghost.frame{outline:1.5px dashed var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
 /* ‼️ ปุ่มเอาออกโผล่เฉพาะตอนชี้ เลือก หรือโฟกัส (18/09/2026 เดิมโผล่ตลอด วางของใกล้กันปุ่มซ้อนกันจนบังงาน)
    ลอยเหนือมุมขวาบน ไม่ทับจุดจับมุม */
@@ -282,20 +300,25 @@ export function createMarkEditor(host) {
   const stampPct = pct(20, 100, 100);                          // ความทึบลายเซ็นกับรูป
   /* ‼️ ความกว้างของลายเซ็นกับรูป เก็บเป็นสัดส่วนของหน้า ไม่ใช่พิกเซล
      หน้ากระดาษบนจอย่อขยายได้ ถ้าเก็บเป็นพิกเซลของจอ ขนาดที่ได้ในไฟล์จะไม่ตรงกับที่เห็น */
-  const stampSize = el("input", { type: "range", min: "5", max: "60", value: "22", step: "1" });
-  const stampSizeVal = el("span", { class: "pe-zoom" }, "22%");
+  /* ‼️ ค่าเริ่มต้น 20% ของความกว้างหน้า (รอบ 5 พี่ปอนด์: "มันดูใหญ่เกินไปไหม" รุ่นก่อน 22% และค้างค่าที่ลากไว้ 40%) */
+  const stampSize = el("input", { type: "range", min: "5", max: "60", value: "20", step: "1" });
+  const stampSizeVal = el("span", { class: "pe-zoom" }, "20%");
   stampSize.addEventListener("input", () => { stampSizeVal.textContent = stampSize.value + "%"; });
 
   let stampUrl = null;            // PNG พื้นโปร่งของลายเซ็นหรือรูปที่เลือกอยู่
-  const pad = signaturePad({ onChange: () => { padUse.disabled = pad.isEmpty(); } });
+  const pad = signaturePad({ onChange: () => { padUse.disabled = pad.isEmpty(); padClear.disabled = pad.isEmpty(); } });
   const padUse = button(tr("ใช้ลายเซ็นนี้", "Use this signature"), { onclick: () => {
     const url = pad.toDataURL();
     if (!url) return st.err(tr("ยังไม่ได้วาดลายเซ็น", "Nothing drawn yet"));
-    saveSignature(url); pad.clear(); padUse.disabled = true;
+    saveSignature(url); pad.clear();
     pickStamp(url); renderSaved();
   } });
   padUse.disabled = true;
-  const padClear = button(tr("ล้างกระดาน", "Clear pad"), { ghost: true, onclick: () => { pad.clear(); padUse.disabled = true; } });
+  /* ‼️ ปุ่มลบเส้นเป็นไอคอนถังขยะที่มุมขวาบนของกระดานเอง แบบช่องเซ็นทั่วไป (รอบ 5 พี่ปอนด์: "ล้างกระดาน
+     ควรเป็นสัญลักษณ์แทนไหม อธิบายแล้วงง") ปิดไว้ตอนกระดานว่าง ไม่ให้กดแล้วเงียบ */
+  const padClear = el("button", { class: "pe-padclear", type: "button", disabled: "",
+    title: tr("ลบเส้นที่วาด", "Erase the drawing"), "aria-label": tr("ลบเส้นที่วาด", "Erase the drawing"),
+    onclick: () => { pad.clear(); } }, [uiIcon("trash")]);
   const signUpInput = el("input", { type: "file", accept: "image/*", hidden: true,
     onchange: async (ev) => {
       const f = ev.target.files[0]; ev.target.value = "";
@@ -339,22 +362,26 @@ export function createMarkEditor(host) {
   function pickStamp(url) {
     stampUrl = url;
     renderSaved();
-    imgPreview.replaceChildren(url && mode === "image"
-      ? el("figure", { class: "on" }, [el("img", { src: url, alt: tr("รูปที่เลือก", "Chosen image") })]) : null);
+    const fig = url && mode === "image"
+      ? el("figure", { class: "on", title: tr("ลากไปปล่อยบนหน้าเพื่อวางได้", "Drag it onto the page to place it") },
+          [el("img", { src: url, alt: tr("รูปที่เลือก", "Chosen image") })]) : null;
+    if (fig) dragToPage(fig, url, "image", () => {});
+    imgPreview.replaceChildren(fig);
   }
 
   function renderSaved() {
     const list = savedSignatures();
     savedBox.replaceChildren(...(list.length ? list : []).map((url) => {
       const fig = el("figure", { class: url === stampUrl ? "on" : "", role: "button", tabindex: "0",
-        "aria-label": tr("ใช้ลายเซ็นนี้", "Use this signature"),
-        onclick: () => pickStamp(url),
+        "aria-label": tr("ใช้ลายเซ็นนี้ ลากไปปล่อยบนหน้าเพื่อวางได้", "Use this signature, or drag it onto the page"),
+        title: tr("คลิกเพื่อเลือก หรือลากไปปล่อยบนหน้า", "Click to pick, or drag onto the page"),
         onkeydown: (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pickStamp(url); } } }, [
         el("img", { src: url, alt: tr("ลายเซ็นที่บันทึกไว้", "Saved signature") }),
         el("button", { class: "x", type: "button", "aria-label": tr("ลบลายเซ็นนี้", "Delete this signature"),
           onclick: (ev) => { ev.stopPropagation(); removeSignature(url);
             if (stampUrl === url) stampUrl = null; renderSaved(); } }, "\u2715"),
       ]);
+      dragToPage(fig, url, "sign", () => pickStamp(url));
       return fig;
     }));
     if (!list.length) savedBox.replaceChildren(el("div", { class: "pe-hint" },
@@ -405,7 +432,21 @@ export function createMarkEditor(host) {
        ห้าเครื่องมือรวมกันมีตัวเลือกสิบกว่าช่อง ถ้าโชว์หมดพร้อมกันแผงจะกลายเป็นกำแพง
        และคนจะหาไม่เจอว่าช่องไหนเป็นของเครื่องมือที่กำลังใช้ */
     for (const g of groups) g.node.hidden = !g.modes.includes(v);
+    /* ‼️ เปิดแผงลายเซ็นแล้วกระดานต้องอยู่ในจอโดยไม่ต้องเลื่อน (รอบ 5 พี่ปอนด์กดล้างแล้ว "ไม่มีอะไรเกิดขึ้น"
+       เพราะกระดานอยู่เหนือส่วนที่เห็นของแผง) เลื่อนเฉพาะกล่องแผงที่เลื่อนได้ ไม่เลื่อนทั้งหน้าเว็บ */
+    if (v === "sign") requestAnimationFrame(() => revealInPanel(pad.node.parentElement));
+    if (v !== "text" && selected && selected.kind === "text") setSelected(null);
     st.info(MODE_HINT());
+  }
+
+  function revealInPanel(node) {
+    let box = node.parentElement;
+    while (box && !(box.scrollHeight > box.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
+    if (!box || box === document.scrollingElement || box === document.body) return;
+    const r = node.getBoundingClientRect(), b = box.getBoundingClientRect();
+    const vis = { top: Math.max(b.top, 0), bottom: Math.min(b.bottom, innerHeight) };
+    if (r.top < vis.top) box.scrollTop -= vis.top - r.top + 8;
+    else if (r.bottom > vis.bottom) box.scrollTop += Math.min(r.bottom - vis.bottom + 8, r.top - vis.top - 8);
   }
 
   const zoomOutBtn = button("-", { ghost: true, label: tr("ซูมออก", "Zoom out"), onclick: () => stepZoom(-1) });
@@ -476,13 +517,14 @@ export function createMarkEditor(host) {
   const clearBtn = button(tr("ล้างหน้านี้", "Clear page"), { icon: "trash", ghost: true, onclick: () => host.clearPage() });
   [placeMidBtn, undoBtn, clearBtn].forEach((b) => { b.disabled = true; });
 
+  const textField = field(tr("ข้อความ", "Text"), textInput,
+    tr("ลากกรอบบนหน้าแล้วพิมพ์ในกรอบได้เลย ดับเบิลคลิกข้อความเพื่อแก้", "Drag a box on the page and type in it. Double click a text to edit it"));
   /* กลุ่มตัวเลือกของแต่ละเครื่องมือ · setMode() เป็นคนเปิดปิดให้ */
   const grp = (modes, children) => ({ modes, node: el("div", { class: "pe-grp" }, children) });
   const groups = [
     grp(["text"], [
       el("h3", {}, tr("ข้อความที่จะใส่", "Text to add")),
-      field(tr("ข้อความ", "Text"), textInput,
-        tr("ลากกรอบบนหน้าแล้วพิมพ์ในกรอบได้เลย ดับเบิลคลิกข้อความเพื่อแก้", "Drag a box on the page and type in it. Double click a text to edit it")),
+      textField,
       el("div", { class: "row" }, [
         field(tr("ขนาด", "Size"), sizeSel),
         field(tr("น้ำหนัก", "Weight"), weightSel),
@@ -507,7 +549,8 @@ export function createMarkEditor(host) {
     ]),
     grp(["sign"], [
       el("h3", {}, tr("ลายเซ็นของคุณ", "Your signature")),
-      el("div", { class: "pe-sign" }, [pad.node, el("div", { class: "row" }, [padUse, padClear]), signUpBtn, signUpInput]),
+      el("div", { class: "pe-sign" }, [el("div", { class: "pe-pad" }, [pad.node, padClear]),
+        el("div", { class: "row" }, [padUse]), signUpBtn, signUpInput]),
       el("h3", {}, tr("ที่บันทึกไว้", "Saved")),
       savedBox,
       el("div", { class: "pe-hint" },
@@ -571,15 +614,31 @@ export function createMarkEditor(host) {
   const kindMode = (e) => (e.kind === "stamp" ? (e.what === "sign" ? "sign" : "image") : e.kind);
   const toolKind = (m) => (m === "sign" || m === "image" ? "stamp" : m);
   const psz = () => (host.size ? host.size() : pageSize);
-  function selectMark(e) {
+
+  /* ── ช่องข้อความในแผง (รอบ 5 พี่ปอนด์: "ข้อความที่พิมให้มันมาอยู่ในนี้ด้วย จะได้แก้ไขได้ 2 ที่") ──
+     เลือกข้อความบนหน้าอยู่ = ช่องนี้คือข้อความของชิ้นนั้น แก้ที่ไหนอีกที่เปลี่ยนตามทันที
+     ไม่ได้เลือก = ช่องเดิม (ใส่ไว้แล้วคลิกบนหน้าเพื่อวางทันที) */
+  const textLabel = textField.querySelector("span");
+  function syncTextField() {
+    const on = selected && selected.kind === "text";
+    textLabel.textContent = on ? tr("ข้อความของชิ้นนี้", "Text of this item") : tr("ข้อความ", "Text");
+    textInput.placeholder = on ? "" : tr("ไม่ต้องใส่ก็ได้ พิมพ์บนหน้าได้เลย", "Optional, you can type on the page");
+    if (on) { if (textInput.value !== selected.text) textInput.value = selected.text; }
+    else if (textInput.dataset.bound === "1") textInput.value = "";
+    textInput.dataset.bound = on ? "1" : "";
+  }
+  function setSelected(e) {
     selected = e;
+    syncTextField();
+  }
+  function selectMark(e) {
+    setSelected(e);
     if (!e) { drawOverlay(); return; }
     if (mode !== kindMode(e)) setMode(kindMode(e));
     if (e.kind === "cover") coverColor.value = e.color;
     if (e.kind === "highlight") { hlColor.value = e.color; hlPct.input.value = String(Math.round(hlAlpha(e) * 100)); }
     if (e.kind === "text") {
-      if (!SIZES.includes(+e.size)) sizeSel.append(el("option", { value: String(e.size) }, String(e.size)));
-      sizeSel.value = String(e.size); weightSel.value = String(e.weight || 400); textColor.value = e.color;
+      showSize(e.size); weightSel.value = String(e.weight || 400); textColor.value = e.color;
     }
     if (e.kind === "stamp") {
       stampPct.input.value = String(Math.round(stampAlpha(e) * 100));
@@ -590,37 +649,115 @@ export function createMarkEditor(host) {
     /* ‼️ แค่สลับคลาส ห้ามวาดชั้นใหม่ทั้งชั้น คลิกที่สองของการดับเบิลคลิกต้องลงกล่องเดิม
        วาดใหม่ = กล่องใหม่ เบราว์เซอร์ไม่นับเป็นดับเบิลคลิก (เจอจริงในเทสรอบ 4) */
     const list = host.list(), boxes = [...layer.querySelectorAll(".pe-box")];
-    const shown = list.filter((m) => !(editing && editing.mark === m));
-    boxes.forEach((n, i) => n.classList.toggle("sel", shown[i] === e));
+    boxes.forEach((n, i) => n.classList.toggle("sel", list[i] === e));
     st.info(tr("เลือกแล้ว เปลี่ยนค่าในแผงได้เลย ลากเพื่อย้าย ลากจุดที่มุมเพื่อย่อขยาย",
                "Selected. Change it in the panel, drag to move, drag a corner to resize"));
+  }
+  /** ขนาดตัวอักษรในช่องขนาด ค่าที่ไม่มีในรายการ (มาจากการลากจุดจับ) เพิ่มเข้าไปแล้วเรียงใหม่ */
+  function showSize(size) {
+    const v = String(size);
+    if (![...sizeSel.options].some((o) => o.value === v)) {
+      const opts = [...sizeSel.options].map((o) => +o.value).concat(+size).sort((a, b) => a - b);
+      sizeSel.replaceChildren(...opts.map((n) => el("option", { value: String(n) }, String(n))));
+    }
+    sizeSel.value = v;
   }
   /** ค่าในแผงเปลี่ยน แล้วชิ้นที่เลือกอยู่เป็นชนิดเดียวกัน ให้ชิ้นนั้นเปลี่ยนตาม */
   const live = (kinds, apply) => () => {
     if (!selected || !kinds.includes(selected.kind) || !host.list().includes(selected)) return;
     apply(selected);
+    keepIn(selected);
     drawOverlay(); host.thumbs();
   };
   coverColor.addEventListener("input", live(["cover"], (e) => { e.color = coverColor.value; }));
   hlColor.addEventListener("input", live(["highlight"], (e) => { e.color = hlColor.value; }));
   hlPct.input.addEventListener("input", live(["highlight"], (e) => { e.alpha = +hlPct.input.value / 100; }));
   textColor.addEventListener("input", live(["text"], (e) => { e.color = textColor.value; }));
-  sizeSel.addEventListener("change", live(["text"], (e) => { e.size = +sizeSel.value; }));
+  sizeSel.addEventListener("change", live(["text"], (e) => { resizeText(e, +sizeSel.value); }));
   weightSel.addEventListener("change", live(["text"], (e) => { e.weight = +weightSel.value; }));
+  textInput.addEventListener("input", live(["text"], (e) => { e.text = textInput.value; }));
   stampPct.input.addEventListener("input", live(["stamp"], (e) => { e.alpha = +stampPct.input.value / 100; }));
   stampSize.addEventListener("input", live(["stamp"], (e) => {
     const c = e.x + e.rw / 2;                       // ย่อขยายรอบกึ่งกลางเดิม
     e.rw = +stampSize.value / 100; e.x = c - e.rw / 2;
   }));
 
+  /* ── ขนาดจริงของของแต่ละชิ้น และบังคับให้อยู่ในหน้า (รอบ 5 ภาพลายเซ็นล้นขอบขวาของกระดาษ) ──
+     ทุกการวาง ลาก ย่อขยาย หรือเปลี่ยนค่า เลื่อนของกลับเข้าหน้าทั้งชิ้น ของที่ใหญ่กว่าหน้าอยู่กึ่งกลาง
+     ภาพต้องรู้สัดส่วนจริงก่อน จึงจำสัดส่วนไว้ตอนโหลดภาพ (aspectOf) */
+  const arSync = new Map();
+  const natural = new Map();          // url -> สัดส่วนสูงต่อกว้างของภาพ
+  const aspectOf = (url) => {
+    if (!natural.has(url)) natural.set(url, new Promise((ok) => {
+      const im = new Image();
+      im.onload = () => { const r = im.naturalHeight / im.naturalWidth || 1; arSync.set(url, r); ok(r); };
+      im.onerror = () => { arSync.set(url, 1); ok(1); };
+      im.src = url;
+    }));
+    return natural.get(url);
+  };
+  const probe = document.createElement("canvas").getContext("2d");
+  /* ‼️ วัดแบบเดียวกับ textToPng ทุกตัว (ฟอนต์ 4 เท่าแล้วหาร) วัดที่ขนาดจริงตรง ๆ ได้แคบกว่าภาพในไฟล์ราว 3%
+     เทสรอบ 5 จับได้: ข้อความชิดขอบขวาล้นหน้าในไฟล์ 3.5 พอยต์ ทั้งที่บนจอเลื่อนเข้าแล้ว */
+  const textWidthPt = (e) => {
+    probe.font = `${e.weight || 400} ${e.size * PNG_SCALE}px "FK Sarabun","Sarabun","Noto Sans Thai",sans-serif`;
+    return (Math.ceil(probe.measureText(e.text || " ").width) + 6) / PNG_SCALE;
+  };
+  /** ทิศเส้นฐานของข้อความในหน้าฐาน (หมุนทวนเข็มตามที่ตาเห็น up องศา แกน y ชี้ลง) */
+  const dirOf = (e) => { const t = (-(e.up || 0) * Math.PI) / 180; return { x: Math.cos(t), y: Math.sin(t) }; };
+  /** กรอบของชิ้นเป็นสัดส่วนของหน้าฐาน { x0, y0, x1, y1 } */
+  function boundsOf(e) {
+    if (e.kind === "cover" || e.kind === "highlight") return { x0: e.x, y0: e.y, x1: e.x + e.w, y1: e.y + e.h };
+    const S = psz();
+    let ax, ay, pts;
+    if (e.kind === "text") {
+      const w = textWidthPt(e), h = e.size * 1.7;
+      ax = e.x * S.w; ay = e.y * S.h;
+      pts = [[0, -h / 2], [w, -h / 2], [0, h / 2], [w, h / 2]];
+    } else {
+      const w = e.rw * S.w, h = (arSync.get(e.url) ?? 1) * w;
+      ax = (e.x + e.rw / 2) * S.w; ay = e.y * S.h;
+      pts = [[-w / 2, -h / 2], [w / 2, -h / 2], [-w / 2, h / 2], [w / 2, h / 2]];
+    }
+    const t = (-(e.up || 0) * Math.PI) / 180, c = Math.cos(t), s = Math.sin(t);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [px, py] of pts) {
+      const X = (ax + px * c - py * s) / S.w, Y = (ay + px * s + py * c) / S.h;
+      x0 = Math.min(x0, X); y0 = Math.min(y0, Y); x1 = Math.max(x1, X); y1 = Math.max(y1, Y);
+    }
+    return { x0, y0, x1, y1 };
+  }
+  function keepIn(e) {
+    if (!e || !psz()) return;
+    if (e.kind === "cover" || e.kind === "highlight") {
+      e.w = Math.min(e.w, 1); e.h = Math.min(e.h, 1);
+      e.x = Math.max(0, Math.min(1 - e.w, e.x)); e.y = Math.max(0, Math.min(1 - e.h, e.y));
+      return;
+    }
+    if (e.kind === "stamp") e.rw = Math.min(e.rw, 1);
+    const b = boundsOf(e);
+    const shift = (lo, hi) => (hi - lo > 1 ? 0.5 - (lo + hi) / 2 : lo < 0 ? -lo : hi > 1 ? 1 - hi : 0);
+    e.x += shift(b.x0, b.x1); e.y += shift(b.y0, b.y1);
+  }
+  /** เปลี่ยนขนาดตัวอักษร โดยกึ่งกลางของข้อความอยู่ที่เดิม */
+  function resizeText(e, size) {
+    const S = psz(), d = dirOf(e), w0 = textWidthPt(e);
+    const cx = e.x * S.w + d.x * w0 / 2, cy = e.y * S.h + d.y * w0 / 2;
+    e.size = size;
+    const w1 = textWidthPt(e);
+    e.x = (cx - d.x * w1 / 2) / S.w; e.y = (cy - d.y * w1 / 2) / S.h;
+  }
+
+  let rebuilding = false;
   function drawOverlay() {
+    rebuilding = true;
     layer.innerHTML = "";
-    if (selected && !host.list().includes(selected)) selected = null;
+    if (selected && !host.list().includes(selected)) setSelected(null);
     host.list().forEach((e) => {
-      if (editing && editing.mark === e) return;                    // กำลังแก้ในที่ ช่องพิมพ์แสดงแทน
       const boxy = e.kind === "cover" || e.kind === "highlight";   // ของที่มีความกว้างความสูงของตัวเอง
+      const isEditing = editing && editing.mark === e;
       const box = el("div", {
-        class: `pe-box ${e.kind}${e === selected ? " sel" : ""}`,
+        class: `pe-box ${e.kind}${e === selected || isEditing ? " sel" : ""}${isEditing ? " editing" : ""}`,
         /* ‼️ ต้องโฟกัสได้ ไม่งั้นคนใช้คีย์บอร์ดแก้ของที่วางไปแล้วไม่ได้เลย (WCAG 2.5.7) */
         tabindex: "0", role: "group",
         style: {
@@ -640,24 +777,29 @@ export function createMarkEditor(host) {
           fontWeight: e.kind === "text" ? e.weight : null,
         },
       }, [
-        e.kind === "text" ? e.text : null,
-        e.kind === "stamp" ? el("img", { src: e.url, alt: "", style: { opacity: String(stampAlpha(e)) } }) : null,
-        /* จุดจับ 4 มุม ‼️ มุมขวาล่างต้องมาก่อน เทสเก่าและคนที่ใช้คีย์บอร์ดหยิบ .pe-grip ตัวแรก */
-        ...(boxy || e.kind === "stamp" ? ["se", "sw", "ne", "nw"].map((c) =>
-          el("div", { class: `pe-grip ${c}`, "data-corner": c, title: tr("ลากเพื่อปรับขนาด", "Drag to resize") })) : []),
+        e.kind === "text" ? textSpan(e, isEditing) : null,
+        e.kind === "stamp" ? el("img", { src: e.url, alt: "", draggable: "false", style: { opacity: String(stampAlpha(e)) } }) : null,
+        /* จุดจับ 4 มุม ทุกชนิดหน้าตาเดียวกัน (รอบ 5 ข้อความก็มี ลากแล้วตัวอักษรย่อขยาย)
+           ‼️ มุมขวาล่างต้องมาก่อน เทสเก่าและคนที่ใช้คีย์บอร์ดหยิบ .pe-grip ตัวแรก */
+        ...["se", "sw", "ne", "nw"].map((c) =>
+          el("div", { class: `pe-grip ${c}`, "data-corner": c, title: tr("ลากเพื่อปรับขนาด", "Drag to resize") })),
         el("button", {
           class: "rm", type: "button", title: tr("เอาออก", "Remove"),
           "aria-label": tr("เอาการแก้นี้ออก", "Remove this edit"),
-          onclick: (ev) => { ev.stopPropagation(); host.remove(e); drawOverlay(); host.sync(); host.thumbs(); },
+          onpointerdown: (ev) => ev.stopPropagation(),
+          onclick: (ev) => {
+            ev.stopPropagation();
+            if (editing && editing.mark === e) editing = null;
+            host.remove(e); drawOverlay(); host.sync(); host.thumbs();
+          },
         }, "✕"),
       ]);
       const what = { cover: tr("กล่องปิดทับ", "Cover box"), highlight: tr("แถบไฮไลต์", "Highlight band"),
                      text: tr("ข้อความ", "Text"), stamp: e.what === "sign" ? tr("ลายเซ็น", "Signature") : tr("รูป", "Image"),
                    }[e.kind] || tr("สิ่งที่วางไว้", "Placed item");
-      const say = () => box.setAttribute("aria-label", tr(
+      box.setAttribute("aria-label", tr(
         `${what} ตำแหน่ง ${Math.round(e.x * 100)}% จากซ้าย ${Math.round(e.y * 100)}% จากบน กดลูกศรเพื่อขยับ กด Delete เพื่อเอาออก`,
         `${what} at ${Math.round(e.x * 100)}% from left, ${Math.round(e.y * 100)}% from top. Arrow keys move it, Delete removes it`));
-      say();
       /* ‼️ ขยับทีละก้าวด้วยลูกศร แม่นกว่าการลากเพราะไม่มีทางพลาด
          ก้าวเล็ก 0.4% ของหน้า ก้าวใหญ่กด Shift = 5 เท่า
          กล่องปิดทับยังปรับขนาดด้วย Alt+ลูกศร ได้ด้วย เพราะลากมุมอย่างเดียวก็ตกเกณฑ์เหมือนกัน */
@@ -676,15 +818,15 @@ export function createMarkEditor(host) {
             /* ภาพรักษาสัดส่วนเสมอ จึงปรับได้แค่ความกว้าง ลูกศรขึ้นลงก็ให้ผลเดียวกับซ้ายขวา */
             e.rw = Math.min(1, Math.max(0.03, e.rw + (d[0] || -d[1])));
           } else {
-            e.x = Math.min(1, Math.max(0, e.x + d[0]));
-            e.y = Math.min(1, Math.max(0, e.y + d[1]));
+            e.x += d[0]; e.y += d[1];
           }
+          keepIn(e);
           drawOverlay();
           const again = [...layer.querySelectorAll(".pe-box")][host.list().indexOf(e)];
           if (again) again.focus();
           return;
         }
-        if (ev.key === "Enter" && e.kind === "text") { ev.preventDefault(); openEditor(e); return; }
+        if (ev.key === "Enter" && e.kind === "text") { ev.preventDefault(); startEdit(e, false); return; }
         if (ev.key === "Delete" || ev.key === "Backspace") {
           ev.preventDefault();
           host.remove(e);
@@ -695,8 +837,86 @@ export function createMarkEditor(host) {
       bindMove(box, e);
       layer.appendChild(box);
     });
-    if (editing) { layer.appendChild(editing.node); styleEditor(); }
+    rebuilding = false;
+    if (editing) {
+      const n = layer.querySelector(".pe-txt.pe-edit");
+      if (n && document.activeElement !== n) {
+        n.focus({ preventScroll: true });
+        const r = document.createRange(); r.selectNodeContents(n); r.collapse(false);
+        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      }
+    }
     host.sync();
+  }
+
+  /* ── ข้อความ: ตัวกล่องเองเป็นที่พิมพ์ (รอบ 5) ──
+     พี่ปอนด์: "ข้อความอ่ะอยากให้มันกดปิดได้ อยากลดขนาดเพิ่มขนาดเองได้เลยตรง" รุ่นก่อนช่องพิมพ์เป็นกรอบเปล่าลอยแยก
+     ไม่มีปุ่มลบไม่มีจุดจับ ตอนนี้ข้อความที่กำลังพิมพ์คือชิ้นจริงบนหน้า มีปุ่มลบและจุดจับครบเหมือนลายเซ็น
+     ช่องพิมพ์เป็น span ข้างในกล่อง จุดจับกับปุ่มลบเป็นพี่น้อง ไม่ปนกับตัวอักษร */
+  let editing = null;          // { mark, isNew, orig }
+  let inkTimer = 0;
+  const inkSoon = () => { clearTimeout(inkTimer); inkTimer = setTimeout(() => host.thumbs(), 250); };
+  function textSpan(e, isEditing) {
+    const span = el("span", { class: `pe-txt${isEditing ? " pe-edit" : ""}` }, e.text);
+    if (!isEditing) return span;
+    span.contentEditable = "true";
+    span.spellcheck = false;
+    span.setAttribute("role", "textbox");
+    span.setAttribute("aria-label", tr("พิมพ์ข้อความ กด Enter เมื่อเสร็จ", "Type the text, press Enter when done"));
+    span.dataset.ph = tr("พิมพ์ข้อความ", "Type here");
+    span.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+    span.addEventListener("dblclick", (ev) => ev.stopPropagation());
+    span.addEventListener("input", () => {
+      e.text = span.innerText.replace(/\s*\n\s*/g, " ");
+      if (selected === e && document.activeElement !== textInput) textInput.value = e.text;
+      inkSoon();
+    });
+    span.addEventListener("keydown", (ev) => {
+      ev.stopPropagation();                         // Delete ลูกศร Esc ในช่องพิมพ์เป็นของช่องพิมพ์ ไม่ใช่ของหน้า
+      if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) { ev.preventDefault(); finishEdit(false); }
+      else if (ev.key === "Escape") { ev.preventDefault(); finishEdit(true); }
+    });
+    span.addEventListener("blur", (ev) => {
+      if (rebuilding || !editing || editing.mark !== e) return;
+      // ไปพิมพ์ต่อในช่องข้อความของแผง = ยังเป็นชิ้นเดิม ข้อความว่างก็ยังไม่ทิ้ง
+      finishEdit(false, ev.relatedTarget === textInput);
+    });
+    return span;
+  }
+  function startEdit(mark, isNew) {
+    if (editing && editing.mark !== mark) finishEdit(false);
+    editing = { mark, isNew, orig: mark.text };
+    selectMark(mark);
+    drawOverlay();
+    st.info(tr("พิมพ์ได้เลย กด Enter เมื่อเสร็จ กด Esc เพื่อยกเลิก แก้ข้อความในแผงด้านขวาก็ได้",
+               "Type now. Enter when done, Esc cancels. You can also edit it in the panel"));
+  }
+  function finishEdit(cancel, keepEmpty = false) {
+    if (!editing) return;
+    const { mark, isNew, orig } = editing;
+    editing = null;
+    if (cancel) { if (isNew) host.remove(mark); else mark.text = orig; }
+    else {
+      mark.text = (mark.text || "").trim();
+      if (!mark.text && !keepEmpty) host.remove(mark);
+    }
+    if (host.list().includes(mark)) keepIn(mark);
+    drawOverlay(); host.thumbs(); host.sync();
+    if (!cancel && mark.text) st.ok(isNew ? tr("วางข้อความแล้ว", "Text placed") : tr("แก้ข้อความแล้ว", "Text updated"));
+    else if (cancel) st.info(MODE_HINT());
+  }
+  /** ข้อความชิ้นใหม่ที่จุดหนึ่ง (กึ่งกลางขอบซ้าย) แล้วพิมพ์บนหน้าได้ทันที */
+  function newTextAt(p, size) {
+    const up = host.up ? host.up() : 0;
+    const m = { kind: "text", x: p.x, y: p.y, text: "", size: size || +sizeSel.value,
+                color: textColor.value, weight: +weightSel.value, ...(up ? { up } : {}) };
+    host.add(m);
+    startEdit(m, true);
+  }
+  /** เครื่องมือข้อความที่จุดหนึ่ง: มีข้อความในแผง (ไม่ได้เลือกชิ้นไหน) = วางทันทีแบบเดิม , ไม่มี = พิมพ์บนหน้า */
+  function textAt(p, size) {
+    if (textInput.value.trim() && !size && !(selected && selected.kind === "text")) return placeText(p);
+    newTextAt(p, size);
   }
 
   /* ลากย้ายของที่วางไปแล้ว และลากจุดที่มุมเพื่อปรับขนาด
@@ -711,14 +931,14 @@ export function createMarkEditor(host) {
       if (ev.target.closest(".rm")) return;
       ev.stopPropagation();
       ev.preventDefault();
-      // กำลังพิมพ์อยู่ คลิกที่อื่น = วางข้อความที่พิมพ์ก่อน คลิกนี้ใช้แค่นั้น (ชั้นถูกวาดใหม่ กล่องนี้หลุดไปแล้ว)
-      if (editing) { commitEditor(); return; }
+      // กำลังพิมพ์ชิ้นอื่นอยู่ คลิกชิ้นนี้ = จบการพิมพ์ก่อน คลิกนี้ใช้แค่นั้น (ชั้นถูกวาดใหม่ กล่องนี้หลุดไปแล้ว)
+      if (editing && editing.mark !== e) { finishEdit(false); return; }
       const g = ev.target.closest(".pe-grip");
       mode0 = g ? "resize" : "move";
       corner = g ? g.dataset.corner : null;
       toolAtDown = mode;
       from = rel(ev);
-      orig = { x: e.x, y: e.y, w: e.w, h: e.h, rw: e.rw };
+      orig = { x: e.x, y: e.y, w: e.w, h: e.h, rw: e.rw, size: e.size, cy: ev.clientY, r: node.getBoundingClientRect() };
       node.classList.add("moving");
       node.setPointerCapture(ev.pointerId);
     });
@@ -726,16 +946,33 @@ export function createMarkEditor(host) {
       if (!mode0) return;
       const p = rel(ev);
       const dx = p.x - from.x, dy = p.y - from.y;
+      const S = psz();
       if (mode0 === "move") {
-        e.x = Math.max(0, Math.min(1, orig.x + dx));
-        e.y = Math.max(0, Math.min(1, orig.y + dy));
+        e.x = orig.x + dx; e.y = orig.y + dy;
       } else if (e.kind === "stamp") {
         /* ภาพรักษาสัดส่วนเสมอ ย่อขยายรอบกึ่งกลางตามระยะจากกึ่งกลางถึงนิ้ว (เป็นพอยต์ หน้าหมุนแบบไหนก็ใช้ได้) */
-        const S = psz(), cx = orig.x + orig.rw / 2, cy = orig.y;
+        const cx = orig.x + orig.rw / 2, cy = orig.y;
         const d0 = Math.hypot((from.x - cx) * S.w, (from.y - cy) * S.h) || 1;
         const d1 = Math.hypot((p.x - cx) * S.w, (p.y - cy) * S.h);
         e.rw = Math.max(0.03, Math.min(1, orig.rw * d1 / d0));
         e.x = cx - e.rw / 2;
+      } else if (e.kind === "text") {
+        /* ข้อความย่อขยายตามความสูงกล่องบนจอ ขนาดตัวอักษรเป็นจำนวนเต็ม (รอบ 5 พี่ปอนด์: "อยากลดขนาดเพิ่มขนาดเองได้เลยตรง")
+           ค่า "ขนาด" ในแผงเปลี่ยนตาม มุมฝั่งตรงข้ามกับจุดจับอยู่ที่เดิม เหมือนยืดกล่องทั่วไป
+           คิดบนจอเพราะข้อความตั้งตรงบนจอเสมอ หน้าหมุนแบบไหนก็ตรง แล้วแปลงจุดยึดกลับเป็นหน้าฐานด้วย point() */
+        const r0 = orig.r, south = corner === "se" || corner === "sw", east = corner === "se" || corner === "ne";
+        const dh = (south ? 1 : -1) * (ev.clientY - orig.cy);
+        const k = Math.max(0.2, (r0.height + dh) / r0.height);
+        const size = Math.max(6, Math.min(144, Math.round(orig.size * k)));
+        if (size !== e.size) {
+          const kk = size / orig.size, W1 = r0.width * kk, H1 = r0.height * kk;
+          const left = east ? r0.left : r0.right - W1;
+          const mid = south ? r0.top + H1 / 2 : r0.bottom - H1 / 2;
+          const at = rel({ clientX: left, clientY: mid });
+          e.x = at.x; e.y = at.y; e.size = size;
+          showSize(size);
+          node.style.fontSize = `${size * pxPerPt()}px`;
+        }
       } else {
         const MIN = 0.004;
         let { x, y, w, h } = orig;
@@ -743,8 +980,10 @@ export function createMarkEditor(host) {
         if (corner === "sw" || corner === "nw") { w = Math.max(MIN, orig.w - dx); x = orig.x + orig.w - w; }
         if (corner === "se" || corner === "sw") h = Math.max(MIN, orig.h + dy);
         if (corner === "ne" || corner === "nw") { h = Math.max(MIN, orig.h - dy); y = orig.y + orig.h - h; }
+        x = Math.max(0, x); y = Math.max(0, y); w = Math.min(w, 1 - x); h = Math.min(h, 1 - y);
         Object.assign(e, { x, y, w, h });
       }
+      if (mode0 === "move" || e.kind !== "cover" && e.kind !== "highlight") keepIn(e);
       const g = geo(e);
       node.style.left = g.left; node.style.top = g.top;
       if (e.kind === "cover" || e.kind === "highlight") {
@@ -773,21 +1012,22 @@ export function createMarkEditor(host) {
           && toolKind(toolAtDown) !== e.kind) {
         // คืนตำแหน่งเดิมก่อน เผื่อขยับไปนิดหน่อยระหว่างคลิก
         e.x = orig.x; e.y = orig.y;
-        selected = null;
+        setSelected(null);
         drawOverlay();
         const at = from;
-        if (toolAtDown === "text") textAt(at, null, ev); else placeStamp(at);
+        if (toolAtDown === "text") textAt(at); else placeStamp(at);
         return;
       }
-      if (!moved) { e.x = orig.x; e.y = orig.y; }
+      if (!moved && was === "move") { e.x = orig.x; e.y = orig.y; }
       /* ดับเบิลคลิกข้อความ = แก้ในที่ นับเองจากเวลาคลิกสองครั้งบนชิ้นเดียวกัน ใช้ได้ทั้งเมาส์และนิ้ว */
       const now = performance.now();
       if (!moved && e.kind === "text" && lastTap.e === e && now - lastTap.t < 450) {
         lastTap = { e: null, t: 0 };
-        openEditor(e);
+        startEdit(e, false);
         return;
       }
       lastTap = moved ? { e: null, t: 0 } : { e, t: now };
+      if (editing && editing.mark === e) { if (moved) { drawOverlay(); host.thumbs(); } return; }
       selectMark(e);
       if (moved) { host.thumbs(); st.ok(was === "resize" ? tr("ปรับขนาดแล้ว", "Resized") : tr("ย้ายแล้ว", "Moved")); }
       const again = [...layer.querySelectorAll(".pe-box")][host.list().indexOf(e)];
@@ -797,78 +1037,14 @@ export function createMarkEditor(host) {
     node.addEventListener("pointercancel", end);
   }
 
-  /* ── ช่องพิมพ์ข้อความบนหน้า (รอบ 4 พี่ปอนด์: "อยากลากมาวางมากกว่า" ไม่ต้องพิมพ์ในแผงก่อน) ──
-     ลากกรอบหรือคลิกด้วยเครื่องมือข้อความ = ช่องพิมพ์โผล่ตรงนั้น Enter หรือคลิกที่อื่น = วาง Esc = ยกเลิก
-     ดับเบิลคลิกข้อความที่วางแล้ว = แก้ในที่ ช่องพิมพ์ใช้ตำแหน่งและขนาดตัวอักษรเดียวกับของที่จะวางจริง (geo) */
-  let editing = null;          // { node, mark (ของเดิมที่กำลังแก้ หรือ null), tmp }
-  function styleEditor() {
-    if (!editing) return;
-    const t = editing.tmp, g = geo(t), n = editing.node;
-    Object.assign(n.style, { left: g.left, top: g.top, transform: g.transform || "", transformOrigin: g.transformOrigin || "",
-      fontSize: `${t.size * pxPerPt()}px`, color: t.color, fontWeight: String(t.weight) });
-  }
-  function openEditor(mark, at, size) {
-    if (editing) commitEditor();
-    const up = mark ? (mark.up || 0) : (host.up ? host.up() : 0);
-    const tmp = mark ? { ...mark } : { kind: "text", x: at.x, y: at.y, size: size || +sizeSel.value,
-      color: textColor.value, weight: +weightSel.value, text: "", ...(up ? { up } : {}) };
-    const node = el("div", { class: "pe-edit", contenteditable: "true", spellcheck: "false", role: "textbox",
-      "aria-label": tr("พิมพ์ข้อความ กด Enter เพื่อวาง", "Type the text, press Enter to place it") },
-      mark ? mark.text : "");
-    editing = { node, mark, tmp };
-    node.addEventListener("pointerdown", (ev) => ev.stopPropagation());
-    node.addEventListener("dblclick", (ev) => ev.stopPropagation());
-    node.addEventListener("keydown", (ev) => {
-      ev.stopPropagation();                         // Delete ลูกศร Esc ในช่องพิมพ์เป็นของช่องพิมพ์ ไม่ใช่ของหน้า
-      if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) { ev.preventDefault(); commitEditor(); }
-      else if (ev.key === "Escape") { ev.preventDefault(); cancelEditor(); }
-    });
-    node.addEventListener("blur", () => { if (editing && editing.node === node) commitEditor(); });
-    if (mark) selected = mark;
-    drawOverlay();
-    node.focus();
-    const r = document.createRange(); r.selectNodeContents(node); r.collapse(false);
-    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
-    st.info(tr("พิมพ์ได้เลย กด Enter เพื่อวาง กด Esc เพื่อยกเลิก", "Type now. Enter places it, Esc cancels"));
-  }
-  function commitEditor() {
-    if (!editing) return;
-    const { node, mark, tmp } = editing;
-    const text = node.innerText.replace(/\s*\n\s*/g, " ").trim();
-    editing = null;
-    node.remove();
-    if (mark) {
-      if (text) mark.text = text; else host.remove(mark);
-    } else if (text) {
-      const m = { ...tmp, text };
-      host.add(m);
-      selected = m;
-    }
-    drawOverlay(); host.thumbs(); host.sync();
-    if (text) st.ok(mark ? tr("แก้ข้อความแล้ว", "Text updated") : tr("วางข้อความแล้ว", "Text placed"));
-  }
-  function cancelEditor() {
-    if (!editing) return;
-    const n = editing.node;
-    editing = null;
-    n.remove();
-    drawOverlay();
-    st.info(MODE_HINT());
-  }
-  /** เครื่องมือข้อความที่จุดหนึ่ง: มีข้อความในแผง = วางทันทีแบบเดิม , ไม่มี = เปิดช่องพิมพ์ตรงนั้น */
-  function textAt(p, size) {
-    if (textInput.value.trim() && !size) return placeText(p);
-    openEditor(null, p, size);
-  }
-
   // ── ลากกรอบบนหน้า ใช้ท่าเดียวทุกเครื่องมือ (รอบ 4 พี่ปอนด์: "แบบคลุมมาวาง จะได้แพทเทิร์นเดียวกัน") ──
   let start = null, ghost = null;
   const rel = point;
   const isDrag = () => mode === "cover" || mode === "highlight";
   layer.addEventListener("pointerdown", (ev) => {
     if (!host.ready() || ev.target.closest(".rm") || ev.target.closest(".pe-edit")) return;
-    if (editing) commitEditor();
-    if (selected) { selected = null; drawOverlay(); }
+    if (editing) { finishEdit(false); return; }        // คลิกที่ว่างตอนพิมพ์ = จบการพิมพ์ ไม่วางชิ้นใหม่ซ้อน
+    if (selected) { setSelected(null); drawOverlay(); }
     start = { p: rel(ev), cx: ev.clientX, cy: ev.clientY };
     ghost = isDrag()
       ? el("div", { class: `pe-ghost ${mode}`,
@@ -890,13 +1066,13 @@ export function createMarkEditor(host) {
   layer.addEventListener("pointerup", (ev) => {
     if (!start) return;
     const p = rel(ev), s0 = start.p;
-    const x = Math.min(s0.x, p.x), y = Math.min(s0.y, p.y);
-    const w = Math.abs(p.x - s0.x), h = Math.abs(p.y - s0.y);
+    const x = Math.max(0, Math.min(s0.x, p.x)), y = Math.max(0, Math.min(s0.y, p.y));
+    const w = Math.min(1, Math.max(s0.x, p.x)) - x, h = Math.min(1, Math.max(s0.y, p.y)) - y;
     // กรอบบนจอเป็นพิกเซล ใช้คิดขนาดตัวอักษรและภาพ (ตามที่ตาเห็น หน้าหมุนแบบไหนก็ตรง)
     const cb = { l: Math.min(start.cx, ev.clientX), t: Math.min(start.cy, ev.clientY),
                  w: Math.abs(ev.clientX - start.cx), h: Math.abs(ev.clientY - start.cy) };
     ghost?.remove(); ghost = null;
-    const click = w < 0.006 && h < 0.006;
+    const click = Math.abs(p.x - s0.x) < 0.006 && Math.abs(p.y - s0.y) < 0.006;
     const at0 = s0;
     start = null;
     if (mode === "text") {
@@ -904,8 +1080,8 @@ export function createMarkEditor(host) {
       /* ขนาดตัวอักษรจากความสูงกรอบ (บรรทัดสูงราว 1.5 เท่าของขนาดตัวอักษร) ปัดเข้าขนาดในรายการ */
       const hPt = cb.h / pxPerPt();
       const size = cb.h < 10 ? 0 : SIZES.reduce((a, b) => (Math.abs(b - hPt / 1.5) < Math.abs(a - hPt / 1.5) ? b : a));
-      if (size) sizeSel.value = String(size);
-      return textAt(point({ clientX: cb.l, clientY: cb.t + cb.h / 2 }), size || +sizeSel.value);
+      if (size) showSize(size);
+      return newTextAt(point({ clientX: cb.l, clientY: cb.t + cb.h / 2 }), size || +sizeSel.value);
     }
     if (mode === "sign" || mode === "image") {
       if (click) return placeStamp(at0);
@@ -922,20 +1098,11 @@ export function createMarkEditor(host) {
              : tr("ปิดทับแล้ว 1 จุด", "Covered one spot"));
   });
 
-  const natural = new Map();          // url -> สัดส่วนสูงต่อกว้างของภาพ
-  const aspectOf = (url) => {
-    if (!natural.has(url)) natural.set(url, new Promise((ok) => {
-      const im = new Image();
-      im.onload = () => ok(im.naturalHeight / im.naturalWidth || 1);
-      im.onerror = () => ok(1);
-      im.src = url;
-    }));
-    return natural.get(url);
-  };
   const stampMsg = () => tr("วางแล้ว ลากเพื่อย้าย ลากจุดที่มุมเพื่อย่อขยาย", "Placed. Drag to move, drag a corner to resize");
   const noStamp = () => st.err(mode === "sign"
     ? tr("เลือกหรือวาดลายเซ็นด้านขวาก่อน", "Pick or draw a signature on the right first")
     : tr("เลือกไฟล์รูปด้านขวาก่อน", "Choose an image on the right first"));
+  const alphaNow = () => (+stampPct.input.value < 100 ? { alpha: +stampPct.input.value / 100 } : {});
   /** วางลายเซ็นหรือรูปให้พอดีกรอบที่ลาก (กรอบเป็นพิกเซลบนจอ) รักษาสัดส่วนภาพ อยู่กึ่งกลางกรอบ */
   async function placeStampBox(cb) {
     if (!stampUrl) return noStamp();
@@ -946,23 +1113,22 @@ export function createMarkEditor(host) {
     const rw = Math.max(0.01, wPt / psz().w);
     const c = point({ clientX: cb.l + cb.w / 2, clientY: cb.t + cb.h / 2 });
     const up = host.up ? host.up() : 0;
-    const m = { kind: "stamp", x: c.x - rw / 2, y: c.y, rw, url, what,
-                ...(+stampPct.input.value < 100 ? { alpha: +stampPct.input.value / 100 } : {}), ...(up ? { up } : {}) };
+    const m = { kind: "stamp", x: c.x - rw / 2, y: c.y, rw, url, what, ...alphaNow(), ...(up ? { up } : {}) };
+    keepIn(m);
     host.add(m);
     drawOverlay(); host.thumbs();
     st.ok(stampMsg());
   }
 
-  /** วางลายเซ็นหรือรูปที่จุดที่คลิก (จุดคลิก = กึ่งกลางของภาพ) */
-  function placeStamp(p) {
-    if (!stampUrl) return noStamp();
-    const rw = (+stampSize.value || 22) / 100;
+  /** วางลายเซ็นหรือรูปที่จุดที่คลิก (จุดคลิก = กึ่งกลางของภาพ) ทั้งชิ้นต้องอยู่ในหน้า */
+  async function placeStamp(p, url = stampUrl, what = mode === "sign" ? "sign" : "image") {
+    if (!url) return noStamp();
+    await aspectOf(url);
+    const rw = (+stampSize.value || 20) / 100;
     const up = host.up ? host.up() : 0;
-    /* up ไม่ใช่ 0 = หน้าถูกหมุนอยู่ ความกว้างของภาพวิ่งคนละแกนกับหน้าฐาน ห้ามบีบ x ด้วยเกณฑ์ขอบซ้าย
-       กึ่งกลางภาพคือ x + rw/2 เสมอ (ดู geo) */
-    host.add({ kind: "stamp", x: up ? p.x - rw / 2 : Math.max(0, p.x - rw / 2), y: p.y, rw, url: stampUrl,
-                 what: mode === "sign" ? "sign" : "image",
-                 ...(+stampPct.input.value < 100 ? { alpha: +stampPct.input.value / 100 } : {}), ...(up ? { up } : {}) });
+    const m = { kind: "stamp", x: p.x - rw / 2, y: p.y, rw, url, what, ...alphaNow(), ...(up ? { up } : {}) };
+    keepIn(m);
+    host.add(m);
     drawOverlay(); host.thumbs();
     st.ok(stampMsg());
   }
@@ -971,10 +1137,54 @@ export function createMarkEditor(host) {
     const text = textInput.value.trim();
     if (!text) { st.err(tr("พิมพ์ข้อความด้านขวาก่อน", "Type the text on the right first")); return; }
     const up = host.up ? host.up() : 0;
-    host.add({ kind: "text", x: p.x, y: p.y, text,
-                 size: +sizeSel.value, color: textColor.value, weight: +weightSel.value, ...(up ? { up } : {}) });
+    const m = { kind: "text", x: p.x, y: p.y, text,
+                size: +sizeSel.value, color: textColor.value, weight: +weightSel.value, ...(up ? { up } : {}) };
+    keepIn(m);
+    host.add(m);
     drawOverlay(); host.thumbs();
     st.ok(tr("วางข้อความแล้ว", "Text placed"));
+  }
+
+  /* ── ลากลายเซ็นหรือรูปจากแผงไปปล่อยบนหน้า (รอบ 5 พี่ปอนด์: "เหมือนมันจะจับลากมาวางไม่มา") ──
+     ภาพในแผงเคยลากได้แบบภาพของเบราว์เซอร์ (เห็นภาพจางติดเมาส์) แต่ไม่มีใครรับ ปล่อยแล้วไม่เกิดอะไร
+     ใช้ pointer events ของเราเอง จอสัมผัสก็ใช้ได้ ขยับไม่ถึง 6 px = คลิกเลือกแบบเดิม
+     ปล่อยบนหน้า = วางกึ่งกลางที่จุดปล่อย ขนาดตามความกว้างในแผง ปล่อยนอกหน้า = ไม่วาง */
+  function dragToPage(node, url, what, onClick) {
+    node.addEventListener("dragstart", (ev) => ev.preventDefault());
+    node.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== 0 || ev.target.closest(".x")) return;
+      const x0 = ev.clientX, y0 = ev.clientY;
+      let float = null;
+      const move = (m) => {
+        if (!float && Math.hypot(m.clientX - x0, m.clientY - y0) < 6) return;
+        m.preventDefault();
+        if (!float) {
+          float = el("img", { src: url, alt: "", class: "pe-float" });
+          document.body.appendChild(float);
+        }
+        float.style.transform = `translate(${m.clientX}px,${m.clientY}px) translate(-50%,-50%)`;
+      };
+      const up = async (u) => {
+        removeEventListener("pointermove", move, true);
+        removeEventListener("pointerup", up, true);
+        removeEventListener("pointercancel", up, true);
+        if (!float) { onClick(); return; }
+        float.remove();
+        if (u.type === "pointercancel") return;
+        const hit = document.elementFromPoint(u.clientX, u.clientY);
+        if (!hit || !(hit === layer || layer.contains(hit)) || !host.ready()) {
+          st.info(tr("ปล่อยบนหน้ากระดาษเพื่อวาง", "Drop it on the page to place it"));
+          return;
+        }
+        if (editing) finishEdit(false);
+        if (mode !== what) setMode(what);
+        stampUrl = url; renderSaved();
+        await placeStamp(point(u), url, what);
+      };
+      addEventListener("pointermove", move, true);
+      addEventListener("pointerup", up, true);
+      addEventListener("pointercancel", up, true);
+    });
   }
 
   return {
